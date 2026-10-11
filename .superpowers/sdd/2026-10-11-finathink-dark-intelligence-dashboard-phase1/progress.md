@@ -35,6 +35,15 @@
 - GREEN: added `frontend/src/overview.js`, wired it into the existing research bundle, loaded that bundle on `/`, and extended the npm test script without adding a framework or chart dependency.
 - Evidence: `cd frontend && npm test` → 21 passed; `cd frontend && npm run build` → success; `python3 -m ruff check src tests` → All checks passed; full Python suite → 1029 passed, 1 skipped.
 - Commit pending: `feat(ui): add accessible overview interactions`.
+
+## Task 5 — completed
+
+- Browser coverage now exercises Overview, Research, Knowledge, Quant, settings, no-JS, keyboard focus, 1440px, 390px/375px responsive widths, and reduced-motion.
+- Fixed bundle parity: `frontend/build.mjs` now copies the built bundle into the local app's packaged asset path, so loopback browser tests execute the current Overview module.
+- Added the UI review record and release checklist evidence; pinned Web Interface Guidelines scan found no `transition: all`, outline suppression, zoom disabling, or missing image dimensions in changed shell/Overview code.
+- Evidence: `PYTHONPATH=src python3 -m pytest tests/p7_5/test_e2e.py -q` → 4 passed; full required gates before final CSS adjustment: 1029 passed, 1 skipped; governance PASS; pip check clean; frontend 21 passed/build success.
+- Commit pending: `test(ui): verify dark dashboard phase one`.
 Task 1: complete (commits cf1042e..f33eeda, tests: env PYTHONPATH=src python3 -m pytest -q → 1027 passed, 1 skipped in 82.84s (0:01:22))
 Task 2: complete (commits f33eeda..8333511, tests: env PYTHONPATH=src python3 -m pytest tests/p7_5/test_local_app.py -q → 13 passed in 0.89s)
 Task 3: complete (commits 8333511..1d4fdfc, tests: env PYTHONPATH=src python3 -m pytest tests/p7_5/test_local_app.py tests/research/test_ui.py -q → 21 passed in 1.75s)
+Task 4: complete (commits 1d4fdfc..4f7ec3e, tests: bash -lc 'cd frontend && npm test && npm run build' → > node build.mjs)

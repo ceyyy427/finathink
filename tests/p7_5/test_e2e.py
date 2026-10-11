@@ -177,6 +177,27 @@ def test_browser_acceptance_real_engine_keyboard_responsive_failures_and_evidenc
             page = context.new_page()
             page.on("pageerror", lambda error: browser_errors.append(f"pageerror:{error}"))
             page.on("console", lambda msg: browser_errors.append(f"console:{msg.text}") if msg.type == "error" else None)
+            page.goto(f"{base}/", wait_until="networkidle")
+            assert page.locator("[data-finathink-overview]").is_visible()
+            assert page.get_by_text("Overview", exact=True).count() >= 1
+            assert page.get_by_text("PAPER-ONLY", exact=True).count() >= 1
+            assert page.locator("body").evaluate("el => el.scrollWidth <= window.innerWidth")
+            page.screenshot(path=str(artifact_dir / "overview-desktop.png"), full_page=True)
+            (artifact_dir / "overview-desktop.html").write_text(page.content(), encoding="utf-8")
+
+            for route in ("/research", "/knowledge", "/quant"):
+                page.goto(f"{base}{route}", wait_until="networkidle")
+                assert page.locator("main#main").is_visible()
+                assert page.locator("body").evaluate("el => el.scrollWidth <= window.innerWidth")
+
+            reduced = browser.new_context(viewport={"width": 375, "height": 812}, reduced_motion="reduce")
+            reduced_page = reduced.new_page()
+            reduced_page.goto(f"{base}/", wait_until="networkidle")
+            assert reduced_page.locator("body").evaluate("el => el.scrollWidth <= window.innerWidth")
+            assert reduced_page.locator("[data-finathink-overview]").get_attribute("data-animation") == "reduced"
+            reduced_page.screenshot(path=str(artifact_dir / "overview-mobile-reduced-motion.png"), full_page=True)
+            reduced.close()
+
             page.goto(f"{base}/settings/data-connections", wait_until="networkidle")
             assert page.locator('input[name="api_key"]').get_attribute("type") == "password"
             assert secret not in page.content()

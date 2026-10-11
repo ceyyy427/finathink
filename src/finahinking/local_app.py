@@ -83,6 +83,7 @@ _EVENT = {
 
 _APP_CSS = """
 :root {
+  color-scheme: dark;
   --background: #f5f7f7;
   --surface: #ffffff;
   --surface-elevated: #fbfcfc;
@@ -155,7 +156,7 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; padding: var(--
 .workspace { min-width: 0; padding: var(--space-8) clamp(var(--space-5), 4vw, var(--space-10)); }
 .workspace-inner { width: min(100%, 940px); margin: 0 auto; }
 .eyebrow { margin: 0 0 var(--space-2); color: var(--evidence); font-size: .76rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
-h1, h2, h3 { margin-top: 0; line-height: 1.18; letter-spacing: -.02em; }
+h1, h2, h3 { margin-top: 0; line-height: 1.18; letter-spacing: -.02em; text-wrap: balance; }
 h1 { max-width: 22ch; margin-bottom: var(--space-3); font-family: Georgia, "Times New Roman", serif; font-size: clamp(2rem, 4vw, 3.2rem); }
 h2 { font-size: 1.28rem; }
 h3 { font-size: 1rem; }
@@ -299,6 +300,7 @@ th { color: var(--text-muted); font-size: .78rem; letter-spacing: .06em; text-tr
 _DARK_APP_CSS = """
 :root {
   --background: #050B18;
+  color-scheme: dark;
   --surface: #081326;
   --surface-elevated: #071122;
   --surface-raised: #0B1730;
@@ -371,7 +373,7 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; padding: var(--
 .topbar-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-2); align-items: center; }
 .local-status { color: var(--success); font-size: .76rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 .eyebrow { margin: 0 0 var(--space-2); color: var(--evidence); font-size: .72rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
-h1, h2, h3 { margin-top: 0; line-height: 1.18; letter-spacing: -.02em; }
+h1, h2, h3 { margin-top: 0; line-height: 1.18; letter-spacing: -.02em; text-wrap: balance; }
 h1 { max-width: 26ch; margin-bottom: var(--space-3); font-size: clamp(2rem, 4vw, 3.2rem); }
 h2 { font-size: 1.25rem; }
 h3 { font-size: 1rem; }
@@ -1933,7 +1935,7 @@ class LocalApplication:
             '</section>'
             '<section class="section"><div class="section-heading"><h2>Continue where you stopped</h2><span class="meta">Private local continuity</span></div><div class="overview-links"><article class="panel"><h3>Current research</h3><p class="meta">Run a bounded question with uncertainty and provenance.</p><a href="/quant">Open Quant</a></article><article class="panel"><h3>Paper simulation</h3><p class="meta">Inspect validity without live orders.</p><a href="/strategy">Open Strategy Lab</a></article><article class="panel"><h3>Evidence event</h3><p class="meta">Follow the captured source chain.</p><a href="/events">Open Events</a></article></div></section>'
             f'<section class="panel"><h2>Boundaries</h2><ul>{"".join(f"<li>{html.escape(str(item))}</li>" for item in payload.get("limitations", ()))}</ul></section>'
-            '<template id="legacy-launch-frames" aria-hidden="true"><img src="/assets/finathink-splash-map.jpg" alt=""><img src="/assets/finathink-research-splash.jpg" alt=""></template>'
+            '<template id="legacy-launch-frames" aria-hidden="true"><img src="/assets/finathink-splash-map.jpg" width="1536" height="1024" alt=""><img src="/assets/finathink-research-splash.jpg" width="900" height="900" alt=""></template>'
             '</section>'
         )
 
