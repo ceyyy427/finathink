@@ -114,6 +114,36 @@ def test_api_rejects_invalid_payload_without_sql_or_network() -> None:
     app.close()
 
 
+def test_overview_projection_is_versioned_server_owned_and_sample_provenance() -> None:
+    app = LocalApplication(LocalAppConfig(db_path=":memory:", offline=True), connection=sqlite3.connect(":memory:"))
+    status, content_type, payload = app.route("GET", "/api/overview")
+    assert (status, content_type) == (200, "application/json")
+    assert payload["schema_version"] == 1
+    assert payload["mode"] == "OFFLINE"
+    assert payload["paper_only"] is True
+    for field in ("as_of", "metrics", "activity", "topics", "learning_activity", "research_status", "limitations", "provenance"):
+        assert field in payload
+    assert payload["provenance"]["data_mode"] == "SAMPLE"
+    assert payload["provenance"]["source_state"] == "CAPTURED"
+    assert payload["metrics"]["saved_items"] == 0
+    assert payload["topics"] == []
+    assert any("fixture" in str(item).lower() or "offline" in str(item).lower() for item in payload["limitations"])
+    app.close()
+
+
+def test_overview_projection_is_empty_safe_and_rejects_secret_or_path_like_fields() -> None:
+    app = LocalApplication(LocalAppConfig(db_path=":memory:", offline=True), connection=sqlite3.connect(":memory:"))
+    payload = app.overview()
+    serialized = json.dumps(payload, ensure_ascii=False).lower()
+    assert payload["metrics"]["research_runs"] == 0
+    assert payload["metrics"]["learning_items"] == 0
+    assert payload["activity"] == []
+    assert payload["learning_activity"] == []
+    for forbidden in ("api_key", "prompt", "endpoint", "/users/", "\\\\"):
+        assert forbidden not in serialized
+    app.close()
+
+
 def test_provider_config_routes_require_csrf_and_persist_redacted_config(tmp_path) -> None:
     app = LocalApplication(LocalAppConfig(db_path=str(tmp_path / "app.sqlite3")))
     payload = {"provider_id": "personal", "adapter_kind": "openai_compatible", "model": "user-model", "endpoint": "https://provider.example.net/v1", "credential_ref": {"env_var": "FINAHINK_USER_API_KEY"}, "enabled": True, "role_models": {"technical": "user-model"}}

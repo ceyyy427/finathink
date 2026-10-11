@@ -691,6 +691,63 @@ class LocalApplication:
         with self._lock:
             return self.repository.export_personal(self.config.session_id)
 
+    def overview(self) -> dict[str, Any]:
+        """Return a read-only, public-safe projection for the Overview page.
+
+        The projection deliberately selects a small allow-list of server-owned
+        values.  It does not expose personal payloads, provider configuration,
+        prompts, endpoints, file paths, or raw artifact records.
+        """
+
+        event = self.event()
+        personal = self.personal()
+        nodes = [item for item in personal.get("nodes", ()) if isinstance(item, Mapping)]
+        history = [item for item in personal.get("history", ()) if isinstance(item, Mapping)]
+        mastery = [item for item in personal.get("mastery_evidence", ()) if isinstance(item, Mapping)]
+        activity = [
+            {
+                "kind": "learning",
+                "label": str(item.get("node_type", "saved work")),
+                "status": "RECORDED",
+            }
+            for item in history[-8:]
+        ]
+        learning_activity = [
+            {"outcome": str(item.get("outcome", "UNKNOWN")).upper(), "status": "RECORDED"}
+            for item in mastery[-8:]
+        ]
+        research_states = []
+        for entry in self._research_runs.values():
+            state = getattr(entry.get("state"), "value", entry.get("state", "UNKNOWN"))
+            research_states.append(str(state).upper())
+        as_of = str((event.get("event") or {}).get("available_at") or "2025-01-15T13:31:00Z")[:10]
+        return {
+            "schema_version": 1,
+            "mode": "OFFLINE" if self.config.offline else "LOCAL",
+            "paper_only": True,
+            "as_of": as_of,
+            "metrics": {
+                "sample_events": 1,
+                "saved_items": len(nodes),
+                "learning_items": len(mastery),
+                "research_runs": len(research_states),
+            },
+            "activity": activity,
+            "topics": [],
+            "learning_activity": learning_activity,
+            "research_status": {"count": len(research_states), "states": research_states[-8:]},
+            "limitations": [
+                "Deterministic fixture and offline mode; no live market feed is queried.",
+                "Overview values are descriptive and read-only; no forecast, order, or trade instruction is produced.",
+            ],
+            "provenance": {
+                "data_mode": str(event.get("data_mode", "SAMPLE")),
+                "source_state": str(event.get("source_state", "CAPTURED")),
+                "source_id": str((event.get("event") or {}).get("source_id", "bls")),
+                "reference_period": str((event.get("event") or {}).get("reference_period", "unknown")),
+            },
+        }
+
     def save_personal(self, payload: Mapping[str, Any]) -> dict[str, Any]:
         title = str(payload.get("title", "")).strip()
         if not title or len(title) > 256:
@@ -1097,6 +1154,8 @@ class LocalApplication:
             return 200, "application/json", {"status": "ok", "service": "finahinking-local", "version": "0.1.0"}
         if clean == "/api/diagnostics":
             return 200, "application/json", self.diagnostics()
+        if clean == "/api/overview" and method == "GET":
+            return 200, "application/json", self.overview()
         if clean == "/api/diagnostics/bundle":
             return 200, "application/json", self.diagnostics_bundle()
         if clean == "/api/p8_2b/knowledge" and method == "GET":
