@@ -275,6 +275,170 @@ th { color: var(--text-muted); font-size: .78rem; letter-spacing: .06em; text-tr
 """
 
 
+# Phase 1 visual system.  The legacy rules above remain as a compatibility
+# reference for older embedded pages; the shell opts into this dark system
+# explicitly so every new surface shares the same tokens.
+_DARK_APP_CSS = """
+:root {
+  --background: #050B18;
+  --surface: #081326;
+  --surface-elevated: #071122;
+  --surface-raised: #0B1730;
+  --border: rgba(167, 139, 250, .18);
+  --border-strong: rgba(167, 139, 250, .42);
+  --text-primary: #E6EEF9;
+  --text-secondary: #AAB8CC;
+  --text-muted: #71819A;
+  --focus: #38BDF8;
+  --evidence: #38BDF8;
+  --success: #34D399;
+  --warning: #FBBF24;
+  --error: #FB7185;
+  --quant-finding: #A78BFA;
+  --learning: #8B5CF6;
+  --limitation: #FB7185;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --shadow-sm: 0 8px 24px rgba(0, 0, 0, .18);
+  --shadow-md: 0 18px 48px rgba(0, 0, 0, .28);
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --measure: 72ch;
+}
+* { box-sizing: border-box; }
+html { background: var(--background); color: var(--text-primary); }
+body { margin: 0; min-width: 320px; background: var(--background); color: var(--text-primary); font: 15px/1.55 Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+a { color: var(--evidence); text-underline-offset: 3px; }
+a:hover { color: #7DD3FC; }
+a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, summary:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+button, input, textarea, select { font: inherit; }
+button, .button { min-height: 44px; border: 1px solid transparent; border-radius: var(--radius-sm); padding: 9px 15px; cursor: pointer; transition: background-color .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease; }
+button, .button-primary { background: var(--learning); color: #fff; }
+button:hover, .button-primary:hover { background: #7C3AED; }
+.button-secondary { display: inline-flex; align-items: center; justify-content: center; background: transparent; color: var(--text-primary); border-color: var(--border-strong); text-decoration: none; }
+.button-secondary:hover { background: rgba(139, 92, 246, .12); }
+input, textarea, select { width: 100%; min-height: 44px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 9px 11px; background: var(--surface); color: var(--text-primary); }
+textarea { min-height: 112px; resize: vertical; }
+label { display: grid; gap: var(--space-2); font-weight: 650; color: var(--text-primary); }
+small, .meta { color: var(--text-muted); font-size: .86rem; }
+code, pre { font-family: "Fira Code", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+code { overflow-wrap: anywhere; }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; padding: var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-sm); background: #040A15; }
+.skip-link { position: absolute; left: -10000px; top: var(--space-3); z-index: 20; padding: var(--space-2) var(--space-3); background: var(--surface-raised); color: #fff; }
+.skip-link:focus { left: var(--space-3); }
+.app-shell { min-height: 100dvh; display: grid; grid-template-columns: 240px minmax(0, 1fr) 264px; background: var(--background); }
+.sidebar { position: sticky; top: 0; align-self: start; min-height: 100dvh; padding: var(--space-6) var(--space-4); border-right: 1px solid var(--border); background: #060D1D; }
+.brand { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-8); color: var(--text-primary); text-decoration: none; }
+.brand-mark { display: grid; place-items: center; width: 34px; height: 34px; border: 1px solid var(--border-strong); border-radius: 10px; background: rgba(139, 92, 246, .16); color: var(--text-primary); font-weight: 800; }
+.brand-name { font: 700 1.16rem/1 "Fira Sans", Inter, ui-sans-serif, sans-serif; letter-spacing: .01em; }
+.nav-section { margin: 0 0 var(--space-5); }
+.nav-section-title { margin: 0 0 var(--space-2); padding: 0 var(--space-2); color: var(--text-muted); font-size: .68rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+.nav-list { display: grid; gap: 3px; margin: 0; padding: 0; list-style: none; }
+.nav-link { display: flex; align-items: center; min-height: 40px; padding: 8px 10px; border-radius: var(--radius-sm); color: var(--text-secondary); text-decoration: none; }
+.nav-link:hover { background: rgba(139, 92, 246, .12); color: var(--text-primary); }
+.nav-link[aria-current="page"] { background: rgba(139, 92, 246, .2); color: #EDE9FE; box-shadow: inset 3px 0 0 var(--learning); font-weight: 750; }
+.sidebar-note { margin-top: auto; padding-top: var(--space-8); color: var(--text-muted); font-size: .8rem; }
+.workspace { min-width: 0; padding: 0 clamp(var(--space-5), 4vw, var(--space-10)) var(--space-8); }
+.workspace-inner { width: min(100%, 1120px); margin: 0 auto; }
+.topbar { display: flex; justify-content: space-between; gap: var(--space-4); align-items: center; min-height: 64px; margin: 0 0 var(--space-8); border-bottom: 1px solid var(--border); color: var(--text-muted); }
+.topbar-context { display: flex; gap: var(--space-2); align-items: center; font-size: .82rem; }
+.topbar-context strong { color: var(--text-primary); }
+.topbar-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-2); align-items: center; }
+.local-status { color: var(--success); font-size: .76rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.eyebrow { margin: 0 0 var(--space-2); color: var(--evidence); font-size: .72rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+h1, h2, h3 { margin-top: 0; line-height: 1.18; letter-spacing: -.02em; }
+h1 { max-width: 26ch; margin-bottom: var(--space-3); font-size: clamp(2rem, 4vw, 3.2rem); }
+h2 { font-size: 1.25rem; }
+h3 { font-size: 1rem; }
+.lede { max-width: var(--measure); margin: 0 0 var(--space-6); color: var(--text-secondary); font-size: 1.04rem; }
+.status-row, .action-row, .tag-row, .metric-row { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+.status { display: inline-flex; align-items: center; min-height: 26px; padding: 3px 9px; border: 1px solid currentColor; border-radius: 999px; font-size: .68rem; font-weight: 800; letter-spacing: .08em; }
+.status--sample, .status--offline { color: var(--warning); background: rgba(251, 191, 36, .1); }
+.status--complete, .status--ready, .status--fact { color: var(--success); background: rgba(52, 211, 153, .1); }
+.status--evidence, .status--quant { color: var(--evidence); background: rgba(56, 189, 248, .1); }
+.status--hypothesis { color: var(--warning); background: rgba(251, 191, 36, .1); }
+.status--limitation, .status--unknown { color: var(--error); background: rgba(251, 113, 133, .1); }
+.status--learning { color: #C4B5FD; background: rgba(139, 92, 246, .12); }
+.hero { display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(260px, .92fr); gap: var(--space-6); align-items: stretch; margin-bottom: var(--space-8); }
+.hero-copy, .hero-art, .card, .panel, .research-panel { min-width: 0; padding: var(--space-5); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); box-shadow: var(--shadow-sm); }
+.hero-art { display: grid; align-content: center; gap: var(--space-3); background: var(--surface-elevated); }
+.hero-art img { display: block; width: 100%; height: auto; border: 1px solid var(--border); border-radius: var(--radius-md); }
+.splash-stage { position: relative; isolation: isolate; overflow: hidden; border-radius: var(--radius-md); background: #071122; }
+.splash-stage::before { content: ""; position: absolute; inset: 7%; z-index: -1; border-radius: 50%; background: conic-gradient(from 15deg, rgba(56,189,248,.16), rgba(139,92,246,.22), rgba(52,211,153,.14), rgba(56,189,248,.16)); filter: blur(18px); animation: splash-spin 18s linear 2; animation-fill-mode: both; }
+.splash-frame { position: relative; z-index: 1; animation: splash-crossfade 14s ease-in-out 2; animation-fill-mode: both; }
+.splash-frame--secondary { position: absolute !important; inset: 0; object-fit: cover; opacity: 0; animation-delay: -7s; }
+@keyframes splash-spin { to { transform: rotate(360deg); } }
+@keyframes splash-crossfade { 0%, 42% { opacity: 1; transform: scale(1) rotate(0deg); } 50%, 92% { opacity: .08; transform: scale(1.015) rotate(1deg); } 100% { opacity: 1; transform: scale(1) rotate(0deg); } }
+.section { margin: 0 0 var(--space-8); }
+.section-heading { display: flex; justify-content: space-between; gap: var(--space-4); align-items: baseline; margin-bottom: var(--space-3); }
+.section-heading h2 { margin-bottom: 0; }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+.card--evidence { border-left: 3px solid var(--evidence); }
+.card--quiet { background: var(--surface-elevated); }
+.card p:last-child, .card ul:last-child, .card ol:last-child { margin-bottom: 0; }
+.card h2, .card h3 { margin-bottom: var(--space-2); }
+.prose { max-width: var(--measure); }
+.prose p, .prose li { color: var(--text-secondary); }
+.form-grid { display: grid; gap: var(--space-4); }
+.field-help { margin: 0; color: var(--text-muted); font-size: .88rem; }
+.stepper { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; margin: var(--space-4) 0 var(--space-6); }
+.step { min-height: 54px; padding: 8px; border-top: 3px solid var(--border); color: var(--text-muted); font-size: .78rem; }
+.step--active { border-top-color: var(--learning); color: var(--text-primary); font-weight: 750; }
+.evidence-list { display: grid; gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
+.evidence-item { padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-elevated); }
+.evidence-item strong { display: block; margin-bottom: var(--space-1); }
+.inspector { min-width: 0; padding: var(--space-8) var(--space-4); border-left: 1px solid var(--border); background: #060D1D; }
+.inspector-inner { position: sticky; top: var(--space-6); }
+.inspector h2 { font-size: 1rem; }
+.inspector dl { margin: 0; }
+.inspector dt { margin-top: var(--space-3); color: var(--text-muted); font-size: .7rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.inspector dd { margin: 0; color: var(--text-secondary); overflow-wrap: anywhere; }
+.empty-state, .loading-state, .error-state { padding: var(--space-5); border: 1px dashed var(--border-strong); border-radius: var(--radius-md); background: var(--surface-elevated); }
+.loading-state { border-style: solid; }
+.error-state { border-color: rgba(251, 113, 133, .55); background: rgba(251, 113, 133, .08); }
+.result { border-top: 3px solid var(--quant-finding); }
+.metric { min-width: 120px; padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-elevated); }
+.metric-value { display: block; font-variant-numeric: tabular-nums; font-size: 1.28rem; font-weight: 800; }
+.metric-label { display: block; color: var(--text-muted); font-size: .76rem; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+th, td { padding: 9px 10px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+th { color: var(--text-muted); font-size: .78rem; letter-spacing: .06em; text-transform: uppercase; }
+.research-workspace { display: grid; gap: var(--space-5); }
+.research-chart, .research-sweep { min-height: 240px; width: 100%; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface-elevated); }
+.research-chart { height: clamp(300px, 42vw, 480px); }
+.research-sweep { height: 260px; }
+.research-tooltip, .research-inspector { min-height: 32px; margin-top: var(--space-2); padding: 6px 9px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-elevated); color: var(--text-secondary); font-size: .84rem; font-variant-numeric: tabular-nums; }
+.workbench-frame { display: grid; gap: var(--space-4); margin-top: var(--space-5); padding: clamp(18px, 3vw, 28px); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); color: var(--text-primary); }
+.workbench-head { display: flex; justify-content: space-between; gap: var(--space-4); align-items: baseline; border-bottom: 1px solid var(--border); padding-bottom: var(--space-3); }
+.workbench-head h2 { margin: 0; font-weight: 650; }
+.workbench-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.workbench-metric { min-height: 76px; padding: var(--space-3); border-right: 1px solid var(--border); }
+.workbench-metric:last-child { border-right: 0; }
+.workbench-metric strong { display: block; font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+.workbench-metric span { color: var(--text-muted); font-size: .76rem; text-transform: capitalize; }
+.workbench-grid, .workbench-notes { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(260px, .9fr); gap: var(--space-4); }
+.workbench-inspector, .workbench-preview { padding: var(--space-3); border: 1px solid var(--border); background: var(--surface-elevated); color: var(--text-secondary); }
+.knowledge-layout { display: grid; gap: var(--space-5); }
+.knowledge-context { border-left: 3px solid var(--learning); background: rgba(139, 92, 246, .08); }
+.knowledge-equation { display: grid; gap: var(--space-2); padding: var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-elevated); overflow-x: auto; }
+.knowledge-symbols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); }
+.knowledge-symbol { padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-elevated); }
+.settings-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+.footer-note { margin-top: var(--space-8); padding-top: var(--space-4); border-top: 1px solid var(--border); color: var(--text-muted); font-size: .82rem; }
+@media (max-width: 1180px) { .app-shell { grid-template-columns: 220px minmax(0, 1fr); } .inspector { grid-column: 2; border-top: 1px solid var(--border); border-left: 0; padding-top: var(--space-5); } .inspector-inner { position: static; } }
+@media (max-width: 880px) { .app-shell { display: block; } .sidebar { position: static; min-height: auto; padding: var(--space-4); border-right: 0; border-bottom: 1px solid var(--border); } .brand { margin-bottom: var(--space-4); } .nav-list { display: flex; flex-wrap: wrap; } .nav-section-title, .sidebar-note { display: none; } .workspace { padding: 0 var(--space-4) var(--space-6); } .topbar { align-items: flex-start; flex-direction: column; padding: var(--space-4) 0; margin-bottom: var(--space-6); } .hero, .grid, .research-grid, .settings-grid, .workbench-grid, .workbench-notes { grid-template-columns: 1fr; } .workbench-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } .workbench-metric:nth-child(2n) { border-right: 0; } .stepper { grid-template-columns: 1fr; } .step { min-height: auto; border-top: 0; border-left: 3px solid var(--border); } .step--active { border-left-color: var(--learning); } .knowledge-symbols { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; } .splash-frame--secondary { display: none; } }
+"""
+
+
 @dataclass(frozen=True)
 class LocalAppConfig:
     """Runtime settings.  SQLite and sample/offline mode are the defaults."""
@@ -909,8 +1073,11 @@ class LocalApplication:
 
     def _nav(self, page: str) -> str:
         names = self._page_names()
-        primary = ("/", "/events", "/explore", "/knowledge", "/quant", "/research", "/workbench", "/ml", "/parameter", "/strategy", "/workspace")
-        secondary = ("/community", "/settings/engines", "/settings/providers", "/settings/data-sources", "/diagnostics")
+        groups = (
+            ("Workspace", "nav-workspace", ("/", "/events", "/explore", "/research", "/workbench", "/workspace")),
+            ("Learn", "nav-learn", ("/knowledge", "/quant", "/strategy", "/ml", "/parameter")),
+            ("System", "nav-system", ("/community", "/settings/engines", "/settings/providers", "/settings/data-sources", "/diagnostics")),
+        )
 
         # Keep the conditional attribute construction explicit so the rendered
         # HTML remains easy to inspect in a browser and in snapshot tests.
@@ -918,24 +1085,15 @@ class LocalApplication:
             current = ' aria-current="page"' if href == page else ""
             return f'<li><a class="nav-link" href="{href}"{current}>{html.escape(names[href])}</a></li>'
 
-        primary_html = "".join(
-            nav_item(href)
-            for href in primary
-        )
-        secondary_html = "".join(
-            nav_item(href)
-            for href in secondary
-        )
+        sections = []
+        for label, section_id, links in groups:
+            items = "".join(nav_item(href) for href in links)
+            sections.append(f'<section class="nav-section" aria-label="{label}" aria-labelledby="{section_id}"><h2 class="nav-section-title" id="{section_id}">{label}</h2><ul class="nav-list">{items}</ul></section>')
         return (
             '<a class="brand" href="/" aria-label="Finathink home">'
             '<span class="brand-mark" aria-hidden="true">F</span><span class="brand-name">Finathink</span></a>'
-            '<section class="nav-section" aria-labelledby="nav-research">'
-            '<h2 class="nav-section-title" id="nav-research">Research</h2><ul class="nav-list">'
-            f"{primary_html}</ul></section>"
-            '<section class="nav-section" aria-labelledby="nav-support">'
-            '<h2 class="nav-section-title" id="nav-support">Support</h2><ul class="nav-list">'
-            f"{secondary_html}</ul></section>"
-            '<p class="sidebar-note">Local-first research. Evidence before confidence. Paper-only strategy simulation.</p>'
+            + "".join(sections)
+            + '<p class="sidebar-note">Local-first research. Evidence before confidence. Paper-only strategy simulation.</p>'
         )
 
     @staticmethod
@@ -975,13 +1133,13 @@ class LocalApplication:
             '<!doctype html><html lang="en"><head><meta charset="utf-8">'
             '<meta name="viewport" content="width=device-width,initial-scale=1">'
             f"<title>{html.escape(title)} · Finathink</title>"
-            '<meta name="theme-color" content="#edf2f1">'
+            '<meta name="theme-color" content="#050B18">'
             '<meta http-equiv="Content-Security-Policy" content="default-src \'self\'; img-src \'self\'; style-src \'self\' \'unsafe-inline\'; script-src \'self\'; connect-src \'self\'; form-action \'self\'">'
-            f"<style>{_APP_CSS}</style>{style_tags}{script_tags}</head><body>"
+            f"<style>{_DARK_APP_CSS}</style>{style_tags}{script_tags}</head><body>"
             '<a class="skip-link" href="#main">Skip to content</a>'
             '<div class="app-shell">'
             f'<nav class="sidebar" aria-label="Primary">{self._nav(clean_page)}</nav>'
-            f'<main class="workspace" id="main" tabindex="-1"><div class="workspace-inner">'
+            f'<main class="workspace" id="main" tabindex="-1"><header class="topbar" aria-label="Workspace context"><div class="topbar-context"><strong>Finathink</strong><span>/</span><span>{html.escape(title)}</span></div><div class="topbar-actions"><span class="local-status">Local Workspace</span><span class="status status--offline">PAPER-ONLY</span></div></header><div class="workspace-inner">'
             f'<p class="eyebrow">{html.escape(eyebrow)}</p>{body}'
             '<p class="footer-note">Finathink is a local-first research and education tool. Results are descriptive, bounded, and not trading instructions.</p>'
             '</div></main>'

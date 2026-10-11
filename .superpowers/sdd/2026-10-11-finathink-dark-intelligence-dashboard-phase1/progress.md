@@ -14,3 +14,11 @@
 - GREEN: implemented `LocalApplication.overview()` and the read-only `GET /api/overview` route with explicit SAMPLE/OFFLINE/PAPER-ONLY provenance and limitations.
 - Evidence: `PYTHONPATH=src python3 -m pytest tests/research/test_ui.py tests/p7_5/test_local_app.py -q` → 19 passed; `PYTHONPATH=src python3 -m pytest -q` → 1027 passed, 1 skipped.
 - Commit pending: `feat(ui): add read-only overview projection`.
+
+## Task 2 — completed
+
+- RED: added assertions for the approved dark palette, grouped Workspace/Learn/System navigation, Local Workspace status, semantic `aria-label`s, and no emoji navigation icons; confirmed the legacy shell failed.
+- GREEN: added the Dark Intelligence token layer, responsive/reduced-motion rules, topbar context, truthful boundary badges, and grouped semantic navigation while preserving route names.
+- Evidence: `PYTHONPATH=src python3 -m pytest tests/p7_5/test_local_app.py -q` → 13 passed; `python3 -m ruff check src tests` → All checks passed; full suite → 1028 passed, 1 skipped.
+- Commit pending: `feat(ui): establish dark intelligence app shell`.
+Task 1: complete (commits cf1042e..f33eeda, tests: env PYTHONPATH=src python3 -m pytest -q → 1027 passed, 1 skipped in 82.84s (0:01:22))

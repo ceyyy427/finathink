@@ -59,6 +59,21 @@ def test_shared_shell_has_product_hierarchy_and_semantic_states() -> None:
     app.close()
 
 
+def test_dark_intelligence_shell_has_grouped_navigation_and_truthful_local_status() -> None:
+    app = LocalApplication(connection=sqlite3.connect(":memory:"))
+    page = app.route("GET", "/")[2]
+    for token in ("#050B18", "#081326", "#8B5CF6", "#38BDF8", "#34D399", ".topbar", ".panel"):
+        assert token in page
+    for label in ("Workspace", "Learn", "System", "Local Workspace", "PAPER-ONLY"):
+        assert label in page
+    assert "aria-label=\"Workspace\"" in page
+    assert "aria-label=\"Learn\"" in page
+    assert "aria-label=\"System\"" in page
+    assert "🧠" not in page and "📊" not in page
+    assert "outline: 3px solid var(--focus)" in page
+    app.close()
+
+
 def test_home_shell_exposes_human_questions_and_workspace_alias() -> None:
     app = LocalApplication(connection=sqlite3.connect(":memory:"))
     home = app.route("GET", "/")[2]
