@@ -55,3 +55,4 @@ Task 2: complete (commits f33eeda..8333511, tests: env PYTHONPATH=src python3 -m
 Task 3: complete (commits 8333511..1d4fdfc, tests: env PYTHONPATH=src python3 -m pytest tests/p7_5/test_local_app.py tests/research/test_ui.py -q → 21 passed in 1.75s)
 Task 4: complete (commits 1d4fdfc..4f7ec3e, tests: bash -lc 'cd frontend && npm test && npm run build' → > node build.mjs)
 Task 5: complete (commits 4f7ec3e..73caa4e, tests: bash -lc 'PYTHONPATH=src python3 -m pytest -q && PYTHONPATH=src python3 -m compileall -q src tests && python3 -m ruff check src tests scripts && python3 scripts/validate_governance.py . && python3 -m pip check && cd frontend && npm test && npm run build' → > node build.mjs)
+Task 6: complete (commits 73caa4e..4f30317, tests: bash -lc 'git diff --check && PYTHONPATH=src python3 -m pytest tests/p7_5/test_local_app.py tests/p7_5/test_e2e.py -q && cd frontend && npm test' → ℹ duration_ms 391.510667)
