@@ -197,7 +197,6 @@ def test_browser_acceptance_real_engine_keyboard_responsive_failures_and_evidenc
             assert reduced_page.locator("[data-finathink-overview]").get_attribute("data-animation") == "reduced"
             reduced_page.screenshot(path=str(artifact_dir / "overview-mobile-reduced-motion.png"), full_page=True)
             reduced.close()
-
             page.goto(f"{base}/settings/data-connections", wait_until="networkidle")
             assert page.locator('input[name="api_key"]').get_attribute("type") == "password"
             assert secret not in page.content()
