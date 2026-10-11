@@ -225,6 +225,16 @@ h3 { font-size: 1rem; }
 .overview-chart { min-height: 210px; display: grid; align-content: center; gap: var(--space-3); padding: var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-sm); background: #060D1D; }
 .overview-chart-bars { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; align-items: end; height: 110px; }
 .overview-chart-bars i { display: block; min-height: 8px; border-radius: 3px 3px 0 0; background: linear-gradient(180deg, var(--evidence), var(--learning)); opacity: .7; }
+.overview-topic-heatmap { display: grid; grid-template-columns: repeat(auto-fit, minmax(88px, 1fr)); gap: 6px; margin-bottom: var(--space-3); }
+.overview-topic-cell { min-height: 54px; display: grid; place-items: center; padding: 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: color-mix(in srgb, var(--evidence) calc(12% + var(--heat, 0%) ), var(--surface-elevated)); color: var(--text-primary); font-size: .78rem; text-align: center; overflow-wrap: anywhere; }
+.overview-topic-cell[data-intensity="1"] { background: rgba(56, 189, 248, .12); }
+.overview-topic-cell[data-intensity="2"] { background: rgba(56, 189, 248, .2); }
+.overview-topic-cell[data-intensity="3"] { background: rgba(56, 189, 248, .3); }
+.overview-topic-cell[data-intensity="4"] { background: rgba(139, 92, 246, .34); }
+.overview-topic-cell[data-intensity="5"] { background: rgba(139, 92, 246, .48); }
+.overview-comparison { margin-top: var(--space-5); }
+.comparison-workspace { display: grid; gap: var(--space-4); }
+.comparison-head { display: flex; justify-content: space-between; gap: var(--space-4); align-items: baseline; border-bottom: 1px solid var(--border); padding-bottom: var(--space-3); }
 .overview-list, .overview-heatmap { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
 .overview-list li, .overview-heatmap li { display: flex; justify-content: space-between; gap: var(--space-3); padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-secondary); }
 .overview-heatmap li { display: grid; grid-template-columns: 1fr auto; }
@@ -893,6 +903,59 @@ class LocalApplication:
         with self._lock:
             return self.repository.export_personal(self.config.session_id)
 
+    @staticmethod
+    def _overview_date(value: Any) -> str | None:
+        """Return a bounded calendar date without exposing raw timestamps."""
+
+        text = str(value or "").strip()
+        candidate = text[:10]
+        if len(candidate) != 10 or candidate[4] != "-" or candidate[7] != "-":
+            return None
+        try:
+            from datetime import date
+
+            date.fromisoformat(candidate)
+        except ValueError:
+            return None
+        return candidate
+
+    def research_comparison(self) -> dict[str, Any]:
+        """Return a descriptive comparison of registered research runs.
+
+        This is intentionally a state/evidence inventory.  It does not rank
+        runs, calculate a quality score, or expose private report contents.
+        """
+
+        from finahinking.research.ui import research_view_model
+
+        runs: list[dict[str, Any]] = []
+        for run_id, entry in sorted(self._research_runs.items()):
+            view_model = research_view_model(entry["state"], entry["manifest"])
+            stage_status = view_model.get("stage_status", {})
+            completed_statuses = {"COMPLETE", "COMPLETED", "READY", "SUCCEEDED", "DONE"}
+            evidence_count = sum(int(item.get("evidence_count", 0)) for item in view_model.get("analysts", ()) if isinstance(item, Mapping))
+            runs.append(
+                {
+                    "run_id": run_id,
+                    "as_of": self._overview_date(view_model.get("as_of")),
+                    "state": str(view_model.get("state", "UNKNOWN")),
+                    "stages_total": len(stage_status),
+                    "stages_completed": sum(str(value).upper() in completed_statuses for value in stage_status.values()),
+                    "analysts": len(view_model.get("analysts", ())),
+                    "evidence_count": evidence_count,
+                    "report_count": len(view_model.get("report_links", {})),
+                    "decision_eligible": bool(view_model.get("decision_eligible", False)),
+                }
+            )
+        return {
+            "schema_version": 1,
+            "mode": "OFFLINE" if self.config.offline else "LOCAL",
+            "paper_only": True,
+            "runs": runs,
+            "basis": ["state", "as_of", "stage completion", "analyst evidence count", "report coverage", "decision eligibility"],
+            "limitations": ["Descriptive run metadata only; no run is ranked or called a winner.", "Registered runs are available only for the current local application session."],
+        }
+
     def overview(self) -> dict[str, Any]:
         """Return a read-only, public-safe projection for the Overview page.
 
@@ -906,18 +969,56 @@ class LocalApplication:
         nodes = [item for item in personal.get("nodes", ()) if isinstance(item, Mapping)]
         history = [item for item in personal.get("history", ()) if isinstance(item, Mapping)]
         mastery = [item for item in personal.get("mastery_evidence", ()) if isinstance(item, Mapping)]
-        activity = [
-            {
-                "kind": "learning",
-                "label": str(item.get("node_type", "saved work")),
-                "status": "RECORDED",
-            }
-            for item in history[-8:]
-        ]
-        learning_activity = [
-            {"outcome": str(item.get("outcome", "UNKNOWN")).upper(), "status": "RECORDED"}
-            for item in mastery[-8:]
-        ]
+        activity = []
+        activity_buckets: dict[str, dict[str, int | str]] = {}
+        topic_buckets: dict[str, dict[str, int | str]] = {}
+        allowed_topic_kinds = {"event", "factor", "knowledge", "learning", "ml", "paper_run", "quant", "research", "strategy"}
+        allowed_event_types = {"completed", "created", "updated", "recorded", "saved", "started"}
+        for item in history[-100:]:
+            date_key = self._overview_date(item.get("occurred_at"))
+            if date_key is None:
+                continue
+            raw_source_kind = str(item.get("source_kind", "research")).strip().lower()
+            source_kind = raw_source_kind if raw_source_kind in allowed_topic_kinds else "research"
+            kind = "learning" if source_kind in {"event", "learning", "knowledge"} else "research"
+            bucket = activity_buckets.setdefault(date_key, {"date": date_key, "count": 0, "learning": 0, "research": 0})
+            bucket["count"] = int(bucket["count"]) + 1
+            bucket[kind] = int(bucket[kind]) + 1
+            topic = source_kind[:48]
+            topic_bucket = topic_buckets.setdefault(topic, {"topic": topic, "count": 0, "last_active": date_key})
+            topic_bucket["count"] = int(topic_bucket["count"]) + 1
+            topic_bucket["last_active"] = max(str(topic_bucket["last_active"]), date_key)
+            raw_event_type = str(item.get("event_type", "recorded")).strip().lower()
+            event_type = raw_event_type if raw_event_type in allowed_event_types else "recorded"
+            activity.append({"timestamp": date_key, "kind": kind, "label": source_kind, "status": event_type.upper()})
+        for item in mastery[-100:]:
+            date_key = self._overview_date(item.get("observed_at"))
+            if date_key is None:
+                continue
+            bucket = activity_buckets.setdefault(date_key, {"date": date_key, "count": 0, "learning": 0, "research": 0})
+            bucket["count"] = int(bucket["count"]) + 1
+            bucket["learning"] = int(bucket["learning"]) + 1
+        learning_buckets: dict[str, dict[str, Any]] = {}
+        for item in mastery[-100:]:
+            date_key = self._overview_date(item.get("observed_at"))
+            if date_key is None:
+                continue
+            bucket = learning_buckets.setdefault(date_key, {"date": date_key, "count": 0, "outcomes": {}})
+            outcome = str(item.get("outcome", "UNKNOWN")).upper()
+            bucket["count"] += 1
+            bucket["outcomes"][outcome] = int(bucket["outcomes"].get(outcome, 0)) + 1
+        research_comparison = self.research_comparison()
+        for run in research_comparison["runs"]:
+            date_key = run.get("as_of")
+            if not date_key:
+                continue
+            bucket = activity_buckets.setdefault(date_key, {"date": date_key, "count": 0, "learning": 0, "research": 0})
+            bucket["count"] = int(bucket["count"]) + 1
+            bucket["research"] = int(bucket["research"]) + 1
+            activity.append({"timestamp": date_key, "kind": "research", "label": "research run", "status": run["state"]})
+        activity_series = [dict(activity_buckets[key]) for key in sorted(activity_buckets)]
+        topics = sorted(topic_buckets.values(), key=lambda item: (-int(item["count"]), str(item["topic"])))[:12]
+        learning_activity = [learning_buckets[key] for key in sorted(learning_buckets)]
         research_states = []
         for entry in self._research_runs.values():
             state = getattr(entry.get("state"), "value", entry.get("state", "UNKNOWN"))
@@ -935,9 +1036,12 @@ class LocalApplication:
                 "research_runs": len(research_states),
             },
             "activity": activity,
-            "topics": [],
+            "activity_series": activity_series,
+            "topics": [dict(item) for item in topics],
+            "topic_heatmap": [dict(item) for item in topics],
             "learning_activity": learning_activity,
             "research_status": {"count": len(research_states), "states": research_states[-8:]},
+            "research_comparison": research_comparison["runs"],
             "limitations": [
                 "Deterministic fixture and offline mode; no live market feed is queried.",
                 "Overview values are descriptive and read-only; no forecast, order, or trade instruction is produced.",
@@ -1025,6 +1129,7 @@ class LocalApplication:
             "/quant": "Quant",
             "/strategy": "Strategy Lab",
             "/research": "Research Workspace",
+            "/research/compare": "Research Comparison",
             "/workbench": "Factor Strategy Workbench",
             "/ml": "ML Lab",
             "/parameter": "Parameter Lab",
@@ -1112,7 +1217,7 @@ class LocalApplication:
     def _nav(self, page: str) -> str:
         names = self._page_names()
         groups = (
-            ("Workspace", "nav-workspace", ("/", "/events", "/explore", "/research", "/workbench", "/workspace")),
+            ("Workspace", "nav-workspace", ("/", "/events", "/explore", "/research", "/research/compare", "/workbench", "/workspace")),
             ("Learn", "nav-learn", ("/knowledge", "/quant", "/strategy", "/ml", "/parameter")),
             ("System", "nav-system", ("/community", "/settings/engines", "/settings/providers", "/settings/data-sources", "/diagnostics")),
         )
@@ -1328,12 +1433,20 @@ class LocalApplication:
             except (TypeError, ValueError) as exc:
                 return 422, "application/json", {"error": str(exc)}
             return 200, "application/json", payload
+        if clean == "/api/research/compare":
+            if method != "GET":
+                return 405, "application/json", {"error": "research comparison is read-only"}
+            return 200, "application/json", self.research_comparison()
         if clean == "/assets/finathink-splash-map.jpg" and method == "GET":
             return 200, "image/jpeg", self.splash_asset()
         if clean == "/assets/finathink-research-splash.jpg" and method == "GET":
             return 200, "image/jpeg", self.research_splash_asset()
         if clean == "/assets/finathink-research.js" and method == "GET":
             return 200, "application/javascript; charset=utf-8", self.research_script_asset()
+        if clean == "/research/compare":
+            if method != "GET":
+                return 405, "application/json", {"error": "research comparison is read-only"}
+            return 200, "text/html; charset=utf-8", self._research_comparison_page_body()
         if clean.startswith("/research/"):
             if method != "GET":
                 return 405, "application/json", {"error": "research routes are read-only"}
@@ -1556,7 +1669,7 @@ class LocalApplication:
                     links=(("/knowledge", "Browse Knowledge"), ("/explore", "Open Explore")),
                 )
             return 200, "text/html; charset=utf-8", self.render_concept_page(concept)
-        if clean in {"/", "/events", "/explore", "/knowledge", "/quant", "/research", "/workbench", "/ml", "/parameter", "/strategy", "/personal", "/workspace", "/community", "/settings/engines", "/settings/providers", "/settings/data-sources", "/diagnostics"}:
+        if clean in {"/", "/events", "/explore", "/knowledge", "/quant", "/research", "/research/compare", "/workbench", "/ml", "/parameter", "/strategy", "/personal", "/workspace", "/community", "/settings/engines", "/settings/providers", "/settings/data-sources", "/diagnostics"}:
             return 200, "text/html; charset=utf-8", self.render_page(clean, query=query)
         if not clean.startswith("/api/"):
             return 404, "text/html; charset=utf-8", self.render_error_page(
@@ -1573,7 +1686,7 @@ class LocalApplication:
         title = names.get(page, "Finathink")
         body = self._page_body(page, query=query)
         inspector = self._page_inspector(page)
-        scripts = ("/assets/finathink-research.js",) if page in {"/", "/research", "/workbench"} else ()
+        scripts = ("/assets/finathink-research.js",) if page in {"/", "/research", "/research/compare", "/workbench"} else ()
         return self.render_shell(active_page, title, body, inspector=inspector, scripts=scripts)
 
     def render_result_page(self, title: str, payload: Any) -> str:
@@ -1901,6 +2014,34 @@ class LocalApplication:
             )
         return ""
 
+    def _research_comparison_page_body(self) -> str:
+        payload = self.research_comparison()
+        rows = "".join(
+            "<tr>"
+            f"<th scope=\"row\">{html.escape(str(item.get('run_id', '—')))}</th>"
+            f"<td>{html.escape(str(item.get('as_of') or '—'))}</td>"
+            f"<td>{html.escape(str(item.get('state', 'UNKNOWN')))}</td>"
+            f"<td>{html.escape(str(item.get('stages_completed', 0)))} / {html.escape(str(item.get('stages_total', 0)))}</td>"
+            f"<td>{html.escape(str(item.get('evidence_count', 0)))}</td>"
+            f"<td>{html.escape(str(item.get('report_count', 0)))}</td>"
+            f"<td>{html.escape('ELIGIBLE' if item.get('decision_eligible') else 'NOT ELIGIBLE')}</td>"
+            "</tr>"
+            for item in payload["runs"]
+            if isinstance(item, Mapping)
+        ) or '<tr><td colspan="7" class="empty-state">No registered research runs are available for comparison.</td></tr>'
+        return (
+            '<div class="status-row">'
+            f'{self._status("OFFLINE", "offline")}{self._status("PAPER-ONLY", "limitation")}{self._status("DESCRIPTIVE", "ready")}'
+            '</div><h1>Research comparison</h1>'
+            '<p class="lede">Compare registered research runs by declared state, stage completion, evidence coverage, and report presence. This workspace does not rank strategies or recommend an action.</p>'
+            '<section class="panel comparison-workspace" data-finathink-comparison data-payload-url="/api/research/compare">'
+            '<div class="comparison-head"><div><h2>Run inventory</h2><p class="source-state">Every value is a server-owned summary of a run already registered in this local session.</p></div><span class="status status--offline">READ-ONLY</span></div>'
+            '<div class="table-wrap"><table aria-label="Research run comparison"><thead><tr><th scope="col">Run</th><th scope="col">As of</th><th scope="col">State</th><th scope="col">Stages</th><th scope="col">Evidence</th><th scope="col">Reports</th><th scope="col">Decision boundary</th></tr></thead><tbody>'
+            f'{rows}</tbody></table></div>'
+            '<p class="meta">Comparison basis: state, as-of, stage completion, analyst evidence count, report coverage, and decision eligibility. No composite score is computed.</p>'
+            '<p class="error-state" data-comparison-error hidden></p></section>'
+        )
+
     def _overview_page_body(self) -> str:
         payload = self.overview()
         metrics = payload["metrics"]
@@ -1910,7 +2051,7 @@ class LocalApplication:
         )
         activity = payload.get("activity") or []
         activity_html = "".join(
-            f'<li><span>{html.escape(str(item.get("label", "Activity")))}</span><strong>{html.escape(str(item.get("status", "RECORDED")))}</strong></li>'
+            f'<li><span>{html.escape(str(item.get("timestamp", "—")))} · {html.escape(str(item.get("label", "Activity")))}</span><strong>{html.escape(str(item.get("status", "RECORDED")))}</strong></li>'
             for item in activity if isinstance(item, Mapping)
         ) or '<li class="empty-state"><span>No saved research activity yet</span><strong>EMPTY</strong></li>'
         topics = payload.get("topics") or []
@@ -1920,26 +2061,43 @@ class LocalApplication:
         ) or '<li class="empty-state"><span>No topics are recorded yet</span><strong>EMPTY</strong></li>'
         learning = payload.get("learning_activity") or []
         heatmap_html = "".join(
-            f'<li><span>{html.escape(str(item.get("outcome", "UNKNOWN")))}</span><strong>{html.escape(str(item.get("status", "RECORDED")))}</strong></li>'
+            f'<li><span>{html.escape(str(item.get("date", "—")))}</span><strong>{html.escape(str(item.get("count", 0)))} checks</strong></li>'
             for item in learning if isinstance(item, Mapping)
         ) or '<li class="empty-state"><span>No learning checks yet</span><strong>EMPTY</strong></li>'
-        bars = '<p class="empty-state">No activity is plotted until a local research or learning record is saved.</p>' if not activity else ''.join('<i style="height:24px" aria-hidden="true"></i>' for _ in activity)
+        activity_series = payload.get("activity_series") or []
+        max_count = max((int(item.get("count", 0)) for item in activity_series if isinstance(item, Mapping)), default=0)
+        bars = '<p class="empty-state">No activity is plotted until a local research or learning record is saved.</p>' if not activity_series else ''.join(
+            f'<i style="height:{max(12, round((int(item.get("count", 0)) / max_count) * 100))}%" title="{html.escape(str(item.get("date", "—")))} · {html.escape(str(item.get("count", 0)))} recorded" aria-label="{html.escape(str(item.get("date", "—")))}: {html.escape(str(item.get("count", 0)))} recorded"></i>'
+            for item in activity_series if isinstance(item, Mapping)
+        )
+        topic_max = max((int(item.get("count", 0)) for item in topics if isinstance(item, Mapping)), default=0)
+        topic_cells = ''.join(
+            f'<span class="overview-topic-cell" data-intensity="{max(1, round((int(item.get("count", 0)) / topic_max) * 5)) if topic_max else 0}" title="{html.escape(str(item.get("topic", "Topic")))}: {html.escape(str(item.get("count", 0)))} recorded">{html.escape(str(item.get("topic", "Topic")))}</span>'
+            for item in topics if isinstance(item, Mapping)
+        ) or '<span class="empty-state">No topics are recorded yet</span>'
+        comparison_rows = ''.join(
+            f'<tr><th scope="row">{html.escape(str(item.get("run_id", "—")))}</th><td>{html.escape(str(item.get("state", "UNKNOWN")))}</td><td>{html.escape(str(item.get("evidence_count", 0)))}</td><td>{html.escape(str(item.get("report_count", 0)))}</td></tr>'
+            for item in payload.get("research_comparison", ()) if isinstance(item, Mapping)
+        ) or '<tr><td colspan="4" class="empty-state">No registered research runs to compare.</td></tr>'
         return (
             f'<section class="overview" data-finathink-overview data-overview-payload-url="/api/overview">'
             f'<header class="overview-header"><div class="overview-header-copy"><div class="status-row">{self._status("OFFLINE", "offline")}{self._status("PAPER-ONLY", "limitation")}</div><h1>Overview</h1><p class="lede">What can I understand today? A calm, evidence-bound view of local research activity.</p></div><div class="overview-meta"><span>As of {html.escape(str(payload.get("as_of", "not attached")))}</span><span>Source: {html.escape(str(payload["provenance"].get("data_mode", "UNKNOWN")))}</span></div></header>'
             f'<section class="metric-grid" aria-label="Overview metrics">{metric_cards}</section>'
             '<section class="overview-grid">'
-            f'<article class="panel overview-region" data-overview-chart><h2>Activity <span>Server projection</span></h2><div class="overview-chart" role="img" aria-label="Saved activity chart; empty when no activity is recorded"><div class="overview-chart-bars">{bars}</div></div><ul class="overview-list" aria-label="Activity text summary">{activity_html}</ul></article>'
-            f'<article class="panel overview-region" data-overview-topics><h2>Topics <span>Recorded only</span></h2><ul class="overview-list" aria-label="Recorded topics">{topic_html}</ul><p class="meta"><a href="/knowledge">Continue learning</a> from the curated local catalog.</p></article>'
+            f'<article class="panel overview-region" data-overview-chart><h2>Activity <span>Daily recorded items</span></h2><div class="overview-chart" role="img" aria-label="Daily saved activity chart; empty when no activity is recorded"><div class="overview-chart-bars" data-overview-activity-series>{bars}</div></div><ul class="overview-list" aria-label="Activity text summary">{activity_html}</ul></article>'
+            f'<article class="panel overview-region" data-overview-topics><h2>Topics <span>Recorded intensity</span></h2><div class="overview-topic-heatmap" aria-label="Recorded topic intensity heatmap">{topic_cells}</div><ul class="overview-list" aria-label="Recorded topics">{topic_html}</ul><p class="meta"><a href="/knowledge">Continue learning</a> from the curated local catalog.</p></article>'
             f'<article class="panel overview-region" data-overview-heatmap><h2>Learning signal <span>Private checks</span></h2><ul class="overview-heatmap" aria-label="Learning activity summary">{heatmap_html}</ul><p class="meta">Learning evidence stays local and is never inferred from browsing.</p></article>'
             '</section>'
             '<section class="section"><div class="section-heading"><h2>Continue where you stopped</h2><span class="meta">Private local continuity</span></div><div class="overview-links"><article class="panel"><h3>Current research</h3><p class="meta">Run a bounded question with uncertainty and provenance.</p><a href="/quant">Open Quant</a></article><article class="panel"><h3>Paper simulation</h3><p class="meta">Inspect validity without live orders.</p><a href="/strategy">Open Strategy Lab</a></article><article class="panel"><h3>Evidence event</h3><p class="meta">Follow the captured source chain.</p><a href="/events">Open Events</a></article></div></section>'
+            f'<section class="panel overview-comparison" data-overview-comparison><div class="section-heading"><h2>Research comparison <span>Descriptive only</span></h2><a class="button-secondary" href="/research/compare">Open workspace</a></div><div class="table-wrap"><table aria-label="Research comparison summary"><thead><tr><th scope="col">Run</th><th scope="col">State</th><th scope="col">Evidence</th><th scope="col">Reports</th></tr></thead><tbody>{comparison_rows}</tbody></table></div><p class="meta">No composite quality score or winner is computed.</p></section>'
             f'<section class="panel"><h2>Boundaries</h2><ul>{"".join(f"<li>{html.escape(str(item))}</li>" for item in payload.get("limitations", ()))}</ul></section>'
             '<template id="legacy-launch-frames" aria-hidden="true"><img src="/assets/finathink-splash-map.jpg" width="1536" height="1024" alt=""><img src="/assets/finathink-research-splash.jpg" width="900" height="900" alt=""></template>'
             '</section>'
         )
 
     def _page_body(self, page: str, *, query: Mapping[str, list[str]] | None = None) -> str:
+        if page == "/research/compare":
+            return self._research_comparison_page_body()
         if page in {"/research", "/workbench", "/ml", "/parameter", "/settings/engines", "/settings/providers", "/settings/data-sources"}:
             return self._p8_2_page_body(page)
         if page == "/":
