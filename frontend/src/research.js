@@ -11,6 +11,7 @@ import { LineChart } from 'echarts/charts';
 import { GridComponent, TooltipComponent } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 import './knowledge.js';
+import { mountOverview } from './overview.js';
 
 echarts.use([LineChart, GridComponent, TooltipComponent, CanvasRenderer]);
 
@@ -548,6 +549,7 @@ export function mountResearch(root, { payload, payloadUrl } = {}) {
 }
 
 if (typeof document !== 'undefined') {
+  document.querySelectorAll('[data-finathink-overview]').forEach((root) => { mountOverview(root).catch(() => {}); });
   document.querySelectorAll('[data-finathink-research]').forEach((root) => { mountResearch(root); });
   document.querySelectorAll('[data-research-run]').forEach((root) => { mountResearchRun(root).catch(() => {}); });
   document.querySelectorAll('[data-research-runtime]').forEach((root) => { mountResearchRuntime(root).catch(() => {}); });

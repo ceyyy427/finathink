@@ -63,3 +63,12 @@ boundary.
 - `tests/research/test_capability_vertical_slice.py`
 - `docs/RESEARCH_CAPABILITY_RELEASE_CHECKLIST.md`
 - `docs/RESEARCH_RUNTIME_GUIDE.md`
+
+## Dark Intelligence Dashboard Phase 1 (2026-10-11)
+
+- [x] `GET /api/overview` provides a versioned, read-only, paper-only projection with explicit provenance and offline limitations.
+- [x] AppShell uses the dark token system, grouped semantic navigation, topbar context, focus styles, responsive layout, and reduced-motion rules.
+- [x] Overview renders server-owned metrics, activity/topics/learning regions, no-data fallbacks, and text-first boundary badges.
+- [x] Existing frontend bundle includes Overview normalization, sensitive-field rejection, reduced-motion state, and keyboard text-summary affordances.
+- [x] Phase 1 UI review is recorded in `docs/reviews/2026-10-11-finathink-dark-dashboard-ui-review.md`.
+- [ ] Full visual regression across external browsers and production data remains `EXTERNAL_UNVERIFIED`; no live provider or trading capability is implied.

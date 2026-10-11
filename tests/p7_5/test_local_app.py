@@ -59,6 +59,38 @@ def test_shared_shell_has_product_hierarchy_and_semantic_states() -> None:
     app.close()
 
 
+def test_dark_intelligence_shell_has_grouped_navigation_and_truthful_local_status() -> None:
+    app = LocalApplication(connection=sqlite3.connect(":memory:"))
+    page = app.route("GET", "/")[2]
+    for token in ("#050B18", "#081326", "#8B5CF6", "#38BDF8", "#34D399", ".topbar", ".panel"):
+        assert token in page
+    for label in ("Workspace", "Learn", "System", "Local Workspace", "PAPER-ONLY"):
+        assert label in page
+    assert "aria-label=\"Workspace\"" in page
+    assert "aria-label=\"Learn\"" in page
+    assert "aria-label=\"System\"" in page
+    assert "🧠" not in page and "📊" not in page
+    assert "outline: 3px solid var(--focus)" in page
+    app.close()
+
+
+def test_overview_dashboard_is_evidence_bound_and_has_no_data_fallbacks() -> None:
+    app = LocalApplication(LocalAppConfig(db_path=":memory:", offline=True), connection=sqlite3.connect(":memory:"))
+    page = app.route("GET", "/")[2]
+    assert 'data-finathink-overview' in page
+    assert 'data-overview-payload-url="/api/overview"' in page
+    assert 'class="overview-header"' in page
+    for label in ("Events", "Saved items", "Learning evidence", "Research runs"):
+        assert label in page
+    for region in ('data-overview-chart', 'data-overview-topics', 'data-overview-heatmap'):
+        assert region in page
+    assert "PAPER-ONLY" in page and "OFFLINE" in page
+    assert "No saved research activity yet" in page
+    assert "No topics are recorded yet" in page
+    assert "api_key" not in page and "prompt" not in page
+    app.close()
+
+
 def test_home_shell_exposes_human_questions_and_workspace_alias() -> None:
     app = LocalApplication(connection=sqlite3.connect(":memory:"))
     home = app.route("GET", "/")[2]
@@ -111,6 +143,36 @@ def test_api_rejects_invalid_payload_without_sql_or_network() -> None:
     assert (status, content_type) == (400, "application/json")
     assert "required" in payload["error"]
     assert json.dumps(app.diagnostics())[0] == "{"
+    app.close()
+
+
+def test_overview_projection_is_versioned_server_owned_and_sample_provenance() -> None:
+    app = LocalApplication(LocalAppConfig(db_path=":memory:", offline=True), connection=sqlite3.connect(":memory:"))
+    status, content_type, payload = app.route("GET", "/api/overview")
+    assert (status, content_type) == (200, "application/json")
+    assert payload["schema_version"] == 1
+    assert payload["mode"] == "OFFLINE"
+    assert payload["paper_only"] is True
+    for field in ("as_of", "metrics", "activity", "topics", "learning_activity", "research_status", "limitations", "provenance"):
+        assert field in payload
+    assert payload["provenance"]["data_mode"] == "SAMPLE"
+    assert payload["provenance"]["source_state"] == "CAPTURED"
+    assert payload["metrics"]["saved_items"] == 0
+    assert payload["topics"] == []
+    assert any("fixture" in str(item).lower() or "offline" in str(item).lower() for item in payload["limitations"])
+    app.close()
+
+
+def test_overview_projection_is_empty_safe_and_rejects_secret_or_path_like_fields() -> None:
+    app = LocalApplication(LocalAppConfig(db_path=":memory:", offline=True), connection=sqlite3.connect(":memory:"))
+    payload = app.overview()
+    serialized = json.dumps(payload, ensure_ascii=False).lower()
+    assert payload["metrics"]["research_runs"] == 0
+    assert payload["metrics"]["learning_items"] == 0
+    assert payload["activity"] == []
+    assert payload["learning_activity"] == []
+    for forbidden in ("api_key", "prompt", "endpoint", "/users/", "\\\\"):
+        assert forbidden not in serialized
     app.close()
 
 
