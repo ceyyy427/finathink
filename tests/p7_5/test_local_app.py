@@ -84,6 +84,10 @@ def test_overview_dashboard_is_evidence_bound_and_has_no_data_fallbacks() -> Non
         assert label in page
     for region in ('data-overview-chart', 'data-overview-topics', 'data-overview-heatmap', 'data-overview-comparison', 'data-overview-activity-series'):
         assert region in page
+    for marker in ('data-overview-loading', 'data-overview-error', 'data-overview-tooltip'):
+        assert marker in page
+    assert '[tabindex="0"]:focus-visible' in page
+    assert 'prefers-reduced-motion' in page
     assert "PAPER-ONLY" in page and "OFFLINE" in page
     assert "No saved research activity yet" in page
     assert "No topics are recorded yet" in page

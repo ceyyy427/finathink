@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { normalizeOverviewPayload, overviewStatus, renderOverview, renderOverviewVisuals } from '../src/overview.js';
+import { mountOverview, normalizeOverviewPayload, overviewStatus, renderOverview, renderOverviewVisuals } from '../src/overview.js';
 
 const payload = {
   schema_version: 1,
@@ -75,4 +75,22 @@ test('renderOverviewVisuals marks real chart, heatmap, and comparison regions re
   assert.equal(topics.dataset.heatmapReady, 'empty');
   assert.equal(heatmap.dataset.heatmapReady, 'empty');
   assert.equal(compare.dataset.comparisonReady, 'empty');
+});
+
+test('mountOverview exposes loading and actionable error states', async () => {
+  const loading = { hidden: true };
+  const error = { hidden: true, textContent: '' };
+  const root = {
+    dataset: {},
+    setAttribute(name, value) { this[name] = value; },
+    querySelector: (selector) => selector === '[data-overview-loading]' ? loading : selector === '[data-overview-error]' ? error : null,
+  };
+  await mountOverview(root, { payload });
+  assert.equal(root.dataset.overviewStatus, 'READY');
+  assert.equal(root['aria-busy'], 'false');
+  assert.equal(loading.hidden, true);
+  const failed = { dataset: {}, setAttribute(name, value) { this[name] = value; }, querySelector: (selector) => selector === '[data-overview-loading]' ? { hidden: true } : selector === '[data-overview-error]' ? error : null };
+  await assert.rejects(() => mountOverview(failed, { payload: { ...payload, schema_version: 99 } }), /schema/);
+  assert.equal(failed.dataset.overviewStatus, 'ERROR');
+  assert.match(error.textContent, /Check the local service/);
 });

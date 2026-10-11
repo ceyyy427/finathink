@@ -343,12 +343,13 @@ _DARK_APP_CSS = """
   --measure: 72ch;
 }
 * { box-sizing: border-box; }
-html { background: var(--background); color: var(--text-primary); }
-body { margin: 0; min-width: 320px; background: var(--background); color: var(--text-primary); font: 15px/1.55 Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+html { background: var(--background); color: var(--text-primary); color-scheme: dark; }
+body { margin: 0; min-width: 320px; overflow-x: hidden; background: var(--background); color: var(--text-primary); font: 15px/1.55 Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; -webkit-tap-highlight-color: rgba(56, 189, 248, .24); }
 a { color: var(--evidence); text-underline-offset: 3px; }
 a:hover { color: #7DD3FC; }
-a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, summary:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, summary:focus-visible, [tabindex="0"]:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
 button, input, textarea, select { font: inherit; }
+button, .button, a { touch-action: manipulation; }
 button, .button { min-height: 44px; border: 1px solid transparent; border-radius: var(--radius-sm); padding: 9px 15px; cursor: pointer; transition: background-color .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease; }
 button, .button-primary { background: var(--learning); color: #fff; }
 button:hover, .button-primary:hover { background: #7C3AED; }
@@ -362,7 +363,7 @@ code, pre { font-family: "Fira Code", ui-monospace, SFMono-Regular, Menlo, Conso
 code { overflow-wrap: anywhere; }
 pre { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; padding: var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-sm); background: #040A15; }
 .skip-link { position: absolute; left: -10000px; top: var(--space-3); z-index: 20; padding: var(--space-2) var(--space-3); background: var(--surface-raised); color: #fff; }
-.skip-link:focus { left: var(--space-3); }
+.skip-link:focus-visible { left: var(--space-3); }
 .app-shell { min-height: 100dvh; display: grid; grid-template-columns: 240px minmax(0, 1fr) 264px; background: var(--background); }
 .sidebar { position: sticky; top: 0; align-self: start; min-height: 100dvh; padding: var(--space-6) var(--space-4); border-right: 1px solid var(--border); background: #060D1D; }
 .brand { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-8); color: var(--text-primary); text-decoration: none; }
@@ -445,7 +446,11 @@ th { color: var(--text-muted); font-size: .78rem; letter-spacing: .06em; text-tr
 .research-chart, .research-sweep { min-height: 240px; width: 100%; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface-elevated); }
 .research-chart { height: clamp(300px, 42vw, 480px); }
 .research-sweep { height: 260px; }
-.research-tooltip, .research-inspector { min-height: 32px; margin-top: var(--space-2); padding: 6px 9px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-elevated); color: var(--text-secondary); font-size: .84rem; font-variant-numeric: tabular-nums; }
+.research-tooltip, .research-inspector, .overview-tooltip { min-height: 32px; margin-top: var(--space-2); padding: 6px 9px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-elevated); color: var(--text-secondary); font-size: .84rem; font-variant-numeric: tabular-nums; }
+.overview-chart-bars i, .overview-topic-cell { cursor: help; }
+.overview-chart-bars i:focus-visible, .overview-topic-cell:focus-visible { outline-offset: 2px; }
+[data-tooltip] { position: relative; }
+[data-tooltip]:hover::after, [data-tooltip]:focus-visible::after { content: attr(data-tooltip); position: absolute; left: 50%; bottom: calc(100% + 8px); z-index: 5; width: max-content; max-width: 220px; padding: 6px 8px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface-raised); color: var(--text-primary); box-shadow: var(--shadow-sm); font-size: .75rem; line-height: 1.3; transform: translateX(-50%); pointer-events: none; }
 .workbench-frame { display: grid; gap: var(--space-4); margin-top: var(--space-5); padding: clamp(18px, 3vw, 28px); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); color: var(--text-primary); }
 .workbench-head { display: flex; justify-content: space-between; gap: var(--space-4); align-items: baseline; border-bottom: 1px solid var(--border); padding-bottom: var(--space-3); }
 .workbench-head h2 { margin: 0; font-weight: 650; }
@@ -481,9 +486,10 @@ th { color: var(--text-muted); font-size: .78rem; letter-spacing: .06em; text-tr
 .knowledge-symbol { padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-elevated); }
 .settings-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
 .footer-note { margin-top: var(--space-8); padding-top: var(--space-4); border-top: 1px solid var(--border); color: var(--text-muted); font-size: .82rem; }
+@media (min-width: 1600px) { .workspace-inner { width: min(100%, 1320px); } .app-shell { grid-template-columns: 256px minmax(0, 1fr) 288px; } }
 @media (max-width: 1180px) { .app-shell { grid-template-columns: 220px minmax(0, 1fr); } .inspector { grid-column: 2; border-top: 1px solid var(--border); border-left: 0; padding-top: var(--space-5); } .inspector-inner { position: static; } }
 @media (max-width: 880px) { .app-shell { display: block; } .sidebar { position: static; min-height: auto; padding: var(--space-4); border-right: 0; border-bottom: 1px solid var(--border); } .brand { margin-bottom: var(--space-4); } .nav-list { display: flex; flex-wrap: wrap; } .nav-section-title, .sidebar-note { display: none; } .workspace { padding: 0 var(--space-4) var(--space-6); } .topbar { align-items: flex-start; flex-direction: column; padding: var(--space-4) 0; margin-bottom: var(--space-6); } .hero, .grid, .research-grid, .settings-grid, .workbench-grid, .workbench-notes { grid-template-columns: 1fr; } .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .overview-header, .overview-grid { display: grid; grid-template-columns: 1fr; align-items: start; } .overview-meta { justify-items: start; } .overview-links { grid-template-columns: 1fr; } .workbench-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } .workbench-metric:nth-child(2n) { border-right: 0; } .stepper { grid-template-columns: 1fr; } .step { min-height: auto; border-top: 0; border-left: 3px solid var(--border); } .step--active { border-left-color: var(--learning); } .knowledge-symbols { grid-template-columns: 1fr; } }
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; } .splash-frame--secondary { display: none; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation: none !important; } .splash-frame--secondary { display: none; } }
 """
 
 
@@ -1931,10 +1937,10 @@ class LocalApplication:
                 '</div><h1>Research workspace</h1>'
                 '<p class="lede">Inspect a normalized market series, its features, events, provenance, and declared parameter experiments in one calm surface. The browser renders server-owned values; it does not calculate them.</p>'
                 '<div class="action-row"><a class="button-primary" href="/workbench">Open Factor Strategy Workbench</a><a class="button-secondary" href="/ml">Open ML Lab</a><a class="button-secondary" href="/parameter">Open Parameter Lab</a><a class="button-secondary" href="/settings/data-sources">Review data sources</a></div>'
-                '<section class="research-workspace" data-finathink-research data-payload-url="/api/research/series">'
+                '<section class="research-workspace" data-finathink-research data-payload-url="/api/research/series" aria-busy="true"><p class="loading-state" data-research-loading aria-live="polite">Loading research workspace…</p>'
                 '<div class="research-toolbar"><div><h2>Price, volume, and evidence</h2><p class="source-state">Crosshair and point selection update the inspector; the fallback table remains available to keyboard users.</p></div><span class="status status--sample">FIXTURE / OFFLINE</span></div>'
                 '<div class="research-panel"><div class="research-chart" data-research-chart role="img" aria-label="Candlestick, volume, and feature overlay chart for the normalized research sample"></div><p class="research-tooltip" data-research-tooltip role="status" aria-live="polite">Hover or focus a point to inspect its canonical values.</p><p class="error-state" data-research-error hidden></p></div>'
-                f'<section class="workbench-frame" data-finathink-workbench data-payload-url="/api/research/workbench"><div class="workbench-head"><div><h2>Factor / strategy workbench</h2><p class="source-state">Signal, capital, risk and execution stay separate. Select a row to inspect the server-owned point.</p></div><span class="status status--offline" data-workbench-status>PAPER-ONLY · OFFLINE</span></div><div class="workbench-metrics">{workbench_metrics}</div><div class="workbench-grid"><div><p class="workbench-inspector" data-workbench-inspector role="status" aria-live="polite">Select a workbench row to inspect its canonical values.</p>{workbench_table}</div><div class="workbench-preview"><h3>Parameter preview</h3><label for="workbench-lookback">Lookback window<input id="workbench-lookback" data-workbench-parameter="lookback" type="range" min="5" max="60" value="20" step="5"></label><p class="field-help" data-workbench-preview>Preview only · not saved and never used to rewrite the frozen run.</p><p class="error-state" data-workbench-error hidden></p></div></div></section>'
+                f'<section class="workbench-frame" data-finathink-workbench data-payload-url="/api/research/workbench" aria-busy="true"><p class="loading-state" data-workbench-loading aria-live="polite">Loading workbench…</p><div class="workbench-head"><div><h2>Factor / strategy workbench</h2><p class="source-state">Signal, capital, risk and execution stay separate. Select a row to inspect the server-owned point.</p></div><span class="status status--offline" data-workbench-status>PAPER-ONLY · OFFLINE</span></div><div class="workbench-metrics">{workbench_metrics}</div><div class="workbench-grid"><div><p class="workbench-inspector" data-workbench-inspector role="status" aria-live="polite">Select a workbench row to inspect its canonical values.</p>{workbench_table}</div><div class="workbench-preview"><h3>Parameter preview</h3><label for="workbench-lookback">Lookback window<input id="workbench-lookback" data-workbench-parameter="lookback" type="range" min="5" max="60" value="20" step="5"></label><p class="field-help" data-workbench-preview>Preview only · not saved and never used to rewrite the frozen run.</p><p class="error-state" data-workbench-error hidden></p></div></div></section>'
                 '<div class="research-grid"><section class="research-panel"><h2>Selected observation</h2><p class="research-inspector" data-research-inspector role="status" aria-live="polite">Select a candle or row to inspect its canonical values.</p><div class="knowledge-context" data-knowledge-context><h3>Learn from this observation</h3><p data-knowledge-context-status>Choose a point to bind a point-in-time explanation.</p><a class="button-secondary" data-knowledge-context-link href="/knowledge/volatility">Teach me this</a></div></section><section class="research-panel"><h2>Declared parameter sweep</h2><div class="research-sweep" data-research-sweep role="img" aria-label="Out-of-sample parameter comparison"></div><p class="field-help">OOS values and multiple-testing context are retained; no winning strategy is named.</p></section></div>'
                 f'<section class="research-panel"><h2>Feature lineage</h2><p class="field-help">Features are computed server-side and linked to the dataset fingerprint; the renderer only displays them.</p><ul class="evidence-list">{feature_cards}</ul></section>'
                 f'<section class="research-panel"><h2>Factor research ledger</h2><p class="field-help">Bounded templates are evaluated on train/validation with T+1 timing. OOS remains hidden until a candidate is explicitly frozen.</p><div class="table-wrap"><table aria-label="Factor research ledger"><thead><tr><th>Candidate</th><th>Expression</th><th>Status</th><th>IC</th><th>OOS</th><th>Admission</th></tr></thead><tbody>{factor_rows}</tbody></table></div><p class="meta">{html.escape(str(factor_research.get("boundary", "paper-only factor evidence")))}</p></section>'
@@ -2067,24 +2073,25 @@ class LocalApplication:
         activity_series = payload.get("activity_series") or []
         max_count = max((int(item.get("count", 0)) for item in activity_series if isinstance(item, Mapping)), default=0)
         bars = '<p class="empty-state">No activity is plotted until a local research or learning record is saved.</p>' if not activity_series else ''.join(
-            f'<i style="height:{max(12, round((int(item.get("count", 0)) / max_count) * 100))}%" title="{html.escape(str(item.get("date", "—")))} · {html.escape(str(item.get("count", 0)))} recorded" aria-label="{html.escape(str(item.get("date", "—")))}: {html.escape(str(item.get("count", 0)))} recorded"></i>'
+            f'<i style="height:{max(12, round((int(item.get("count", 0)) / max_count) * 100))}%" data-tooltip="{html.escape(str(item.get("date", "—")))} · {html.escape(str(item.get("count", 0)))} recorded" title="{html.escape(str(item.get("date", "—")))} · {html.escape(str(item.get("count", 0)))} recorded" aria-label="{html.escape(str(item.get("date", "—")))}: {html.escape(str(item.get("count", 0)))} recorded" tabindex="0"></i>'
             for item in activity_series if isinstance(item, Mapping)
         )
         topic_max = max((int(item.get("count", 0)) for item in topics if isinstance(item, Mapping)), default=0)
         topic_cells = ''.join(
-            f'<span class="overview-topic-cell" data-intensity="{max(1, round((int(item.get("count", 0)) / topic_max) * 5)) if topic_max else 0}" title="{html.escape(str(item.get("topic", "Topic")))}: {html.escape(str(item.get("count", 0)))} recorded">{html.escape(str(item.get("topic", "Topic")))}</span>'
+            f'<span class="overview-topic-cell" data-intensity="{max(1, round((int(item.get("count", 0)) / topic_max) * 5)) if topic_max else 0}" data-tooltip="{html.escape(str(item.get("topic", "Topic")))}: {html.escape(str(item.get("count", 0)))} recorded" title="{html.escape(str(item.get("topic", "Topic")))}: {html.escape(str(item.get("count", 0)))} recorded" tabindex="0">{html.escape(str(item.get("topic", "Topic")))}</span>'
             for item in topics if isinstance(item, Mapping)
-        ) or '<span class="empty-state">No topics are recorded yet</span>'
+        ) or ''
         comparison_rows = ''.join(
             f'<tr><th scope="row">{html.escape(str(item.get("run_id", "—")))}</th><td>{html.escape(str(item.get("state", "UNKNOWN")))}</td><td>{html.escape(str(item.get("evidence_count", 0)))}</td><td>{html.escape(str(item.get("report_count", 0)))}</td></tr>'
             for item in payload.get("research_comparison", ()) if isinstance(item, Mapping)
         ) or '<tr><td colspan="4" class="empty-state">No registered research runs to compare.</td></tr>'
         return (
-            f'<section class="overview" data-finathink-overview data-overview-payload-url="/api/overview">'
+            f'<section class="overview" data-finathink-overview data-overview-payload-url="/api/overview" aria-busy="true">'
+            '<p class="loading-state" data-overview-loading aria-live="polite">Loading overview…</p><p class="error-state" data-overview-error role="alert" aria-live="assertive" hidden></p>'
             f'<header class="overview-header"><div class="overview-header-copy"><div class="status-row">{self._status("OFFLINE", "offline")}{self._status("PAPER-ONLY", "limitation")}</div><h1>Overview</h1><p class="lede">What can I understand today? A calm, evidence-bound view of local research activity.</p></div><div class="overview-meta"><span>As of {html.escape(str(payload.get("as_of", "not attached")))}</span><span>Source: {html.escape(str(payload["provenance"].get("data_mode", "UNKNOWN")))}</span></div></header>'
             f'<section class="metric-grid" aria-label="Overview metrics">{metric_cards}</section>'
             '<section class="overview-grid">'
-            f'<article class="panel overview-region" data-overview-chart><h2>Activity <span>Daily recorded items</span></h2><div class="overview-chart" role="img" aria-label="Daily saved activity chart; empty when no activity is recorded"><div class="overview-chart-bars" data-overview-activity-series>{bars}</div></div><ul class="overview-list" aria-label="Activity text summary">{activity_html}</ul></article>'
+            f'<article class="panel overview-region" data-overview-chart tabindex="0"><h2>Activity <span>Daily recorded items</span></h2><div class="overview-chart" role="img" aria-label="Daily saved activity chart; empty when no activity is recorded"><div class="overview-chart-bars" data-overview-activity-series>{bars}</div></div><p class="overview-tooltip" data-overview-tooltip role="status" aria-live="polite">Focus a bar or topic to inspect recorded values.</p><ul class="overview-list" aria-label="Activity text summary">{activity_html}</ul></article>'
             f'<article class="panel overview-region" data-overview-topics><h2>Topics <span>Recorded intensity</span></h2><div class="overview-topic-heatmap" aria-label="Recorded topic intensity heatmap">{topic_cells}</div><ul class="overview-list" aria-label="Recorded topics">{topic_html}</ul><p class="meta"><a href="/knowledge">Continue learning</a> from the curated local catalog.</p></article>'
             f'<article class="panel overview-region" data-overview-heatmap><h2>Learning signal <span>Private checks</span></h2><ul class="overview-heatmap" aria-label="Learning activity summary">{heatmap_html}</ul><p class="meta">Learning evidence stays local and is never inferred from browsing.</p></article>'
             '</section>'

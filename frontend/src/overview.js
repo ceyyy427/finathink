@@ -92,12 +92,31 @@ function reducedMotion() {
   return typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
+function setHidden(target, hidden) {
+  if (target) target.hidden = hidden;
+}
+
+function bindOverviewTooltips(root) {
+  const live = root?.querySelector?.('[data-overview-tooltip]');
+  if (!live) return;
+  root.querySelectorAll?.('[data-tooltip]').forEach((target) => {
+    if (target.dataset.tooltipBound === 'true') return;
+    const announce = () => { live.textContent = target.dataset.tooltip || ''; };
+    target.addEventListener('mouseenter', announce);
+    target.addEventListener('focus', announce);
+    target.dataset.tooltipBound = 'true';
+  });
+}
+
 export function renderOverview(root, payload) {
   const normalized = normalizeOverviewPayload(payload);
   if (root?.dataset) {
     root.dataset.overviewStatus = overviewStatus(normalized);
     root.dataset.animation = reducedMotion() ? 'reduced' : 'enabled';
+    root.setAttribute?.('aria-busy', 'false');
   }
+  setHidden(root?.querySelector?.('[data-overview-loading]'), true);
+  setHidden(root?.querySelector?.('[data-overview-error]'), true);
   const chart = root?.querySelector?.('[data-overview-chart]');
   if (chart?.dataset) {
     chart.dataset.chartReady = normalized.activity.length ? 'ready' : 'empty';
@@ -107,6 +126,7 @@ export function renderOverview(root, payload) {
   const topics = root?.querySelector?.('[data-overview-topics]');
   if (topics?.dataset) topics.dataset.topicCount = String(normalized.topics.length);
   renderOverviewVisuals(root, normalized);
+  bindOverviewTooltips(root);
   return normalized;
 }
 
@@ -145,14 +165,19 @@ export function renderOverviewVisuals(root, normalized) {
 export function mountOverview(root, { payload, payloadUrl } = {}) {
   if (!root) return Promise.reject(new TypeError('overview root is required'));
   root.dataset.overviewStatus = 'LOADING';
+  root.setAttribute?.('aria-busy', 'true');
+  setHidden(root.querySelector?.('[data-overview-loading]'), false);
+  setHidden(root.querySelector?.('[data-overview-error]'), true);
   const load = payload ? Promise.resolve(payload) : fetch(payloadUrl || root.dataset.overviewPayloadUrl || root.dataset.payloadUrl).then((response) => {
     if (!response.ok) throw new Error(`overview request failed (${response.status})`);
     return response.json();
   });
   return load.then((raw) => renderOverview(root, raw)).catch((error) => {
     root.dataset.overviewStatus = 'ERROR';
+    root.setAttribute?.('aria-busy', 'false');
+    setHidden(root.querySelector?.('[data-overview-loading]'), true);
     const target = root.querySelector?.('[data-overview-error]');
-    if (target) { target.textContent = `Overview unavailable: ${error.message}`; target.hidden = false; }
+    if (target) { target.textContent = `Overview unavailable: ${error.message}. Check the local service and retry.`; target.hidden = false; }
     throw error;
   });
 }

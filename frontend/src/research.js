@@ -342,6 +342,9 @@ export function previewWorkbenchParameter(root, parameter, value) {
 export function renderWorkbench(root, payload) {
   const normalized = normalizeWorkbenchPayload(payload);
   root.dataset.workbenchStatus = 'READY';
+  root.setAttribute?.('aria-busy', 'false');
+  const loading = root.querySelector('[data-workbench-loading]');
+  if (loading) loading.hidden = true;
   root.dataset.workbenchRunId = normalized.run_id;
   const status = root.querySelector('[data-workbench-status]');
   if (status) status.textContent = `PAPER-ONLY · ${normalized.points.length} point(s) · render-only`;
@@ -371,15 +374,29 @@ export function renderWorkbench(root, payload) {
 }
 
 export function mountWorkbench(root, { payload, payloadUrl } = {}) {
-  if (root) root.dataset.workbenchStatus = 'LOADING';
+  if (root) {
+    root.dataset.workbenchStatus = 'LOADING';
+    root.setAttribute?.('aria-busy', 'true');
+    const loading = root.querySelector('[data-workbench-loading]');
+    if (loading) loading.hidden = false;
+  }
   const load = payload ? Promise.resolve(payload) : fetch(payloadUrl || root.dataset.payloadUrl).then((response) => {
     if (!response.ok) throw new Error(`workbench request failed (${response.status})`);
     return response.json();
   });
-  return load.then((raw) => renderWorkbench(root, raw)).catch((error) => {
+  return load.then((raw) => {
+    const result = renderWorkbench(root, raw);
+    root.setAttribute?.('aria-busy', 'false');
+    const loading = root.querySelector('[data-workbench-loading]');
+    if (loading) loading.hidden = true;
+    return result;
+  }).catch((error) => {
     if (root) root.dataset.workbenchStatus = 'ERROR';
+    root?.setAttribute?.('aria-busy', 'false');
+    const loading = root?.querySelector('[data-workbench-loading]');
+    if (loading) loading.hidden = true;
     const target = root?.querySelector('[data-workbench-error]');
-    if (target) { target.textContent = `Workbench unavailable: ${error.message}`; target.hidden = false; }
+    if (target) { target.textContent = `Workbench unavailable: ${error.message}. Check the local service and retry.`; target.hidden = false; }
     throw error;
   });
 }
@@ -493,12 +510,19 @@ function renderSweep(root, sweep) {
 
 export function mountResearch(root, { payload, payloadUrl } = {}) {
   if (root._finathinkCleanup) root._finathinkCleanup();
+  root.dataset.researchStatus = 'LOADING';
+  root.setAttribute?.('aria-busy', 'true');
+  const loading = root.querySelector('[data-research-loading]');
+  if (loading) loading.hidden = false;
   const load = payload ? Promise.resolve(payload) : fetch(payloadUrl || root.dataset.payloadUrl).then((response) => {
     if (!response.ok) throw new Error(`research payload request failed (${response.status})`);
     return response.json();
   });
   return load.then((raw) => {
     const normalized = normalizePayload(raw);
+    root.dataset.researchStatus = 'READY';
+    root.setAttribute?.('aria-busy', 'false');
+    if (loading) loading.hidden = true;
     const workbenchRoot = root.querySelector('[data-finathink-workbench]');
     if (workbenchRoot && normalized.workbench) renderWorkbench(workbenchRoot, normalized.workbench);
     const chartContainer = root.querySelector('[data-research-chart]');
@@ -540,8 +564,11 @@ export function mountResearch(root, { payload, payloadUrl } = {}) {
     };
     return normalized;
   }).catch((error) => {
+    root.dataset.researchStatus = 'ERROR';
+    root.setAttribute?.('aria-busy', 'false');
+    if (loading) loading.hidden = true;
     const target = root.querySelector('[data-research-error]') || root;
-    target.textContent = `Research visualization unavailable: ${error.message}`;
+    target.textContent = `Research visualization unavailable: ${error.message}. Check the local service and retry.`;
     target.hidden = false;
     target.setAttribute('role', 'alert');
     throw error;

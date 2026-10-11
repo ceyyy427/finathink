@@ -173,7 +173,7 @@ def test_browser_acceptance_real_engine_keyboard_responsive_failures_and_evidenc
             (artifact_dir / "no-js-failed-mobile.html").write_text(page.content(), encoding="utf-8")
             no_js.close()
 
-            context = browser.new_context(viewport={"width": 1440, "height": 1000}, device_scale_factor=1)
+            context = browser.new_context(viewport={"width": 1440, "height": 900}, device_scale_factor=1)
             page = context.new_page()
             page.on("pageerror", lambda error: browser_errors.append(f"pageerror:{error}"))
             page.on("console", lambda msg: browser_errors.append(f"console:{msg.text}") if msg.type == "error" else None)
@@ -182,8 +182,25 @@ def test_browser_acceptance_real_engine_keyboard_responsive_failures_and_evidenc
             assert page.get_by_text("Overview", exact=True).count() >= 1
             assert page.get_by_text("PAPER-ONLY", exact=True).count() >= 1
             assert page.locator("body").evaluate("el => el.scrollWidth <= window.innerWidth")
+            assert page.locator("[data-finathink-overview]").get_attribute("aria-busy") == "false"
+            assert page.locator("[data-overview-tooltip]").get_attribute("aria-live") == "polite"
+            navigation_timing = page.evaluate("""() => {
+                const entry = performance.getEntriesByType('navigation')[0];
+                return { domContentLoaded: entry ? entry.domContentLoadedEventEnd : 0, resourceCount: performance.getEntriesByType('resource').length };
+            }""")
+            assert navigation_timing["domContentLoaded"] < 5000
+            assert navigation_timing["resourceCount"] < 40
+            page.locator("[data-overview-chart]").focus()
+            assert page.locator(":focus").get_attribute("data-overview-chart") == ""
             page.screenshot(path=str(artifact_dir / "overview-desktop.png"), full_page=True)
             (artifact_dir / "overview-desktop.html").write_text(page.content(), encoding="utf-8")
+
+            wide = browser.new_context(viewport={"width": 1920, "height": 1080}, device_scale_factor=1)
+            wide_page = wide.new_page()
+            wide_page.goto(f"{base}/", wait_until="networkidle")
+            assert wide_page.locator("body").evaluate("el => el.scrollWidth <= window.innerWidth")
+            wide_page.screenshot(path=str(artifact_dir / "overview-wide-1920.png"), full_page=True)
+            wide.close()
 
             for route in ("/research", "/knowledge", "/quant"):
                 page.goto(f"{base}{route}", wait_until="networkidle")
