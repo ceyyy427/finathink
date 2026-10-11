@@ -74,6 +74,23 @@ def test_dark_intelligence_shell_has_grouped_navigation_and_truthful_local_statu
     app.close()
 
 
+def test_overview_dashboard_is_evidence_bound_and_has_no_data_fallbacks() -> None:
+    app = LocalApplication(LocalAppConfig(db_path=":memory:", offline=True), connection=sqlite3.connect(":memory:"))
+    page = app.route("GET", "/")[2]
+    assert 'data-finathink-overview' in page
+    assert 'data-overview-payload-url="/api/overview"' in page
+    assert 'class="overview-header"' in page
+    for label in ("Events", "Saved items", "Learning evidence", "Research runs"):
+        assert label in page
+    for region in ('data-overview-chart', 'data-overview-topics', 'data-overview-heatmap'):
+        assert region in page
+    assert "PAPER-ONLY" in page and "OFFLINE" in page
+    assert "No saved research activity yet" in page
+    assert "No topics are recorded yet" in page
+    assert "api_key" not in page and "prompt" not in page
+    app.close()
+
+
 def test_home_shell_exposes_human_questions_and_workspace_alias() -> None:
     app = LocalApplication(connection=sqlite3.connect(":memory:"))
     home = app.route("GET", "/")[2]

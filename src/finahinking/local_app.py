@@ -210,6 +210,24 @@ h3 { font-size: 1rem; }
 .metric { min-width: 120px; padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-elevated); }
 .metric-value { display: block; font-variant-numeric: tabular-nums; font-size: 1.28rem; font-weight: 800; }
 .metric-label { display: block; color: var(--text-muted); font-size: .76rem; }
+.overview-header { display: flex; justify-content: space-between; gap: var(--space-6); align-items: flex-end; margin-bottom: var(--space-6); }
+.overview-header h1 { margin-bottom: var(--space-2); }
+.overview-header-copy { min-width: 0; }
+.overview-meta { display: grid; justify-items: end; gap: var(--space-2); color: var(--text-muted); font-size: .82rem; }
+.metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3); margin-bottom: var(--space-6); }
+.metric-card { min-width: 0; padding: var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); box-shadow: var(--shadow-sm); }
+.metric-card .metric-value { font-size: 1.7rem; color: var(--text-primary); }
+.overview-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(280px, .8fr); gap: var(--space-4); }
+.overview-region { min-width: 0; }
+.overview-region h2 { display: flex; justify-content: space-between; gap: var(--space-3); align-items: baseline; }
+.overview-region h2 span { color: var(--text-muted); font-size: .72rem; font-weight: 500; }
+.overview-chart { min-height: 210px; display: grid; align-content: center; gap: var(--space-3); padding: var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-sm); background: #060D1D; }
+.overview-chart-bars { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; align-items: end; height: 110px; }
+.overview-chart-bars i { display: block; min-height: 8px; border-radius: 3px 3px 0 0; background: linear-gradient(180deg, var(--evidence), var(--learning)); opacity: .7; }
+.overview-list, .overview-heatmap { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.overview-list li, .overview-heatmap li { display: flex; justify-content: space-between; gap: var(--space-3); padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-secondary); }
+.overview-heatmap li { display: grid; grid-template-columns: 1fr auto; }
+.overview-links { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); }
 .table-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
 th, td { padding: 9px 10px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
@@ -419,6 +437,24 @@ th { color: var(--text-muted); font-size: .78rem; letter-spacing: .06em; text-tr
 .workbench-frame { display: grid; gap: var(--space-4); margin-top: var(--space-5); padding: clamp(18px, 3vw, 28px); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); color: var(--text-primary); }
 .workbench-head { display: flex; justify-content: space-between; gap: var(--space-4); align-items: baseline; border-bottom: 1px solid var(--border); padding-bottom: var(--space-3); }
 .workbench-head h2 { margin: 0; font-weight: 650; }
+.overview-header { display: flex; justify-content: space-between; gap: var(--space-6); align-items: flex-end; margin-bottom: var(--space-6); }
+.overview-header h1 { margin-bottom: var(--space-2); }
+.overview-header-copy { min-width: 0; }
+.overview-meta { display: grid; justify-items: end; gap: var(--space-2); color: var(--text-muted); font-size: .82rem; }
+.metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3); margin-bottom: var(--space-6); }
+.metric-card { min-width: 0; padding: var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); box-shadow: var(--shadow-sm); }
+.metric-card .metric-value { font-size: 1.7rem; color: var(--text-primary); }
+.overview-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(280px, .8fr); gap: var(--space-4); }
+.overview-region { min-width: 0; }
+.overview-region h2 { display: flex; justify-content: space-between; gap: var(--space-3); align-items: baseline; }
+.overview-region h2 span { color: var(--text-muted); font-size: .72rem; font-weight: 500; }
+.overview-chart { min-height: 210px; display: grid; align-content: center; gap: var(--space-3); padding: var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-sm); background: #060D1D; }
+.overview-chart-bars { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; align-items: end; height: 110px; }
+.overview-chart-bars i { display: block; min-height: 8px; border-radius: 3px 3px 0 0; background: linear-gradient(180deg, var(--evidence), var(--learning)); opacity: .7; }
+.overview-list, .overview-heatmap { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.overview-list li, .overview-heatmap li { display: flex; justify-content: space-between; gap: var(--space-3); padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-secondary); }
+.overview-heatmap li { display: grid; grid-template-columns: 1fr auto; }
+.overview-links { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); }
 .workbench-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
 .workbench-metric { min-height: 76px; padding: var(--space-3); border-right: 1px solid var(--border); }
 .workbench-metric:last-child { border-right: 0; }
@@ -434,7 +470,7 @@ th { color: var(--text-muted); font-size: .78rem; letter-spacing: .06em; text-tr
 .settings-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
 .footer-note { margin-top: var(--space-8); padding-top: var(--space-4); border-top: 1px solid var(--border); color: var(--text-muted); font-size: .82rem; }
 @media (max-width: 1180px) { .app-shell { grid-template-columns: 220px minmax(0, 1fr); } .inspector { grid-column: 2; border-top: 1px solid var(--border); border-left: 0; padding-top: var(--space-5); } .inspector-inner { position: static; } }
-@media (max-width: 880px) { .app-shell { display: block; } .sidebar { position: static; min-height: auto; padding: var(--space-4); border-right: 0; border-bottom: 1px solid var(--border); } .brand { margin-bottom: var(--space-4); } .nav-list { display: flex; flex-wrap: wrap; } .nav-section-title, .sidebar-note { display: none; } .workspace { padding: 0 var(--space-4) var(--space-6); } .topbar { align-items: flex-start; flex-direction: column; padding: var(--space-4) 0; margin-bottom: var(--space-6); } .hero, .grid, .research-grid, .settings-grid, .workbench-grid, .workbench-notes { grid-template-columns: 1fr; } .workbench-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } .workbench-metric:nth-child(2n) { border-right: 0; } .stepper { grid-template-columns: 1fr; } .step { min-height: auto; border-top: 0; border-left: 3px solid var(--border); } .step--active { border-left-color: var(--learning); } .knowledge-symbols { grid-template-columns: 1fr; } }
+@media (max-width: 880px) { .app-shell { display: block; } .sidebar { position: static; min-height: auto; padding: var(--space-4); border-right: 0; border-bottom: 1px solid var(--border); } .brand { margin-bottom: var(--space-4); } .nav-list { display: flex; flex-wrap: wrap; } .nav-section-title, .sidebar-note { display: none; } .workspace { padding: 0 var(--space-4) var(--space-6); } .topbar { align-items: flex-start; flex-direction: column; padding: var(--space-4) 0; margin-bottom: var(--space-6); } .hero, .grid, .research-grid, .settings-grid, .workbench-grid, .workbench-notes { grid-template-columns: 1fr; } .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .overview-header, .overview-grid { display: grid; grid-template-columns: 1fr; align-items: start; } .overview-meta { justify-items: start; } .overview-links { grid-template-columns: 1fr; } .workbench-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } .workbench-metric:nth-child(2n) { border-right: 0; } .stepper { grid-template-columns: 1fr; } .step { min-height: auto; border-top: 0; border-left: 3px solid var(--border); } .step--active { border-left-color: var(--learning); } .knowledge-symbols { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; } .splash-frame--secondary { display: none; } }
 """
 
@@ -1863,17 +1899,49 @@ class LocalApplication:
             )
         return ""
 
+    def _overview_page_body(self) -> str:
+        payload = self.overview()
+        metrics = payload["metrics"]
+        metric_cards = "".join(
+            f'<article class="metric-card"><span class="metric-value">{html.escape(str(metrics.get(key, 0)))}</span><span class="metric-label">{html.escape(label)}</span></article>'
+            for key, label in (("sample_events", "Events"), ("saved_items", "Saved items"), ("learning_items", "Learning evidence"), ("research_runs", "Research runs"))
+        )
+        activity = payload.get("activity") or []
+        activity_html = "".join(
+            f'<li><span>{html.escape(str(item.get("label", "Activity")))}</span><strong>{html.escape(str(item.get("status", "RECORDED")))}</strong></li>'
+            for item in activity if isinstance(item, Mapping)
+        ) or '<li class="empty-state"><span>No saved research activity yet</span><strong>EMPTY</strong></li>'
+        topics = payload.get("topics") or []
+        topic_html = "".join(
+            f'<li><span>{html.escape(str(item.get("label", item.get("topic", "Topic"))))}</span><strong>{html.escape(str(item.get("count", 0)))}</strong></li>'
+            for item in topics if isinstance(item, Mapping)
+        ) or '<li class="empty-state"><span>No topics are recorded yet</span><strong>EMPTY</strong></li>'
+        learning = payload.get("learning_activity") or []
+        heatmap_html = "".join(
+            f'<li><span>{html.escape(str(item.get("outcome", "UNKNOWN")))}</span><strong>{html.escape(str(item.get("status", "RECORDED")))}</strong></li>'
+            for item in learning if isinstance(item, Mapping)
+        ) or '<li class="empty-state"><span>No learning checks yet</span><strong>EMPTY</strong></li>'
+        bars = "".join('<i style="height:8px" aria-hidden="true"></i>' for _ in range(8))
+        return (
+            f'<section class="overview" data-finathink-overview data-overview-payload-url="/api/overview">'
+            f'<header class="overview-header"><div class="overview-header-copy"><div class="status-row">{self._status("OFFLINE", "offline")}{self._status("PAPER-ONLY", "limitation")}</div><h1>Overview</h1><p class="lede">What can I understand today? A calm, evidence-bound view of local research activity.</p></div><div class="overview-meta"><span>As of {html.escape(str(payload.get("as_of", "not attached")))}</span><span>Source: {html.escape(str(payload["provenance"].get("data_mode", "UNKNOWN")))}</span></div></header>'
+            f'<section class="metric-grid" aria-label="Overview metrics">{metric_cards}</section>'
+            '<section class="overview-grid">'
+            f'<article class="panel overview-region" data-overview-chart><h2>Activity <span>Server projection</span></h2><div class="overview-chart" role="img" aria-label="Saved activity chart; empty when no activity is recorded"><div class="overview-chart-bars">{bars}</div><p class="meta">No activity is plotted until a local research or learning record is saved.</p></div><ul class="overview-list" aria-label="Activity text summary">{activity_html}</ul></article>'
+            f'<article class="panel overview-region" data-overview-topics><h2>Topics <span>Recorded only</span></h2><ul class="overview-list" aria-label="Recorded topics">{topic_html}</ul><p class="meta"><a href="/knowledge">Continue learning</a> from the curated local catalog.</p></article>'
+            f'<article class="panel overview-region" data-overview-heatmap><h2>Learning signal <span>Private checks</span></h2><ul class="overview-heatmap" aria-label="Learning activity summary">{heatmap_html}</ul><p class="meta">Learning evidence stays local and is never inferred from browsing.</p></article>'
+            '</section>'
+            '<section class="section"><div class="section-heading"><h2>Continue where you stopped</h2><span class="meta">Private local continuity</span></div><div class="overview-links"><article class="panel"><h3>Current research</h3><p class="meta">Run a bounded question with uncertainty and provenance.</p><a href="/quant">Open Quant</a></article><article class="panel"><h3>Paper simulation</h3><p class="meta">Inspect validity without live orders.</p><a href="/strategy">Open Strategy Lab</a></article><article class="panel"><h3>Evidence event</h3><p class="meta">Follow the captured source chain.</p><a href="/events">Open Events</a></article></div></section>'
+            f'<section class="panel"><h2>Boundaries</h2><ul>{"".join(f"<li>{html.escape(str(item))}</li>" for item in payload.get("limitations", ()))}</ul></section>'
+            '<template id="legacy-launch-frames" aria-hidden="true"><img src="/assets/finathink-splash-map.jpg" alt=""><img src="/assets/finathink-research-splash.jpg" alt=""></template>'
+            '</section>'
+        )
+
     def _page_body(self, page: str, *, query: Mapping[str, list[str]] | None = None) -> str:
         if page in {"/research", "/workbench", "/ml", "/parameter", "/settings/engines", "/settings/providers", "/settings/data-sources"}:
             return self._p8_2_page_body(page)
         if page == "/":
-            return (
-                '<section class="hero"><div class="hero-copy"><div class="status-row">'
-                f'{self._status("READY", "ready")}{self._status("SAMPLE", "sample")}{self._status("OFFLINE", "offline")}'
-                '</div><h1>Understand today. Think tomorrow.</h1><p class="lede">Finathink turns financial events into evidence-bound learning, then lets you test a question with transparent math and paper-only research.</p><div class="action-row"><a class="button-primary" href="/events">Start with today’s event</a><a class="button-secondary" href="/explore">Explore a question</a></div></div><div class="hero-art"><div class="splash-stage" aria-label="Finathink launch frames"><img class="splash-frame" src="/assets/finathink-splash-map.jpg" width="1536" height="1024" loading="eager" decoding="async" alt="Finathink map connecting real-world events, knowledge, quantitative thinking, personal learning, trust and evidence, strategy research, and open extension points"><img class="splash-frame splash-frame--secondary" src="/assets/finathink-research-splash.jpg" width="900" height="900" loading="lazy" decoding="async" alt="" aria-hidden="true"></div><p class="meta">Launch map · static frames with a restrained gradient transition · <a href="/events">Enter the real product journey</a></p></div></section>'
-                '<section class="section"><div class="section-heading"><h2>What can I understand today?</h2><span class="meta">One calm path from event to evidence</span></div><div class="grid"><article class="card card--evidence"><h3>Today / Events</h3><p>Start with a captured CPI release, see what changed, and inspect the source before interpreting it.</p><a href="/events">Open Events →</a></article><article class="card"><h3>Continue learning</h3><p>Move from intuition to equation, derivation, code, finance, quant, strategy role, and current context.</p><a href="/knowledge">Open Knowledge →</a></article><article class="card"><h3>Current research</h3><p>Ask a bounded quant question or formalize a strategy idea with uncertainty and provenance visible.</p><a href="/quant">Open Quant →</a></article><article class="card"><h3>Paper simulation</h3><p>Backtest, check OOS validity, compare to paper state, and keep live execution unavailable.</p><a href="/strategy">Open Strategy Lab →</a></article></div></section>'
-                '<section class="section"><div class="section-heading"><h2>Continue where you stopped</h2><span class="meta">Private local continuity</span></div><div class="card card--quiet"><p>Reopen <strong>Workspace</strong> to find saved events, research runs, learning evidence, and exports by human-readable names.</p><a class="button-secondary" href="/workspace">Open Workspace</a></div></section>'
-            )
+            return self._overview_page_body()
         if page == "/events":
             event = self.event()
             claims = event.get("claims", []) or []

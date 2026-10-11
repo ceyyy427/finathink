@@ -21,4 +21,12 @@
 - GREEN: added the Dark Intelligence token layer, responsive/reduced-motion rules, topbar context, truthful boundary badges, and grouped semantic navigation while preserving route names.
 - Evidence: `PYTHONPATH=src python3 -m pytest tests/p7_5/test_local_app.py -q` → 13 passed; `python3 -m ruff check src tests` → All checks passed; full suite → 1028 passed, 1 skipped.
 - Commit pending: `feat(ui): establish dark intelligence app shell`.
+
+## Task 3 — completed
+
+- RED: added Overview markup assertions for the versioned payload URL, four metric cards, activity/topics/heatmap regions, truthful boundaries, empty states, and secret-like field absence.
+- GREEN: replaced the legacy home Hero with server-rendered Overview markup sourced from `LocalApplication.overview()`, preserving no-JavaScript text fallbacks and existing route links.
+- Evidence: `PYTHONPATH=src python3 -m pytest tests/p7_5/test_local_app.py tests/research/test_ui.py -q` → 21 passed; full suite → 1029 passed, 1 skipped.
+- Commit pending: `feat(ui): render evidence bound overview dashboard`.
 Task 1: complete (commits cf1042e..f33eeda, tests: env PYTHONPATH=src python3 -m pytest -q → 1027 passed, 1 skipped in 82.84s (0:01:22))
+Task 2: complete (commits f33eeda..8333511, tests: env PYTHONPATH=src python3 -m pytest tests/p7_5/test_local_app.py -q → 13 passed in 0.89s)
