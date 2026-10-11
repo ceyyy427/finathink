@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { normalizeOverviewPayload, overviewStatus, renderOverview } from '../src/overview.js';
+import { normalizeOverviewPayload, overviewStatus, renderOverview, renderOverviewVisuals } from '../src/overview.js';
 
 const payload = {
   schema_version: 1,
@@ -18,6 +18,8 @@ const payload = {
   research_status: { count: 0, states: [] },
   limitations: ['fixture only'],
   provenance: { data_mode: 'SAMPLE', source_state: 'CAPTURED', source_id: 'bls' },
+  activity_series: [{ date: '2026-10-01', count: 2, learning: 1, research: 1 }],
+  research_comparison: [],
 };
 
 test('normalizeOverviewPayload preserves server metrics and chronological activity', () => {
@@ -26,17 +28,19 @@ test('normalizeOverviewPayload preserves server metrics and chronological activi
   assert.deepEqual(normalized.activity.map((item) => item.timestamp), ['2026-10-01', '2026-10-02']);
   assert.deepEqual(normalized.topics, []);
   assert.equal(normalized.paper_only, true);
+  assert.deepEqual(normalized.activity_series[0].count, 2);
 });
 
 test('normalizeOverviewPayload rejects invalid boundaries and public secrets or paths', () => {
   assert.throws(() => normalizeOverviewPayload({ ...payload, paper_only: false }), /boundary/i);
   assert.throws(() => normalizeOverviewPayload({ ...payload, provenance: { api_key: 'hidden' } }), /unsafe/i);
   assert.throws(() => normalizeOverviewPayload({ ...payload, limitations: ['/Users/mac/private.sqlite3'] }), /unsafe/i);
+  assert.throws(() => normalizeOverviewPayload({ ...payload, topics: [{ topic: 'quant', count: -1 }] }), /count/i);
 });
 
 test('overviewStatus distinguishes loading, empty, ready, blocked, and error states', () => {
   assert.equal(overviewStatus(null), 'LOADING');
-  assert.equal(overviewStatus(normalizeOverviewPayload({ ...payload, metrics: { sample_events: 0, saved_items: 0, learning_items: 0, research_runs: 0 }, activity: [], topics: [], learning_activity: [] })), 'EMPTY');
+  assert.equal(overviewStatus(normalizeOverviewPayload({ ...payload, metrics: { sample_events: 0, saved_items: 0, learning_items: 0, research_runs: 0 }, activity: [], activity_series: [], topics: [], learning_activity: [], research_comparison: [] })), 'EMPTY');
   assert.equal(overviewStatus(normalizeOverviewPayload(payload)), 'READY');
   assert.equal(overviewStatus(null, new Error('offline')), 'ERROR');
 });
@@ -50,4 +54,25 @@ test('renderOverview exposes reduced-motion and keyboard text-summary affordance
   assert.equal(chart.tabindex, '0');
   assert.match(chart['aria-label'], /text summary/i);
   delete globalThis.window;
+});
+
+test('renderOverviewVisuals marks real chart, heatmap, and comparison regions ready', () => {
+  const chart = { dataset: {}, querySelector: () => null };
+  const topics = { dataset: {} };
+  const heatmap = { dataset: {} };
+  const compare = { dataset: {} };
+  const root = {
+    dataset: {},
+    querySelector: (selector) => ({
+      '[data-overview-chart]': chart,
+      '[data-overview-topics]': topics,
+      '[data-overview-heatmap]': heatmap,
+      '[data-overview-comparison]': compare,
+    }[selector] || null),
+  };
+  renderOverviewVisuals(root, normalizeOverviewPayload(payload));
+  assert.equal(chart.dataset.chartReady, 'ready');
+  assert.equal(topics.dataset.heatmapReady, 'empty');
+  assert.equal(heatmap.dataset.heatmapReady, 'empty');
+  assert.equal(compare.dataset.comparisonReady, 'empty');
 });

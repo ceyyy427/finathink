@@ -82,12 +82,13 @@ def test_overview_dashboard_is_evidence_bound_and_has_no_data_fallbacks() -> Non
     assert 'class="overview-header"' in page
     for label in ("Events", "Saved items", "Learning evidence", "Research runs"):
         assert label in page
-    for region in ('data-overview-chart', 'data-overview-topics', 'data-overview-heatmap'):
+    for region in ('data-overview-chart', 'data-overview-topics', 'data-overview-heatmap', 'data-overview-comparison', 'data-overview-activity-series'):
         assert region in page
     assert "PAPER-ONLY" in page and "OFFLINE" in page
     assert "No saved research activity yet" in page
     assert "No topics are recorded yet" in page
     assert "api_key" not in page and "prompt" not in page
+    assert "/research/compare" in page
     app.close()
 
 
@@ -173,6 +174,49 @@ def test_overview_projection_is_empty_safe_and_rejects_secret_or_path_like_field
     assert payload["learning_activity"] == []
     for forbidden in ("api_key", "prompt", "endpoint", "/users/", "\\\\"):
         assert forbidden not in serialized
+    app.close()
+
+
+def test_overview_projection_aggregates_real_activity_topics_and_learning_dates() -> None:
+    from finahinking.p7.models import MasteryEvidence, PersonalNode
+
+    app = LocalApplication(LocalAppConfig(db_path=":memory:", offline=True), connection=sqlite3.connect(":memory:"))
+    app.repository.save_node(app.config.session_id, PersonalNode("concept-vol", "concept", "Volatility", {}))
+    app.repository.save_mastery_evidence(
+        app.config.session_id,
+        MasteryEvidence("evidence-vol-1", "concept-vol", "quiz_response", "knowledge:volatility:q1", "correct", "2026-10-03T09:00:00+00:00"),
+    )
+    app.repository.save_history_entry(
+        app.config.session_id,
+        history_id="history-1",
+        source_kind="quant",
+        source_id="quant-1",
+        source_fingerprint="a" * 64,
+        event_type="completed",
+        title="Quant research",
+        occurred_at="2026-10-03T10:00:00+00:00",
+    )
+    payload = app.overview()
+    assert payload["activity_series"] == [{"date": "2026-10-03", "count": 2, "learning": 1, "research": 1}]
+    assert payload["topics"] == [{"topic": "quant", "count": 1, "last_active": "2026-10-03"}]
+    assert payload["learning_activity"] == [{"date": "2026-10-03", "count": 1, "outcomes": {"CORRECT": 1}}]
+    serialized = json.dumps(payload, ensure_ascii=False).lower()
+    assert "volatility" not in serialized
+    app.close()
+
+
+def test_research_comparison_projection_is_empty_safe_and_route_is_read_only() -> None:
+    app = LocalApplication(LocalAppConfig(db_path=":memory:", offline=True), connection=sqlite3.connect(":memory:"))
+    status, content_type, payload = app.route("GET", "/api/research/compare")
+    assert (status, content_type) == (200, "application/json")
+    assert payload["schema_version"] == 1
+    assert payload["runs"] == []
+    status, content_type, page = app.route("GET", "/research/compare")
+    assert status == 200
+    assert content_type.startswith("text/html")
+    assert "Research comparison" in page
+    assert "No registered research runs" in page
+    assert app.route("POST", "/research/compare")[0] == 405
     app.close()
 
 
