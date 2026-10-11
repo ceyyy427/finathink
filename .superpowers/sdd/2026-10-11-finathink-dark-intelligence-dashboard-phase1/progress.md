@@ -28,5 +28,13 @@
 - GREEN: replaced the legacy home Hero with server-rendered Overview markup sourced from `LocalApplication.overview()`, preserving no-JavaScript text fallbacks and existing route links.
 - Evidence: `PYTHONPATH=src python3 -m pytest tests/p7_5/test_local_app.py tests/research/test_ui.py -q` → 21 passed; full suite → 1029 passed, 1 skipped.
 - Commit pending: `feat(ui): render evidence bound overview dashboard`.
+
+## Task 4 — completed
+
+- RED: added frontend tests for Overview schema/boundary validation, chronological activity, empty-state status, public secret/path rejection, reduced-motion, and keyboard summary affordance; confirmed missing-module failure first.
+- GREEN: added `frontend/src/overview.js`, wired it into the existing research bundle, loaded that bundle on `/`, and extended the npm test script without adding a framework or chart dependency.
+- Evidence: `cd frontend && npm test` → 21 passed; `cd frontend && npm run build` → success; `python3 -m ruff check src tests` → All checks passed; full Python suite → 1029 passed, 1 skipped.
+- Commit pending: `feat(ui): add accessible overview interactions`.
 Task 1: complete (commits cf1042e..f33eeda, tests: env PYTHONPATH=src python3 -m pytest -q → 1027 passed, 1 skipped in 82.84s (0:01:22))
 Task 2: complete (commits f33eeda..8333511, tests: env PYTHONPATH=src python3 -m pytest tests/p7_5/test_local_app.py -q → 13 passed in 0.89s)
+Task 3: complete (commits 8333511..1d4fdfc, tests: env PYTHONPATH=src python3 -m pytest tests/p7_5/test_local_app.py tests/research/test_ui.py -q → 21 passed in 1.75s)

@@ -1571,7 +1571,7 @@ class LocalApplication:
         title = names.get(page, "Finathink")
         body = self._page_body(page, query=query)
         inspector = self._page_inspector(page)
-        scripts = ("/assets/finathink-research.js",) if page in {"/research", "/workbench"} else ()
+        scripts = ("/assets/finathink-research.js",) if page in {"/", "/research", "/workbench"} else ()
         return self.render_shell(active_page, title, body, inspector=inspector, scripts=scripts)
 
     def render_result_page(self, title: str, payload: Any) -> str:
@@ -1921,13 +1921,13 @@ class LocalApplication:
             f'<li><span>{html.escape(str(item.get("outcome", "UNKNOWN")))}</span><strong>{html.escape(str(item.get("status", "RECORDED")))}</strong></li>'
             for item in learning if isinstance(item, Mapping)
         ) or '<li class="empty-state"><span>No learning checks yet</span><strong>EMPTY</strong></li>'
-        bars = "".join('<i style="height:8px" aria-hidden="true"></i>' for _ in range(8))
+        bars = '<p class="empty-state">No activity is plotted until a local research or learning record is saved.</p>' if not activity else ''.join('<i style="height:24px" aria-hidden="true"></i>' for _ in activity)
         return (
             f'<section class="overview" data-finathink-overview data-overview-payload-url="/api/overview">'
             f'<header class="overview-header"><div class="overview-header-copy"><div class="status-row">{self._status("OFFLINE", "offline")}{self._status("PAPER-ONLY", "limitation")}</div><h1>Overview</h1><p class="lede">What can I understand today? A calm, evidence-bound view of local research activity.</p></div><div class="overview-meta"><span>As of {html.escape(str(payload.get("as_of", "not attached")))}</span><span>Source: {html.escape(str(payload["provenance"].get("data_mode", "UNKNOWN")))}</span></div></header>'
             f'<section class="metric-grid" aria-label="Overview metrics">{metric_cards}</section>'
             '<section class="overview-grid">'
-            f'<article class="panel overview-region" data-overview-chart><h2>Activity <span>Server projection</span></h2><div class="overview-chart" role="img" aria-label="Saved activity chart; empty when no activity is recorded"><div class="overview-chart-bars">{bars}</div><p class="meta">No activity is plotted until a local research or learning record is saved.</p></div><ul class="overview-list" aria-label="Activity text summary">{activity_html}</ul></article>'
+            f'<article class="panel overview-region" data-overview-chart><h2>Activity <span>Server projection</span></h2><div class="overview-chart" role="img" aria-label="Saved activity chart; empty when no activity is recorded"><div class="overview-chart-bars">{bars}</div></div><ul class="overview-list" aria-label="Activity text summary">{activity_html}</ul></article>'
             f'<article class="panel overview-region" data-overview-topics><h2>Topics <span>Recorded only</span></h2><ul class="overview-list" aria-label="Recorded topics">{topic_html}</ul><p class="meta"><a href="/knowledge">Continue learning</a> from the curated local catalog.</p></article>'
             f'<article class="panel overview-region" data-overview-heatmap><h2>Learning signal <span>Private checks</span></h2><ul class="overview-heatmap" aria-label="Learning activity summary">{heatmap_html}</ul><p class="meta">Learning evidence stays local and is never inferred from browsing.</p></article>'
             '</section>'
