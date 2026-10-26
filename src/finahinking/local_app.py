@@ -307,6 +307,18 @@ th { color: var(--text-muted); font-size: .78rem; letter-spacing: .06em; text-tr
 # Phase 1 visual system.  The legacy rules above remain as a compatibility
 # reference for older embedded pages; the shell opts into this dark system
 # explicitly so every new surface shares the same tokens.
+_RESEARCH_JOBS_CSS = """
+.snapshot-fingerprint { overflow-wrap: anywhere; font-family: var(--font-mono, monospace); font-size: .85rem; color: var(--text-secondary); }
+[data-run-workspace] .grid > *, [data-run-workspace] label, [data-run-workspace] select { min-width: 0; max-width: 100%; }
+[data-run-workspace] dl { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .5rem 1rem; }
+[data-run-workspace] dd { margin: 0; font-variant-numeric: tabular-nums; }
+[data-run-history] button { overflow-wrap: anywhere; text-align: left; white-space: normal; }
+.research-stage-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: .5rem; padding-left: 1.5rem; color: var(--text-muted); font-size: .82rem; }
+.research-stage-list [data-stage-status="COMPLETE"] { color: var(--success); }
+.research-stage-list [data-stage-status="RUNNING"] { color: var(--evidence); }
+.research-stage-list [data-stage-status="FAILED"] { color: var(--error); }
+"""
+
 _DARK_APP_CSS = """
 :root {
   --background: #050B18;
@@ -552,6 +564,7 @@ class LocalApplication:
         self.repository = SQLiteP7Repository(self.connection)
         self._bootstrap_identity()
         self._lock = threading.RLock()
+        self._research_application = None
         self._event_journey: Any | None = None
         if self.config.db_path == ":memory:":
             self.artifact_root = Path(tempfile.mkdtemp(prefix="finahinking-artifacts-"))
@@ -573,6 +586,16 @@ class LocalApplication:
         # The transport is inert until the user explicitly invokes a test or
         # research entrypoint. Saving a connection never performs I/O.
         self._data_transport = data_transport if data_transport is not None else BoundedHttpTransport()
+
+    @property
+    def research_service(self):
+        """Compose once without starting any process from a request thread."""
+        with self._lock:
+            if self._research_application is None:
+                from finahinking.research.application_service import ResearchApplicationService
+
+                self._research_application = ResearchApplicationService(self.artifact_root, scope_id=self.config.session_id)
+            return self._research_application
 
     def register_research_run(self, result: Any, manifest: Any) -> None:
         """Register a completed research result for read-only local inspection."""
@@ -1180,6 +1203,7 @@ class LocalApplication:
             "/quant": "Quant",
             "/strategy": "Strategy Lab",
             "/research": "Research Workspace",
+            "/research/jobs": "研究任务",
             "/research/compare": "Research Comparison",
             "/workbench": "Factor Strategy Workbench",
             "/ml": "ML Lab",
@@ -1268,7 +1292,7 @@ class LocalApplication:
     def _nav(self, page: str) -> str:
         names = self._page_names()
         groups = (
-            ("Workspace", "nav-workspace", ("/", "/events", "/explore", "/research", "/research/compare", "/workbench", "/workspace")),
+            ("Workspace", "nav-workspace", ("/", "/events", "/explore", "/research/jobs", "/research", "/research/compare", "/workbench", "/workspace")),
             ("Learn", "nav-learn", ("/knowledge", "/quant", "/strategy", "/ml", "/parameter")),
             ("System", "nav-system", ("/community", "/settings/engines", "/settings/providers", "/settings/data-sources", "/diagnostics")),
         )
@@ -1329,7 +1353,7 @@ class LocalApplication:
             f"<title>{html.escape(title)} · Finathink</title>"
             '<meta name="theme-color" content="#050B18">'
             '<meta http-equiv="Content-Security-Policy" content="default-src \'self\'; img-src \'self\'; style-src \'self\' \'unsafe-inline\'; script-src \'self\'; connect-src \'self\'; form-action \'self\'">'
-            f"<style>{_DARK_APP_CSS}</style>{style_tags}{script_tags}</head><body>"
+            f"<style>{_DARK_APP_CSS}{_RESEARCH_JOBS_CSS if page == '/research/jobs' else ''}</style>{style_tags}{script_tags}</head><body>"
             '<a class="skip-link" href="#main">Skip to content</a>'
             '<div class="app-shell">'
             f'<nav class="sidebar" aria-label="Primary">{self._nav(clean_page)}</nav>'
@@ -1344,6 +1368,94 @@ class LocalApplication:
         if not isinstance(body, Mapping) or body.get("_csrf") != self.csrf_token:
             return 403, "application/json", {"error": "csrf token is required"}
         return None
+
+    @staticmethod
+    def _snapshot_summary(snapshot):
+        return {"snapshot_ref": snapshot.fingerprint, "instruments": list(snapshot.instruments), "record_count": len(snapshot.observations), "mode": snapshot.mode, "as_of": snapshot.as_of.isoformat(), "pit_status": "AVAILABLE" if snapshot.pit_available() else "UNKNOWN"}
+
+    def _research_jobs_route(self, method, clean, body, query):
+        if not (clean == "/api/research/jobs" or clean.startswith(("/api/research/jobs/", "/api/research/snapshots"))):
+            return None
+        content_type = "application/json"
+        if method not in {"GET", "POST"}:
+            return 405, content_type, {"error": "research endpoint supports GET and POST"}
+        if method == "POST":
+            denied = self._data_write_guard(body)
+            if denied is not None:
+                return denied
+        values = {key: value for key, value in (body or {}).items() if key != "_csrf"} if isinstance(body, Mapping) else {}
+        try:
+            service = self.research_service
+            if clean == "/api/research/jobs":
+                if method == "POST":
+                    return 202, content_type, service.submit(values)
+                return 200, content_type, service.list_jobs(limit=int(query.get("limit", ["50"])[0]), offset=int(query.get("offset", ["0"])[0]))
+            if clean.startswith("/api/research/jobs/"):
+                parts = clean.removeprefix("/api/research/jobs/").split("/")
+                if len(parts) == 1 and method == "GET":
+                    return 200, content_type, service.get_job(parts[0])
+                if len(parts) == 2 and parts[1] == "cancel" and method == "POST":
+                    return 200, content_type, service.cancel(parts[0])
+                return 405, content_type, {"error": "use GET status or POST cancel"}
+            if clean == "/api/research/snapshots" and method == "GET":
+                return 200, content_type, {"snapshots": [self._snapshot_summary(item) for item in service.snapshots.list_snapshots()]}
+            if clean == "/api/research/snapshots/sample" and method == "POST":
+                from finahinking.p8_2.data_sources import FixtureMarketDataSource
+
+                if set(values) - {"instrument"}:
+                    raise ValueError("unsupported sample fields")
+                snapshot = FixtureMarketDataSource(points=60).snapshot(values.get("instrument", "AAA"))
+                service.snapshots.save(snapshot)
+                return 201, content_type, self._snapshot_summary(snapshot)
+            if clean == "/api/research/snapshots/capture" and method == "POST":
+                if set(values) - {"connection_id", "instrument", "start", "end", "as_of"}:
+                    raise ValueError("unsupported capture fields")
+                config = self._data_connections.get(values["connection_id"])
+                request = DataRequest(dataset_kind="prices", instruments=(values["instrument"],), start=values.get("start"), end=values.get("end"), as_of=values.get("as_of"))
+                reference = JsonApiConnector(config, self._data_connections.credentials, self._data_transport).capture(request, service.snapshots)
+                return 201, content_type, self._snapshot_summary(service.snapshots.load(reference))
+            return 405, content_type, {"error": "use an explicit snapshot preparation endpoint"}
+        except FileNotFoundError:
+            return 422, content_type, {"error": "所选快照不存在，请重新选择或显式获取数据。"}
+        except KeyError:
+            return 404, content_type, {"error": "未找到当前会话的研究任务或数据连接。"}
+        except DataConnectorError as exc:
+            return 502, content_type, {"error": "数据获取失败，请检查连接、字段映射及数据权限。", "code": exc.code}
+        except (ValueError, TypeError):
+            return 422, content_type, {"error": "输入未通过校验，请检查快照、标的、日期、研究问题和资源上限；研究问题中不要粘贴凭证。"}
+        except (OSError, sqlite3.Error):
+            return 503, content_type, {"error": "本地研究存储暂不可用，请检查磁盘空间和文件权限后重试。"}
+
+    def _research_jobs_page_body(self):
+        return (
+            '<section data-run-workspace data-job-status="EMPTY">'
+            '<div class="status-row"><span class="status status--offline">LOCAL / OFFLINE</span><span class="status status--ready">PAPER-ONLY</span></div>'
+            '<h1>研究任务</h1><p class="lede">选定数据，运行有边界的研究，保留可以复核的结果。</p>'
+            '<p>本轮运行固定的两日动量基线、含费用回测和纸面风险检查。输入需至少四条日频 OHLCV，同一标的每个 UTC 日期一条，并提供可用时间。模型配置为本地离线角色流程，不调用模型 API。研究问题作为假设留档，不会自行生成或执行代码。</p>'
+            f'<input data-run-csrf type="hidden" value="{self.csrf_token}">'
+            '<p data-run-loading role="status">正在读取快照与任务记录…</p>'
+            '<p class="error-state" data-run-error role="alert" hidden></p>'
+            '<button class="button-secondary" type="button" data-run-refresh>重新读取记录</button>'
+            '<div class="grid section"><section class="card"><h2>01 / 准备数据</h2>'
+            '<p>保存连接不会获取数据。这里的操作会显式读取用户配置的 API，并冻结一份有指纹的 OHLCV 快照。</p>'
+            '<form class="form-grid" data-snapshot-capture><label>数据连接<select name="connection_id" required><option value="">请选择已保存的连接</option></select></label>'
+            '<label>标的<input name="instrument" required maxlength="128" value="AAA"></label><label>开始日期<input type="date" name="start" required></label><label>结束日期<input type="date" name="end" required></label><label>数据截止日<input type="date" name="as_of" required></label>'
+            '<button type="submit">获取并保存快照</button></form><p><a href="/settings/data-connections">配置自己的数据接口</a></p>'
+            '<details><summary>使用明确标记的演示数据</summary><form class="form-grid" data-snapshot-sample><label>演示标的<input name="instrument" required maxlength="128" value="AAA"></label><button type="submit">生成 SAMPLE 快照</button></form></details></section>'
+            '<section class="card"><h2>02 / 提交研究</h2><form class="form-grid" data-run-submit>'
+            '<label>已保存的快照<select name="snapshot_ref" required><option value="">请选择数据快照</option></select></label>'
+            '<p class="field-help" data-snapshot-description>尚未选择数据，不会自动使用演示数据。</p>'
+            '<label>研究标的<input name="instrument" required maxlength="128" value="AAA"></label><label>研究截止日（UTC 当日结束）<input type="date" name="as_of" required></label>'
+            '<label>研究问题<textarea name="question" required maxlength="2000" rows="3">检验这个快照上的动量基线，并检查费用与历史回撤。</textarea></label>'
+            '<label>执行配置<select name="model_config_ref"><option value="offline">本地确定性流程 / 不调用模型</option></select></label>'
+            '<label>墙钟上限（秒，最多 300）<input name="max_wall_seconds" type="number" min="5" max="300" value="120" required></label>'
+            '<button type="submit">提交研究任务</button></form><button type="button" class="button-secondary" data-run-new>新建另一项研究</button></section></div>'
+            '<section class="panel section" data-run-progress aria-live="polite" aria-atomic="false"><h2>03 / 运行与结果</h2>'
+            '<p data-run-empty>还没有研究任务。先选择快照并提交研究。</p><p data-run-state></p><p data-run-identity class="snapshot-fingerprint"></p><ol class="research-stage-list" data-run-stages></ol>'
+            '<dl data-run-metrics></dl><p data-run-failure></p><div class="action-row"><button type="button" data-run-cancel disabled>取消任务</button><a data-run-report hidden>打开完整 HTML 报告</a><a data-run-detail hidden>查看研究档案</a></div></section>'
+            '<section class="panel section"><h2>最近的后台任务</h2><p>刷新页面或重启服务后，可从这里继续查看；相同提交标识不会重复排队。</p><ul class="overview-list" data-run-history></ul><a href="/research/compare">比较已发布的研究</a></section>'
+            '<noscript><p>任务提交和跟踪需要 JavaScript。已发布的 HTML 报告可离线阅读。</p></noscript></section>'
+        )
 
     def _data_connection_from_payload(self, values: Mapping[str, Any]) -> tuple[DataConnectionConfig, str | None]:
         auth_mode = str(values.get("auth_mode", "no_auth"))
@@ -1419,6 +1531,11 @@ class LocalApplication:
         parsed = urlsplit(path)
         query = parse_qs(parsed.query) if query is None else query
         clean = parsed.path.rstrip("/") or "/"
+        if clean == "/research/jobs" and method == "GET":
+            return 200, "text/html; charset=utf-8", self.render_page(clean, query=query)
+        job_response = self._research_jobs_route(method, clean, body, query)
+        if job_response is not None:
+            return job_response
         if clean == "/api/research/runs":
             if method != "GET":
                 return 405, "application/json", {"error": "research history is read-only"}
@@ -1754,7 +1871,7 @@ class LocalApplication:
         title = names.get(page, "Finathink")
         body = self._page_body(page, query=query)
         inspector = self._page_inspector(page)
-        scripts = ("/assets/finathink-research.js",) if page in {"/", "/research", "/research/compare", "/workbench"} else ()
+        scripts = ("/assets/finathink-research.js",) if page in {"/", "/research", "/research/jobs", "/research/compare", "/workbench"} else ()
         return self.render_shell(active_page, title, body, inspector=inspector, scripts=scripts)
 
     def render_result_page(self, title: str, payload: Any) -> str:
@@ -1898,6 +2015,8 @@ class LocalApplication:
         return self.render_shell("/knowledge", title_text, body, inspector=self._inspector("Knowledge provenance", {"Concept": title_text, "Catalog": DEFAULT_CATALOG.fingerprint, "Mastery": mastery.state, "Boundary": "Sample curriculum; verify sources"}, status="CURATED"), eyebrow="Knowledge / progressive depth")
 
     def _page_inspector(self, page: str) -> str:
+        if page == "/research/jobs":
+            return self._inspector("研究运行边界", {"数据": "显式选定并校验的快照", "执行": "独立 supervisor / spawn", "模型": "本地离线角色流程", "产物": "有指纹的 HTML 报告"}, status="PAPER-ONLY")
         if page == "/events":
             return self._inspector("Event provenance", {"Source": "U.S. Bureau of Labor Statistics", "Mode": "CAPTURED / SAMPLE", "Next": "Show Evidence → Knowledge → Quant"}, status="CAPTURED")
         if page == "/quant":
@@ -2163,7 +2282,7 @@ class LocalApplication:
             f'<article class="panel overview-region" data-overview-topics><h2>Topics <span>Recorded intensity</span></h2><div class="overview-topic-heatmap" aria-label="Recorded topic intensity heatmap">{topic_cells}</div><ul class="overview-list" aria-label="Recorded topics">{topic_html}</ul><p class="meta"><a href="/knowledge">Continue learning</a> from the curated local catalog.</p></article>'
             f'<article class="panel overview-region" data-overview-heatmap><h2>Learning signal <span>Private checks</span></h2><ul class="overview-heatmap" aria-label="Learning activity summary">{heatmap_html}</ul><p class="meta">Learning evidence stays local and is never inferred from browsing.</p></article>'
             '</section>'
-            '<section class="section"><div class="section-heading"><h2>Continue where you stopped</h2><span class="meta">Private local continuity</span></div><div class="overview-links"><article class="panel"><h3>Current research</h3><p class="meta">Run a bounded question with uncertainty and provenance.</p><a href="/quant">Open Quant</a></article><article class="panel"><h3>Paper simulation</h3><p class="meta">Inspect validity without live orders.</p><a href="/strategy">Open Strategy Lab</a></article><article class="panel"><h3>Evidence event</h3><p class="meta">Follow the captured source chain.</p><a href="/events">Open Events</a></article></div></section>'
+            '<section class="section"><div class="section-heading"><h2>Continue where you stopped</h2><span class="meta">Private local continuity</span></div><div class="overview-links"><article class="panel"><h3>Current research</h3><p class="meta">Run a bounded question with uncertainty and provenance.</p><a href="/research/jobs">打开研究任务</a></article><article class="panel"><h3>Paper simulation</h3><p class="meta">Inspect validity without live orders.</p><a href="/strategy">Open Strategy Lab</a></article><article class="panel"><h3>Evidence event</h3><p class="meta">Follow the captured source chain.</p><a href="/events">Open Events</a></article></div></section>'
             f'<section class="panel overview-comparison" data-overview-comparison><div class="section-heading"><h2>Research comparison <span>Descriptive only</span></h2><a class="button-secondary" href="/research/compare">Open workspace</a></div><div class="table-wrap"><table aria-label="Research comparison summary"><thead><tr><th scope="col">Run</th><th scope="col">State</th><th scope="col">Evidence</th><th scope="col">Reports</th></tr></thead><tbody>{comparison_rows}</tbody></table></div><p class="meta">No composite quality score or winner is computed.</p></section>'
             f'<section class="panel"><h2>Boundaries</h2><ul>{"".join(f"<li>{html.escape(str(item))}</li>" for item in payload.get("limitations", ()))}</ul></section>'
             '<template id="legacy-launch-frames" aria-hidden="true"><img src="/assets/finathink-splash-map.jpg" width="1536" height="1024" alt=""><img src="/assets/finathink-research-splash.jpg" width="900" height="900" alt=""></template>'
@@ -2171,6 +2290,8 @@ class LocalApplication:
         )
 
     def _page_body(self, page: str, *, query: Mapping[str, list[str]] | None = None) -> str:
+        if page == "/research/jobs":
+            return self._research_jobs_page_body()
         if page == "/research/compare":
             return self._research_comparison_page_body()
         if page in {"/research", "/workbench", "/ml", "/parameter", "/settings/engines", "/settings/providers", "/settings/data-sources"}:
@@ -2239,6 +2360,8 @@ class LocalApplication:
         return f'<h1>Diagnostics</h1><p class="lede">A redacted local health view with clear recovery actions. Personal payloads and secrets are omitted.</p><div class="action-row"><a class="button-secondary" href="/api/diagnostics/bundle">Download redacted bundle</a><a class="button-secondary" href="/api/personal/backup">Back up private data</a></div><section class="card"><pre>{diagnostics}</pre></section>'
 
     def close(self) -> None:
+        if self._research_application is not None:
+            self._research_application.close()
         self.connection.close()
 
 
@@ -2336,7 +2459,7 @@ class _Handler(BaseHTTPRequestHandler):
 
 
 def create_server(application: LocalApplication | None = None, *, host: str | None = None, port: int | None = None) -> ThreadingHTTPServer:
-    """Create a server without starting it (useful for smoke/E2E tests)."""
+    """Bootstrap the independent owner; return a bound, not-yet-serving HTTP server."""
 
     app = application or LocalApplication()
     resolved_host = host or app.config.host
@@ -2345,6 +2468,12 @@ def create_server(application: LocalApplication | None = None, *, host: str | No
     address = (resolved_host, int(port if port is not None else app.config.port))
     server = ThreadingHTTPServer(address, _Handler)
     server.application = app  # type: ignore[attr-defined]
+    try:
+        app.research_service.start()
+    except Exception:
+        server.server_close()
+        app.research_service.close()
+        raise
     return server
 
 

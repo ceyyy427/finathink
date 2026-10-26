@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import asdict
 from datetime import date
+from types import MappingProxyType
 
 import pandas as pd
 
@@ -24,6 +25,19 @@ from .tools import (
     ResearchToolStatus,
 )
 
+_LOCAL_POLICY = MappingProxyType({
+    "version": "local-paper.v1", "factor_id": "momentum_2d", "momentum_window": 2, "bar_frequency": "daily-single-utc-date",
+    "strategy_version": f"{FactorThresholdStrategy.strategy_id}.{FactorThresholdStrategy.version}",
+    "engine_version": BacktestEngine.engine_version, "threshold": 0.0,
+    "target_weight": 0.75, "starting_cash": 10000, "fee_bps": 5, "slippage_bps": 5,
+    "max_drawdown": 0.35, "max_concentration": 1.0, "min_liquidity": 1.0,
+})
+
+
+def local_research_policy():
+    """The same parameters drive execution and the durable semantic identity."""
+    return dict(_LOCAL_POLICY)
+
 
 class SnapshotResearchTools(ResearchToolGateway):
     """Use the in-house engine; never resolve a missing input to a fixture."""
@@ -33,6 +47,7 @@ class SnapshotResearchTools(ResearchToolGateway):
             raise TypeError("snapshot must be a DatasetSnapshot")
         # Defensive roundtrip also verifies nested content before it is used.
         self.snapshot = DatasetSnapshot.from_json(snapshot.to_json())
+        self.policy = local_research_policy()
         self.analysis: dict = {}
         self.risk_payload: dict = {}
         quant = QuantServiceGateway()
@@ -83,19 +98,22 @@ class SnapshotResearchTools(ResearchToolGateway):
     def _backtest(self, parameters):
         self._check_binding(parameters)
         requested = tuple(parameters.get("factor_ids", ()))
-        if requested not in {(), ("momentum_2d",)}:
+        if requested not in {(), (self.policy["factor_id"],)}:
             raise ValueError("selected factor is not supported by this deterministic workflow")
         instrument = str(parameters["instrument"])
         rows = [item for item in self.snapshot.observations if item.instrument == instrument]
         if len(rows) < 4:
             raise ValueError("selected instrument requires at least four OHLCV observations")
+        if len({item.timestamp.date() for item in rows}) != len(rows):
+            raise ValueError("daily baseline requires one observation per UTC date")
         frame = pd.DataFrame(
             [{key: getattr(item, key) for key in ("open", "high", "low", "close", "volume")} for item in rows],
             index=pd.DatetimeIndex([item.timestamp for item in rows]),
         )
         dataset = Dataset(frame, Provenance("user-snapshot", "local snapshot reference", license="user-declared; local research"))
-        strategy = FactorThresholdStrategy(factor=momentum_factor(2))
-        config = BacktestConfig(starting_cash=10000, fee_bps=5, slippage_bps=5)
+        policy = self.policy
+        strategy = FactorThresholdStrategy(factor=momentum_factor(policy["momentum_window"]), threshold=policy["threshold"], target_weight=policy["target_weight"])
+        config = BacktestConfig(**{key: policy[key] for key in ("starting_cash", "fee_bps", "slippage_bps")})
         backtest = BacktestEngine().run(dataset, strategy, config)
         evaluation = evaluate_backtest(backtest)
         factor_values = strategy.factor.compute(frame["close"])
@@ -107,6 +125,7 @@ class SnapshotResearchTools(ResearchToolGateway):
         self.analysis = {
             "dataset_fingerprint": self.snapshot.fingerprint,
             "engine_dataset_fingerprint": backtest.dataset_fingerprint,
+            "policy_fingerprint": stable_digest(policy), "strategy_version": policy["strategy_version"],
             "instrument": instrument, "as_of": parameters["as_of"],
             "factor": factor, "metrics": dict(evaluation.metrics),
             "backtest": backtest.to_dict(), "config": asdict(config),
@@ -121,6 +140,7 @@ class SnapshotResearchTools(ResearchToolGateway):
             raise ValueError("risk requires the matching completed backtest")
         last = next(item for item in reversed(self.snapshot.observations) if item.instrument == parameters["instrument"])
         drawdown = abs(float(self.analysis["metrics"]["max_drawdown"]))
+        policy = self.policy
         self.risk_payload = {
             "dataset_fingerprint": self.snapshot.fingerprint,
             "snapshot": {
@@ -129,12 +149,12 @@ class SnapshotResearchTools(ResearchToolGateway):
                 "as_of": self._boundary(parameters["as_of"]).isoformat(), "pit_status": "AVAILABLE",
                 "observations": [{key: last.to_dict()[key] for key in ("instrument", "timestamp", "available_at", "close", "volume")}],
                 "drawdown": drawdown,
-                "stress_results": {"historical_drawdown": {"passed": drawdown <= 0.35}},
+                "stress_results": {"historical_drawdown": {"passed": drawdown <= policy["max_drawdown"]}},
             },
             "factor_result": {"status": "READY", "metrics": {"drawdown": drawdown}},
-            "constraints": {"max_drawdown": 0.35, "max_concentration": 1.0, "min_liquidity": 1.0, "stress_scenarios": {"historical_drawdown": {"drawdown": drawdown}}},
+            "constraints": {**{key: policy[key] for key in ("max_drawdown", "max_concentration", "min_liquidity")}, "stress_scenarios": {"historical_drawdown": {"drawdown": drawdown}}},
             "candidates": [parameters["instrument"]],
-            "portfolio_constraints": {"max_single_weight": 0.75, "max_exposure": 0.75},
-            "execution_policy": {"initial_cash": 10000, "fee_bps": 5, "slippage_bps": 5},
+            "portfolio_constraints": {"max_single_weight": policy["target_weight"], "max_exposure": policy["target_weight"]},
+            "execution_policy": {"initial_cash": policy["starting_cash"], "fee_bps": policy["fee_bps"], "slippage_bps": policy["slippage_bps"]},
         }
         return self.risk_payload

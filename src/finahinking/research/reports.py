@@ -302,6 +302,8 @@ class ReportBundleWriter:
             "source_snapshot": status_snapshot,
         }
         status_model = research_view_model(result.state, status_manifest)
+        if analytics_payload:
+            status_model["quant_metrics"] = analytics_payload.get("metrics", {})
         complete_path = bundle / "complete_report.html"
         complete_path.write_text(
             render_status_wall_html(status_model, title="Finathink research report"),
@@ -328,7 +330,7 @@ class ReportBundleWriter:
                 "decision_digest": stable_digest(result.decision) if result.decision else None,
                 **status_snapshot,
                 **{section: payload for section, payload in runtime_payloads.items()},
-                **({"quant_analytics": {"fingerprint": analytics_payload.get("fingerprint"), "limitations": analytics_payload.get("limitations", ())}} if analytics_payload else {}),
+                **({"quant_analytics": {"fingerprint": analytics_payload.get("fingerprint"), "policy_fingerprint": analytics_payload.get("policy_fingerprint"), "metrics": analytics_payload.get("metrics", {}), "limitations": analytics_payload.get("limitations", ())}} if analytics_payload else {}),
             },
             created_at=datetime.now(UTC),
         )

@@ -12,6 +12,7 @@ import atexit
 import json
 import multiprocessing
 import os
+import sqlite3
 import threading
 import time
 from collections.abc import Mapping
@@ -595,7 +596,25 @@ class ResearchSupervisor:
             if message.kind == "RESULT":
                 result_ref = payload.get("result_ref")
                 if isinstance(result_ref, str):
-                    self.queue.complete(job.job_id, result_ref=result_ref, checkpoint_ref=job.checkpoint_ref, **fence)
+                    publication = None
+                    if "local_research" in job.capabilities or result_ref.startswith("research-result:"):
+                        from .application_service import verify_research_receipt
+
+                        try:
+                            publication = verify_research_receipt(self.queue.path.parent, self.queue, current, result_ref, artifact_digest=payload.get("artifact_digest"), verify_input=True)
+                        except (OSError, ValueError, KeyError, TypeError):
+                            self._retry_or_fail(job, "PUBLICATION_INVALID")
+                            return
+                    completed = self.queue.complete(job.job_id, result_ref=result_ref, checkpoint_ref=current.checkpoint_ref, **fence)
+                    if publication is not None and completed.status is JobStatus.COMPLETED:
+                        from .application_service import index_verified_publication
+
+                        try:
+                            index_verified_publication(self.queue.path.parent, publication)
+                        except (OSError, ValueError, KeyError, sqlite3.Error):
+                            # Queue completion is authoritative. Startup or
+                            # a subsequent GET repairs an interrupted index.
+                            pass
                 else:
                     self._retry_or_fail(job, "RESULT_INVALID")
             elif message.kind == "CANCELLED":
@@ -616,7 +635,7 @@ class ResearchSupervisor:
 
     def _retry_or_fail(self, job: JobRecord, reason: str) -> None:
         try:
-            if reason in {"RESOURCE_LIMIT"}:
+            if reason in {"RESOURCE_LIMIT", "PUBLICATION_INVALID", "DATA_UNAVAILABLE", "DATA_INVALID", "NO_DATA_AVAILABLE", "SNAPSHOT_INTEGRITY_FAILED", "REQUEST_UNAVAILABLE", "QUANT_VALIDATION_FAILED", "RISK_REVIEW_FAILED", "POLICY_CHANGED"}:
                 self.queue.fail(job.job_id, reason, worker_id=job.worker_id, attempt=job.attempts, lease_until=job.lease_until, lease_token=job.lease_token)
             else:
                 self.queue.retry(job.job_id, reason, worker_id=job.worker_id, attempt=job.attempts, lease_until=job.lease_until, lease_token=job.lease_token)

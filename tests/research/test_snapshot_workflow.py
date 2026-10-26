@@ -1,6 +1,7 @@
 """The selected snapshot, not a fixture, feeds every deterministic stage."""
 
 from dataclasses import replace
+from datetime import timedelta
 
 import pytest
 
@@ -65,6 +66,16 @@ def test_unknown_pit_is_blocked_before_factor_or_backtest():
     assert result.state.current_state is ResearchState.DATA_UNAVAILABLE
     assert result.decision is None
     assert tools.analysis == {}
+
+
+def test_daily_baseline_rejects_intraday_bars_instead_of_mislabeling_returns():
+    original = FixtureMarketDataSource(points=8).snapshot("AAA")
+    start = original.observations[0].timestamp
+    intraday = replace(original, observations=tuple(replace(item, timestamp=start + timedelta(minutes=index), available_at=start + timedelta(minutes=index + 1)) for index, item in enumerate(original.observations)))
+    tools = SnapshotResearchTools(intraday)
+    result = ResearchOrchestrator().run(request(intraday.fingerprint), OfflineDriver(), tools)
+    assert result.state.current_state is ResearchState.VALIDATION_FAILED
+    assert result.decision is None and tools.analysis == {}
 
 
 def test_unsupported_factor_is_rejected_rather_than_silently_ignored():

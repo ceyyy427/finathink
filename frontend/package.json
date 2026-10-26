@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "node build.mjs",
-    "test": "node --test test/research.test.mjs test/knowledge.test.mjs test/overview.test.mjs",
+    "test": "node --test test/research.test.mjs test/knowledge.test.mjs test/overview.test.mjs test/run-workspace.test.mjs",
     "perf": "node test/performance.mjs"
   },
   "dependencies": {

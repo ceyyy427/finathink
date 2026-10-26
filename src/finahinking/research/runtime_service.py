@@ -73,6 +73,8 @@ class ResearchRuntimeService:
         timeout_seconds: float = 60.0,
         max_result_bytes: int = 8192,
         max_attempts: int = 8,
+        autostart: bool = True,
+        supervisor_concurrency: int = 8,
     ) -> None:
         self.queue = queue if isinstance(queue, JobQueue) else JobQueue(queue, max_attempts=max_attempts, backoff_base_seconds=0)
         self._request_resolver = request_resolver
@@ -108,11 +110,12 @@ class ResearchRuntimeService:
             # shared supervisor owns the worker pool and is deliberately
             # sized above one so concurrent requests do not create separate
             # supervisors.
-            max_concurrency=8,
+            max_concurrency=supervisor_concurrency,
         )
         # Supervisor ownership is established during service construction. A
         # request thread only observes durable queue state thereafter.
-        self.start_supervisor()
+        if autostart:
+            self.start_supervisor()
 
     @staticmethod
     def _task_ref(request: ResearchRequest) -> str:

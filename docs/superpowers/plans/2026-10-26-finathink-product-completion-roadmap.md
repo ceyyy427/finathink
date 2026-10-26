@@ -95,11 +95,11 @@ Overview 只由一个入口初始化；数据摘要独立于 canvas DOM。
 **Interfaces:** 建议 `POST /api/research/jobs`、`GET /api/research/jobs/{id}`、
 `POST /api/research/jobs/{id}/cancel`；页面提交 connection/snapshot、问题、标的、as-of、模型配置引用及预算。
 
-- [ ] 测试：幂等提交、取消、崩溃恢复、两任务并行不串结果、预算超限、失败阶段可定位。
-- [ ] 由应用服务装配真实 snapshot store、quant gateway、driver 与报告仓库；worker 由引用恢复输入。
-- [ ] 默认 runner 不再无条件选择缺少量化能力的 gateway；明确所选运行模式和失败原因。
-- [ ] 页面提供提交、阶段进度、取消、报告入口；先用有界轮询读取持久化状态。
-- [ ] 验收两份不同输入从页面跑到不同报告，刷新页面和重启服务后可继续查看；审查并提交。
+- [x] 测试：幂等提交、取消、崩溃恢复、两任务并行不串结果、预算超限、失败阶段可定位。
+- [x] 由应用服务装配真实 snapshot store、quant gateway、driver 与报告仓库；worker 由引用恢复输入。
+- [x] 默认 runner 不再无条件选择缺少量化能力的 gateway；明确所选运行模式和失败原因。
+- [x] 页面提供提交、阶段进度、取消、报告入口；先用有界轮询读取持久化状态。
+- [x] 验收两份不同输入从页面跑到不同报告，刷新页面和重启服务后可继续查看；组件自查并提交，随后执行一次独立全分支审查。
 
 ### Task 5：让模型收到有效研究材料
 
