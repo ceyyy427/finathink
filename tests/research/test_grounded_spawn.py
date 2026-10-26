@@ -1,4 +1,5 @@
 import json
+import time
 
 from finahinking.research.application_service import ResearchApplicationService
 from tests.research.grounded_worker_peer import install_peer
@@ -78,3 +79,49 @@ def test_missing_credential_is_reported_as_configuration_failure_without_network
     service.start()
     outcome = wait_for(service, job["job_id"])
     assert outcome["failure_kind"] == "PROVIDER_NOT_CONFIGURED" and outcome["attempts"] == 1
+
+
+def test_failed_model_attempts_keep_sanitized_durable_call_details(configured):
+    service, _ = configured
+    install_peer(service)
+    job = submit(service, question="force-provider-failure", materials=[])
+    service.start()
+    outcome = wait_for(service, job["job_id"])
+    assert outcome["status"] == "failed" and outcome["report_url"] is None
+    study = outcome["model_research"]
+    assert len(study["calls"]) == 1 and study["calls"][0]["role"] == "technical"
+    assert study["calls"][0]["status"] == "SCHEMA_ERROR" and study["calls"][0]["dispatched"]
+    assert study["calls"][0]["usage"]["total_units"] == 160
+    restarted = ResearchApplicationService(service.root)
+    try:
+        assert restarted.get_job(job["job_id"])["model_research"]["calls"] == study["calls"]
+    finally:
+        restarted.close()
+    assert "test-only-model-value" not in str(study) and "models.acme.com" not in str(study)
+
+
+def test_cancelled_paid_attempts_are_unknown_not_zero_after_worker_termination(configured):
+    service, _ = configured
+    install_peer(service)
+    job = submit(service, question="hold-model-request", materials=[])
+    service.start()
+    deadline = time.monotonic() + 15
+    while not (service.root / "peer-wire.jsonl").exists() and time.monotonic() < deadline:
+        time.sleep(0.05)
+    assert (service.root / "peer-wire.jsonl").exists()
+    service.cancel(job["job_id"])
+    outcome = wait_for(service, job["job_id"])
+    assert outcome["status"] == "cancelled"
+    calls = outcome["model_research"]["calls"]
+    assert len(calls) == 1 and calls[0]["dispatched"] and calls[0]["status"] == "UNKNOWN"
+    assert calls[0]["usage"] is None and outcome["model_research"]["usage_status"] == "UNKNOWN"
+
+
+def test_optional_learning_byte_exhaustion_prevents_any_publication(configured):
+    service, _ = configured
+    install_peer(service)
+    job = submit(service, question="oversized-learning-case", materials=[material(role="learning")], budget={"max_bytes": 200000})
+    service.start()
+    outcome = wait_for(service, job["job_id"])
+    assert outcome["status"] == "failed" and outcome["failure_kind"] == "RESOURCE_LIMIT"
+    assert outcome["report_url"] is None and service.runs.list_runs() == []

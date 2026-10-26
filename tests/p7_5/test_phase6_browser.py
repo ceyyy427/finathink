@@ -55,6 +55,9 @@ def test_page_configures_an_inert_provider_then_authorizes_a_grounded_spawn_job(
             assert layout["controlsRight"] <= layout["right"] + 2 and layout["right"] <= layout["bound"] + 2 and layout["documentWidth"] <= layout["viewport"] + 2, layout
             page.screenshot(path=str(_artifacts / f"expanded-{width}.png"), full_page=True)
         page.set_viewport_size({"width": 1440, "height": 900})
+        page.goto(base + page.locator('[data-run-detail]').get_attribute("href"))
+        page.locator('[data-research-runtime][data-runtime-status="READY"]').wait_for()
+        assert page.locator('[data-research-runtime-error]').is_hidden()
         assert diagnostics["errors"] == []
     finally:
         server.shutdown()

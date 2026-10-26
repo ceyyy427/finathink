@@ -157,6 +157,12 @@ test('normalizeResearchRuntime keeps server-owned stream facts and rejects publi
   assert.throws(() => normalizeResearchRuntime({ ...normalized, checkpoint: { prompt: 'hidden' } }), /unsafe|invalid/i);
 });
 
+test('online runtime accepts the same read-only contract without weakening mode checks', () => {
+  const payload = { schema_version: 3, run_id: 'online-runtime', state: 'LEARNING_RECORDED', mode: 'USER_API', paper_only: true, manifest_digest: 'a'.repeat(64) };
+  assert.equal(normalizeResearchRuntime(payload).mode, 'USER_API');
+  assert.throws(() => normalizeResearchRuntime({ ...payload, mode: 'LIVE' }));
+});
+
 test('renderResearchRuntime is render-only and supports no-JS fallback', () => {
   const root = { dataset: {}, querySelector: () => ({ textContent: '' }) };
   const rendered = renderResearchRuntime(root, {

@@ -6,6 +6,14 @@ const mounted = new WeakMap();
 const LABELS = { queued: '等待运行', running: '运行中', retryable: '等待重试', completed: '运行完成', failed: '运行失败', cancelled: '已取消' };
 const STAGES = { RECEIVED: '接收任务', IDENTIFIED: '识别标的', DATA_CHECKED: '校验数据与 PIT', ANALYSTS_RUNNING: '分析师材料研究', ANALYSTS_READY: '汇总角色结果', EVIDENCE_REVIEW: '检查证据', RESEARCH_PLAN_READY: '固定研究计划', QUANT_VALIDATION: '确定性回测', RISK_REVIEW: '纸面风险检查', PAPER_DECISION_READY: '纸面决策', REPORT_PUBLISHED: '生成报告文件', LEARNING_RECORDED: '记录本轮结果' };
 
+export function modelCallSummary(job) {
+  if (job.execution_mode !== 'provider-grounded') return '本地离线流程 · 不调用模型。';
+  const study = job.model_research; const calls = study?.calls ?? [];
+  const dispatched = calls.filter((item) => item.dispatched).length;
+  const usage = study?.usage_status === 'UNKNOWN' ? '中断或未确认的用量未知，不能按零计费。' : '用量以已返回记录为准；费用以用户服务账单为准。';
+  return `材料研究 · ${job.model_config_ref} · 已登记 ${calls.length} 次调用尝试，出站记录 ${dispatched} 条；${usage}模型观察待复核。`;
+}
+
 export function normalizeJob(payload) {
   if (!payload || payload.schema_version !== 1 || payload.paper_only !== true || !['local-deterministic', 'provider-grounded'].includes(payload.execution_mode)) throw new TypeError('Invalid job boundary');
   if (!REF.test(payload.job_id ?? '') || !REF.test(payload.run_id ?? '') || !/^[0-9a-f]{64}$/.test(payload.snapshot_ref ?? '') || !STATUSES.has(payload.status)) throw new TypeError('Invalid job identity');
@@ -81,7 +89,9 @@ export function mountRunWorkspace(root, { fetcher = globalThis.fetch, location =
     text('[data-run-identity]', `${job.data_mode ?? 'UNKNOWN'} DATA · ${job.instrument} · ${job.as_of} · ${job.snapshot_ref}`);
     text('[data-run-data-note]', (job.data_limitations ?? []).join(' '));
     const study = job.model_research;
-    text('[data-run-model-summary]', job.execution_mode === 'provider-grounded' ? `材料研究 · ${job.model_config_ref} · 已记录 ${study?.calls?.length ?? 0} 次调用；模型观察待复核。` : '本地离线流程 · 不调用模型。');
+    text('[data-run-model-summary]', modelCallSummary(job));
+    const calls = query('[data-run-call-records]');
+    if (calls) calls.replaceChildren(...(study?.calls ?? []).map((item) => element('li', `${item.role} · ${item.model} · ${item.status} · 上下文 ${item.context_bytes} B · ${item.duration_ms == null ? '耗时未确认' : `${item.duration_ms} ms`} · 用量 ${!item.dispatched ? '未出站' : item.usage?.total_units ?? '未知'}`)));
     const roles = query('[data-run-model-roles]');
     if (roles) roles.replaceChildren(...(study?.roles ?? []).map((item) => element('li', `${item.role} · ${item.status} · ${(item.claims ?? []).join(' / ')} ${(item.limitations ?? []).join(' / ')}`)));
     const synthesis = query('[data-run-synthesis]');

@@ -212,6 +212,7 @@ def run_local_research_stage(invocation, checkpoint_ref, publish_checkpoint, *, 
         from .analyst_runtime import GroundedResearchManager
         from .credentials import LocalProviderCredentialStore
         from .drivers import GroundedApiDriver
+        from .model_call_journal import ModelCallJournal
         from .provider_config import ProviderConfig
         from .provider_transport import ProviderHttpTransport
 
@@ -225,20 +226,24 @@ def run_local_research_stage(invocation, checkpoint_ref, publish_checkpoint, *, 
             config = ProviderConfig.from_mapping(inputs["provider"])
             if not config.enabled or config.provider_id != spec["model_config_ref"]:
                 raise ValueError()
-            driver = GroundedApiDriver(snapshot, config, materials=inputs["materials"], transport=ProviderHttpTransport(), credential_store=LocalProviderCredentialStore())
+            journal = ModelCallJournal(root / "model-calls.sqlite3", job_id=record.job_id, run_id=request.run_id, request_digest=stable_digest(request), attempt=record.attempts, scope_id=spec["scope_id"])
+            driver = GroundedApiDriver(snapshot, config, materials=inputs["materials"], transport=ProviderHttpTransport(), credential_store=LocalProviderCredentialStore(), call_journal=journal)
             manager = GroundedResearchManager(driver)
             if budget is not None:
                 budget.charge_bytes(len(json.dumps(inputs).encode("utf-8")))
         except (KeyError, ValueError, OSError, TypeError):
             return {"status": "blocked", "failure_kind": "CONTEXT_INTEGRITY_FAILED"}
     result = ResearchOrchestrator().run(request, driver, tools, analyst_pool=AnalystPool(), manager=manager, run_control=Control(), checkpoint_writer=checkpoint)
+    if budget is not None and budget.resource_failures:
+        checkpoint(result.state)
+        return {"status": "blocked", "failure_kind": "RESOURCE_LIMIT"}
     if result.state.current_state is not ResearchState.LEARNING_RECORDED or result.decision is None or not result.decision.paper_only:
         checkpoint(result.state)
         return {"status": "blocked", "failure_kind": "RESOURCE_LIMIT" if budget is not None and budget.resource_failures else result.state.failure_kind.value if result.state.failure_kind else "VALIDATION_FAILED"}
     if spec.get("execution_mode") == "provider-grounded":
         tools.analysis["model_research"] = {
             "execution_mode": "provider-grounded", "provider": spec["model_config_ref"],
-            "calls": driver.call_records, "context_input_ref": spec["context_input_ref"],
+            "calls": journal.records(terminal=True), "context_input_ref": spec["context_input_ref"],
             "roles": [{"role": report.role, "status": report.status, "claims": list(report.claims), "evidence_refs": list(report.evidence_refs), "limitations": list(report.limitations)} for report in result.state.analyst_reports],
             "synthesis": driver.synthesis_summary,
             "limitations": ["Citation membership verifies input binding, not semantic truth. Model observations do not set financial metrics or policy."]}
@@ -448,6 +453,17 @@ class ResearchApplicationService:
         source = entry["manifest"].get("source_snapshot", {}) if entry is not None else {}
         if report_status == "AVAILABLE":
             metrics = entry["manifest"].get("source_snapshot", {}).get("quant_analytics", {}).get("metrics", {})
+        runtime_metrics = self.queue.load_metrics(record.job_id) or {}
+        model_research = source.get("model_research")
+        if request.research_plan.validation_spec.get("execution_mode") == "provider-grounded":
+            from .model_call_journal import ModelCallJournal
+
+            calls = []
+            journal_path = self.root / "model-calls.sqlite3"
+            if journal_path.exists():
+                journal = ModelCallJournal(journal_path, job_id=record.job_id, run_id=request.run_id, request_digest=stable_digest(request), attempt=max(1, record.attempts), scope_id=self.scope_id)
+                calls = journal.records(terminal=record.status in {JobStatus.COMPLETED, JobStatus.CANCELLED, JobStatus.FAILED})
+            model_research = {**(model_research or {}), "calls": calls, "usage_status": "UNKNOWN" if any(item["dispatched"] and item["usage"] is None for item in calls) else "RECORDED" if calls else "NOT_STARTED", "aggregate_counts": runtime_metrics}
         return redact_public_payload({
             "schema_version": 1, "paper_only": True, "execution_mode": request.research_plan.validation_spec.get("execution_mode", "local-deterministic"),
             "data_mode": source.get("data_mode", request.research_plan.validation_spec.get("data_mode", "UNKNOWN")),
@@ -455,7 +471,7 @@ class ResearchApplicationService:
             "job_id": record.job_id, "run_id": request.run_id, "status": record.status.value,
             "snapshot_ref": request.snapshot_ref, "instrument": request.instrument, "as_of": request.as_of.isoformat(),
             "question": request.research_plan.hypotheses[0], "model_config_ref": request.research_plan.validation_spec.get("model_config_ref", "offline"),
-            "model_research": source.get("model_research"),
+            "model_research": model_research,
             "budget": request.research_plan.validation_spec["budget"], "attempts": record.attempts,
             "cancel_requested": record.cancel_requested,
             "created_at": _utc(record.created_at), "updated_at": _utc(record.updated_at),
@@ -464,7 +480,7 @@ class ResearchApplicationService:
             "failure_kind": failure or publication_error, "failure_stage": failed_stage,
             "report_status": report_status, "report_url": f"/research/{request.run_id}/report/complete" if report_status == "AVAILABLE" else None,
             "run_url": f"/research/{request.run_id}", "metrics": metrics,
-            "runtime_metrics": self.queue.load_metrics(record.job_id) or {},
+            "runtime_metrics": runtime_metrics,
         })
 
     def list_jobs(self, *, limit=50, offset=0):

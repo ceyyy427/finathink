@@ -157,11 +157,12 @@ class CompatibleApiDriver(UserApiDriver):
 class GroundedApiDriver:
     """One explicitly configured call per material-backed role; no tool access."""
 
-    def __init__(self, snapshot, config, *, materials=(), transport=None, credential_store=None):
+    def __init__(self, snapshot, config, *, materials=(), transport=None, credential_store=None, call_journal=None):
         import threading
 
         self.snapshot, self.config, self.materials = snapshot, config, materials
         self.transport, self.credential_store = transport, credential_store
+        self.call_journal = call_journal
         self._calls = []
         self.synthesis_summary = {}
         self._lock = threading.RLock()
@@ -192,23 +193,39 @@ class GroundedApiDriver:
             return DriverResult(reports=(AgentReport(role=role, status="INSUFFICIENT_DATA", limitations=("No authorized material for this role at the research cutoff.",), model_ref="local/material-check"),))
         started = time.monotonic()
         model = self.config.model_for_role(role)
-        record = {"role": role, "model": model, "context_bytes": len(bundle._json.encode("utf-8")), "context_fingerprint": bundle.fingerprint, "status": "FAILED", "usage": {}}
+        record = {"role": role, "model": model, "context_bytes": len(bundle._json.encode("utf-8")), "context_fingerprint": bundle.fingerprint, "status": "FAILED", "usage": {}, "dispatched": False}
+        call_id = None
+
+        def dispatched(request_bytes):
+            if self.call_journal is not None:
+                self.call_journal.dispatched(call_id, request_bytes)
+            record.update(dispatched=True, request_bytes=request_bytes)
+
+        def reported_usage(usage):
+            units = {public: usage[native] for native, public in (("prompt_tokens", "input_units"), ("completion_tokens", "generated_units"), ("total_tokens", "total_units")) if native in usage}
+            record["usage"] = units
+            if self.call_journal is not None:
+                self.call_journal.record_usage(call_id, units)
+
         try:
+            if self.call_journal is not None:
+                call_id = self.call_journal.begin({key: record[key] for key in ("role", "model", "context_bytes", "context_fingerprint")})
+                record["call_id"] = call_id
             adapter_type = DeepSeekCompatibleAdapter if self.config.adapter_kind == "deepseek_compatible" else OpenAICompatibleAdapter
             endpoint = self.config.endpoint.rstrip("/") if self.config.endpoint else None
             if endpoint and not endpoint.endswith("/chat/completions"):
                 endpoint += "/chat/completions"
             adapter = adapter_type(model=model, endpoint=endpoint, provider_id=self.config.provider_id,
                                    credential_ref=self.config.credential_ref, credential_store=self.credential_store,
-                                   transport=self.transport, retry_policy=RetryPolicy(max_attempts=1), timeout=15)
+                                   transport=self.transport, retry_policy=RetryPolicy(max_attempts=1), timeout=15,
+                                   on_dispatch=dispatched, on_usage=reported_usage)
             response = adapter.invoke(ModelEnvelope(request.run_id, role, stable_digest(request), bundle.fingerprint, research_context=bundle))
             report = AgentReport(role=role, status="READY", claims=tuple(response.content.get("claims", ())),
                                  evidence_refs=tuple(response.content["evidence_refs"]), limitations=tuple(response.content.get("limitations", ())),
                                  model_ref=f"model:{self.config.provider_id}:{stable_digest({'provider': self.config.provider_id, 'model': model})[:24]}")
             # Numeric counters use neutral public names so existing secret/
             # prompt/token-key redaction remains intact at the report boundary.
-            units = {public: response.usage[native] for native, public in (("prompt_tokens", "input_units"), ("completion_tokens", "generated_units"), ("total_tokens", "total_units")) if native in (response.usage or {})}
-            record.update(status="READY", usage=units)
+            record["status"] = "READY"
             plan = None
             if role == "research":
                 base = request.research_plan
@@ -228,5 +245,7 @@ class GroundedApiDriver:
             return DriverResult(failure_kind=FailureKind.VALIDATION_FAILED, failure_message="grounded provider output was not accepted")
         finally:
             record["duration_ms"] = round((time.monotonic() - started) * 1000)
+            if self.call_journal is not None and call_id is not None:
+                self.call_journal.finish(call_id, {key: record[key] for key in ("status", "usage", "duration_ms")})
             with self._lock:
                 self._calls.append(record)

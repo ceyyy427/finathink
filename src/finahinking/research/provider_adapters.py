@@ -224,6 +224,8 @@ class _CompatibleAdapter:
         credential_store: CredentialStore | None = None,
         schema_version: str = "research-model.v1",
         provider_id: str | None = None,
+        on_dispatch=None,
+        on_usage=None,
     ) -> None:
         if provider_id is not None:
             if not isinstance(provider_id, str) or not re.fullmatch(r"[a-z][a-z0-9_-]{0,63}", provider_id):
@@ -263,6 +265,7 @@ class _CompatibleAdapter:
         self.credential_ref = credential_ref
         self.credential_store = credential_store
         self.schema_version = schema_version.strip()
+        self.on_dispatch, self.on_usage = on_dispatch, on_usage
 
     def capabilities(self) -> ProviderCapabilities:
         return ProviderCapabilities(
@@ -325,8 +328,11 @@ class _CompatibleAdapter:
         for attempt in range(self.retry_policy.max_attempts):
             try:
                 budget = current_runtime_budget()
+                request_bytes = len(_json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8"))
                 if budget is not None:
-                    budget.charge_provider_call(len(_json.dumps(payload, separators=(",", ":")).encode("utf-8")))
+                    budget.charge_provider_call(request_bytes)
+                if self.on_dispatch is not None:
+                    self.on_dispatch(request_bytes)
                 response = self._request(headers, payload)
                 status_code, body = _response_parts(response)
                 if budget is not None:
@@ -345,6 +351,12 @@ class _CompatibleAdapter:
                     raise ProviderAdapterError("provider response is not JSON", kind=ProviderFailureKind.NON_JSON)
                 if not isinstance(body, Mapping):
                     raise ProviderSchemaError()
+                usage = body.get("usage", {})
+                if not isinstance(usage, Mapping):
+                    usage = {}
+                safe_usage = {key: usage[key] for key in ("prompt_tokens", "completion_tokens", "total_tokens") if type(usage.get(key)) is int and 0 <= usage[key] <= 10**9}
+                if self.on_usage is not None and safe_usage:
+                    self.on_usage(safe_usage)
                 if "choices" in body:
                     choices = body.get("choices")
                     if not isinstance(choices, (list, tuple)) or not choices or not isinstance(choices[0], Mapping):
@@ -372,14 +384,17 @@ class _CompatibleAdapter:
                 if envelope.research_context is not None:
                     if finish_reason != "stop" or content.get("status") != "READY":
                         raise ProviderSchemaError()
+                    required = {"status", "claims", "evidence_refs", "limitations"}
+                    if envelope.role == "research":
+                        required |= {"hypotheses", "disagreements"}
+                    if set(content) != required or not content["claims"] or any(not claim.strip() for claim in content["claims"]):
+                        raise ProviderSchemaError()
+                    if envelope.role == "research" and (not content["hypotheses"] or any(not item.strip() for item in (*content["hypotheses"], *content["disagreements"]))):
+                        raise ProviderSchemaError()
                     try:
                         envelope.research_context.validate_references(content.get("evidence_refs", ()))
                     except ValueError:
                         raise ProviderSchemaError() from None
-                usage = body.get("usage", {})
-                if not isinstance(usage, Mapping):
-                    usage = {}
-                safe_usage = {key: usage[key] for key in ("prompt_tokens", "completion_tokens", "total_tokens") if type(usage.get(key)) is int and 0 <= usage[key] <= 10**9}
                 return ModelResponse(provider=self.provider_name, model=self.model, content=content, finish_reason=finish_reason, usage=safe_usage)
             except RuntimeLimitExceeded:
                 raise ProviderAdapterError("RESOURCE_LIMIT", kind=ProviderFailureKind.RESOURCE_LIMIT) from None

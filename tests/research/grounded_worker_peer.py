@@ -28,6 +28,15 @@ def run_peer_stage(invocation, checkpoint_ref, publish_checkpoint):
             with (root / "peer-wire.jsonl").open("a") as handle:
                 handle.write(json.dumps(payload) + "\n")
             result = peer.request(method, path, headers=headers, json=payload, timeout=15)
+            context = json.loads(payload["messages"][1]["content"])
+            if context["question"] == "force-provider-failure" and context["role"] == "technical":
+                result["json"]["choices"][0]["message"]["content"] = "{}"
+            if context["question"] == "oversized-learning-case" and context["role"] == "learning":
+                result["json"]["padding"] = "x" * 300000
+            if context["question"] == "hold-model-request":
+                import time
+
+                time.sleep(30)
             self.body = json.dumps(result["json"]).encode()
 
         def getresponse(self):
