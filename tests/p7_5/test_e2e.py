@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import threading
 from datetime import UTC, date, datetime
 from html.parser import HTMLParser
@@ -131,14 +132,14 @@ def _assert_artifact_manifest(artifact_dir: Path, lines: list[str]) -> None:
         assert digest == hashlib.sha256(content).hexdigest()
 
 
-@pytest.mark.skipif(__import__("importlib.util").util.find_spec("playwright") is None, reason="playwright dev dependency is not installed")
+@pytest.mark.skipif(__import__("importlib.util").util.find_spec("playwright") is None and os.environ.get("FINATHINK_REQUIRE_BROWSER") != "1", reason="playwright dev dependency is not installed")
 def test_browser_acceptance_real_engine_keyboard_responsive_failures_and_evidence(monkeypatch) -> None:
     """Exercise the served product in Chromium; HTMLParser tests cannot prove these behaviors."""
 
     from playwright.sync_api import Error as PlaywrightError
     from playwright.sync_api import sync_playwright
 
-    artifact_dir = Path(__file__).resolve().parents[2] / ".superpowers" / "sdd" / "2026-10-08-research-capability-completion-plan" / "task-16-artifacts"
+    artifact_dir = Path(os.environ.get("FINATHINK_BROWSER_ARTIFACT_DIR", ".superpowers/sdd/2026-10-26-finathink-product-completion-roadmap/browser-artifacts")) / "runtime-journeys"
     artifact_dir.mkdir(parents=True, exist_ok=True)
     secret = "browser-secret-must-never-render"
     monkeypatch.setenv("FINAHINK_USER_API_KEY", secret)
@@ -154,10 +155,14 @@ def test_browser_acceptance_real_engine_keyboard_responsive_failures_and_evidenc
             # every developer/CI machine. Missing browser binaries are an
             # explicit environment skip, rather than a path-specific failure.
             if not Path(playwright.chromium.executable_path).is_file():
+                if os.environ.get("FINATHINK_REQUIRE_BROWSER") == "1":
+                    pytest.fail("Required Chromium binary is unavailable; run python -m playwright install chromium")
                 pytest.skip("Playwright bundled Chromium is unavailable; run `python -m playwright install chromium`")
             try:
                 browser = playwright.chromium.launch(headless=True)
             except PlaywrightError as error:
+                if os.environ.get("FINATHINK_REQUIRE_BROWSER") == "1":
+                    pytest.fail(f"Required Chromium could not launch: {error}")
                 pytest.skip(
                     f"Playwright bundled Chromium could not launch ({error.__class__.__name__}); "
                     "run `python -m playwright install chromium`"

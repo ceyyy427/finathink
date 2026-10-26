@@ -110,6 +110,7 @@ function bindOverviewTooltips(root) {
 
 export function renderOverview(root, payload) {
   const normalized = normalizeOverviewPayload(payload);
+  root?._finathinkOverviewCleanup?.();
   if (root?.dataset) {
     root.dataset.overviewStatus = overviewStatus(normalized);
     root.dataset.animation = reducedMotion() ? 'reduced' : 'enabled';
@@ -125,6 +126,39 @@ export function renderOverview(root, payload) {
   }
   const topics = root?.querySelector?.('[data-overview-topics]');
   if (topics?.dataset) topics.dataset.topicCount = String(normalized.topics.length);
+  const tableBody = root?.querySelector?.('[data-overview-daily-rows]');
+  if (tableBody && typeof document !== 'undefined') {
+    const rows = normalized.activity_series.map((item) => {
+      const row = document.createElement('tr');
+      const heading = document.createElement('th');
+      heading.scope = 'row';
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'overview-day';
+      button.dataset.overviewDay = '';
+      button.dataset.date = item.date;
+      button.dataset.tooltip = `${item.date}: ${item.count} recorded · ${item.learning} learning · ${item.research} research`;
+      button.setAttribute('aria-describedby', 'overview-tooltip');
+      button.textContent = item.date;
+      heading.appendChild(button);
+      row.appendChild(heading);
+      for (const key of ['count', 'learning', 'research']) {
+        const cell = document.createElement('td');
+        cell.textContent = String(item[key]);
+        row.appendChild(cell);
+      }
+      return row;
+    });
+    if (!rows.length) {
+      const row = document.createElement('tr');
+      const cell = document.createElement('td');
+      cell.colSpan = 4;
+      cell.textContent = 'No dated activity recorded. Save research or complete a learning check to begin.';
+      row.appendChild(cell);
+      rows.push(row);
+    }
+    tableBody.replaceChildren(...rows);
+  }
   renderOverviewVisuals(root, normalized);
   bindOverviewTooltips(root);
   return normalized;
@@ -140,21 +174,49 @@ export function renderOverviewVisuals(root, normalized) {
   const comparison = root?.querySelector?.('[data-overview-comparison]');
   if (comparison?.dataset) comparison.dataset.comparisonReady = normalized.research_comparison.length ? 'ready' : 'empty';
   if (typeof document === 'undefined' || !chart) return normalized;
-  const chartCanvas = chart.querySelector?.('.overview-chart');
+  const chartCanvas = chart.querySelector?.('[data-overview-canvas]');
+  const bars = chart.querySelector?.('[data-overview-activity-series]');
+  if (!normalized.activity_series.length) {
+    setHidden(chartCanvas, true);
+    setHidden(bars, false);
+    if (bars) bars.textContent = 'No dated activity recorded.';
+  }
   if (chartCanvas && normalized.activity_series.length) {
-    chartCanvas.querySelector?.('.overview-chart-bars')?.setAttribute('hidden', 'hidden');
+    chartCanvas.hidden = false;
     const instance = echarts.init(chartCanvas, null, { renderer: 'canvas' });
     instance.setOption({
       animation: !reducedMotion(),
       grid: { top: 20, right: 16, bottom: 32, left: 42 },
-      tooltip: { trigger: 'axis' },
+      tooltip: { trigger: 'axis', confine: true },
       xAxis: { type: 'category', data: normalized.activity_series.map((item) => item.date ?? '—'), axisLabel: { color: '#71819A' } },
       yAxis: { type: 'value', minInterval: 1, axisLabel: { color: '#71819A' }, splitLine: { lineStyle: { color: 'rgba(167, 139, 250, .16)' } } },
       series: [{ type: 'bar', name: 'Recorded activity', data: normalized.activity_series.map((item) => item.count ?? 0), itemStyle: { color: '#38BDF8', borderRadius: [4, 4, 0, 0] } }],
     });
+    setHidden(chart.querySelector?.('[data-overview-activity-series]'), true);
     root._finathinkOverviewChart = instance;
+    const resize = () => instance.resize();
+    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(resize) : null;
+    observer?.observe(chartCanvas);
+    window.addEventListener('resize', resize, { passive: true });
+    const motion = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+    const updateMotion = () => {
+      root.dataset.animation = motion.matches ? 'reduced' : 'enabled';
+      instance.setOption({ animation: !motion.matches });
+    };
+    motion?.addEventListener('change', updateMotion);
+    const cleanup = (event) => {
+      if (event?.persisted) return;
+      observer?.disconnect();
+      window.removeEventListener('resize', resize);
+      window.removeEventListener('pagehide', cleanup);
+      motion?.removeEventListener('change', updateMotion);
+      instance.dispose();
+      root._finathinkOverviewChart = null;
+      root._finathinkOverviewCleanup = null;
+    };
+    root._finathinkOverviewCleanup = cleanup;
+    window.addEventListener('pagehide', cleanup);
   }
-  const bars = chart.querySelector?.('[data-overview-activity-series]');
   if (bars && normalized.activity_series.length) {
     bars.setAttribute('data-point-count', String(normalized.activity_series.length));
     bars.setAttribute('aria-label', normalized.activity_series.map((item) => `${item.date ?? 'unknown'}: ${item.count ?? 0} recorded`).join('; '));
@@ -164,6 +226,7 @@ export function renderOverviewVisuals(root, normalized) {
 
 export function mountOverview(root, { payload, payloadUrl } = {}) {
   if (!root) return Promise.reject(new TypeError('overview root is required'));
+  if (root._finathinkOverviewMount) return root._finathinkOverviewMount;
   root.dataset.overviewStatus = 'LOADING';
   root.setAttribute?.('aria-busy', 'true');
   setHidden(root.querySelector?.('[data-overview-loading]'), false);
@@ -172,7 +235,8 @@ export function mountOverview(root, { payload, payloadUrl } = {}) {
     if (!response.ok) throw new Error(`overview request failed (${response.status})`);
     return response.json();
   });
-  return load.then((raw) => renderOverview(root, raw)).catch((error) => {
+  root._finathinkOverviewMount = load.then((raw) => renderOverview(root, raw)).catch((error) => {
+    root._finathinkOverviewMount = null;
     root.dataset.overviewStatus = 'ERROR';
     root.setAttribute?.('aria-busy', 'false');
     setHidden(root.querySelector?.('[data-overview-loading]'), true);
@@ -180,8 +244,5 @@ export function mountOverview(root, { payload, payloadUrl } = {}) {
     if (target) { target.textContent = `Overview unavailable: ${error.message}. Check the local service and retry.`; target.hidden = false; }
     throw error;
   });
-}
-
-if (typeof document !== 'undefined') {
-  document.querySelectorAll('[data-finathink-overview]').forEach((root) => { mountOverview(root).catch(() => {}); });
+  return root._finathinkOverviewMount;
 }

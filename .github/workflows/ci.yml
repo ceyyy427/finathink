@@ -10,6 +10,54 @@ permissions:
   contents: read
 
 jobs:
+  frontend-release:
+    name: Frontend build and browser regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      FINATHINK_REQUIRE_BROWSER: '1'
+      FINATHINK_BROWSER_ARTIFACT_DIR: ${{ runner.temp }}/finathink-browser-artifacts
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install locked frontend dependencies
+        working-directory: frontend
+        run: npm ci
+      - name: Frontend unit tests and parser performance
+        working-directory: frontend
+        run: |
+          npm test
+          npm run perf --silent | tee parser-performance.json
+      - name: Build and verify committed browser bundle
+        run: |
+          npm --prefix frontend run build
+          git diff --exit-code -- site/assets/finathink-research.js src/finahinking/_package_data/assets/finathink-research.js
+      - name: Install browser test runtime
+        run: |
+          python -m pip install -e '.[dev]'
+          python -m playwright install --with-deps chromium
+      - name: Required browser and HTTP journeys
+        run: python -m pytest tests/p7_5/test_e2e.py tests/p7_5/test_phase4_browser.py -q --junitxml=browser-results.xml
+      - name: Save screenshots, diagnostics, performance and test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-browser-evidence
+          retention-days: 14
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/finathink-browser-artifacts/
+            frontend/parser-performance.json
+            browser-results.xml
+
   test:
     runs-on: ubuntu-latest
     strategy:
