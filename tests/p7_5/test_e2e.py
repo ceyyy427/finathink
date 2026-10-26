@@ -151,13 +151,8 @@ def test_browser_acceptance_real_engine_keyboard_responsive_failures_and_evidenc
     browser_errors: list[str] = []
     try:
         with sync_playwright() as playwright:
-            # Let Playwright resolve its own bundled browser so this works on
-            # every developer/CI machine. Missing browser binaries are an
-            # explicit environment skip, rather than a path-specific failure.
-            if not Path(playwright.chromium.executable_path).is_file():
-                if os.environ.get("FINATHINK_REQUIRE_BROWSER") == "1":
-                    pytest.fail("Required Chromium binary is unavailable; run python -m playwright install chromium")
-                pytest.skip("Playwright bundled Chromium is unavailable; run `python -m playwright install chromium`")
+            # Launch checks the actual browser: executable_path may describe the
+            # optional headed binary when only the headless shell is installed.
             try:
                 browser = playwright.chromium.launch(headless=True)
             except PlaywrightError as error:
