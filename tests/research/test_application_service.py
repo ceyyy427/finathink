@@ -96,6 +96,8 @@ def test_two_spawned_jobs_publish_distinct_verified_reports_and_survive_restart(
     assert outcomes[0]["metrics"]["total_return"] > 0
     assert outcomes[1]["metrics"]["total_return"] == 0
     assert all(job["report_status"] == "AVAILABLE" and job["report_url"] for job in outcomes)
+    assert all(job["data_mode"] == "SAMPLE" for job in outcomes)
+    assert all("Synthetic SAMPLE data; it is not evidence of market performance." in job["data_limitations"] for job in outcomes)
     assert service.runs.count_runs() == 2
     for job in outcomes:
         entry = service.runs.get_run(job["run_id"])

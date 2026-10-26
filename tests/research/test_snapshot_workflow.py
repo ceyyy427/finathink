@@ -1,16 +1,18 @@
 """The selected snapshot, not a fixture, feeds every deterministic stage."""
 
 from dataclasses import replace
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
 from finahinking.data.snapshot_store import SnapshotStore
 from finahinking.p8_2.data_sources import FixtureMarketDataSource
+from finahinking.quant.evaluation import evaluate_backtest
+from finahinking.quant.interfaces import BacktestResult
 from finahinking.research.contracts import ResearchPlan, ResearchRequest, ResearchState, to_jsonable
 from finahinking.research.drivers import OfflineDriver
 from finahinking.research.reports import ReportBundleWriter
-from finahinking.research.snapshot_tools import SnapshotResearchTools
+from finahinking.research.snapshot_tools import SnapshotResearchTools, local_research_policy
 from finahinking.research.tools import ResearchToolRequest, ResearchToolStatus
 from finahinking.research.workflow import ResearchOrchestrator
 
@@ -18,7 +20,7 @@ from finahinking.research.workflow import ResearchOrchestrator
 def request(ref, run_id="selected-run"):
     return ResearchRequest(
         run_id=run_id, instrument="AAA", as_of="2026-10-01",
-        research_plan=ResearchPlan(hypotheses=("bounded local study",), factor_ids=("momentum_2d",)),
+        research_plan=ResearchPlan(hypotheses=("bounded local study",), factor_ids=(local_research_policy()["factor_id"],)),
         analyst_roles=("technical",), asset_class="EQUITY", workflow_version="local-research.v1",
         config_digest="local-defaults-v1", snapshot_ref=ref,
     )
@@ -76,6 +78,57 @@ def test_daily_baseline_rejects_intraday_bars_instead_of_mislabeling_returns():
     result = ResearchOrchestrator().run(request(intraday.fingerprint), OfflineDriver(), tools)
     assert result.state.current_state is ResearchState.VALIDATION_FAILED
     assert result.decision is None and tools.analysis == {}
+
+
+def test_final_cutoff_does_not_authorize_trades_before_historical_release():
+    original = FixtureMarketDataSource(points=20).snapshot("AAA")
+    released = datetime(2026, 9, 1, tzinfo=UTC)
+    delayed = replace(original, as_of=released, observations=tuple(replace(item, available_at=released) for item in original.observations))
+    tools = SnapshotResearchTools(delayed)
+    result = ResearchOrchestrator().run(request(delayed.fingerprint), OfflineDriver(), tools)
+    assert result.state.current_state is ResearchState.VALIDATION_FAILED
+    assert result.decision is None and tools.analysis == {}
+
+
+def test_paper_allocation_uses_the_same_strategy_signal_including_cash():
+    original = FixtureMarketDataSource(points=20).snapshot("AAA")
+    falling = replace(original, observations=tuple(replace(item, close=100 - index, high=max(item.open, 100 - index) + 1, low=min(item.open, 100 - index) - 1) for index, item in enumerate(original.observations)))
+    tools = SnapshotResearchTools(falling)
+    result = ResearchOrchestrator().run(request(falling.fingerprint), OfflineDriver(), tools)
+    assert tools.analysis["metrics"]["trade_count"] == 0
+    assert result.state.current_state is ResearchState.LEARNING_RECORDED
+    assert dict(result.decision.weights) == {"AAA": 0.0}
+    assert tools.risk_payload["portfolio_constraints"]["max_exposure"] == 0
+    assert tools.risk_payload["snapshot"]["concentration"] == 0
+
+
+def test_unknown_calendar_is_observation_based_without_false_annualization():
+    daily = FixtureMarketDataSource(points=20).snapshot("AAA")
+    start = daily.observations[0].timestamp
+    weekly = replace(daily, observations=tuple(replace(item, timestamp=start + timedelta(days=7 * index), available_at=start + timedelta(days=7 * index)) for index, item in enumerate(daily.observations)))
+    for snapshot in (daily, weekly):
+        tools = SnapshotResearchTools(snapshot)
+        result = ResearchOrchestrator().run(request(snapshot.fingerprint), OfflineDriver(), tools)
+        assert result.state.current_state is ResearchState.LEARNING_RECORDED
+        assert tools.analysis["factor"]["factor_id"] == "momentum_2obs"
+        assert tools.analysis["metric_basis"] == "OBSERVATION"
+        assert all(tools.analysis["metrics"][key] is None for key in ("annualized_return", "volatility", "sharpe", "sortino"))
+        replay = evaluate_backtest(BacktestResult.from_dict(tools.analysis["backtest"]))
+        assert all(replay.metrics[key] is None for key in ("annualized_return", "volatility", "sharpe", "sortino"))
+        assert tools.analysis["metrics"]["total_return"] > 0
+
+
+def test_synthetic_source_warning_survives_into_visible_complete_report(tmp_path):
+    snapshot = FixtureMarketDataSource(points=20).snapshot("AAA")
+    tools = SnapshotResearchTools(snapshot)
+    result = ResearchOrchestrator().run(request(snapshot.fingerprint), OfflineDriver(), tools)
+    assert tools.analysis["data_mode"] == "SAMPLE"
+    assert set(snapshot.limitations).issubset(tools.analysis["limitations"])
+    manifest = ReportBundleWriter().write(result, tmp_path, quant_analytics=tools.analysis)
+    assert manifest.source_snapshot["data_mode"] == "SAMPLE"
+    html = (tmp_path / result.state.run_id / "complete_report.html").read_text()
+    assert "Synthetic SAMPLE data; it is not evidence of market performance." in html
+    assert 'Data mode: SAMPLE' in html
 
 
 def test_unsupported_factor_is_rejected_rather_than_silently_ignored():

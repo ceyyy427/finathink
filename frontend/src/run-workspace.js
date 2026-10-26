@@ -78,7 +78,8 @@ export function mountRunWorkspace(root, { fetcher = globalThis.fetch, location =
     root.dataset.workspaceState = 'READY';
     const empty = query('[data-run-empty]'); if (empty) empty.hidden = true;
     text('[data-run-state]', `${LABELS[job.status]} · ${STAGES[job.state] ?? job.state} · 第 ${job.attempts} 次尝试`);
-    text('[data-run-identity]', `${job.instrument} · ${job.as_of} · ${job.snapshot_ref}`);
+    text('[data-run-identity]', `${job.data_mode ?? 'UNKNOWN'} DATA · ${job.instrument} · ${job.as_of} · ${job.snapshot_ref}`);
+    text('[data-run-data-note]', (job.data_limitations ?? []).join(' '));
     text('[data-run-failure]', job.failure_kind ? `需要处理：${job.failure_kind}（阶段：${STAGES[job.failure_stage] ?? job.failure_stage ?? '发布校验'}）。检查数据与配置后，新建研究任务。` : '');
     const stages = query('[data-run-stages]');
     if (stages) stages.replaceChildren(...job.stages.map((stage) => { const node = element('li', `${STAGES[stage.name]} · ${stage.status}`); node.dataset.stageStatus = stage.status; return node; }));

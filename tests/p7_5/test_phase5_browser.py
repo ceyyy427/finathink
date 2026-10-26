@@ -65,6 +65,8 @@ def test_two_real_inputs_generate_distinct_reports_and_survive_page_reload(http_
     assert first != second and link_a != link_b
     assert app.research_service.get_job(first)["metrics"]["total_return"] > 0
     assert app.research_service.get_job(second)["metrics"]["total_return"] == 0
+    assert "SAMPLE DATA" in page.locator('[data-run-identity]').inner_text()
+    assert "not evidence of market performance" in page.locator('[data-run-data-note]').inner_text()
     for link, reference in zip((link_a, link_b), references, strict=True):
         response = page.request.get(base + link)
         assert response.status == 200 and reference in response.text()

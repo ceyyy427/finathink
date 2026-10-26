@@ -306,7 +306,7 @@ class ResearchApplicationService:
         request = ResearchRequest(
             run_id=f"research-{stable_digest({'scope': self.scope_id, 'key': key})[:24]}",
             instrument=instrument, as_of=values.get("as_of"),
-            research_plan=ResearchPlan(hypotheses=(question.strip(),), factor_ids=(policy["factor_id"],), validation_spec={"scope_id": self.scope_id, "execution_mode": "local-deterministic", "model_config_ref": "offline", "budget": budget, "policy_fingerprint": policy_fingerprint, "strategy_version": policy["strategy_version"]}),
+            research_plan=ResearchPlan(hypotheses=(question.strip(),), factor_ids=(policy["factor_id"],), validation_spec={"scope_id": self.scope_id, "execution_mode": "local-deterministic", "model_config_ref": "offline", "data_mode": snapshot.mode, "budget": budget, "policy_fingerprint": policy_fingerprint, "strategy_version": policy["strategy_version"]}),
             analyst_roles=_ROLES, asset_class="EQUITY_OR_ETF", workflow_version=WORKFLOW_VERSION,
             config_digest=stable_digest({"workflow": WORKFLOW_VERSION, "budget": budget, "policy_fingerprint": policy_fingerprint}),
             snapshot_ref=snapshot.fingerprint,
@@ -368,10 +368,13 @@ class ResearchApplicationService:
             failed_stage = "REPORT_PUBLISHED"
         metrics = {}
         report_status = entry["report_status"] if entry is not None else "UNAVAILABLE"
+        source = entry["manifest"].get("source_snapshot", {}) if entry is not None else {}
         if report_status == "AVAILABLE":
             metrics = entry["manifest"].get("source_snapshot", {}).get("quant_analytics", {}).get("metrics", {})
         return redact_public_payload({
             "schema_version": 1, "paper_only": True, "execution_mode": "local-deterministic",
+            "data_mode": source.get("data_mode", request.research_plan.validation_spec.get("data_mode", "UNKNOWN")),
+            "data_limitations": source.get("data_limitations", []), "metric_basis": "OBSERVATION",
             "job_id": record.job_id, "run_id": request.run_id, "status": record.status.value,
             "snapshot_ref": request.snapshot_ref, "instrument": request.instrument, "as_of": request.as_of.isoformat(),
             "question": request.research_plan.hypotheses[0], "model_config_ref": "offline",

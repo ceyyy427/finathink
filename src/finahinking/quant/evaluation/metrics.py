@@ -59,6 +59,11 @@ def evaluate_backtest(result: BacktestResult) -> EvaluationReport:
         "excess_return": None if total_return is None or benchmark_return is None else total_return - benchmark_return,
         "trade_count": float(len(result.trades)),
     }
+    if result.config.frequency == "observation":
+        # An observation is not a calendar/session duration. Re-evaluation
+        # must preserve this boundary, including from a saved BacktestResult.
+        for key in ("annualized_return", "volatility", "sharpe", "sortino"):
+            metrics[key] = None
     return EvaluationReport(
         result_fingerprint=result.fingerprint,
         metrics=metrics,

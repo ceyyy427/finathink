@@ -89,6 +89,8 @@ def research_view_model(run_state: ResearchRunState, manifest: ReportManifest | 
             "state_history": [item.value for item in run_state.state_history],
             "as_of": as_of,
             "dataset_fingerprint": snapshot.get("dataset_fingerprint"),
+            "data_mode": snapshot.get("data_mode", "UNKNOWN"),
+            "data_limitations": snapshot.get("data_limitations", []),
             "mode": "OFFLINE",
             "paper_only": True,
             "decision_eligible": run_state.decision_eligible,
@@ -346,4 +348,8 @@ def render_status_wall_html(model: Mapping[str, Any], *, title: str = "Finathink
     )
     if metric_rows:
         evidence_html += f'<section aria-labelledby="quant-metrics"><h2 id="quant-metrics">Historical metrics</h2><table><tbody>{metric_rows}</tbody></table><p>In-sample deterministic baseline, including declared transaction costs. Not an out-of-sample forecast.</p></section>'
+    if safe.get("data_mode"):
+        data_notes = "".join(f'<li>{esc(note)}</li>' for note in safe.get("data_limitations", []))
+        source_json = esc(json.dumps(safe.get("source_metadata", {}), ensure_ascii=False, sort_keys=True))
+        evidence_html += f'<section class="note" aria-labelledby="data-mode"><h2 id="data-mode">Data mode: {esc(safe["data_mode"])}</h2><ul>{data_notes}</ul><details><summary>Source metadata</summary><pre>{source_json}</pre></details></section>'
     return f'''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Read-only multi-agent research status wall"><title>{esc(safe_title)} · {run_id}</title><style>body{{font:16px/1.5 system-ui,sans-serif;max-width:980px;margin:0 auto;padding:2rem;color:#173137}}h1{{margin-bottom:.25rem}}.meta{{color:#617174}}.grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.7rem;padding:0;list-style:none}}.grid li{{border:1px solid #c9c2b5;padding:.8rem;display:flex;justify-content:space-between;gap:.5rem}}table{{width:100%;border-collapse:collapse;margin:1rem 0}}th,td{{text-align:left;border-bottom:1px solid #c9c2b5;padding:.6rem}}code,pre{{overflow:auto}}.note{{border-left:3px solid #c36e48;padding-left:1rem}}</style></head><body><main><h1>{esc(safe_title)}</h1><p class="meta">Run {run_id} · State {state} · PAPER-ONLY · READ-ONLY</p>{evidence_html}<section aria-labelledby="roles"><h2 id="roles">Analyst roles</h2><ul class="grid">{role_cards}</ul></section><section aria-labelledby="stages"><h2 id="stages">Stage wall</h2><table><thead><tr><th>Stage</th><th>Status</th></tr></thead><tbody>{stage_rows}</tbody></table></section><section class="note" aria-labelledby="evidence"><h2 id="evidence">Missing evidence</h2><ul>{limitation_rows}</ul></section><noscript><p>This report is fully readable without JavaScript. Values are server-provided; no financial indicators are calculated in the browser.</p></noscript><details><summary>Server payload (redacted)</summary><pre>{payload_json}</pre></details></main></body></html>'''

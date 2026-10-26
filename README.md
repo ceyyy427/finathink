@@ -29,8 +29,8 @@ Finathink 将用户提供的数据、证据、因子、量化检验、风险检�
 
 ### 后台研究任务
 
-- 在“研究任务”页显式获取并保存日频 OHLCV 快照，或选择已保存的快照。
-- 通过独立 supervisor 与 spawn worker 运行两日动量基线、含费用回测和纸面风险检查。
+- 在“研究任务”页显式获取并保存低频 OHLCV 快照，或选择已保存的快照。
+- 通过独立 supervisor 与 spawn worker 运行两观察期动量基线、含费用回测和同信号纸面风险检查。
 - 跟踪阶段进度、取消任务，并在刷新页面或重启服务后继续查看。
 - 按数据与策略指纹保存已校验的报告；历史记录、Overview 和研究对比读取同一本地库存。
 - 本地离线角色流程可直接运行，研究问题与资源预算随任务留档。
@@ -92,7 +92,7 @@ python3 scripts/run_local_app.py --sample --port 8765
 - 因子策略工作台：<http://127.0.0.1:8765/workbench>
 - Provider 设置：<http://127.0.0.1:8765/settings/providers>
 
-日频数据准备、任务接口与验收说明见[本地研究闭环指南](docs/PHASE5_LOCAL_RESEARCH_GUIDE.md)。
+低频数据准备、任务接口与验收说明见[本地研究闭环指南](docs/PHASE5_LOCAL_RESEARCH_GUIDE.md)。
 
 ## 仓库结构
 

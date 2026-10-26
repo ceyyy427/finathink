@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import date
+from itertools import pairwise
 from types import MappingProxyType
 
 import pandas as pd
@@ -26,7 +27,8 @@ from .tools import (
 )
 
 _LOCAL_POLICY = MappingProxyType({
-    "version": "local-paper.v1", "factor_id": "momentum_2d", "momentum_window": 2, "bar_frequency": "daily-single-utc-date",
+    "version": "local-paper.v2", "factor_id": "momentum_2obs", "momentum_window": 2, "bar_frequency": "one-observation-per-utc-date",
+    "metric_basis": "OBSERVATION", "annualization": 1,
     "strategy_version": f"{FactorThresholdStrategy.strategy_id}.{FactorThresholdStrategy.version}",
     "engine_version": BacktestEngine.engine_version, "threshold": 0.0,
     "target_weight": 0.75, "starting_cash": 10000, "fee_bps": 5, "slippage_bps": 5,
@@ -105,18 +107,33 @@ class SnapshotResearchTools(ResearchToolGateway):
         if len(rows) < 4:
             raise ValueError("selected instrument requires at least four OHLCV observations")
         if len({item.timestamp.date() for item in rows}) != len(rows):
-            raise ValueError("daily baseline requires one observation per UTC date")
+            raise ValueError("low-frequency baseline requires at most one observation per UTC date")
+        # Every value in a historical signal must already be available when
+        # the next-bar engine can execute it. End-of-research PIT alone is
+        # not sufficient. Delayed feeds need an availability-aware engine.
+        if any(previous.available_at is None or previous.available_at > following.timestamp for previous, following in pairwise(rows)):
+            raise ValueError("historical data was unavailable at its next-bar execution boundary")
         frame = pd.DataFrame(
             [{key: getattr(item, key) for key in ("open", "high", "low", "close", "volume")} for item in rows],
             index=pd.DatetimeIndex([item.timestamp for item in rows]),
         )
         dataset = Dataset(frame, Provenance("user-snapshot", "local snapshot reference", license="user-declared; local research"))
         policy = self.policy
-        strategy = FactorThresholdStrategy(factor=momentum_factor(policy["momentum_window"]), threshold=policy["threshold"], target_weight=policy["target_weight"])
-        config = BacktestConfig(**{key: policy[key] for key in ("starting_cash", "fee_bps", "slippage_bps")})
+        factor_definition = replace(momentum_factor(policy["momentum_window"]), name=policy["factor_id"])
+        strategy = FactorThresholdStrategy(factor=factor_definition, threshold=policy["threshold"], target_weight=policy["target_weight"])
+        config = BacktestConfig(**{key: policy[key] for key in ("starting_cash", "fee_bps", "slippage_bps", "annualization")}, frequency="observation")
         backtest = BacktestEngine().run(dataset, strategy, config)
         evaluation = evaluate_backtest(backtest)
+        metrics = dict(evaluation.metrics)
         factor_values = strategy.factor.compute(frame["close"])
+        target_weight = float(strategy.generate(dataset).iloc[-1])
+        from .reports import redact_public_payload
+
+        source = redact_public_payload({
+            "data_mode": self.snapshot.mode,
+            "source_metadata": {("origin_id" if key == "source" else key): self.snapshot.provenance[key] for key in ("connection_id", "source_declaration", "provider", "source", "data_fingerprint", "retrieved_at", "timezone", "adjustment", "calendar", "quality_issues") if key in self.snapshot.provenance},
+            "source_limitations": list(self.snapshot.limitations),
+        })
         factor = {
             "factor_id": strategy.factor.name, "dataset_fingerprint": self.snapshot.fingerprint,
             "latest_value": float(factor_values.iloc[-1]),
@@ -127,9 +144,11 @@ class SnapshotResearchTools(ResearchToolGateway):
             "engine_dataset_fingerprint": backtest.dataset_fingerprint,
             "policy_fingerprint": stable_digest(policy), "strategy_version": policy["strategy_version"],
             "instrument": instrument, "as_of": parameters["as_of"],
-            "factor": factor, "metrics": dict(evaluation.metrics),
+            "factor": factor, "metrics": metrics, "proposed_target_weight": target_weight,
+            "metric_basis": policy["metric_basis"], "data_mode": source["data_mode"],
+            "source_metadata": source["source_metadata"],
             "backtest": backtest.to_dict(), "config": asdict(config),
-            "limitations": list(evaluation.limitations), "paper_only": True,
+            "limitations": sorted(set(evaluation.limitations) | set(source["source_limitations"]) | {"Observation-period metrics; calendar not verified, so annualized return, volatility, Sharpe and Sortino are withheld.", "Historical signal availability is checked against each next-bar execution boundary; delayed feeds are rejected.", "Paper fills use archived marks, not live market execution."}), "paper_only": True,
         }
         self.analysis["fingerprint"] = stable_digest(self.analysis)
         return self.analysis
@@ -139,7 +158,9 @@ class SnapshotResearchTools(ResearchToolGateway):
         if not self.analysis or any(self.analysis[key] != parameters[key] for key in ("instrument", "as_of")):
             raise ValueError("risk requires the matching completed backtest")
         last = next(item for item in reversed(self.snapshot.observations) if item.instrument == parameters["instrument"])
-        drawdown = abs(float(self.analysis["metrics"]["max_drawdown"]))
+        historical_drawdown = abs(float(self.analysis["metrics"]["max_drawdown"]))
+        target_weight = self.analysis["proposed_target_weight"]
+        drawdown = historical_drawdown if target_weight else 0.0
         policy = self.policy
         self.risk_payload = {
             "dataset_fingerprint": self.snapshot.fingerprint,
@@ -149,12 +170,14 @@ class SnapshotResearchTools(ResearchToolGateway):
                 "as_of": self._boundary(parameters["as_of"]).isoformat(), "pit_status": "AVAILABLE",
                 "observations": [{key: last.to_dict()[key] for key in ("instrument", "timestamp", "available_at", "close", "volume")}],
                 "drawdown": drawdown,
+                "concentration": target_weight, "proposed_target_weight": target_weight,
+                "historical_strategy_drawdown": historical_drawdown,
                 "stress_results": {"historical_drawdown": {"passed": drawdown <= policy["max_drawdown"]}},
             },
             "factor_result": {"status": "READY", "metrics": {"drawdown": drawdown}},
-            "constraints": {**{key: policy[key] for key in ("max_drawdown", "max_concentration", "min_liquidity")}, "stress_scenarios": {"historical_drawdown": {"drawdown": drawdown}}},
+            "constraints": {**{key: policy[key] for key in ("max_drawdown", "max_concentration")}, "min_liquidity": policy["min_liquidity"] if target_weight else 0.0, "stress_scenarios": {"historical_drawdown": {"drawdown": drawdown}}},
             "candidates": [parameters["instrument"]],
-            "portfolio_constraints": {"max_single_weight": policy["target_weight"], "max_exposure": policy["target_weight"]},
+            "portfolio_constraints": {"max_single_weight": policy["target_weight"], "max_exposure": target_weight},
             "execution_policy": {"initial_cash": policy["starting_cash"], "fee_bps": policy["fee_bps"], "slippage_bps": policy["slippage_bps"]},
         }
         return self.risk_payload

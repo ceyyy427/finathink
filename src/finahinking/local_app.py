@@ -1431,7 +1431,7 @@ class LocalApplication:
             '<section data-run-workspace data-job-status="EMPTY">'
             '<div class="status-row"><span class="status status--offline">LOCAL / OFFLINE</span><span class="status status--ready">PAPER-ONLY</span></div>'
             '<h1>研究任务</h1><p class="lede">选定数据，运行有边界的研究，保留可以复核的结果。</p>'
-            '<p>本轮运行固定的两日动量基线、含费用回测和纸面风险检查。输入需至少四条日频 OHLCV，同一标的每个 UTC 日期一条，并提供可用时间。模型配置为本地离线角色流程，不调用模型 API。研究问题作为假设留档，不会自行生成或执行代码。</p>'
+            '<p>本轮运行两观察期动量基线、含费用回测和同信号纸面风控。至少四条低频 OHLCV，每个 UTC 日期最多一条；历史信号所用数据必须在下一根观测执行前可用。周期按观测条数计算，未验证交易日历时不展示年化收益、波动率或夏普。模型使用本地离线角色合同，研究问题作为假设留档。</p>'
             f'<input data-run-csrf type="hidden" value="{self.csrf_token}">'
             '<p data-run-loading role="status">正在读取快照与任务记录…</p>'
             '<p class="error-state" data-run-error role="alert" hidden></p>'
@@ -1452,7 +1452,7 @@ class LocalApplication:
             '<button type="submit">提交研究任务</button></form><button type="button" class="button-secondary" data-run-new>新建另一项研究</button></section></div>'
             '<section class="panel section" data-run-progress aria-live="polite" aria-atomic="false"><h2>03 / 运行与结果</h2>'
             '<p data-run-empty>还没有研究任务。先选择快照并提交研究。</p><p data-run-state></p><p data-run-identity class="snapshot-fingerprint"></p><ol class="research-stage-list" data-run-stages></ol>'
-            '<dl data-run-metrics></dl><p data-run-failure></p><div class="action-row"><button type="button" data-run-cancel disabled>取消任务</button><a data-run-report hidden>打开完整 HTML 报告</a><a data-run-detail hidden>查看研究档案</a></div></section>'
+            '<p class="field-help" data-run-data-note></p><dl data-run-metrics></dl><p data-run-failure></p><div class="action-row"><button type="button" data-run-cancel disabled>取消任务</button><a data-run-report hidden>打开完整 HTML 报告</a><a data-run-detail hidden>查看研究档案</a></div></section>'
             '<section class="panel section"><h2>最近的后台任务</h2><p>刷新页面或重启服务后，可从这里继续查看；相同提交标识不会重复排队。</p><ul class="overview-list" data-run-history></ul><a href="/research/compare">比较已发布的研究</a></section>'
             '<noscript><p>任务提交和跟踪需要 JavaScript。已发布的 HTML 报告可离线阅读。</p></noscript></section>'
         )
