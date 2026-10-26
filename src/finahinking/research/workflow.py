@@ -354,7 +354,7 @@ class ResearchOrchestrator:
                 outcome
                 for outcome in outcomes
                 if spec_by_role.get(outcome.role.casefold(), AnalystSpec(outcome.role)).required
-                and outcome.status not in {"READY", "OFFLINE"}
+                and outcome.status not in {"READY", "OFFLINE", "INSUFFICIENT_DATA"}
             )
             missing_required_roles = tuple(
                 spec.role for spec in specs if spec.required and spec.role.casefold() not in {outcome.role.casefold() for outcome in outcomes}

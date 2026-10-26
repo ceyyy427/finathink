@@ -12,6 +12,13 @@ test('job contract preserves server metrics and verifies report identity', () =>
   for (const change of [{ paper_only: false }, { snapshot_ref: 'unknown' }, { report_url: 'javascript:alert(1)' }, { report_url: '/research/other/report/complete' }, { metrics: { total_return: Infinity } }]) assert.throws(() => normalizeJob({ ...job, ...change }));
 });
 
+test('grounded jobs retain model provenance without admitting other execution modes', () => {
+  const value = normalizeJob({ ...job, execution_mode: 'provider-grounded', model_config_ref: 'desk', model_research: { calls: [], roles: [] } });
+  assert.equal(value.execution_mode, 'provider-grounded');
+  assert.equal(value.model_config_ref, 'desk');
+  assert.throws(() => normalizeJob({ ...job, execution_mode: 'live-trading' }));
+});
+
 test('observer stops on terminal result and never schedules another poll', async () => {
   const timers = new Map(); let serial = 0; let calls = 0; const updates = [];
   const observer = createJobObserver({ fetcher: async () => response({ ...job, status: ++calls === 1 ? 'running' : 'completed' }), setTimer: (fn) => { timers.set(++serial, fn); return serial; }, clearTimer: (id) => timers.delete(id) });
@@ -52,6 +59,6 @@ test('mounting one workspace twice coalesces its initial requests', async () => 
   const second = mountRunWorkspace(root, { fetcher });
   assert.equal(first, second);
   await first.ready;
-  assert.equal(calls, 3);
+  assert.equal(calls, 4);
   first.stop();
 });

@@ -107,7 +107,7 @@ def test_local_app_exposes_secret_free_provider_status_and_settings_page(monkeyp
     assert "read-only" in error["error"]
     page_status, page_type, page = app.route("GET", "/settings/providers")
     assert page_status == 200 and page_type.startswith("text/html")
-    assert "Provider access" in page
+    assert 'name="credential_env"' in page and 'name="api_key"' not in page
     assert secret not in page
 
 

@@ -6,9 +6,12 @@ import json
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
 from .contracts import ProviderSelection, stable_digest, to_jsonable
+
+if TYPE_CHECKING:
+    from .context_bundle import ResearchContextBundle
 
 
 @dataclass(frozen=True, slots=True)
@@ -28,8 +31,8 @@ class ProviderCapabilities:
 class ModelEnvelope:
     """A secret-free request envelope.
 
-    The envelope contains digests and allowlisted names, never a raw prompt,
-    endpoint, path, credential, or executable instruction.
+    Legacy probes use digests. Grounded runs additionally carry a private,
+    authorized context projection, never credentials or execution hooks.
     """
 
     request_id: str
@@ -38,6 +41,7 @@ class ModelEnvelope:
     context_digest: str
     tool_names: tuple[str, ...] = ()
     instructions: str = "Return a structured research observation for review."
+    research_context: ResearchContextBundle | None = None
 
     def __post_init__(self) -> None:
         for name, value in (("request_id", self.request_id), ("role", self.role), ("input_digest", self.input_digest), ("context_digest", self.context_digest)):
@@ -45,6 +49,14 @@ class ModelEnvelope:
                 raise ValueError(f"{name} must be non-empty")
         object.__setattr__(self, "tool_names", tuple(sorted(set(self.tool_names))))
         object.__setattr__(self, "instructions", self.instructions.strip())
+        if self.research_context is not None:
+            from .context_bundle import ResearchContextBundle
+
+            if not isinstance(self.research_context, ResearchContextBundle):
+                raise TypeError("research context must be a validated bundle")
+            payload = self.research_context.to_dict()
+            if payload["run_id"] != self.request_id or payload["role"] != self.role or self.context_digest != self.research_context.fingerprint:
+                raise ValueError("research context envelope binding mismatch")
 
 
 @dataclass(frozen=True, slots=True)
@@ -53,6 +65,7 @@ class ModelResponse:
     model: str
     content: Mapping[str, Any]
     finish_reason: str = "stop"
+    usage: Mapping[str, int] | None = None
 
     def __post_init__(self) -> None:
         if not self.provider.strip() or not self.model.strip():

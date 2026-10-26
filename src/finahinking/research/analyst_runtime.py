@@ -11,6 +11,7 @@ import time
 from collections import Counter
 from collections.abc import Mapping, Sequence
 from concurrent.futures import Future, ThreadPoolExecutor, wait
+from contextvars import copy_context
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any
@@ -181,7 +182,7 @@ class AnalystPool:
             try:
                 for spec in unique_specs:
                     started = time.monotonic()
-                    future = executor.submit(driver.propose, request, _safe_context(context, spec.role))
+                    future = executor.submit(copy_context().run, driver.propose, request, _safe_context(context, spec.role))
                     submitted[spec.role] = (spec, future, started)
 
                 pending = {item[1] for item in submitted.values()}
@@ -315,6 +316,19 @@ class ResearchManager:
             },
             risk_policy_version=base.risk_policy_version if base is not None else "risk.v1",
         )
+
+
+class GroundedResearchManager:
+    """Model synthesis over already validated, run-bound observations only."""
+
+    def __init__(self, driver):
+        self.driver = driver
+
+    def synthesize(self, reports, request):
+        result = self.driver.propose(request, {"analyst_role": "research", "reports": reports})
+        if result.failure_kind is not None or result.research_plan is None:
+            raise ValueError("grounded manager could not validate its synthesis")
+        return result.research_plan
 
 
 __all__ = ["AnalystFailureKind", "AnalystOutcome", "AnalystPool", "ResearchManager"]

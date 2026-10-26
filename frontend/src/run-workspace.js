@@ -4,10 +4,10 @@ const STATUSES = new Set(['queued', 'running', 'retryable', ...TERMINAL]);
 const REF = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/;
 const mounted = new WeakMap();
 const LABELS = { queued: '等待运行', running: '运行中', retryable: '等待重试', completed: '运行完成', failed: '运行失败', cancelled: '已取消' };
-const STAGES = { RECEIVED: '接收任务', IDENTIFIED: '识别标的', DATA_CHECKED: '校验数据与 PIT', ANALYSTS_RUNNING: '离线分析师流程', ANALYSTS_READY: '汇总角色结果', EVIDENCE_REVIEW: '检查证据', RESEARCH_PLAN_READY: '固定研究计划', QUANT_VALIDATION: '确定性回测', RISK_REVIEW: '纸面风险检查', PAPER_DECISION_READY: '纸面决策', REPORT_PUBLISHED: '生成报告文件', LEARNING_RECORDED: '记录本轮结果' };
+const STAGES = { RECEIVED: '接收任务', IDENTIFIED: '识别标的', DATA_CHECKED: '校验数据与 PIT', ANALYSTS_RUNNING: '分析师材料研究', ANALYSTS_READY: '汇总角色结果', EVIDENCE_REVIEW: '检查证据', RESEARCH_PLAN_READY: '固定研究计划', QUANT_VALIDATION: '确定性回测', RISK_REVIEW: '纸面风险检查', PAPER_DECISION_READY: '纸面决策', REPORT_PUBLISHED: '生成报告文件', LEARNING_RECORDED: '记录本轮结果' };
 
 export function normalizeJob(payload) {
-  if (!payload || payload.schema_version !== 1 || payload.paper_only !== true || payload.execution_mode !== 'local-deterministic') throw new TypeError('Invalid job boundary');
+  if (!payload || payload.schema_version !== 1 || payload.paper_only !== true || !['local-deterministic', 'provider-grounded'].includes(payload.execution_mode)) throw new TypeError('Invalid job boundary');
   if (!REF.test(payload.job_id ?? '') || !REF.test(payload.run_id ?? '') || !/^[0-9a-f]{64}$/.test(payload.snapshot_ref ?? '') || !STATUSES.has(payload.status)) throw new TypeError('Invalid job identity');
   if (payload.run_url !== `/research/${payload.run_id}` || (payload.report_url != null && payload.report_url !== `/research/${payload.run_id}/report/complete`)) throw new TypeError('Invalid job report identity');
   if (!payload.metrics || typeof payload.metrics !== 'object' || Array.isArray(payload.metrics) || Object.values(payload.metrics).some((value) => value !== null && (typeof value !== 'number' || !Number.isFinite(value)))) throw new TypeError('Invalid job metrics');
@@ -80,6 +80,12 @@ export function mountRunWorkspace(root, { fetcher = globalThis.fetch, location =
     text('[data-run-state]', `${LABELS[job.status]} · ${STAGES[job.state] ?? job.state} · 第 ${job.attempts} 次尝试`);
     text('[data-run-identity]', `${job.data_mode ?? 'UNKNOWN'} DATA · ${job.instrument} · ${job.as_of} · ${job.snapshot_ref}`);
     text('[data-run-data-note]', (job.data_limitations ?? []).join(' '));
+    const study = job.model_research;
+    text('[data-run-model-summary]', job.execution_mode === 'provider-grounded' ? `材料研究 · ${job.model_config_ref} · 已记录 ${study?.calls?.length ?? 0} 次调用；模型观察待复核。` : '本地离线流程 · 不调用模型。');
+    const roles = query('[data-run-model-roles]');
+    if (roles) roles.replaceChildren(...(study?.roles ?? []).map((item) => element('li', `${item.role} · ${item.status} · ${(item.claims ?? []).join(' / ')} ${(item.limitations ?? []).join(' / ')}`)));
+    const synthesis = query('[data-run-synthesis]');
+    if (synthesis) synthesis.replaceChildren(...(study ? [element('h3', '经理综合 · 待验证假设'), ...(study.synthesis?.hypotheses ?? []).map((item) => element('p', item)), element('h3', '分歧与待确认事项'), ...(study.synthesis?.disagreements ?? []).map((item) => element('p', item))] : []));
     text('[data-run-failure]', job.failure_kind ? `需要处理：${job.failure_kind}（阶段：${STAGES[job.failure_stage] ?? job.failure_stage ?? '发布校验'}）。检查数据与配置后，新建研究任务。` : '');
     const stages = query('[data-run-stages]');
     if (stages) stages.replaceChildren(...job.stages.map((stage) => { const node = element('li', `${STAGES[stage.name]} · ${stage.status}`); node.dataset.stageStatus = stage.status; return node; }));
@@ -122,13 +128,15 @@ export function mountRunWorkspace(root, { fetcher = globalThis.fetch, location =
     clearError(); root.dataset.workspaceState = 'LOADING';
     const loading = query('[data-run-loading]'); if (loading) loading.hidden = false;
     try {
-      const [catalog, recent, connections] = await Promise.all([
+      const [catalog, recent, connections, configured] = await Promise.all([
         readJSON(fetcher, '/api/research/snapshots'), readJSON(fetcher, '/api/research/jobs?limit=20'), readJSON(fetcher, '/api/data/connections'),
+        readJSON(fetcher, '/api/research/providers/config'),
       ]);
       if (stopped) return;
       snapshots = catalog.snapshots;
       fillOptions(form?.elements.namedItem('snapshot_ref'), snapshots, (item) => `${item.mode} · ${item.instruments.join(', ')} · ${item.record_count} 行 · ${item.snapshot_ref.slice(0, 12)}`, (item) => item.snapshot_ref, '请选择数据快照');
       fillOptions(captureForm?.elements.namedItem('connection_id'), connections.connections, (item) => item.display_name, (item) => item.connection_id, '请选择已保存的连接');
+      fillOptions(form?.elements.namedItem('model_config_ref'), [{ provider_id: 'offline', model: '本地确定性流程 / 不调用模型' }, ...(configured.outbound_enabled === false ? [] : (configured.providers ?? []).filter((item) => item.enabled && item.adapter_kind !== 'offline' && item.endpoint_configured && item.credential_ref))], (item) => `${item.provider_id} · ${item.model}`, (item) => item.provider_id, '请选择执行配置');
       snapshotDescription();
       const list = query('[data-run-history]');
       if (list) list.replaceChildren(...recent.jobs.map(normalizeJob).map((job) => {
@@ -148,6 +156,10 @@ export function mountRunWorkspace(root, { fetcher = globalThis.fetch, location =
     try {
       const fields = Object.fromEntries(new FormData(form));
       const values = { snapshot_ref: fields.snapshot_ref, question: fields.question, instrument: fields.instrument, as_of: fields.as_of, model_config_ref: fields.model_config_ref, budget: { max_wall_seconds: Number(fields.max_wall_seconds) } };
+      values.allow_model_calls = fields.allow_model_calls === 'true';
+      try { values.materials = fields.materials?.trim() ? JSON.parse(fields.materials) : []; }
+      catch { throw new Error('材料必须为 JSON 数组，不要粘贴凭证。'); }
+      if (!Array.isArray(values.materials)) throw new Error('材料必须为 JSON 数组。');
       const intent = JSON.stringify(values);
       if (lastIntent !== intent || !requestKey) { requestKey = globalThis.crypto.randomUUID(); lastIntent = intent; }
       const job = normalizeJob(await post('/api/research/jobs', { ...values, idempotency_key: requestKey }));
@@ -180,4 +192,19 @@ export function mountRunWorkspace(root, { fetcher = globalThis.fetch, location =
   globalThis.window?.addEventListener('pageshow', (event) => { if (event.persisted) { stopped = false; load(); } });
   instance.ready = load();
   return instance;
+}
+
+export function mountProviderSettings(form, { fetcher = globalThis.fetch } = {}) {
+  const status = form.querySelector('[data-provider-status]');
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const button = form.querySelector('button[type="submit"]'); button.disabled = true;
+    try {
+      const fields = Object.fromEntries(new FormData(form));
+      await readJSON(fetcher, '/api/research/providers/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...fields, _csrf: form.querySelector('[data-provider-csrf]').value }) });
+      status.textContent = '配置已保存，尚未调用模型。返回研究任务页选择接口并明确授权。';
+      form.reset();
+    } catch { status.textContent = '保存未通过校验。请检查标识、模型、HTTPS 地址、凭证引用和角色 JSON；不要填入 Key 本身。'; }
+    finally { button.disabled = false; }
+  });
 }

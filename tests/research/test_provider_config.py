@@ -94,6 +94,16 @@ def test_provider_config_allow_lists_adapter_model_and_fields() -> None:
         ProviderConfig.from_mapping({"provider_id": "x", "adapter_kind": "offline", "model": "fixture-v1", "prompt": "secret"})
 
 
+def test_user_compatible_model_identifiers_are_not_a_stale_vendor_catalog():
+    from finahinking.research.provider_config import ProviderConfig
+
+    config = ProviderConfig("user-desk", "openai_compatible", "my-org/research-model:2026-10", role_models={"news": "custom-news-v2"})
+    assert config.model_for_role("news") == "custom-news-v2"
+    for model in ("", "x" * 129, "https://acme.com/model", "model\nexecute", "api_key=value", "/private/model"):
+        with pytest.raises(ValueError):
+            ProviderConfig("user-desk", "openai_compatible", model)
+
+
 @pytest.mark.parametrize("host", ["foo.internal", "foo.intranet", "foo.lan", "foo.home", "foo.test", "foo.invalid", "foo.example", "singlelabel"])
 def test_provider_config_rejects_special_use_dns_hosts(host: str) -> None:
     with pytest.raises(ValueError, match="endpoint"):
