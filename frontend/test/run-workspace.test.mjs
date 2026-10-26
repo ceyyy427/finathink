@@ -1,15 +1,29 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createJobObserver, mountRunWorkspace, normalizeJob } from '../src/run-workspace.js';
+import { createJobObserver, modelCallSummary, mountRunWorkspace, normalizeJob } from '../src/run-workspace.js';
 
 const job = { schema_version: 1, paper_only: true, execution_mode: 'local-deterministic', job_id: 'job-1', run_id: 'research-1', snapshot_ref: 'a'.repeat(64), status: 'running', state: 'QUANT_VALIDATION', attempts: 1, stages: [], metrics: {}, report_url: null, run_url: '/research/research-1' };
 const response = (value) => ({ ok: true, json: async () => value });
+
+test('an interrupted dispatched attempt is displayed as unknown usage, not zero calls', () => {
+  const text = modelCallSummary({ ...job, execution_mode: 'provider-grounded', model_config_ref: 'desk', status: 'cancelled', model_research: { calls: [{ dispatched: true, status: 'UNKNOWN', usage: null }], usage_status: 'UNKNOWN' } });
+  assert.match(text, /1 次调用/);
+  assert.match(text, /未知/);
+  assert.doesNotMatch(text, /0 次调用/);
+});
 
 test('job contract preserves server metrics and verifies report identity', () => {
   const value = normalizeJob({ ...job, status: 'completed', metrics: { total_return: 0.125, sharpe_ratio: null }, report_url: '/research/research-1/report/complete' });
   assert.equal(value.metrics.total_return, 0.125);
   assert.equal(value.metrics.sharpe_ratio, null);
   for (const change of [{ paper_only: false }, { snapshot_ref: 'unknown' }, { report_url: 'javascript:alert(1)' }, { report_url: '/research/other/report/complete' }, { metrics: { total_return: Infinity } }]) assert.throws(() => normalizeJob({ ...job, ...change }));
+});
+
+test('grounded jobs retain model provenance without admitting other execution modes', () => {
+  const value = normalizeJob({ ...job, execution_mode: 'provider-grounded', model_config_ref: 'desk', model_research: { calls: [], roles: [] } });
+  assert.equal(value.execution_mode, 'provider-grounded');
+  assert.equal(value.model_config_ref, 'desk');
+  assert.throws(() => normalizeJob({ ...job, execution_mode: 'live-trading' }));
 });
 
 test('observer stops on terminal result and never schedules another poll', async () => {
@@ -52,6 +66,6 @@ test('mounting one workspace twice coalesces its initial requests', async () => 
   const second = mountRunWorkspace(root, { fetcher });
   assert.equal(first, second);
   await first.ready;
-  assert.equal(calls, 3);
+  assert.equal(calls, 4);
   first.stop();
 });

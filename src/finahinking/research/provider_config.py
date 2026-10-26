@@ -23,7 +23,8 @@ from finahinking.data.user_api_contracts import DataSourceCredentialRef
 
 from .provider_status import ProviderCredentialRef
 
-# This is a local configuration admission list, not a claim of live readiness.
+# Adapter admission and offline fixtures; remote model identifiers are validated
+# syntactically, not treated as a vendor availability catalog.
 ALLOWED_ADAPTER_MODELS = MappingProxyType({
     "offline": frozenset({"fixture-v1"}),
     "openai_compatible": frozenset({"user-model", "gpt-4o", "gpt-4o-mini", "gpt-4.1", "gpt-4.1-mini", "gpt-5", "gpt-5-mini"}),
@@ -34,6 +35,14 @@ _FIELDS = frozenset({"provider_id", "adapter_kind", "model", "endpoint", "creden
 _IDENTIFIER = re.compile(r"^[a-z][a-z0-9_-]{0,63}$")
 _SENSITIVE = re.compile(r"api[-_]?key|secret|token|password|credential|prompt|raw[-_]?provider", re.IGNORECASE)
 _SPECIAL_USE_SUFFIXES = frozenset({"internal", "intranet", "lan", "home", "test", "invalid", "example", "localhost", "local", "onion", "alt"})
+
+
+def _model_allowed(adapter_kind, model):
+    if type(model) is not str:
+        return False
+    if adapter_kind == "offline":
+        return model in ALLOWED_ADAPTER_MODELS["offline"]
+    return bool(re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.:/-]{0,127}", model) and "://" not in model and ".." not in model and not _SENSITIVE.search(model))
 
 
 def _endpoint(value: str | None) -> str | None:
@@ -78,8 +87,7 @@ class ProviderConfig:
             raise ValueError("provider identifier is invalid")
         if type(self.adapter_kind) is not str or self.adapter_kind not in ALLOWED_ADAPTER_MODELS:
             raise ValueError("provider adapter is not allowed")
-        allowed = ALLOWED_ADAPTER_MODELS[self.adapter_kind]
-        if type(self.model) is not str or self.model not in allowed:
+        if not _model_allowed(self.adapter_kind, self.model):
             raise ValueError("provider model is not allowed")
         if type(self.enabled) is not bool:
             raise TypeError("provider enabled must be boolean")
@@ -91,7 +99,7 @@ class ProviderConfig:
         if not isinstance(self.role_models, Mapping):
             raise TypeError("role_models must be a mapping")
         roles = dict(self.role_models)
-        if any(type(role) is not str or role not in ALLOWED_ROLES or type(model) is not str or model not in allowed for role, model in roles.items()):
+        if any(type(role) is not str or role not in ALLOWED_ROLES or not _model_allowed(self.adapter_kind, model) for role, model in roles.items()):
             raise ValueError("role model route is not allowed")
         object.__setattr__(self, "endpoint", endpoint)
         object.__setattr__(self, "role_models", MappingProxyType(dict(sorted(roles.items()))))

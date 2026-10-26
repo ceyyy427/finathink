@@ -134,6 +134,18 @@ class InMemoryCredentialStore:
             raise ValueError("credential is not configured") from exc
 
 
+class LocalProviderCredentialStore:
+    """Resolve an explicitly named environment or existing OS keychain entry."""
+
+    def resolve(self, ref):
+        if ref.env_var is not None:
+            return EnvironmentCredentialStore().resolve(ref)
+        from finahinking.data.connection_settings import KeychainDataCredentialStore
+        from finahinking.data.user_api_contracts import DataSourceCredentialRef
+
+        return KeychainDataCredentialStore().resolve(DataSourceCredentialRef(keychain_label=ref.keychain_label))
+
+
 @dataclass(frozen=True, slots=True)
 class ProviderRuntimeConfig:
     provider: str

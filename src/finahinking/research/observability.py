@@ -143,14 +143,14 @@ class RuntimeBudget:
 
     def check_wall(self) -> None:
         with self._lock:
-            if time.monotonic() - self.started >= self.limits.max_wall_seconds:
+            if self.resource_failures or time.monotonic() - self.started >= self.limits.max_wall_seconds:
                 self._fail()
 
     def charge_provider_call(self, request_bytes: int = 0) -> None:
         if type(request_bytes) is not int or request_bytes < 0:
             raise ValueError("byte charge must be non-negative")
         with self._lock:
-            if time.monotonic() - self.started >= self.limits.max_wall_seconds:
+            if self.resource_failures or time.monotonic() - self.started >= self.limits.max_wall_seconds:
                 self._fail()
             if self.limits.max_provider_calls is not None and self.provider_calls + 1 > self.limits.max_provider_calls:
                 self._fail()
@@ -163,6 +163,8 @@ class RuntimeBudget:
         if type(amount) is not int or amount < 0:
             raise ValueError("byte charge must be non-negative")
         with self._lock:
+            if self.resource_failures:
+                self._fail()
             if self.limits.max_bytes is not None and self.bytes_used + amount > self.limits.max_bytes:
                 self._fail()
             self.bytes_used += amount
@@ -171,7 +173,7 @@ class RuntimeBudget:
         if type(count) is not int or count < 0:
             raise ValueError("experiment charge must be non-negative")
         with self._lock:
-            if time.monotonic() - self.started >= self.limits.max_wall_seconds:
+            if self.resource_failures or time.monotonic() - self.started >= self.limits.max_wall_seconds:
                 self._fail()
             if self.limits.max_experiments is not None and self.experiments + count > self.limits.max_experiments:
                 self._fail()
@@ -200,7 +202,7 @@ class RuntimeBudget:
         if not isinstance(delta, WorkerMetricsDelta) or delta.job_id != self.run_id:
             raise ValueError("metrics delta belongs to another job")
         with self._lock:
-            if time.monotonic() - self.started >= self.limits.max_wall_seconds:
+            if self.resource_failures or time.monotonic() - self.started >= self.limits.max_wall_seconds:
                 self._fail()
             if self.limits.max_provider_calls is not None and self.provider_calls + delta.provider_calls > self.limits.max_provider_calls:
                 self._fail()

@@ -12,7 +12,7 @@ import { GridComponent, TooltipComponent } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 import './knowledge.js';
 import { mountOverview } from './overview.js';
-import { mountRunWorkspace } from './run-workspace.js';
+import { mountProviderSettings, mountRunWorkspace } from './run-workspace.js';
 
 echarts.use([LineChart, GridComponent, TooltipComponent, CanvasRenderer]);
 
@@ -40,7 +40,7 @@ export function normalizeResearchRun(payload) {
   if (!payload || payload.schema_version !== 1) throw new TypeError('research run payload schema is invalid');
   if (typeof payload.run_id !== 'string' || payload.run_id.trim() === '') throw new TypeError('research run id is invalid');
   if (!RESEARCH_RUN_STATES.has(payload.state)) throw new TypeError('research run state is invalid');
-  if (payload.mode !== 'OFFLINE' || payload.paper_only !== true) throw new TypeError('research run boundary is invalid');
+  if (!['OFFLINE', 'USER_API'].includes(payload.mode) || payload.paper_only !== true) throw new TypeError('research run boundary is invalid');
   if (!Array.isArray(payload.analysts) || payload.analysts.some((item) => !item || typeof item.role !== 'string' || typeof item.status !== 'string')) throw new TypeError('research analyst status is invalid');
   return {
     ...payload,
@@ -133,7 +133,7 @@ function normalizeRuntimeRecord(value, field) {
 export function normalizeResearchRuntime(payload) {
   if (!payload || ![2, 3].includes(payload.schema_version) || typeof payload.run_id !== 'string' || payload.run_id.trim() === '') throw new TypeError('research runtime schema is invalid');
   if (!RUNTIME_STATES.has(payload.state)) throw new TypeError('research runtime state is invalid');
-  if (payload.mode !== 'OFFLINE' || payload.paper_only !== true) throw new TypeError('research runtime boundary is invalid');
+  if (!['OFFLINE', 'USER_API'].includes(payload.mode) || payload.paper_only !== true) throw new TypeError('research runtime boundary is invalid');
   const stage_status = normalizePublicMap(payload.stage_status ?? {}, 'stage_status');
   const role_status = normalizePublicMap(payload.role_status ?? {}, 'role_status');
   const checkpoint = normalizeRuntimeRecord(payload.checkpoint ?? { state: 'NOT_ATTACHED' }, 'checkpoint');
@@ -577,6 +577,7 @@ export function mountResearch(root, { payload, payloadUrl } = {}) {
 }
 
 if (typeof document !== 'undefined') {
+  document.querySelectorAll('[data-provider-form]').forEach((form) => { mountProviderSettings(form); });
   document.querySelectorAll('[data-run-workspace]').forEach((root) => { mountRunWorkspace(root); });
   document.querySelectorAll('[data-finathink-overview]').forEach((root) => { mountOverview(root).catch(() => {}); });
   document.querySelectorAll('[data-finathink-research]').forEach((root) => { mountResearch(root); });

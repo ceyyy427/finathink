@@ -38,8 +38,8 @@ _FAILURES = (
     "RESOURCE_LIMIT", "TIMEOUT", "DATA_UNAVAILABLE", "DATA_INVALID", "NO_DATA_AVAILABLE",
     "QUANT_VALIDATION_FAILED", "RISK_REVIEW_FAILED", "VALIDATION_FAILED", "INTERNAL_ERROR",
     "ANALYST_REQUIRED_MISSING", "ANALYST_TIMEOUT", "SNAPSHOT_INTEGRITY_FAILED",
-    "REQUEST_UNAVAILABLE", "PUBLICATION_INVALID", "RESULT_INVALID", "RUNNER_EXCEPTION",
-    "WORKER_START_FAILED", "SUPERVISOR_STOPPED", "POLICY_CHANGED",
+    "REQUEST_UNAVAILABLE", "PUBLICATION_INVALID", "RESULT_INVALID", "RUNNER_EXCEPTION", "CONTEXT_INTEGRITY_FAILED", "OUTBOUND_DISABLED",
+    "WORKER_START_FAILED", "SUPERVISOR_STOPPED", "POLICY_CHANGED", "PROVIDER_NOT_CONFIGURED",
 )
 _RECEIPT_REF = re.compile(r"^research-result:([0-9a-f]{64})$")
 _ATTEMPT_ID = re.compile(r"^[0-9a-f]{32}$")
@@ -92,6 +92,12 @@ def _write_private_json(path, value):
         os.link(temporary, path)
     finally:
         temporary.unlink(missing_ok=True)
+
+
+def _model_input_digest(value):
+    # Private settings contain endpoint/credential-reference KEYS, not values.
+    # Fingerprint their canonical serialization without weakening public contracts.
+    return stable_digest(json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False))
 
 
 def verify_research_receipt(root, queue, record, reference, *, artifact_digest=None, verify_input=False):
@@ -148,7 +154,11 @@ def verify_research_receipt(root, queue, record, reference, *, artifact_digest=N
     }
 
 
-def run_local_research_stage(invocation, checkpoint_ref, publish_checkpoint):
+def run_offline_research_stage(invocation, checkpoint_ref, publish_checkpoint):
+    return run_local_research_stage(invocation, checkpoint_ref, publish_checkpoint, allow_model_calls=False)
+
+
+def run_local_research_stage(invocation, checkpoint_ref, publish_checkpoint, *, allow_model_calls=True):
     """Trusted spawn entry: only a queue-owned reference crosses the pipe."""
     from .analyst_runtime import AnalystPool, ResearchManager
     from .drivers import OfflineDriver
@@ -194,10 +204,49 @@ def run_local_research_stage(invocation, checkpoint_ref, publish_checkpoint):
             return current.cancel_requested or current.status is not JobStatus.RUNNING or current.attempts != record.attempts or current.lease_token != record.lease_token
 
     tools = SnapshotResearchTools(snapshot)
-    result = ResearchOrchestrator().run(request, OfflineDriver(), tools, analyst_pool=AnalystPool(), manager=ResearchManager(), run_control=Control(), checkpoint_writer=checkpoint)
+    driver, manager = OfflineDriver(), ResearchManager()
+    spec = request.research_plan.validation_spec
+    if spec.get("execution_mode") == "provider-grounded":
+        if not allow_model_calls:
+            return {"status": "blocked", "failure_kind": "OUTBOUND_DISABLED"}
+        from .analyst_runtime import GroundedResearchManager
+        from .credentials import LocalProviderCredentialStore
+        from .drivers import GroundedApiDriver
+        from .model_call_journal import ModelCallJournal
+        from .provider_config import ProviderConfig
+        from .provider_transport import ProviderHttpTransport
+
+        try:
+            reference = spec["context_input_ref"]
+            if not isinstance(reference, str) or not re.fullmatch(r"[0-9a-f]{64}", reference):
+                raise ValueError()
+            inputs = _read_json(root / "model-inputs" / f"{reference}.json")
+            if _model_input_digest(inputs) != reference or inputs.get("scope_id") != spec["scope_id"]:
+                raise ValueError()
+            config = ProviderConfig.from_mapping(inputs["provider"])
+            if not config.enabled or config.provider_id != spec["model_config_ref"]:
+                raise ValueError()
+            journal = ModelCallJournal(root / "model-calls.sqlite3", job_id=record.job_id, run_id=request.run_id, request_digest=stable_digest(request), attempt=record.attempts, scope_id=spec["scope_id"])
+            driver = GroundedApiDriver(snapshot, config, materials=inputs["materials"], transport=ProviderHttpTransport(), credential_store=LocalProviderCredentialStore(), call_journal=journal)
+            manager = GroundedResearchManager(driver)
+            if budget is not None:
+                budget.charge_bytes(len(json.dumps(inputs).encode("utf-8")))
+        except (KeyError, ValueError, OSError, TypeError):
+            return {"status": "blocked", "failure_kind": "CONTEXT_INTEGRITY_FAILED"}
+    result = ResearchOrchestrator().run(request, driver, tools, analyst_pool=AnalystPool(), manager=manager, run_control=Control(), checkpoint_writer=checkpoint)
+    if budget is not None and budget.resource_failures:
+        checkpoint(result.state)
+        return {"status": "blocked", "failure_kind": "RESOURCE_LIMIT"}
     if result.state.current_state is not ResearchState.LEARNING_RECORDED or result.decision is None or not result.decision.paper_only:
         checkpoint(result.state)
-        return {"status": "blocked", "failure_kind": result.state.failure_kind.value if result.state.failure_kind else "VALIDATION_FAILED"}
+        return {"status": "blocked", "failure_kind": "RESOURCE_LIMIT" if budget is not None and budget.resource_failures else result.state.failure_kind.value if result.state.failure_kind else "VALIDATION_FAILED"}
+    if spec.get("execution_mode") == "provider-grounded":
+        tools.analysis["model_research"] = {
+            "execution_mode": "provider-grounded", "provider": spec["model_config_ref"],
+            "calls": journal.records(terminal=True), "context_input_ref": spec["context_input_ref"],
+            "roles": [{"role": report.role, "status": report.status, "claims": list(report.claims), "evidence_refs": list(report.evidence_refs), "limitations": list(report.limitations)} for report in result.state.analyst_reports],
+            "synthesis": driver.synthesis_summary,
+            "limitations": ["Citation membership verifies input binding, not semantic truth. Model observations do not set financial metrics or policy."]}
     if budget is not None:
         budget.check_wall()
     manifest = ReportBundleWriter().write(result, root / "reports" / f"attempt-{attempt_id}", quant_analytics=tools.analysis)
@@ -229,12 +278,15 @@ def index_verified_publication(root, publication):
 
 
 class ResearchApplicationService:
-    def __init__(self, root: str | Path, *, scope_id="local-session"):
+    def __init__(self, root: str | Path, *, scope_id="local-session", provider_configs=None, allow_model_calls=True):
+        from .provider_config import ProviderConfigStore
         from .runtime_service import ResearchRuntimeService
 
         self.root = Path(root)
         self.root.mkdir(parents=True, exist_ok=True, mode=0o700)
         self.scope_id = scope_id
+        self.provider_configs = provider_configs if provider_configs is not None else ProviderConfigStore()
+        self.allow_model_calls = allow_model_calls
         self.snapshots = SnapshotStore(self.root / "snapshots")
         self.runs = RunRepository(self.root / "research-index.sqlite3", report_root=self.root / "reports", scope_id=scope_id)
         queue_path = self.root / "research-jobs.sqlite3"
@@ -247,7 +299,8 @@ class ResearchApplicationService:
         finally:
             os.close(descriptor)
         self.queue = JobQueue(queue_path, max_attempts=3, backoff_base_seconds=0.1, backoff_max_seconds=1)
-        self.runtime = ResearchRuntimeService(self.queue, stage_runners={"local_research": run_local_research_stage}, worker_id=f"application-{uuid.uuid4().hex[:16]}", timeout_seconds=300, autostart=False, supervisor_concurrency=2)
+        runner = run_local_research_stage if allow_model_calls else run_offline_research_stage
+        self.runtime = ResearchRuntimeService(self.queue, stage_runners={"local_research": runner}, worker_id=f"application-{uuid.uuid4().hex[:16]}", timeout_seconds=300, autostart=False, supervisor_concurrency=2)
 
     def start(self):
         # Recover the small complete→index crash window without re-executing
@@ -284,19 +337,30 @@ class ResearchApplicationService:
     def submit(self, values):
         if not isinstance(values, dict):
             raise TypeError("research submission must be an object")
-        if set(values) - {"idempotency_key", "snapshot_ref", "question", "instrument", "as_of", "model_config_ref", "budget"}:
+        if set(values) - {"idempotency_key", "snapshot_ref", "question", "instrument", "as_of", "model_config_ref", "budget", "materials", "allow_model_calls"}:
             raise ValueError("research submission contains unsupported fields")
         key = _ref(values.get("idempotency_key"), "idempotency_key")
         question = values.get("question")
         if not isinstance(question, str) or not question.strip() or len(question) > 2000:
             raise ValueError("research question must contain 1 to 2000 characters")
-        if values.get("model_config_ref", "offline") != "offline":
-            raise ValueError("select the explicit local offline workflow")
+        selected_provider = values.get("model_config_ref", "offline")
+        config = None
+        if selected_provider != "offline":
+            config = self.provider_configs.get(selected_provider)
+            if not self.allow_model_calls or values.get("allow_model_calls") is not True or config is None or not config.enabled or config.adapter_kind == "offline" or config.endpoint is None or config.credential_ref is None:
+                raise ValueError("select a configured provider and explicitly authorize model calls")
+        elif values.get("materials"):
+            raise ValueError("select and authorize a model before supplying role materials")
         snapshot = self.snapshots.load(values.get("snapshot_ref"))
         instrument = values.get("instrument")
         if instrument not in snapshot.instruments:
             raise ValueError("selected snapshot does not contain the requested instrument")
-        limits = self._limits(values.get("budget", {}))
+        raw_budget = values.get("budget", {})
+        if config is not None:
+            if not isinstance(raw_budget, dict) or raw_budget.get("max_attempts", 1) != 1:
+                raise ValueError("online research has one attempt; resubmit explicitly after failure")
+            raw_budget = {"max_attempts": 1, "max_provider_calls": 6, **raw_budget}
+        limits = self._limits(raw_budget)
         budget = asdict(limits)
         from .snapshot_tools import local_research_policy
 
@@ -305,11 +369,30 @@ class ResearchApplicationService:
         request = ResearchRequest(
             run_id=f"research-{stable_digest({'scope': self.scope_id, 'key': key})[:24]}",
             instrument=instrument, as_of=values.get("as_of"),
-            research_plan=ResearchPlan(hypotheses=(question.strip(),), factor_ids=(policy["factor_id"],), validation_spec={"scope_id": self.scope_id, "execution_mode": "local-deterministic", "model_config_ref": "offline", "data_mode": snapshot.mode, "budget": budget, "policy_fingerprint": policy_fingerprint, "strategy_version": policy["strategy_version"]}),
+            research_plan=ResearchPlan(hypotheses=(question.strip(),), factor_ids=(policy["factor_id"],), validation_spec={"scope_id": self.scope_id, "execution_mode": "provider-grounded" if config is not None else "local-deterministic", "model_config_ref": selected_provider, "data_mode": snapshot.mode, "budget": budget, "policy_fingerprint": policy_fingerprint, "strategy_version": policy["strategy_version"]}),
             analyst_roles=_ROLES, asset_class="EQUITY_OR_ETF", workflow_version=WORKFLOW_VERSION,
             config_digest=stable_digest({"workflow": WORKFLOW_VERSION, "budget": budget, "policy_fingerprint": policy_fingerprint}),
             snapshot_ref=snapshot.fingerprint,
         )
+        if config is not None:
+            from dataclasses import replace
+
+            from .context_bundle import build_context_bundle, normalize_materials
+
+            materials = normalize_materials(values.get("materials", []), request)
+            # Validate every role and the manager's aggregate before any paid call.
+            for role in (*_ROLES, "research"):
+                build_context_bundle(request, snapshot, role, materials=materials)
+            inputs = {"schema_version": 1, "scope_id": self.scope_id, "provider": config._stored(), "materials": materials}
+            reference = _model_input_digest(inputs)
+            target = self.root / "model-inputs" / f"{reference}.json"
+            try:
+                _write_private_json(target, inputs)
+            except FileExistsError:
+                if _model_input_digest(_read_json(target)) != reference:
+                    raise ValueError("model input integrity mismatch") from None
+            plan = replace(request.research_plan, validation_spec={**request.research_plan.validation_spec, "context_input_ref": reference})
+            request = replace(request, research_plan=plan, config_digest=stable_digest({"base": request.config_digest, "context_input_ref": reference}))
         record = self.runtime.submit(request, idempotency_key=f"application:{stable_digest({'scope': self.scope_id, 'key': key})[:40]}", limits=limits)
         return self.get_job(record.job_id)
 
@@ -370,13 +453,25 @@ class ResearchApplicationService:
         source = entry["manifest"].get("source_snapshot", {}) if entry is not None else {}
         if report_status == "AVAILABLE":
             metrics = entry["manifest"].get("source_snapshot", {}).get("quant_analytics", {}).get("metrics", {})
+        runtime_metrics = self.queue.load_metrics(record.job_id) or {}
+        model_research = source.get("model_research")
+        if request.research_plan.validation_spec.get("execution_mode") == "provider-grounded":
+            from .model_call_journal import ModelCallJournal
+
+            calls = []
+            journal_path = self.root / "model-calls.sqlite3"
+            if journal_path.exists():
+                journal = ModelCallJournal(journal_path, job_id=record.job_id, run_id=request.run_id, request_digest=stable_digest(request), attempt=max(1, record.attempts), scope_id=self.scope_id)
+                calls = journal.records(terminal=record.status in {JobStatus.COMPLETED, JobStatus.CANCELLED, JobStatus.FAILED})
+            model_research = {**(model_research or {}), "calls": calls, "usage_status": "UNKNOWN" if any(item["dispatched"] and item["usage"] is None for item in calls) else "RECORDED" if calls else "NOT_STARTED", "aggregate_counts": runtime_metrics}
         return redact_public_payload({
-            "schema_version": 1, "paper_only": True, "execution_mode": "local-deterministic",
+            "schema_version": 1, "paper_only": True, "execution_mode": request.research_plan.validation_spec.get("execution_mode", "local-deterministic"),
             "data_mode": source.get("data_mode", request.research_plan.validation_spec.get("data_mode", "UNKNOWN")),
             "data_limitations": source.get("data_limitations", []), "metric_basis": "OBSERVATION",
             "job_id": record.job_id, "run_id": request.run_id, "status": record.status.value,
             "snapshot_ref": request.snapshot_ref, "instrument": request.instrument, "as_of": request.as_of.isoformat(),
-            "question": request.research_plan.hypotheses[0], "model_config_ref": "offline",
+            "question": request.research_plan.hypotheses[0], "model_config_ref": request.research_plan.validation_spec.get("model_config_ref", "offline"),
+            "model_research": model_research,
             "budget": request.research_plan.validation_spec["budget"], "attempts": record.attempts,
             "cancel_requested": record.cancel_requested,
             "created_at": _utc(record.created_at), "updated_at": _utc(record.updated_at),
@@ -385,7 +480,7 @@ class ResearchApplicationService:
             "failure_kind": failure or publication_error, "failure_stage": failed_stage,
             "report_status": report_status, "report_url": f"/research/{request.run_id}/report/complete" if report_status == "AVAILABLE" else None,
             "run_url": f"/research/{request.run_id}", "metrics": metrics,
-            "runtime_metrics": self.queue.load_metrics(record.job_id) or {},
+            "runtime_metrics": runtime_metrics,
         })
 
     def list_jobs(self, *, limit=50, offset=0):

@@ -281,7 +281,8 @@ def test_http_runtime_journey_has_no_js_navigation_redacted_settings_and_read_on
         assert settings.has("input", name="api_key", type="password", autocomplete="new-password")
         assert "API key (never displayed)" in settings.visible_text
         assert "Saving does not download data" in settings.visible_text
-        assert "never stores, echoes, or exports the secret value" in pages["/settings/providers"].visible_text
+        assert pages["/settings/providers"].has("input", name="credential_env")
+        assert not pages["/settings/providers"].has("input", name="api_key")
 
         run_page = pages["/research/browser-e2e-run"]
         assert "READ-ONLY" in run_page.visible_text and "PAPER-ONLY" in run_page.visible_text

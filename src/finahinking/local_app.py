@@ -310,6 +310,10 @@ th { color: var(--text-muted); font-size: .78rem; letter-spacing: .06em; text-tr
 _RESEARCH_JOBS_CSS = """
 .snapshot-fingerprint { overflow-wrap: anywhere; font-family: var(--font-mono, monospace); font-size: .85rem; color: var(--text-secondary); }
 [data-run-workspace] .grid > *, [data-run-workspace] label, [data-run-workspace] select { min-width: 0; max-width: 100%; }
+[data-run-workspace] .form-grid { min-width: 0; grid-template-columns: minmax(0, 1fr); }
+[data-run-workspace] .form-grid > * { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+[data-run-workspace] .model-consent { display: grid; grid-template-columns: 1.15rem minmax(0, 1fr); gap: .6rem; align-items: start; }
+[data-run-workspace] .model-consent input { width: 1.15rem; height: 1.15rem; padding: 0; margin: .15rem 0 0; }
 [data-run-workspace] dl { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .5rem 1rem; }
 [data-run-workspace] dd { margin: 0; font-variant-numeric: tabular-nums; }
 [data-run-history] button { overflow-wrap: anywhere; text-align: left; white-space: normal; }
@@ -594,7 +598,7 @@ class LocalApplication:
             if self._research_application is None:
                 from finahinking.research.application_service import ResearchApplicationService
 
-                self._research_application = ResearchApplicationService(self.artifact_root, scope_id=self.config.session_id)
+                self._research_application = ResearchApplicationService(self.artifact_root, scope_id=self.config.session_id, provider_configs=self._provider_configs, allow_model_calls=not self.config.offline)
             return self._research_application
 
     def register_research_run(self, result: Any, manifest: Any) -> None:
@@ -654,7 +658,7 @@ class LocalApplication:
             )
             warning = f'<p class="error-state" role="alert">Report {entry["report_status"]}. Restore the original bundle or create a new research run; the saved history is retained.</p>' if entry["report_status"] != "AVAILABLE" else ''
             body = (
-                f'<div class="status-row"><span class="status status--offline">OFFLINE</span><span class="status status--ready">PAPER-ONLY</span><span class="status status--quant">{html.escape(view_model["state"])}</span></div>'
+                f'<div class="status-row"><span class="status status--offline">{html.escape(view_model["mode"])}</span><span class="status status--ready">PAPER-ONLY</span><span class="status status--quant">{html.escape(view_model["state"])}</span></div>'
                 f'<h1>Research run {html.escape(run_id)}</h1>'
                 f'<p class="lede">As-of: {html.escape(str(view_model.get("as_of") or "not attached"))}. This view is read-only and never submits an order.</p>'
                 f'{warning}'
@@ -663,7 +667,7 @@ class LocalApplication:
                 f'<div class="action-row">{link_html}</div>'
                 f'<section data-research-run data-payload-url="/research/{html.escape(run_id)}/status"><p class="field-help" data-research-run-status>SERVER-RENDERED · {html.escape(view_model["state"])}</p><p class="field-help" data-research-run-summary>As-of {html.escape(str(view_model.get("as_of") or "not attached"))}</p><p class="error-state" data-research-run-error hidden></p></section>'
             )
-            return 200, "text/html; charset=utf-8", self.render_shell("/research", f"Research {run_id}", body, inspector=self._inspector("Research run", {"Run": run_id, "Mode": "OFFLINE", "Boundary": "PAPER-ONLY / READ-ONLY"}, status="OFFLINE"), scripts=("/assets/finathink-research.js",))
+            return 200, "text/html; charset=utf-8", self.render_shell("/research", f"Research {run_id}", body, inspector=self._inspector("Research run", {"Run": run_id, "Mode": view_model["mode"], "Boundary": "PAPER-ONLY / READ-ONLY"}, status=view_model["mode"]), scripts=("/assets/finathink-research.js",))
         if len(parts) == 3 and parts[1] == "report":
             if entry["report_status"] != "AVAILABLE":
                 return 409, "application/json", {"error": "report bundle is missing or failed integrity verification", "report_status": entry["report_status"]}
@@ -1429,9 +1433,9 @@ class LocalApplication:
     def _research_jobs_page_body(self):
         return (
             '<section data-run-workspace data-job-status="EMPTY">'
-            '<div class="status-row"><span class="status status--offline">LOCAL / OFFLINE</span><span class="status status--ready">PAPER-ONLY</span></div>'
+            '<div class="status-row"><span class="status status--offline">LOCAL WORKSPACE</span><span class="status status--ready">PAPER-ONLY</span></div>'
             '<h1>研究任务</h1><p class="lede">选定数据，运行有边界的研究，保留可以复核的结果。</p>'
-            '<p>本轮运行两观察期动量基线、含费用回测和同信号纸面风控。至少四条低频 OHLCV，每个 UTC 日期最多一条；历史信号所用数据必须在下一根观测执行前可用。周期按观测条数计算，未验证交易日历时不展示年化收益、波动率或夏普。模型使用本地离线角色合同，研究问题作为假设留档。</p>'
+            '<p>服务器运行两观察期动量基线、含费用回测和同信号纸面风控。至少四条低频 OHLCV，每个 UTC 日期最多一条；历史信号所用数据必须在下一根观测执行前可用。周期按观测条数计算，未验证交易日历时不展示年化收益、波动率或夏普。可选择离线流程，或明确授权所选模型分析材料；模型观察不修改数值策略。</p>'
             f'<input data-run-csrf type="hidden" value="{self.csrf_token}">'
             '<p data-run-loading role="status">正在读取快照与任务记录…</p>'
             '<p class="error-state" data-run-error role="alert" hidden></p>'
@@ -1448,11 +1452,14 @@ class LocalApplication:
             '<label>研究标的<input name="instrument" required maxlength="128" value="AAA"></label><label>研究截止日（UTC 当日结束）<input type="date" name="as_of" required></label>'
             '<label>研究问题<textarea name="question" required maxlength="2000" rows="3">检验这个快照上的动量基线，并检查费用与历史回撤。</textarea></label>'
             '<label>执行配置<select name="model_config_ref"><option value="offline">本地确定性流程 / 不调用模型</option></select></label>'
+            '<p><a href="/settings/providers">配置用户自己的模型接口</a></p>'
+            '<details><summary>补充基本面、新闻、情绪或学习材料</summary><p class="field-help">可选 JSON 数组，每条包含 role、instrument、summary、source_label、observed_at、available_at、authorized:true。时间需带时区；最多 16 条，每条摘要最多 2000 字。没有对应材料的角色会显示资料不足。</p><label>已授权材料摘要（JSON）<textarea name="materials" rows="5" maxlength="40000" placeholder="[]"></textarea></label></details>'
+            '<label class="model-consent"><input type="checkbox" name="allow_model_calls" value="true">我授权向所选模型发送研究问题、标的、最近最多 16 条行情及上述材料摘要，并承担调用费用。在线任务不自动重试。</label>'
             '<label>墙钟上限（秒，最多 300）<input name="max_wall_seconds" type="number" min="5" max="300" value="120" required></label>'
             '<button type="submit">提交研究任务</button></form><button type="button" class="button-secondary" data-run-new>新建另一项研究</button></section></div>'
             '<section class="panel section" data-run-progress aria-live="polite" aria-atomic="false"><h2>03 / 运行与结果</h2>'
             '<p data-run-empty>还没有研究任务。先选择快照并提交研究。</p><p data-run-state></p><p data-run-identity class="snapshot-fingerprint"></p><ol class="research-stage-list" data-run-stages></ol>'
-            '<p class="field-help" data-run-data-note></p><dl data-run-metrics></dl><p data-run-failure></p><div class="action-row"><button type="button" data-run-cancel disabled>取消任务</button><a data-run-report hidden>打开完整 HTML 报告</a><a data-run-detail hidden>查看研究档案</a></div></section>'
+            '<p class="field-help" data-run-data-note></p><p data-run-model-summary></p><ul class="overview-list" data-run-call-records></ul><ul class="overview-list" data-run-model-roles></ul><div data-run-synthesis></div><dl data-run-metrics></dl><p data-run-failure></p><div class="action-row"><button type="button" data-run-cancel disabled>取消任务</button><a data-run-report hidden>打开完整 HTML 报告</a><a data-run-detail hidden>查看研究档案</a></div></section>'
             '<section class="panel section"><h2>最近的后台任务</h2><p>刷新页面或重启服务后，可从这里继续查看；相同提交标识不会重复排队。</p><ul class="overview-list" data-run-history></ul><a href="/research/compare">比较已发布的研究</a></section>'
             '<noscript><p>任务提交和跟踪需要 JavaScript。已发布的 HTML 报告可离线阅读。</p></noscript></section>'
         )
@@ -1550,7 +1557,7 @@ class LocalApplication:
                 return 422, "application/json", {"error": "research history filter or pagination is invalid"}
         if clean == "/api/research/providers/config":
             if method == "GET":
-                return 200, "application/json", {"providers": list(self._provider_configs.list()), "paper_only": True, "provider_called": False}
+                return 200, "application/json", {"providers": list(self._provider_configs.list()), "paper_only": True, "provider_called": False, "outbound_enabled": not self.config.offline}
             if method != "POST":
                 return 405, "application/json", {"error": "provider configuration supports GET and POST"}
             denied = self._data_write_guard(body)
@@ -1559,7 +1566,12 @@ class LocalApplication:
             from finahinking.research.provider_config import ProviderConfig
 
             try:
-                config = ProviderConfig.from_mapping({key: value for key, value in body.items() if key != "_csrf"})
+                values = {key: value for key, value in body.items() if key != "_csrf"}
+                if "credential_env" in values:
+                    values["credential_ref"] = {"env_var": values.pop("credential_env")}
+                if isinstance(values.get("role_models"), str):
+                    values["role_models"] = json.loads(values["role_models"] or "{}")
+                config = ProviderConfig.from_mapping(values)
                 self._provider_configs.save(config)
             except (TypeError, ValueError) as exc:
                 status = 409 if str(exc) == "provider already exists" else 400
@@ -1871,7 +1883,7 @@ class LocalApplication:
         title = names.get(page, "Finathink")
         body = self._page_body(page, query=query)
         inspector = self._page_inspector(page)
-        scripts = ("/assets/finathink-research.js",) if page in {"/", "/research", "/research/jobs", "/research/compare", "/workbench"} else ()
+        scripts = ("/assets/finathink-research.js",) if page in {"/", "/research", "/research/jobs", "/research/compare", "/workbench", "/settings/providers"} else ()
         return self.render_shell(active_page, title, body, inspector=inspector, scripts=scripts)
 
     def render_result_page(self, title: str, payload: Any) -> str:
@@ -2016,7 +2028,7 @@ class LocalApplication:
 
     def _page_inspector(self, page: str) -> str:
         if page == "/research/jobs":
-            return self._inspector("研究运行边界", {"数据": "显式选定并校验的快照", "执行": "独立 supervisor / spawn", "模型": "本地离线角色流程", "产物": "有指纹的 HTML 报告"}, status="PAPER-ONLY")
+            return self._inspector("研究运行边界", {"数据": "显式选定并校验的快照", "执行": "独立 supervisor / spawn", "模型": "按所选配置；在线调用需授权", "产物": "有指纹的 HTML 报告"}, status="PAPER-ONLY")
         if page == "/events":
             return self._inspector("Event provenance", {"Source": "U.S. Bureau of Labor Statistics", "Mode": "CAPTURED / SAMPLE", "Next": "Show Evidence → Knowledge → Quant"}, status="CAPTURED")
         if page == "/quant":
@@ -2187,7 +2199,17 @@ class LocalApplication:
                 f'<article class="card"><div class="status-row">{self._status("READY" if item.get("configured") else "NOT CONFIGURED", "ready" if item.get("configured") else "sample")}{self._status("OFFLINE" if item.get("offline") else "USER KEY", "offline" if item.get("offline") else "quant")}</div><h2>{html.escape(str(item.get("provider")))}</h2><p>Model: <code>{html.escape(str(item.get("model")))}</code></p><p>{html.escape(str(item.get("reason")))}</p><p class="meta">Credential reference: <code>{html.escape(json.dumps(item.get("credential_ref", {}), sort_keys=True))}</code></p></article>'
                 for item in payload.get("providers", []) if isinstance(item, Mapping)
             )
-            return f'<h1>Provider access</h1><p class="lede">Connect a user-owned model through a reference to an environment variable or keychain entry. Finathink never stores, echoes, or exports the secret value.</p><section class="settings-grid">{cards}</section><section class="section card card--quiet"><h2>Local setup</h2><p>Set <code>FINAHINK_USER_API_KEY</code> in the user environment before starting the local app. The readiness endpoint reports only configured/not configured status.</p><p class="meta">No browser form submits a secret. No provider SDK is required for the offline fixture.</p></section>'
+            return (f'<h1>模型接口</h1><p class="lede">使用用户自己的兼容模型服务。保存配置不调用模型；凭证在调用前从明确指定的环境变量或已有系统 Keychain 引用读取。</p><section class="settings-grid">{cards}</section>'
+                    '<section class="card section"><h2>新增兼容接口</h2><form class="form-grid" data-provider-form>'
+                    f'<input type="hidden" data-provider-csrf value="{self.csrf_token}">'
+                    '<label>配置标识（小写字母、数字、短横线或下划线）<input name="provider_id" required maxlength="64" placeholder="my-model"></label>'
+                    '<label>兼容协议<select name="adapter_kind"><option value="openai_compatible">OpenAI-compatible</option><option value="deepseek_compatible">DeepSeek-compatible</option></select></label>'
+                    '<label>默认模型<input name="model" required placeholder="gpt-4.1"></label>'
+                    '<label>HTTPS 基础地址或完整 Chat Completions 地址<input name="endpoint" type="url" required autocomplete="off"></label>'
+                    '<label>保存 API Key 的环境变量名称（不是 Key 本身）<input name="credential_env" required placeholder="FINAHINK_USER_API_KEY" autocomplete="off"></label>'
+                    '<label>各角色的模型映射（可选 JSON）<textarea name="role_models" rows="3" placeholder="{}"></textarea></label>'
+                    '<button type="submit">保存接口配置</button><p data-provider-status role="status"></p></form>'
+                    '<p>角色为 fundamentals、technical、sentiment、news、learning、research（经理）。回到“研究任务”选择接口并授权后才发出请求。Codex 外部任务仍需执行端回传，不会自动调用当前聊天。</p></section>')
         if page == "/settings/data-sources":
             from finahinking.p8_2.research_view import build_research_payload, qmt_payload
 

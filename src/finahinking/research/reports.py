@@ -307,6 +307,7 @@ class ReportBundleWriter:
             status_model["data_mode"] = analytics_payload.get("data_mode", "UNKNOWN")
             status_model["data_limitations"] = analytics_payload.get("limitations", [])
             status_model["source_metadata"] = analytics_payload.get("source_metadata", {})
+            status_model["model_research"] = analytics_payload.get("model_research")
         complete_path = bundle / "complete_report.html"
         complete_path.write_text(
             render_status_wall_html(status_model, title="Finathink research report"),
@@ -333,6 +334,7 @@ class ReportBundleWriter:
                 "decision_digest": stable_digest(result.decision) if result.decision else None,
                 **status_snapshot,
                 **({"data_mode": analytics_payload.get("data_mode", "UNKNOWN"), "data_limitations": analytics_payload.get("limitations", []), "source_metadata": analytics_payload.get("source_metadata", {})} if analytics_payload else {}),
+                **({"model_research": analytics_payload["model_research"]} if analytics_payload and analytics_payload.get("model_research") else {}),
                 **{section: payload for section, payload in runtime_payloads.items()},
                 **({"quant_analytics": {"fingerprint": analytics_payload.get("fingerprint"), "policy_fingerprint": analytics_payload.get("policy_fingerprint"), "metrics": analytics_payload.get("metrics", {}), "limitations": analytics_payload.get("limitations", ())}} if analytics_payload else {}),
             },
