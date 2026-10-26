@@ -8,7 +8,6 @@ import re
 import sqlite3
 import tempfile
 import uuid
-from contextlib import closing
 from dataclasses import asdict
 from datetime import UTC, datetime
 from pathlib import Path
@@ -253,7 +252,7 @@ class ResearchApplicationService:
     def start(self):
         # Recover the small complete→index crash window without re-executing
         # a completed calculation. Ordinary completions are indexed by owner.
-        with closing(self.queue._connect()) as db:
+        with self.queue._connect() as db:
             rows = db.execute("SELECT j.job_id FROM jobs j JOIN request_snapshots r ON r.task_ref=j.task_ref WHERE j.status='completed' AND json_extract(r.payload, '$.research_plan.validation_spec.scope_id')=? AND json_extract(r.payload, '$.workflow_version')=?", (self.scope_id, WORKFLOW_VERSION)).fetchall()
         for row in rows:
             try:
@@ -392,7 +391,7 @@ class ResearchApplicationService:
     def list_jobs(self, *, limit=50, offset=0):
         if type(limit) is not int or not 1 <= limit <= 200 or type(offset) is not int or offset < 0:
             raise ValueError("job pagination is invalid")
-        with closing(self.queue._connect()) as db:
+        with self.queue._connect() as db:
             where = "json_extract(r.payload, '$.research_plan.validation_spec.scope_id')=? AND json_extract(r.payload, '$.workflow_version')=?"
             args = (self.scope_id, WORKFLOW_VERSION)
             total = db.execute(f"SELECT COUNT(*) FROM jobs j JOIN request_snapshots r ON r.task_ref=j.task_ref WHERE {where}", args).fetchone()[0]

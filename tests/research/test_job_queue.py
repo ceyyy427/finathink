@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import sqlite3
+
 import pytest
 
 from finahinking.research.contracts import AgentTask, stable_digest
@@ -13,6 +15,53 @@ def task(task_id: str = "task-1") -> AgentTask:
         input_digest=f"input-{task_id}",
         inputs={"dataset_ref": "dataset-1"},
     )
+
+
+@pytest.fixture
+def tracked_connections(monkeypatch):
+    original = sqlite3.connect
+    opened = []
+    statements = []
+
+    class TrackedConnection(sqlite3.Connection):
+        closed = False
+
+        def close(self):
+            self.closed = True
+            super().close()
+
+    def connect(*args, **kwargs):
+        connection = original(*args, factory=TrackedConnection, **kwargs)
+        connection.set_trace_callback(statements.append)
+        opened.append(connection)
+        return connection
+
+    monkeypatch.setattr(sqlite3, "connect", connect)
+    return opened, statements
+
+
+def test_queue_transactions_close_connections_on_success_and_rollback(tmp_path, tracked_connections):
+    connections, _ = tracked_connections
+    queue = JobQueue(tmp_path / "closed.sqlite")
+    record = queue.enqueue(task(), "closed")
+    queue.get(record.job_id)
+    with queue._connect() as db:
+        db.execute("CREATE TABLE should_rollback (value TEXT)")
+    with pytest.raises(RuntimeError), queue._connect() as db:
+        db.execute("INSERT INTO should_rollback VALUES ('uncommitted')")
+        raise RuntimeError("abort the operation")
+    with queue._connect() as db:
+        assert db.execute("SELECT COUNT(*) FROM should_rollback").fetchone()[0] == 0
+    assert connections and all(connection.closed for connection in connections)
+
+
+def test_status_reads_do_not_change_the_persistent_journal_mode(tmp_path, tracked_connections):
+    _, statements = tracked_connections
+    queue = JobQueue(tmp_path / "read-only-status.sqlite")
+    record = queue.enqueue(task(), "status-read")
+    statements.clear()
+    queue.get(record.job_id)
+    assert not any("JOURNAL_MODE=WAL" in statement.upper().replace(" ", "") for statement in statements)
 
 
 def test_enqueue_is_idempotent_and_does_not_persist_task_inputs(tmp_path) -> None:
