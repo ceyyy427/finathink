@@ -35,6 +35,12 @@
 安装 `actionlint 1.7.12` 复现后，改用 `github.workspace` 并让上传步骤引用同一环境变量；
 修复后工作流静态检查通过。远端执行和产物记录见 [PR #10](https://github.com/ceyyy427/finathink/pull/10) 的 Checks。
 
+首次实际执行中，前端/浏览器、notebook 和量化迁移通过；Python 矩阵的安全审计发现两项旧锁定依赖问题。
+按上游公告最小更新 `certifi` 至 `2026.10.19`、`setuptools` 至 `84.1.0`，并同步构建后端 pin；
+来源：[certifi 公告](https://raw.githubusercontent.com/pypa/advisory-database/main/vulns/certifi/PYSEC-2026-4320.yaml)、
+[setuptools 公告](https://github.com/advisories/GHSA-xmj3-9gf7-h52w)。未增加忽略项或改变严格审计命令。
+本地安全扫描已先复现这两项失败，再验证更新后的锁文件未发现已知漏洞。
+
 ## 浏览器与视觉检查
 
 - 本地 Chromium：375×812、768×1024、1024×768、1440×900、1920×1080。
@@ -46,6 +52,9 @@
 
 本地证据位于 `.superpowers/sdd/2026-10-26-finathink-product-completion-roadmap/browser-artifacts/`；
 新证据目录独立于原阶段证据。CI 中同一组文件保存为 `frontend-browser-evidence` artifact。
+
+已下载首轮成功的前端 CI 产物复查：JUnit 为 14 项通过、0 skipped、0 failures、0 errors，
+并包含桌面/移动截图、页面 HTML、诊断与性能 JSON；已查看远端生成的桌面 Overview 截图。
 
 ## Web Interface Guidelines 检查
 
