@@ -94,3 +94,25 @@ test('mountOverview exposes loading and actionable error states', async () => {
   assert.equal(failed.dataset.overviewStatus, 'ERROR');
   assert.match(error.textContent, /Check the local service/);
 });
+
+test('mountOverview coalesces repeated calls into one request and render', async () => {
+  let requests = 0;
+  let finish;
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = () => {
+    requests += 1;
+    return new Promise((resolve) => { finish = () => resolve({ ok: true, json: async () => payload }); });
+  };
+  try {
+    const root = { dataset: { overviewPayloadUrl: '/api/overview' }, querySelector: () => null };
+    const first = mountOverview(root);
+    const second = mountOverview(root);
+    assert.equal(requests, 1);
+    finish();
+    assert.equal(await first, await second);
+    await mountOverview(root);
+    assert.equal(requests, 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

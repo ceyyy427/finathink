@@ -449,6 +449,25 @@ th { color: var(--text-muted); font-size: .78rem; letter-spacing: .06em; text-tr
 .research-tooltip, .research-inspector, .overview-tooltip { min-height: 32px; margin-top: var(--space-2); padding: 6px 9px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-elevated); color: var(--text-secondary); font-size: .84rem; font-variant-numeric: tabular-nums; }
 .overview-chart-bars i, .overview-topic-cell { cursor: help; }
 .overview-chart-bars i:focus-visible, .overview-topic-cell:focus-visible { outline-offset: 2px; }
+.overview-chart-canvas { width: 100%; height: 210px; min-width: 0; }
+.overview-chart [hidden] { display: none; }
+.overview-daily-table { margin-top: var(--space-3); max-height: 280px; }
+.overview-daily-table th, .overview-daily-table td { padding: 8px 6px; font-size: .76rem; letter-spacing: 0; }
+.overview-day { min-height: 44px; padding: 4px; background: transparent; color: var(--evidence); white-space: nowrap; }
+.overview-day:hover { background: var(--surface-raised); color: var(--text-primary); }
+.overview-history { margin-top: var(--space-3); }
+.overview-history summary { cursor: pointer; color: var(--text-secondary); }
+.overview-topic-heatmap { display: grid; grid-template-columns: repeat(auto-fit, minmax(88px, 1fr)); gap: 6px; margin-bottom: var(--space-3); }
+.overview-topic-cell { min-height: 54px; display: grid; place-items: center; padding: 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-primary); font-size: .78rem; text-align: center; overflow-wrap: anywhere; }
+.overview-topic-cell[data-intensity="1"] { background: rgba(56, 189, 248, .12); }
+.overview-topic-cell[data-intensity="2"] { background: rgba(56, 189, 248, .2); }
+.overview-topic-cell[data-intensity="3"] { background: rgba(56, 189, 248, .3); }
+.overview-topic-cell[data-intensity="4"] { background: rgba(139, 92, 246, .34); }
+.overview-topic-cell[data-intensity="5"] { background: rgba(139, 92, 246, .48); }
+.overview-comparison { margin-top: var(--space-5); }
+.overview-comparison h2 span { display: block; margin-top: 6px; color: var(--text-secondary); font-size: .76rem; font-weight: 500; }
+.comparison-workspace { display: grid; gap: var(--space-4); }
+.comparison-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-4); align-items: baseline; }
 [data-tooltip] { position: relative; }
 [data-tooltip]:hover::after, [data-tooltip]:focus-visible::after { content: attr(data-tooltip); position: absolute; left: 50%; bottom: calc(100% + 8px); z-index: 5; width: max-content; max-width: 220px; padding: 6px 8px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface-raised); color: var(--text-primary); box-shadow: var(--shadow-sm); font-size: .75rem; line-height: 1.3; transform: translateX(-50%); pointer-events: none; }
 .workbench-frame { display: grid; gap: var(--space-4); margin-top: var(--space-5); padding: clamp(18px, 3vw, 28px); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); color: var(--text-primary); }
@@ -1452,7 +1471,7 @@ class LocalApplication:
         if clean == "/research/compare":
             if method != "GET":
                 return 405, "application/json", {"error": "research comparison is read-only"}
-            return 200, "text/html; charset=utf-8", self._research_comparison_page_body()
+            return 200, "text/html; charset=utf-8", self.render_page(clean, query=query)
         if clean.startswith("/research/"):
             if method != "GET":
                 return 405, "application/json", {"error": "research routes are read-only"}
@@ -2073,9 +2092,14 @@ class LocalApplication:
         activity_series = payload.get("activity_series") or []
         max_count = max((int(item.get("count", 0)) for item in activity_series if isinstance(item, Mapping)), default=0)
         bars = '<p class="empty-state">No activity is plotted until a local research or learning record is saved.</p>' if not activity_series else ''.join(
-            f'<i style="height:{max(12, round((int(item.get("count", 0)) / max_count) * 100))}%" data-tooltip="{html.escape(str(item.get("date", "—")))} · {html.escape(str(item.get("count", 0)))} recorded" title="{html.escape(str(item.get("date", "—")))} · {html.escape(str(item.get("count", 0)))} recorded" aria-label="{html.escape(str(item.get("date", "—")))}: {html.escape(str(item.get("count", 0)))} recorded" tabindex="0"></i>'
+            f'<i style="height:{max(12, round((int(item.get("count", 0)) / max_count) * 100))}%" aria-hidden="true"></i>'
             for item in activity_series if isinstance(item, Mapping)
         )
+        daily_rows = ''.join(
+            f'<tr><th scope="row"><button type="button" class="overview-day" data-overview-day data-date="{html.escape(str(item["date"]))}" data-tooltip="{html.escape(str(item["date"]))}: {item["count"]} recorded · {item["learning"]} learning · {item["research"]} research" aria-describedby="overview-tooltip">{html.escape(str(item["date"]))}</button></th><td>{item["count"]}</td><td>{item["learning"]}</td><td>{item["research"]}</td></tr>'
+            for item in activity_series if isinstance(item, Mapping)
+        ) or '<tr><td colspan="4">No dated activity recorded. Save research or complete a learning check to begin.</td></tr>'
+        daily_table = '<div class="table-wrap overview-daily-table"><table aria-label="Daily activity data"><thead><tr><th scope="col">Date</th><th scope="col">Recorded</th><th scope="col">Learning</th><th scope="col">Research</th></tr></thead><tbody data-overview-daily-rows>' + daily_rows + '</tbody></table></div>'
         topic_max = max((int(item.get("count", 0)) for item in topics if isinstance(item, Mapping)), default=0)
         topic_cells = ''.join(
             f'<span class="overview-topic-cell" data-intensity="{max(1, round((int(item.get("count", 0)) / topic_max) * 5)) if topic_max else 0}" data-tooltip="{html.escape(str(item.get("topic", "Topic")))}: {html.escape(str(item.get("count", 0)))} recorded" title="{html.escape(str(item.get("topic", "Topic")))}: {html.escape(str(item.get("count", 0)))} recorded" tabindex="0">{html.escape(str(item.get("topic", "Topic")))}</span>'
@@ -2085,13 +2109,14 @@ class LocalApplication:
             f'<tr><th scope="row">{html.escape(str(item.get("run_id", "—")))}</th><td>{html.escape(str(item.get("state", "UNKNOWN")))}</td><td>{html.escape(str(item.get("evidence_count", 0)))}</td><td>{html.escape(str(item.get("report_count", 0)))}</td></tr>'
             for item in payload.get("research_comparison", ()) if isinstance(item, Mapping)
         ) or '<tr><td colspan="4" class="empty-state">No registered research runs to compare.</td></tr>'
+        history_open = ' open' if not activity else ''
         return (
-            f'<section class="overview" data-finathink-overview data-overview-payload-url="/api/overview" aria-busy="true">'
-            '<p class="loading-state" data-overview-loading aria-live="polite">Loading overview…</p><p class="error-state" data-overview-error role="alert" aria-live="assertive" hidden></p>'
+            f'<section class="overview" data-finathink-overview data-overview-payload-url="/api/overview" aria-busy="false">'
+            '<p class="loading-state" data-overview-loading aria-live="polite" hidden>Loading overview…</p><p class="error-state" data-overview-error role="alert" aria-live="assertive" hidden></p>'
             f'<header class="overview-header"><div class="overview-header-copy"><div class="status-row">{self._status("OFFLINE", "offline")}{self._status("PAPER-ONLY", "limitation")}</div><h1>Overview</h1><p class="lede">What can I understand today? A calm, evidence-bound view of local research activity.</p></div><div class="overview-meta"><span>As of {html.escape(str(payload.get("as_of", "not attached")))}</span><span>Source: {html.escape(str(payload["provenance"].get("data_mode", "UNKNOWN")))}</span></div></header>'
             f'<section class="metric-grid" aria-label="Overview metrics">{metric_cards}</section>'
             '<section class="overview-grid">'
-            f'<article class="panel overview-region" data-overview-chart tabindex="0"><h2>Activity <span>Daily recorded items</span></h2><div class="overview-chart" role="img" aria-label="Daily saved activity chart; empty when no activity is recorded"><div class="overview-chart-bars" data-overview-activity-series>{bars}</div></div><p class="overview-tooltip" data-overview-tooltip role="status" aria-live="polite">Focus a bar or topic to inspect recorded values.</p><ul class="overview-list" aria-label="Activity text summary">{activity_html}</ul></article>'
+            f'<article class="panel overview-region" data-overview-chart tabindex="0"><h2>Activity <span>Daily recorded items</span></h2><div class="overview-chart"><div class="overview-chart-canvas" data-overview-canvas aria-hidden="true" hidden></div><div class="overview-chart-bars" data-overview-activity-series>{bars}</div></div><p class="overview-tooltip" id="overview-tooltip" data-overview-tooltip role="status" aria-live="polite">Focus a date or topic to inspect recorded values.</p>{daily_table}<details class="overview-history"{history_open}><summary>Activity records</summary><ul class="overview-list" aria-label="Activity text summary">{activity_html}</ul></details></article>'
             f'<article class="panel overview-region" data-overview-topics><h2>Topics <span>Recorded intensity</span></h2><div class="overview-topic-heatmap" aria-label="Recorded topic intensity heatmap">{topic_cells}</div><ul class="overview-list" aria-label="Recorded topics">{topic_html}</ul><p class="meta"><a href="/knowledge">Continue learning</a> from the curated local catalog.</p></article>'
             f'<article class="panel overview-region" data-overview-heatmap><h2>Learning signal <span>Private checks</span></h2><ul class="overview-heatmap" aria-label="Learning activity summary">{heatmap_html}</ul><p class="meta">Learning evidence stays local and is never inferred from browsing.</p></article>'
             '</section>'

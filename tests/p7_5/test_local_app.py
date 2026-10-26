@@ -220,6 +220,10 @@ def test_research_comparison_projection_is_empty_safe_and_route_is_read_only() -
     assert content_type.startswith("text/html")
     assert "Research comparison" in page
     assert "No registered research runs" in page
+    assert page.lower().startswith("<!doctype html>")
+    assert '<main class="workspace" id="main"' in page
+    assert 'aria-label="Primary"' in page
+    assert 'href="/research/compare" aria-current="page"' in page
     assert app.route("POST", "/research/compare")[0] == 405
     app.close()
 
