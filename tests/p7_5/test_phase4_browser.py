@@ -204,3 +204,24 @@ def test_empty_payload_replaces_server_daily_rows(http_app, observed_page):
     assert page.locator('[data-overview-day]').count() == 0
     assert page.locator('[data-overview-canvas]').is_hidden()
     assert page.get_by_role("table", name="Daily activity data").get_by_text("No dated activity recorded", exact=False).is_visible()
+    page.get_by_text("Activity records", exact=True).click()
+    summary = page.get_by_role("list", name="Activity text summary")
+    assert summary.locator("li").count() == 1
+    assert summary.get_by_text("No saved research activity yet").is_visible()
+
+
+def test_empty_rerender_clears_focused_activity_tooltip(http_app, observed_page):
+    app, base = http_app
+    page, _, _ = observed_page
+    page.goto(base, wait_until="networkidle")
+    page.locator('[data-overview-day][data-date="2026-10-02"]').focus()
+    assert "3 recorded" in page.locator('[data-overview-tooltip]').inner_text()
+    payload = app.overview()
+    payload["activity_series"] = []
+    payload["activity"] = []
+    page.route("**/api/overview", lambda route: route.fulfill(status=200, content_type="application/json", body=json.dumps(payload)))
+    # Explicitly refresh through the real bundled entry, without test-only exports.
+    page.evaluate("document.querySelector('[data-finathink-overview]')._finathinkOverviewMount = null")
+    page.add_script_tag(url=base + "/assets/finathink-research.js")
+    page.locator('[data-overview-day]').first.wait_for(state="hidden")
+    assert page.locator('[data-overview-tooltip]').inner_text() == "Focus a date or topic to inspect recorded values."

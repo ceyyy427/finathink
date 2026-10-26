@@ -55,7 +55,7 @@ Overview 只由一个入口初始化；数据摘要独立于 canvas DOM。
 - [x] 修复当前路由、重复 mount、图表清理、焦点数据回退和主题 CSS 只存在于旧样式的问题。
 - [x] 覆盖成功/空/加载/失败、真实主题记录和跨移动断点 resize；比较页也加入截图矩阵。
 - [x] CI 新增 Node 测试/构建及安装 Chromium 的必跑浏览器 job，保存截图、错误和性能 JSON。
-- [ ] 验证 `npm test`、`npm run build`、`python3 -m pytest tests/p7_5 -q`；审查并单独提交。
+- [x] 验证 `npm test`、`npm run build`、`python3 -m pytest tests/p7_5 -q`；审查并单独提交。
 
 ### Task 2：统一可重放的数据快照
 

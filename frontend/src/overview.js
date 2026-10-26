@@ -118,6 +118,27 @@ export function renderOverview(root, payload) {
   }
   setHidden(root?.querySelector?.('[data-overview-loading]'), true);
   setHidden(root?.querySelector?.('[data-overview-error]'), true);
+  const tooltip = root?.querySelector?.('[data-overview-tooltip]');
+  if (tooltip) tooltip.textContent = 'Focus a date or topic to inspect recorded values.';
+  const history = root?.querySelector?.('[aria-label="Activity text summary"]');
+  if (history && typeof document !== 'undefined') {
+    const records = normalized.activity.length ? normalized.activity : [null];
+    history.replaceChildren(...records.map((item) => {
+      const row = document.createElement('li');
+      const description = document.createElement('span');
+      const status = document.createElement('strong');
+      if (item) {
+        description.textContent = `${item.timestamp ?? '—'} · ${item.label ?? 'Activity'}`;
+        status.textContent = item.status ?? 'RECORDED';
+      } else {
+        row.className = 'empty-state';
+        description.textContent = 'No saved research activity yet';
+        status.textContent = 'EMPTY';
+      }
+      row.append(description, status);
+      return row;
+    }));
+  }
   const chart = root?.querySelector?.('[data-overview-chart]');
   if (chart?.dataset) {
     chart.dataset.chartReady = normalized.activity.length ? 'ready' : 'empty';

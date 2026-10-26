@@ -13,7 +13,7 @@
 | 缩放、降动效与实例清理 | 缺少尺寸和生命周期监听 | 1920→375→1440 resize、系统降动效切换、pagehide dispose |
 | 主题没有热力样式 | 样式只存在于旧 CSS，实际 AppShell 使用 dark CSS | 在启用的主题添加规则；真实 quant/strategy 记录的浏览器样式验证 |
 | 无 JS 时仍显示加载中 | 服务端默认 aria-busy=true/loading 可见 | 服务端快照默认可读；JS 加载时才切换 busy；无 JS 旅程验证 |
-| 空响应残留旧日期 | 只在新行非空时更新 DOM | 注入空活动响应后旧按钮消失、表格显示空状态 |
+| 空响应残留旧数据 | 原日期表只在新行非空时更新；活动记录和提示仍保留旧快照 | 日期表和活动记录均按验证后的响应重建；空响应移除旧记录，重复渲染清除已聚焦日期的提示 |
 
 回归先复现了缺外壳、重复请求、丢失日期控件及空响应残留，再分别完成修复和通过验证。
 
@@ -30,6 +30,10 @@
 
 已使用不存在的浏览器目录做负向检查：严格模式返回失败，不能以 skip 通过。
 普通 Python 测试环境仍允许明确报告浏览器未安装；独立发布 job 强制安装并执行。
+
+首轮远端校验发现 job 级 env 不允许使用 `runner.temp`，因此没有创建测试 job。
+安装 `actionlint 1.7.12` 复现后，改用 `github.workspace` 并让上传步骤引用同一环境变量；
+修复后工作流静态检查通过。远端执行和产物记录见 [PR #10](https://github.com/ceyyy427/finathink/pull/10) 的 Checks。
 
 ## 浏览器与视觉检查
 
@@ -52,8 +56,16 @@
 ## 验证记录
 
 - 前端 Node 单测：24 passed；构建与 bundle 一致性检查通过。
-- pytest 全量：`FINATHINK_REQUIRE_BROWSER=1` 配合本地 wheelhouse 运行，1040 passed、1 skipped。
-- 独立最终审查结果在本 PR 完成前补齐。
+- pytest 全量：`FINATHINK_REQUIRE_BROWSER=1` 配合本地 wheelhouse 运行，1041 passed、1 skipped。
+- 独立最终审查：没有 Critical/Minor，发现 1 项 Important P2（空响应残留活动记录和提示）。
+  两个浏览器场景分别先复现失败，再修复通过；修复后的全量回归通过。
+- `actionlint`、Ruff、compileall、治理检查和 bundle 一致性检查通过。
 - 首轮全量：1038 passed、1 failed、1 skipped；失败项是 wheel 安装测试访问 PyPI 时 TLS 连接中断。
 - 下载构建/运行依赖到本地 wheelhouse 后，以 `PIP_NO_INDEX=1`、`PIP_FIND_LINKS` 重跑 clean-install：1 passed。
   该处理只影响本次验证的依赖来源，没有修改安装测试或放宽产品约束。
+
+## 范围与保留事项
+
+- 本次仅完成 Phase 4 / Task 1，后续 Task 2–9 仍是待执行规划。
+- 保留本轮本地截图与诊断目录，代价是占用额外磁盘空间；不覆盖旧阶段文件。
+- 合并前核对实际 CI 及截图产物，不修改 GitHub 分支保护配置；未来 PR 是否强制检查仍取决于仓库策略。

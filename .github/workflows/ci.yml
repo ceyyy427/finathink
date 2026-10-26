@@ -16,7 +16,7 @@ jobs:
     timeout-minutes: 15
     env:
       FINATHINK_REQUIRE_BROWSER: '1'
-      FINATHINK_BROWSER_ARTIFACT_DIR: ${{ runner.temp }}/finathink-browser-artifacts
+      FINATHINK_BROWSER_ARTIFACT_DIR: ${{ github.workspace }}/browser-artifacts
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -54,7 +54,7 @@ jobs:
           retention-days: 14
           if-no-files-found: error
           path: |
-            ${{ runner.temp }}/finathink-browser-artifacts/
+            ${{ env.FINATHINK_BROWSER_ARTIFACT_DIR }}/
             frontend/parser-performance.json
             browser-results.xml
 
