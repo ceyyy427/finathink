@@ -66,10 +66,10 @@ Overview 只由一个入口初始化；数据摘要独立于 canvas DOM。
 **Interfaces:** `SnapshotStore.save(snapshot: DatasetSnapshot) -> str` 与
 `SnapshotStore.load(fingerprint: str) -> DatasetSnapshot`；请求只绑定 snapshot ref。
 
-- [ ] 添加测试：同内容相同指纹；篡改拒绝；缺失 available_at 保持 UNKNOWN；重启后能载入。
-- [ ] 将 DataBatch 转成既有 DatasetSnapshot，记录字段质量、时区、复权/日历声明、数据截止时间与来源。
-- [ ] 将用户选中快照显式传给因子、回测、风险、组合计算；数据不满足需求时给出具体缺字段说明。
-- [ ] 验证 A/B 两份数据分别贯通计算，报告中的 dataset fingerprint 与输入一致；审查并提交。
+- [x] 添加测试：同内容相同指纹；篡改拒绝；缺失 available_at 保持 UNKNOWN；重启后能载入。
+- [x] 将 DataBatch 转成既有 DatasetSnapshot，记录字段质量、时区、复权/日历声明、数据截止时间与来源。
+- [x] 将用户选中快照显式传给因子、回测、风险、组合计算；数据不满足需求时给出具体缺字段说明。
+- [x] 验证 A/B 两份数据分别贯通计算，报告中的 dataset fingerprint 与输入一致；审查并提交。
 
 ### Task 3：统一持久化研究索引
 

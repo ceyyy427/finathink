@@ -221,6 +221,7 @@ class ResearchRequest:
     workflow_version: str
     config_digest: str
     previous_policy_fingerprint: str | None = None
+    snapshot_ref: str | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "run_id", _nonempty(self.run_id, "run_id"))
@@ -240,6 +241,8 @@ class ResearchRequest:
                 "previous_policy_fingerprint",
                 _public_identifier(self.previous_policy_fingerprint, "previous_policy_fingerprint"),
             )
+        if self.snapshot_ref is not None and (not isinstance(self.snapshot_ref, str) or not re.fullmatch(r"[0-9a-f]{64}", self.snapshot_ref)):
+            raise ValueError("snapshot_ref must be a content-addressed snapshot fingerprint")
 
 
 @dataclass(frozen=True, slots=True)
@@ -604,6 +607,9 @@ def to_jsonable(value: Any) -> Any:
         return {
             item.name: to_jsonable(getattr(value, item.name))
             for item in fields(value)
+            # Preserve the canonical identity of requests queued before the
+            # optional snapshot binding was introduced.
+            if not (isinstance(value, ResearchRequest) and item.name == "snapshot_ref" and value.snapshot_ref is None)
         }
     if isinstance(value, Mapping):
         result: dict[str, Any] = {}

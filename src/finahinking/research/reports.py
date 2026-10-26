@@ -470,6 +470,7 @@ def _status_snapshot(result: ResearchRunResult) -> dict[str, Any]:
     )
     factor_proposals = next((item.get("factor_proposals") for item in reversed(metadata) if item.get("factor_proposals") is not None), [])
     provider_readiness = next((item.get("provider_readiness") for item in reversed(metadata) if item.get("provider_readiness") is not None), {"status": "UNKNOWN"})
+    dataset_fingerprint = next((item["dataset_fingerprint"] for item in metadata if isinstance(item.get("dataset_fingerprint"), str)), None)
     return _scrub({
         "role_status": role_status,
         "stage_status": stage_status,
@@ -477,6 +478,7 @@ def _status_snapshot(result: ResearchRunResult) -> dict[str, Any]:
         "checkpoint_status": checkpoint_state if isinstance(checkpoint_state, Mapping) else {"state": checkpoint_state or "NOT_ATTACHED"},
         "factor_proposals": factor_proposals if isinstance(factor_proposals, Sequence) and not isinstance(factor_proposals, (str, bytes, bytearray)) else [],
         "provider_readiness": provider_readiness if isinstance(provider_readiness, Mapping) else {"status": "UNKNOWN"},
+        **({"dataset_fingerprint": dataset_fingerprint} if dataset_fingerprint else {}),
     })
 
 

@@ -273,6 +273,12 @@ class JsonApiConnector:
             as_of=request.as_of,
         )
 
+    def capture(self, request: DataRequest, store) -> str:
+        """Explicitly fetch once and retain an immutable replay reference."""
+        from finahinking.p8_2.data_sources import snapshot_from_batch
+
+        return store.save(snapshot_from_batch(self.fetch(request)))
+
 
 __all__ = [
     "MAX_PAGES",

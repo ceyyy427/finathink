@@ -201,7 +201,7 @@ def build_research_payload(snapshot: DatasetSnapshot | None = None) -> dict[str,
                 "signal": "observation",
                 "source": item.source,
                 "provider": item.provider,
-                "available_at": item.available_at.isoformat(),
+                "available_at": item.available_at.isoformat() if item.available_at is not None else None,
             }
         )
         previous_close = close
