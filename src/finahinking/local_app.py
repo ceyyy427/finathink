@@ -558,7 +558,9 @@ class LocalApplication:
         else:
             self.artifact_root = Path(self.config.db_path).expanduser().parent / "artifacts"
             self.artifact_root.mkdir(parents=True, exist_ok=True)
-        self._research_runs: dict[str, dict[str, Any]] = {}
+        from finahinking.research.run_repository import RunRepository
+
+        self._run_repository = RunRepository(self.artifact_root / "research-index.sqlite3", report_root=self.artifact_root / "reports", scope_id=self.config.session_id)
         from finahinking.research.provider_config import ProviderConfigStore
 
         provider_path = None if self.config.db_path == ":memory:" else Path(self.config.db_path).expanduser().with_suffix(".providers.json")
@@ -582,23 +584,43 @@ class LocalApplication:
         if not (bundle / "manifest.json").exists():
             raise ValueError("research report manifest is missing")
         events = tuple(getattr(result, "events", ()) or ())
-        self._research_runs[run_id] = {"state": result.state, "manifest": manifest, "events": events, "bundle": bundle}
+        self._run_repository.record_result(result, manifest, bundle=bundle)
         from finahinking.research.ui import register_runtime_snapshot
 
         register_runtime_snapshot(result.state, manifest, events)
 
+    def _research_entry(self, run_id: str):
+        try:
+            return self._run_repository.get_run(run_id)
+        except KeyError:
+            return None
+
+    @staticmethod
+    def _research_model(entry):
+        from finahinking.research.ui import research_view_model
+
+        manifest = dict(entry["manifest"])
+        if entry["report_status"] != "AVAILABLE":
+            manifest["files"] = {}
+        model = research_view_model(entry["state"], manifest)
+        model.update({key: entry[key] for key in ("created_at", "started_at", "finished_at", "dataset_fingerprint", "strategy_version", "policy_fingerprint", "report_status")})
+        return model, manifest
+
     def _research_run_route(self, clean: str) -> tuple[int, str, Any]:
-        from finahinking.research.ui import research_runtime_view_model, research_view_model
+        from finahinking.research.ui import research_runtime_view_model
 
         parts = [part for part in clean.removeprefix("/research/").split("/") if part]
         if not parts:
             return 404, "application/json", {"error": "research run not found"}
         run_id = parts[0]
-        entry = self._research_runs.get(run_id)
+        try:
+            entry = self._research_entry(run_id)
+        except ValueError:
+            return 422, "application/json", {"error": "research index record is invalid"}
         if entry is None:
             return 404, "application/json", {"error": "research run not found"}
-        view_model = research_view_model(entry["state"], entry["manifest"])
-        runtime_model = research_runtime_view_model(run_id, state=entry["state"], manifest=entry["manifest"], events=entry.get("events", ()))
+        view_model, manifest = self._research_model(entry)
+        runtime_model = research_runtime_view_model(run_id, state=entry["state"], manifest=manifest, events=entry.get("events", ()))
         if len(parts) == 2 and parts[1] == "status":
             return 200, "application/json", view_model
         if len(parts) == 1:
@@ -607,10 +629,12 @@ class LocalApplication:
                 f'<a class="button-secondary" href="{html.escape(url)}">{html.escape(section.replace("_", " ").title())}</a>'
                 for section, url in sorted(links.items())
             )
+            warning = f'<p class="error-state" role="alert">Report {entry["report_status"]}. Restore the original bundle or create a new research run; the saved history is retained.</p>' if entry["report_status"] != "AVAILABLE" else ''
             body = (
                 f'<div class="status-row"><span class="status status--offline">OFFLINE</span><span class="status status--ready">PAPER-ONLY</span><span class="status status--quant">{html.escape(view_model["state"])}</span></div>'
                 f'<h1>Research run {html.escape(run_id)}</h1>'
                 f'<p class="lede">As-of: {html.escape(str(view_model.get("as_of") or "not attached"))}. This view is read-only and never submits an order.</p>'
+                f'{warning}'
                 f'<section class="card"><h2>Analyst status</h2><pre>{html.escape(json.dumps(view_model, ensure_ascii=False, indent=2, sort_keys=True))}</pre></section>'
                 f'<section class="card" data-research-runtime data-payload-url="/api/research/runs/{html.escape(run_id)}/stream"><h2>Runtime status wall</h2><p data-research-runtime-state>{html.escape(runtime_model["state"])} · READ-ONLY · PAPER-ONLY</p><p data-research-runtime-stages>{html.escape(" · ".join(f"{key}: {value}" for key, value in runtime_model.get("stage_status", {}).items()))}</p><p data-research-runtime-tools>{html.escape(" · ".join(str(item.get("name", item.get("tool", "tool"))) for item in runtime_model.get("tool_summaries", ())) or "No tool summary recorded." )}</p><p class="field-help">Server snapshot only; the browser never calculates financial indicators.</p><p class="error-state" data-research-runtime-error hidden></p></section>'
                 f'<div class="action-row">{link_html}</div>'
@@ -618,6 +642,8 @@ class LocalApplication:
             )
             return 200, "text/html; charset=utf-8", self.render_shell("/research", f"Research {run_id}", body, inspector=self._inspector("Research run", {"Run": run_id, "Mode": "OFFLINE", "Boundary": "PAPER-ONLY / READ-ONLY"}, status="OFFLINE"), scripts=("/assets/finathink-research.js",))
         if len(parts) == 3 and parts[1] == "report":
+            if entry["report_status"] != "AVAILABLE":
+                return 409, "application/json", {"error": "report bundle is missing or failed integrity verification", "report_status": entry["report_status"]}
             section = parts[2]
             allowed = {"complete": "complete_report.html", "2_evidence": "2_evidence/index.html", "3_research": "3_research/index.html", "4_quant": "4_quant/index.html", "5_risk": "5_risk/index.html", "6_paper_decision": "6_paper_decision/index.html", "experiments": "experiments/index.html", "risk_attribution": "risk_attribution/index.html", "learning_history": "learning_history/index.html"}
             if section not in allowed:
@@ -944,18 +970,17 @@ class LocalApplication:
             return None
         return candidate
 
-    def research_comparison(self) -> dict[str, Any]:
+    def research_comparison(self, *, limit=100, offset=0, state=None, sort_by="created_at", order="desc") -> dict[str, Any]:
         """Return a descriptive comparison of registered research runs.
 
         This is intentionally a state/evidence inventory.  It does not rank
         runs, calculate a quality score, or expose private report contents.
         """
 
-        from finahinking.research.ui import research_view_model
-
         runs: list[dict[str, Any]] = []
-        for run_id, entry in sorted(self._research_runs.items()):
-            view_model = research_view_model(entry["state"], entry["manifest"])
+        for entry in self._run_repository.list_runs(limit=limit, offset=offset, state=state, sort_by=sort_by, order=order):
+            run_id = entry["run_id"]
+            view_model, _ = self._research_model(entry)
             stage_status = view_model.get("stage_status", {})
             completed_statuses = {"COMPLETE", "COMPLETED", "READY", "SUCCEEDED", "DONE"}
             evidence_count = sum(int(item.get("evidence_count", 0)) for item in view_model.get("analysts", ()) if isinstance(item, Mapping))
@@ -970,6 +995,7 @@ class LocalApplication:
                     "evidence_count": evidence_count,
                     "report_count": len(view_model.get("report_links", {})),
                     "decision_eligible": bool(view_model.get("decision_eligible", False)),
+                    **{key: entry[key] for key in ("created_at", "started_at", "finished_at", "dataset_fingerprint", "strategy_version", "policy_fingerprint", "report_status")},
                 }
             )
         return {
@@ -977,8 +1003,9 @@ class LocalApplication:
             "mode": "OFFLINE" if self.config.offline else "LOCAL",
             "paper_only": True,
             "runs": runs,
+            "total": self._run_repository.count_runs(state=state), "limit": limit, "offset": offset,
             "basis": ["state", "as_of", "stage completion", "analyst evidence count", "report coverage", "decision eligibility"],
-            "limitations": ["Descriptive run metadata only; no run is ranked or called a winner.", "Registered runs are available only for the current local application session."],
+            "limitations": ["Descriptive run metadata only; no run is ranked or called a winner.", "Reports are verified from the persistent local inventory; unavailable bundles remain listed."],
         }
 
     def overview(self) -> dict[str, Any]:
@@ -1033,21 +1060,20 @@ class LocalApplication:
             bucket["count"] += 1
             bucket["outcomes"][outcome] = int(bucket["outcomes"].get(outcome, 0)) + 1
         research_comparison = self.research_comparison()
-        for run in research_comparison["runs"]:
-            date_key = run.get("as_of")
+        for day in self._run_repository.activity_by_day():
+            date_key = day["date"]
             if not date_key:
                 continue
             bucket = activity_buckets.setdefault(date_key, {"date": date_key, "count": 0, "learning": 0, "research": 0})
-            bucket["count"] = int(bucket["count"]) + 1
-            bucket["research"] = int(bucket["research"]) + 1
-            activity.append({"timestamp": date_key, "kind": "research", "label": "research run", "status": run["state"]})
+            bucket["count"] = int(bucket["count"]) + day["count"]
+            bucket["research"] = int(bucket["research"]) + day["count"]
+        for run in research_comparison["runs"]:
+            activity.append({"timestamp": run["created_at"], "kind": "research", "label": "research run", "status": run["state"]})
         activity_series = [dict(activity_buckets[key]) for key in sorted(activity_buckets)]
         topics = sorted(topic_buckets.values(), key=lambda item: (-int(item["count"]), str(item["topic"])))[:12]
         learning_activity = [learning_buckets[key] for key in sorted(learning_buckets)]
-        research_states = []
-        for entry in self._research_runs.values():
-            state = getattr(entry.get("state"), "value", entry.get("state", "UNKNOWN"))
-            research_states.append(str(state).upper())
+        state_counts = self._run_repository.counts_by_state()
+        research_states = sorted(state_counts)
         as_of = str((event.get("event") or {}).get("available_at") or "2025-01-15T13:31:00Z")[:10]
         return {
             "schema_version": 1,
@@ -1058,14 +1084,14 @@ class LocalApplication:
                 "sample_events": 1,
                 "saved_items": len(nodes),
                 "learning_items": len(mastery),
-                "research_runs": len(research_states),
+                "research_runs": self._run_repository.count_runs(),
             },
             "activity": activity,
             "activity_series": activity_series,
             "topics": [dict(item) for item in topics],
             "topic_heatmap": [dict(item) for item in topics],
             "learning_activity": learning_activity,
-            "research_status": {"count": len(research_states), "states": research_states[-8:]},
+            "research_status": {"count": self._run_repository.count_runs(), "states": research_states[-8:], "counts": state_counts},
             "research_comparison": research_comparison["runs"],
             "limitations": [
                 "Deterministic fixture and offline mode; no live market feed is queried.",
@@ -1393,6 +1419,18 @@ class LocalApplication:
         parsed = urlsplit(path)
         query = parse_qs(parsed.query) if query is None else query
         clean = parsed.path.rstrip("/") or "/"
+        if clean == "/api/research/runs":
+            if method != "GET":
+                return 405, "application/json", {"error": "research history is read-only"}
+            try:
+                pagination = {
+                    "limit": int(query.get("limit", ["50"])[0]), "offset": int(query.get("offset", ["0"])[0]),
+                    "state": query.get("state", [None])[0], "sort_by": query.get("sort_by", ["created_at"])[0],
+                    "order": query.get("order", ["desc"])[0],
+                }
+                return 200, "application/json", self.research_comparison(**pagination)
+            except (ValueError, TypeError):
+                return 422, "application/json", {"error": "research history filter or pagination is invalid"}
         if clean == "/api/research/providers/config":
             if method == "GET":
                 return 200, "application/json", {"providers": list(self._provider_configs.list()), "paper_only": True, "provider_called": False}
@@ -1448,13 +1486,18 @@ class LocalApplication:
             run_id = clean.removeprefix("/api/research/runs/").removesuffix("/stream").strip("/")
             if not run_id or "/" in run_id or "\\" in run_id:
                 return 400, "application/json", {"error": "research run id is invalid"}
-            entry = self._research_runs.get(run_id)
+            try:
+                entry = self._research_entry(run_id)
+            except ValueError:
+                return 422, "application/json", {"error": "research index record is invalid"}
             if entry is None:
                 return 404, "application/json", {"error": "research run not found"}
             from finahinking.research.ui import research_runtime_view_model
 
             try:
-                payload = research_runtime_view_model(run_id, state=entry["state"], manifest=entry["manifest"], events=entry.get("events", ()))
+                _, manifest = self._research_model(entry)
+                payload = research_runtime_view_model(run_id, state=entry["state"], manifest=manifest, events=entry.get("events", ()))
+                payload["report_status"] = entry["report_status"]
             except (TypeError, ValueError) as exc:
                 return 422, "application/json", {"error": str(exc)}
             return 200, "application/json", payload

@@ -80,11 +80,11 @@ Overview 只由一个入口初始化；数据摘要独立于 canvas DOM。
 **Interfaces:** `RunRepository.list_runs(...)`、`get_run(run_id)`、
 `record_result(...)` 统一提供运行、报告、数据/策略版本和执行时间引用。
 
-- [ ] 测试：运行完成后重启应用，Overview、历史和对比仍可打开同一报告。
-- [ ] 用持久化索引替代 `_research_runs` 作为页面事实来源；现有注册方法作为兼容入口。
-- [ ] 区分 `created_at`、`started_at`、`finished_at` 与研究 `as_of`；按真实发生时间统计活动。
-- [ ] 记录缺失/损坏报告状态，并校验 manifest 指纹；过滤、分页和排序在服务器完成。
-- [ ] 运行 repository、report、local-app 测试；审查并提交。
+- [x] 测试：运行完成后重启应用，Overview、历史和对比仍可打开同一报告。
+- [x] 用持久化索引替代 `_research_runs` 作为页面事实来源；现有注册方法作为兼容入口。
+- [x] 区分 `created_at`、`started_at`、`finished_at` 与研究 `as_of`；按真实发生时间统计活动。
+- [x] 记录缺失/损坏报告状态，并校验 manifest 指纹；过滤、分页和排序在服务器完成。
+- [x] 运行 repository、report、local-app 测试；审查并提交。
 
 ### Task 4：用户研究提交到 Supervisor 的完整旅程
 
