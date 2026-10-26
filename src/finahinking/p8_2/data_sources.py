@@ -8,6 +8,45 @@ from typing import Protocol
 from .contracts import DatasetSnapshot, MarketObservation
 
 
+def snapshot_from_batch(batch, *, as_of=None, adjustment: str = "UNKNOWN", calendar: str = "UNKNOWN") -> DatasetSnapshot:
+    """Capture normalized user prices without inventing missing OHLCV or PIT."""
+
+    from finahinking.data.user_api_contracts import DataBatch, fingerprint_records
+
+    if not isinstance(batch, DataBatch):
+        raise TypeError("batch must be a DataBatch")
+    if batch.data_fingerprint != fingerprint_records(batch.records):
+        raise ValueError("data batch fingerprint does not match records")
+    if not batch.records:
+        raise ValueError("snapshot has no price records")
+    required = {"instrument", "timestamp", "open", "high", "low", "close", "volume"}
+    observations = []
+    for index, record in enumerate(batch.records):
+        missing = sorted(required - record.keys())
+        if missing:
+            raise ValueError(f"record {index}: missing required fields: {', '.join(missing)}")
+        observations.append(MarketObservation(
+            **{key: record[key] for key in required},
+            amount=record.get("amount"), available_at=record.get("available_at"),
+            source=batch.connection_id, provider="user-api",
+            retrieved_at=batch.retrieved_at, adapter_version="user-snapshot.v1",
+        ))
+    observations.sort(key=lambda item: (item.instrument, item.timestamp))
+    return DatasetSnapshot(
+        dataset_id=f"user-{batch.data_fingerprint[:32]}",
+        observations=tuple(observations), mode="CAPTURED", as_of=as_of,
+        provenance={
+            "connection_id": batch.connection_id, "source": batch.connection_id,
+            "provider": "user-api", "source_declaration": batch.source_declaration,
+            "data_fingerprint": batch.data_fingerprint,
+            "retrieved_at": batch.retrieved_at.isoformat(),
+            "quality_issues": list(batch.quality_issues), "pit_status": batch.pit_available,
+            "timezone": "UTC", "adjustment": adjustment, "calendar": calendar,
+        },
+        limitations=("User-declared source and market conventions; paper-only research.",),
+    )
+
+
 class MarketDataSource(Protocol):
     def snapshot(self, instrument: str = "DEMO", *, limit: int | None = None) -> DatasetSnapshot:
         """Return a normalized, fingerprinted snapshot."""
@@ -84,4 +123,4 @@ class FixtureMarketDataSource:
         )
 
 
-__all__ = ["FixtureMarketDataSource", "MarketDataSource"]
+__all__ = ["FixtureMarketDataSource", "MarketDataSource", "snapshot_from_batch"]

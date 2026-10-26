@@ -200,7 +200,7 @@ class MarketObservation:
         source = _text(self.source, "source")
         provider = _text(self.provider, "provider")
         retrieved = None if self.retrieved_at is None else _timestamp(self.retrieved_at)
-        available = timestamp if self.available_at is None else _timestamp(self.available_at)
+        available = None if self.available_at is None else _timestamp(self.available_at)
         adapter_version = _text(self.adapter_version, "adapter_version")
         object.__setattr__(self, "timestamp", timestamp)
         object.__setattr__(self, "retrieved_at", retrieved)
@@ -227,7 +227,7 @@ class MarketObservation:
         return self.source
 
     @property
-    def availability_time(self) -> pd.Timestamp:
+    def availability_time(self) -> pd.Timestamp | None:
         return self.available_at
 
     @property
@@ -238,7 +238,7 @@ class MarketObservation:
 
     def available_at_time(self, as_of: Any) -> bool:
         try:
-            return self.available_at <= _timestamp(as_of)
+            return self.available_at is not None and self.timestamp <= _timestamp(as_of) and self.available_at <= _timestamp(as_of)
         except (TypeError, ValueError):
             return False
 
@@ -256,7 +256,7 @@ class MarketObservation:
             "source": self.source,
             "provider": self.provider,
             "retrieved_at": self.retrieved_at.isoformat() if self.retrieved_at is not None else None,
-            "available_at": self.available_at.isoformat(),
+            "available_at": self.available_at.isoformat() if self.available_at is not None else None,
             "adapter_version": self.adapter_version,
         }
 
@@ -298,7 +298,7 @@ class DatasetSnapshot:
         mode = _text(self.mode, "mode").upper()
         if mode not in {"SAMPLE", "SYNTHETIC", "CAPTURED", "LIVE", "PAPER"}:
             raise ValueError("dataset mode is invalid")
-        as_of = max(item.available_at for item in records) if self.as_of is None else _timestamp(self.as_of)
+        as_of = max(item.available_at if item.available_at is not None else item.timestamp for item in records) if self.as_of is None else _timestamp(self.as_of)
         provenance = _payload(self.provenance)
         limitations = tuple(_text(item, "limitation") for item in self.limitations)
         object.__setattr__(self, "observations", records)
@@ -328,11 +328,11 @@ class DatasetSnapshot:
 
     def pit_available(self, as_of: Any | None = None) -> bool:
         boundary = self.as_of if as_of is None else _timestamp(as_of)
-        return all(item.available_at <= boundary for item in self.observations)
+        return all(item.available_at_time(boundary) for item in self.observations)
 
     def available_observations(self, as_of: Any | None = None) -> tuple[MarketObservation, ...]:
         boundary = self.as_of if as_of is None else _timestamp(as_of)
-        return tuple(item for item in self.observations if item.available_at <= boundary)
+        return tuple(item for item in self.observations if item.available_at_time(boundary))
 
     def to_dict(self, *, include_fingerprint: bool = True) -> dict[str, Any]:
         payload: dict[str, Any] = {

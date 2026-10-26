@@ -166,8 +166,8 @@ def _workflow_result_payload(workflow: object) -> Mapping[str, object]:
         # carry the bundle root, the manifest file, or proof that every listed
         # digest was recomputed from durable bytes.  Treating its hex strings
         # as proof would let a fabricated object publish a false success.
-        # ReportBundleWriter/Task 7 will add a filesystem-backed verification
-        # hand-off; until then this stage must remain explicitly blocked.
+        # The selected-snapshot runner below supplies a filesystem-backed
+        # receipt. A memory-only legacy result remains explicitly blocked.
         if (
             state_name == "LEARNING_RECORDED"
             and eligible is True
@@ -207,7 +207,8 @@ def run_default_workflow_stage(
     fixed runner without accepting an import path from a task payload.
     """
 
-    del previous, publish_checkpoint
+    del previous
+    invocation = request
     if not hasattr(request, "run_id"):
         # The supervisor process exposes only its private queue location to
         # the trusted built-in stage.  The worker still receives a digest-only
@@ -222,6 +223,12 @@ def run_default_workflow_stage(
             request = queue.load_request_snapshot(request.task_ref, expected_digest=queue.task_input_digest(request.task_ref))
         except (KeyError, ValueError, TypeError):
             return {"status": "blocked", "state": "UNKNOWN", "failure_kind": "REQUEST_UNAVAILABLE"}
+    if getattr(request, "snapshot_ref", None) is not None:
+        from .application_service import run_local_research_stage
+
+        if not hasattr(invocation, "job_id") or publish_checkpoint is None:
+            return {"status": "blocked", "failure_kind": "REQUEST_UNAVAILABLE"}
+        return run_local_research_stage(invocation, None, publish_checkpoint)
     from .drivers import OfflineDriver
     from .tools import ResearchToolGateway
     from .workflow import ResearchOrchestrator

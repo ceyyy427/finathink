@@ -288,7 +288,7 @@ class ResearchOrchestrator:
             return finish(ResearchState.CANCELLED, FailureKind.CANCELLED, "run was cancelled before execution")
 
         transition(ResearchState.IDENTIFIED, {"instrument": request.instrument})
-        dataset_id = request.research_plan.required_datasets[0] if isinstance(request.research_plan, ResearchPlan) and request.research_plan.required_datasets else "fixture"
+        dataset_id = request.snapshot_ref or (request.research_plan.required_datasets[0] if isinstance(request.research_plan, ResearchPlan) and request.research_plan.required_datasets else "fixture")
         data_response = tools.execute(
             ResearchToolRequest(
                 name="research.inspect_dataset",
@@ -303,7 +303,11 @@ class ResearchOrchestrator:
             target = ResearchState.NO_DATA_AVAILABLE if kind is FailureKind.NO_DATA_AVAILABLE else ResearchState.DATA_UNAVAILABLE
             transition(ResearchState.DATA_CHECKED, {"dataset_status": kind.value})
             return finish(target, kind, f"dataset check failed: {kind.value}")
-        transition(ResearchState.DATA_CHECKED, {"dataset_digest": stable_digest(data_response.result)})
+        if request.snapshot_ref and (not isinstance(data_response.result, Mapping) or data_response.result.get("dataset_fingerprint") != request.snapshot_ref):
+            transition(ResearchState.DATA_CHECKED, {"dataset_status": "MISMATCH"})
+            return finish(ResearchState.DATA_UNAVAILABLE, FailureKind.DATA_INVALID, "selected dataset fingerprint mismatch")
+        binding = {"dataset_fingerprint": request.snapshot_ref} if request.snapshot_ref else {}
+        transition(ResearchState.DATA_CHECKED, {"dataset_digest": stable_digest(data_response.result)}, metadata=binding)
         parallel = analyst_pool is not None or manager is not None
         if parallel:
             # Imports stay lazy so AnalystPool can retain its compatibility import
@@ -441,7 +445,7 @@ class ResearchOrchestrator:
         quant_response = tools.execute(
             ResearchToolRequest(
                 name="quant.run_backtest",
-                args={"instrument": request.instrument, "as_of": request.as_of.isoformat(), "factor_ids": plan.factor_ids},
+                args={"instrument": request.instrument, "as_of": request.as_of.isoformat(), "factor_ids": plan.factor_ids, **binding},
                 run_id=request.run_id,
             )
         )
@@ -449,12 +453,14 @@ class ResearchOrchestrator:
             return finish(ResearchState.CANCELLED, FailureKind.CANCELLED, "run was cancelled after quant stage")
         if quant_response.status is not ResearchToolStatus.SUCCEEDED:
             return finish(ResearchState.VALIDATION_FAILED, FailureKind.QUANT_VALIDATION_FAILED, "quant validation failed")
-        transition(ResearchState.QUANT_VALIDATION, {"quant_digest": stable_digest(quant_response.result)})
+        if binding and (not isinstance(quant_response.result, Mapping) or quant_response.result.get("dataset_fingerprint") != request.snapshot_ref):
+            return finish(ResearchState.VALIDATION_FAILED, FailureKind.QUANT_VALIDATION_FAILED, "quant dataset fingerprint mismatch")
+        transition(ResearchState.QUANT_VALIDATION, {"quant_digest": stable_digest(quant_response.result)}, metadata=binding)
 
         risk_response = tools.execute(
             ResearchToolRequest(
                 name="quant.analyze_risk",
-                args={"instrument": request.instrument, "as_of": request.as_of.isoformat()},
+                args={"instrument": request.instrument, "as_of": request.as_of.isoformat(), **binding},
                 run_id=request.run_id,
             )
         )
@@ -462,6 +468,8 @@ class ResearchOrchestrator:
             return finish(ResearchState.CANCELLED, FailureKind.CANCELLED, "run was cancelled after risk stage")
         if risk_response.status is not ResearchToolStatus.SUCCEEDED:
             return finish(ResearchState.VALIDATION_FAILED, FailureKind.RISK_REVIEW_FAILED, "risk review failed")
+        if binding and (not isinstance(risk_response.result, Mapping) or risk_response.result.get("dataset_fingerprint") != request.snapshot_ref or not isinstance(risk_response.result.get("snapshot"), Mapping) or risk_response.result["snapshot"].get("dataset_fingerprint") != request.snapshot_ref):
+            return finish(ResearchState.VALIDATION_FAILED, FailureKind.RISK_REVIEW_FAILED, "risk dataset fingerprint mismatch")
         structured_risk = self._coerce_quant_risk_payload(
             risk_response.result,
             data_response.result,
@@ -474,7 +482,7 @@ class ResearchOrchestrator:
             return finish(ResearchState.CANCELLED, FailureKind.CANCELLED, "run was cancelled during risk review")
         if risk_review.blocking_reasons:
             return finish(ResearchState.VALIDATION_FAILED, FailureKind.RISK_REVIEW_FAILED, "; ".join(risk_review.blocking_reasons))
-        transition(ResearchState.RISK_REVIEW, {"risk_digest": stable_digest(risk_review)})
+        transition(ResearchState.RISK_REVIEW, {"risk_digest": stable_digest(risk_review)}, metadata=binding)
         if cancelled():
             return finish(ResearchState.CANCELLED, FailureKind.CANCELLED, "run was cancelled after risk review")
         # Keep the legacy four-argument hook overrideable while making the

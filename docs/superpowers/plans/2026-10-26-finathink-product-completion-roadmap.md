@@ -66,10 +66,10 @@ Overview 只由一个入口初始化；数据摘要独立于 canvas DOM。
 **Interfaces:** `SnapshotStore.save(snapshot: DatasetSnapshot) -> str` 与
 `SnapshotStore.load(fingerprint: str) -> DatasetSnapshot`；请求只绑定 snapshot ref。
 
-- [ ] 添加测试：同内容相同指纹；篡改拒绝；缺失 available_at 保持 UNKNOWN；重启后能载入。
-- [ ] 将 DataBatch 转成既有 DatasetSnapshot，记录字段质量、时区、复权/日历声明、数据截止时间与来源。
-- [ ] 将用户选中快照显式传给因子、回测、风险、组合计算；数据不满足需求时给出具体缺字段说明。
-- [ ] 验证 A/B 两份数据分别贯通计算，报告中的 dataset fingerprint 与输入一致；审查并提交。
+- [x] 添加测试：同内容相同指纹；篡改拒绝；缺失 available_at 保持 UNKNOWN；重启后能载入。
+- [x] 将 DataBatch 转成既有 DatasetSnapshot，记录字段质量、时区、复权/日历声明、数据截止时间与来源。
+- [x] 将用户选中快照显式传给因子、回测、风险、组合计算；数据不满足需求时给出具体缺字段说明。
+- [x] 验证 A/B 两份数据分别贯通计算，报告中的 dataset fingerprint 与输入一致；审查并提交。
 
 ### Task 3：统一持久化研究索引
 
@@ -80,11 +80,11 @@ Overview 只由一个入口初始化；数据摘要独立于 canvas DOM。
 **Interfaces:** `RunRepository.list_runs(...)`、`get_run(run_id)`、
 `record_result(...)` 统一提供运行、报告、数据/策略版本和执行时间引用。
 
-- [ ] 测试：运行完成后重启应用，Overview、历史和对比仍可打开同一报告。
-- [ ] 用持久化索引替代 `_research_runs` 作为页面事实来源；现有注册方法作为兼容入口。
-- [ ] 区分 `created_at`、`started_at`、`finished_at` 与研究 `as_of`；按真实发生时间统计活动。
-- [ ] 记录缺失/损坏报告状态，并校验 manifest 指纹；过滤、分页和排序在服务器完成。
-- [ ] 运行 repository、report、local-app 测试；审查并提交。
+- [x] 测试：运行完成后重启应用，Overview、历史和对比仍可打开同一报告。
+- [x] 用持久化索引替代 `_research_runs` 作为页面事实来源；现有注册方法作为兼容入口。
+- [x] 区分 `created_at`、`started_at`、`finished_at` 与研究 `as_of`；按真实发生时间统计活动。
+- [x] 记录缺失/损坏报告状态，并校验 manifest 指纹；过滤、分页和排序在服务器完成。
+- [x] 运行 repository、report、local-app 测试；审查并提交。
 
 ### Task 4：用户研究提交到 Supervisor 的完整旅程
 
@@ -95,11 +95,11 @@ Overview 只由一个入口初始化；数据摘要独立于 canvas DOM。
 **Interfaces:** 建议 `POST /api/research/jobs`、`GET /api/research/jobs/{id}`、
 `POST /api/research/jobs/{id}/cancel`；页面提交 connection/snapshot、问题、标的、as-of、模型配置引用及预算。
 
-- [ ] 测试：幂等提交、取消、崩溃恢复、两任务并行不串结果、预算超限、失败阶段可定位。
-- [ ] 由应用服务装配真实 snapshot store、quant gateway、driver 与报告仓库；worker 由引用恢复输入。
-- [ ] 默认 runner 不再无条件选择缺少量化能力的 gateway；明确所选运行模式和失败原因。
-- [ ] 页面提供提交、阶段进度、取消、报告入口；先用有界轮询读取持久化状态。
-- [ ] 验收两份不同输入从页面跑到不同报告，刷新页面和重启服务后可继续查看；审查并提交。
+- [x] 测试：幂等提交、取消、崩溃恢复、两任务并行不串结果、预算超限、失败阶段可定位。
+- [x] 由应用服务装配真实 snapshot store、quant gateway、driver 与报告仓库；worker 由引用恢复输入。
+- [x] 默认 runner 不再无条件选择缺少量化能力的 gateway；明确所选运行模式和失败原因。
+- [x] 页面提供提交、阶段进度、取消、报告入口；先用有界轮询读取持久化状态。
+- [x] 验收两份不同输入从页面跑到不同报告，刷新页面和重启服务后可继续查看；组件自查并提交，随后执行一次独立全分支审查。
 
 ### Task 5：让模型收到有效研究材料
 

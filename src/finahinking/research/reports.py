@@ -302,6 +302,11 @@ class ReportBundleWriter:
             "source_snapshot": status_snapshot,
         }
         status_model = research_view_model(result.state, status_manifest)
+        if analytics_payload:
+            status_model["quant_metrics"] = analytics_payload.get("metrics", {})
+            status_model["data_mode"] = analytics_payload.get("data_mode", "UNKNOWN")
+            status_model["data_limitations"] = analytics_payload.get("limitations", [])
+            status_model["source_metadata"] = analytics_payload.get("source_metadata", {})
         complete_path = bundle / "complete_report.html"
         complete_path.write_text(
             render_status_wall_html(status_model, title="Finathink research report"),
@@ -327,8 +332,9 @@ class ReportBundleWriter:
                 "state_digest": stable_digest(result.state),
                 "decision_digest": stable_digest(result.decision) if result.decision else None,
                 **status_snapshot,
+                **({"data_mode": analytics_payload.get("data_mode", "UNKNOWN"), "data_limitations": analytics_payload.get("limitations", []), "source_metadata": analytics_payload.get("source_metadata", {})} if analytics_payload else {}),
                 **{section: payload for section, payload in runtime_payloads.items()},
-                **({"quant_analytics": {"fingerprint": analytics_payload.get("fingerprint"), "limitations": analytics_payload.get("limitations", ())}} if analytics_payload else {}),
+                **({"quant_analytics": {"fingerprint": analytics_payload.get("fingerprint"), "policy_fingerprint": analytics_payload.get("policy_fingerprint"), "metrics": analytics_payload.get("metrics", {}), "limitations": analytics_payload.get("limitations", ())}} if analytics_payload else {}),
             },
             created_at=datetime.now(UTC),
         )
@@ -470,6 +476,7 @@ def _status_snapshot(result: ResearchRunResult) -> dict[str, Any]:
     )
     factor_proposals = next((item.get("factor_proposals") for item in reversed(metadata) if item.get("factor_proposals") is not None), [])
     provider_readiness = next((item.get("provider_readiness") for item in reversed(metadata) if item.get("provider_readiness") is not None), {"status": "UNKNOWN"})
+    dataset_fingerprint = next((item["dataset_fingerprint"] for item in metadata if isinstance(item.get("dataset_fingerprint"), str)), None)
     return _scrub({
         "role_status": role_status,
         "stage_status": stage_status,
@@ -477,6 +484,7 @@ def _status_snapshot(result: ResearchRunResult) -> dict[str, Any]:
         "checkpoint_status": checkpoint_state if isinstance(checkpoint_state, Mapping) else {"state": checkpoint_state or "NOT_ATTACHED"},
         "factor_proposals": factor_proposals if isinstance(factor_proposals, Sequence) and not isinstance(factor_proposals, (str, bytes, bytearray)) else [],
         "provider_readiness": provider_readiness if isinstance(provider_readiness, Mapping) else {"status": "UNKNOWN"},
+        **({"dataset_fingerprint": dataset_fingerprint} if dataset_fingerprint else {}),
     })
 
 
