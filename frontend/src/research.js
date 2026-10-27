@@ -15,6 +15,7 @@ import { mountOverview } from './overview.js';
 import { mountProviderSettings, mountRunWorkspace } from './run-workspace.js';
 import { mountExperimentWorkspace } from './experiment-workspace.js';
 import { mountLearningReview } from './learning-review.js';
+import { mountAppShell } from './app-shell.js';
 
 echarts.use([LineChart, GridComponent, TooltipComponent, CanvasRenderer]);
 
@@ -579,6 +580,7 @@ export function mountResearch(root, { payload, payloadUrl } = {}) {
 }
 
 if (typeof document !== 'undefined') {
+  mountAppShell(document);
   document.querySelectorAll('[data-experiment-workspace]').forEach((root) => { mountExperimentWorkspace(root); });
   document.querySelectorAll('[data-learning-workspace]').forEach((root) => { mountLearningReview(root); });
   document.querySelectorAll('[data-provider-form]').forEach((form) => { mountProviderSettings(form); });

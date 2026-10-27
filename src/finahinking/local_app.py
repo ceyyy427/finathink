@@ -58,6 +58,7 @@ from finahinking.p8_2b.context import ContextSnapshot, no_context, resolve_conte
 from finahinking.p8_2b.export import export_bibtex, export_csl_json, export_latex, export_markdown
 from finahinking.p8_2b.math import render_latex, render_mathml
 from finahinking.p8_2b.widgets import WidgetSpec, run_widget
+from finahinking.workbench_ui import BLUE_WHITE_CSS, nav_icon, shell_search_dialog
 
 
 def default_db_path() -> str:
@@ -1342,26 +1343,33 @@ class LocalApplication:
     def _nav(self, page: str) -> str:
         names = self._page_names()
         groups = (
-            ("研究", "nav-workspace", ("/", "/events", "/explore", "/research/jobs", "/research/experiments", "/research/learning", "/research", "/research/compare", "/workbench", "/workspace")),
-            ("学习", "nav-learn", ("/knowledge", "/quant", "/strategy", "/ml", "/parameter")),
-            ("系统", "nav-system", ("/community", "/settings/engines", "/settings/providers", "/settings/data-connections", "/settings/data-sources", "/diagnostics")),
+            ("研究", "nav-workspace", ("/", "/research/jobs", "/events", "/knowledge", "/research/experiments", "/strategy", "/research/learning")),
+            ("学习", "nav-learn", ("/explore", "/quant", "/research", "/research/compare", "/workbench", "/ml", "/parameter", "/workspace", "/community", "/settings/engines", "/settings/data-sources")),
+            ("系统", "nav-system", ("/settings/data-connections", "/settings/providers", "/diagnostics")),
         )
+        icons = {"/": "overview", "/research/jobs": "codex", "/events": "events", "/knowledge": "knowledge", "/research/experiments": "factor", "/strategy": "strategy", "/research/learning": "report", "/settings/data-connections": "data"}
 
         # Keep the conditional attribute construction explicit so the rendered
         # HTML remains easy to inspect in a browser and in snapshot tests.
         def nav_item(href: str) -> str:
             current = ' aria-current="page"' if href == page else ""
-            return f'<li><a class="nav-link" href="{href}"{current}>{html.escape(names[href])}</a></li>'
+            return f'<li><a class="nav-link" href="{href}"{current}>{nav_icon(icons.get(href, "system"))}<span>{html.escape(names[href])}</span></a></li>'
 
         sections = []
         for label, section_id, links in groups:
             items = "".join(nav_item(href) for href in links)
-            sections.append(f'<section class="nav-section" aria-label="{label}" aria-labelledby="{section_id}"><h2 class="nav-section-title" id="{section_id}">{label}</h2><ul class="nav-list">{items}</ul></section>')
+            if section_id == "nav-learn":
+                expanded = ' open' if page in links else ''
+                sections.append(f'<details class="nav-section nav-more" aria-label="{label}"{expanded}><summary>更多研究工具</summary><ul class="nav-list">{items}</ul></details>')
+            else:
+                sections.append(f'<section class="nav-section" aria-label="{label}" aria-labelledby="{section_id}"><h2 class="nav-section-title" id="{section_id}">{label}</h2><ul class="nav-list">{items}</ul></section>')
         return (
+            f'<button type="button" class="shell-icon-button shell-close" data-shell-close aria-label="关闭导航" hidden>{nav_icon("close")}</button>'
             '<a class="brand" href="/" aria-label="Finathink home">'
-            '<span class="brand-mark" aria-hidden="true">F</span><span class="brand-name">Finathink</span></a>'
+            '<span class="brand-mark" aria-hidden="true">F</span><span><span class="brand-name">Finathink<small>.</small></span><span class="brand-caption">RESEARCH WITH EVIDENCE</span></span></a>'
+            '<div class="space-switch"><span class="space-symbol" aria-hidden="true">F</span><strong>个人研究空间<small>Local workspace</small></strong></div>'
             + "".join(sections)
-            + '<p class="sidebar-note">本地研究 · 可追溯证据 · 纸面策略验证</p>'
+            + '<p class="sidebar-note"><strong>本地优先 · 证据可追溯</strong>研究 → 验证 → 解释 → 学习</p>'
         )
 
     @staticmethod
@@ -1396,24 +1404,28 @@ class LocalApplication:
             },
         )
         style_tags = "".join(f'<link rel="stylesheet" href="{html.escape(path)}">' for path in styles)
-        script_tags = "".join(f'<script src="{html.escape(path)}" defer></script>' for path in scripts)
+        script_tags = "".join(f'<script src="{html.escape(path)}" defer></script>' for path in dict.fromkeys(("/assets/finathink-research.js", *scripts)))
         from .research.learning_workspace_page import LEARNING_CSS
 
         return (
             '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">'
             '<meta name="viewport" content="width=device-width,initial-scale=1">'
             f"<title>{html.escape(title)} · Finathink</title>"
-            '<meta name="theme-color" content="#050B18">'
+            '<meta name="theme-color" content="#f5f8fd">'
             '<meta http-equiv="Content-Security-Policy" content="default-src \'self\'; img-src \'self\'; style-src \'self\' \'unsafe-inline\'; script-src \'self\'; connect-src \'self\'; form-action \'self\'">'
-            f"<style>{_DARK_APP_CSS}{_RESEARCH_JOBS_CSS if page == '/research/jobs' else ''}{_FACTOR_STUDY_CSS if page == '/research/experiments' else ''}{LEARNING_CSS if page == '/research/learning' else ''}</style>{style_tags}{script_tags}</head><body>"
+            f"<style>{_APP_CSS}{BLUE_WHITE_CSS}{_RESEARCH_JOBS_CSS if page == '/research/jobs' else ''}{_FACTOR_STUDY_CSS if page == '/research/experiments' else ''}{LEARNING_CSS if page == '/research/learning' else ''}</style>{style_tags}{script_tags}</head><body>"
             '<a class="skip-link" href="#main">跳到主要内容</a>'
-            '<div class="app-shell">'
-            f'<nav class="sidebar" aria-label="主导航">{self._nav(clean_page)}</nav>'
-            f'<main class="workspace" id="main" tabindex="-1"><header class="topbar" aria-label="Workspace context"><div class="topbar-context"><strong>Finathink</strong><span>/</span><span>{html.escape(title)}</span></div><div class="topbar-actions"><span class="local-status">Local Workspace</span><span class="status status--offline">PAPER-ONLY</span></div></header><div class="workspace-inner">'
+            '<div class="app-shell" data-finathink-shell>'
+            f'<nav class="sidebar" id="shell-navigation" aria-label="主导航">{self._nav(clean_page)}</nav>'
+            '<button type="button" class="shell-shade" data-shell-shade aria-label="关闭导航遮罩" tabindex="-1" hidden></button>'
+            '<div class="app-frame" data-shell-frame><header class="topbar" aria-label="Workspace context">'
+            f'<div class="topbar-context"><button type="button" class="shell-icon-button shell-menu" data-shell-menu aria-controls="shell-navigation" aria-label="展开导航" aria-expanded="false" hidden>{nav_icon("menu")}</button><span>工作空间 /</span><strong>{html.escape(title)}</strong></div>'
+            f'<div class="topbar-actions"><button type="button" class="shell-search-open" data-shell-search-open aria-controls="shell-search" hidden>{nav_icon("search")}<span>搜索功能入口</span><kbd>⌘ K</kbd></button><span class="local-status">本地研究</span><a class="button" href="/research/jobs">新建研究</a></div></header>'
+            '<div class="workspace-layout"><main class="workspace" id="main" tabindex="-1"><div class="workspace-inner">'
             f'<p class="eyebrow">{html.escape(eyebrow)}</p>{body}'
-            '<p class="footer-note">Finathink is a local-first research and education tool. Results are descriptive, bounded, and not trading instructions.</p>'
+            '<p class="footer-note">本地优先 · 可追溯研究与学习 · PAPER-ONLY</p>'
             '</div></main>'
-            f"{inspector_html}</div></body></html>"
+            f"{inspector_html}</div></div></div>{shell_search_dialog()}</body></html>"
         )
 
     def _data_write_guard(self, body: Any) -> tuple[int, str, Any] | None:

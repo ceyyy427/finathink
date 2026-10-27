@@ -32,10 +32,10 @@
 
 **Interfaces:** `render_shell` 保持原调用签名；导航的现有路由和 aria-current 保留。所有外壳页只加载一次本地 bundle。新 shell 不依赖网络、数据库写入或模型连接。
 
-- [ ] 写并运行回归：shell 的语义地标、全部旧路由、脚本只一次、渲染无副作用；本地导航入口搜索不返回任意 URL。
-- [ ] 运行 `python3 -m pytest tests/research/test_phase10_workbench.py -q`。Expected: 新主题/导航能力缺失导致断言失败，非测试初始化错误。
-- [ ] 实施白色侧栏、顶栏、浅色面板/表单/工作区，渐进增强移动导航与入口搜索；现有页面主题跟随。
-- [ ] 运行该 Python 文件、`npm --prefix frontend test`、构建。Expected: 全通过，打包资产两处相同；提交。
+- [x] 写并运行回归：shell 的语义地标、全部旧路由、脚本只一次、渲染无副作用；本地导航入口搜索不返回任意 URL。
+- [x] 运行 `python3 -m pytest tests/research/test_phase10_workbench.py -q`。Expected: 新主题/导航能力缺失导致断言失败，非测试初始化错误。
+- [x] 实施白色侧栏、顶栏、浅色面板/表单/工作区，渐进增强移动导航与入口搜索；现有页面主题跟随。
+- [x] 运行该 Python 文件、`npm --prefix frontend test`、构建。Expected: 全通过，打包资产两处相同；提交。
 
 ### Task 2：真实总览与问题进入研究主流程
 
