@@ -1,4 +1,429 @@
 {
   "schema_version": "research-methods.v1",
-  "skills": []
+  "skills": [
+    {
+      "skill_id": "factor-mining-workflow",
+      "name": "因子研究全流程",
+      "version": "1.0.0",
+      "tags": [
+        "factor-mining",
+        "hypothesis",
+        "factor"
+      ],
+      "required_inputs": [
+        "question",
+        "snapshot_ref",
+        "as_of",
+        "universe"
+      ],
+      "output_types": [
+        "ResearchPlan",
+        "FactorProposal"
+      ],
+      "main_resource": "method-factor-mining-workflow",
+      "required_resources": [
+        "method-factor-mining-workflow",
+        "factor-validation-v1",
+        "reference-factor-mining-workflow"
+      ],
+      "optional_resources": [
+        "source-factor-mining-workflow",
+        "upstream-factor-handbook",
+        "upstream-falsification-report"
+      ],
+      "policy_ref": "factor-validation-v1",
+      "boundaries": [
+        "paper-only",
+        "no-tool-grant",
+        "no-automatic-admission"
+      ]
+    },
+    {
+      "skill_id": "alpha-gpt-factor-mining",
+      "name": "受控公式候选生成",
+      "version": "1.0.0",
+      "tags": [
+        "formula-generation",
+        "factor-mining",
+        "factor"
+      ],
+      "required_inputs": [
+        "question",
+        "allowed_fields",
+        "allowed_operators",
+        "as_of"
+      ],
+      "output_types": [
+        "FactorProposal"
+      ],
+      "main_resource": "method-alpha-gpt-factor-mining",
+      "required_resources": [
+        "method-alpha-gpt-factor-mining",
+        "factor-validation-v1",
+        "reference-alpha-gpt-factor-mining"
+      ],
+      "optional_resources": [
+        "source-alpha-gpt-factor-mining"
+      ],
+      "policy_ref": "factor-validation-v1",
+      "boundaries": [
+        "paper-only",
+        "no-tool-grant",
+        "no-automatic-admission"
+      ]
+    },
+    {
+      "skill_id": "alpha-gpt-researcher",
+      "name": "研究证据与方法综合",
+      "version": "1.0.0",
+      "tags": [
+        "research-synthesis",
+        "research",
+        "factor"
+      ],
+      "required_inputs": [
+        "question",
+        "evidence_refs",
+        "as_of"
+      ],
+      "output_types": [
+        "ResearchPlan"
+      ],
+      "main_resource": "method-alpha-gpt-researcher",
+      "required_resources": [
+        "method-alpha-gpt-researcher",
+        "factor-validation-v1",
+        "reference-alpha-gpt-researcher"
+      ],
+      "optional_resources": [
+        "source-alpha-gpt-researcher"
+      ],
+      "policy_ref": "factor-validation-v1",
+      "boundaries": [
+        "paper-only",
+        "no-tool-grant",
+        "no-automatic-admission"
+      ]
+    },
+    {
+      "skill_id": "backtest-acceptance",
+      "name": "回测口径与验收",
+      "version": "1.0.0",
+      "tags": [
+        "backtest",
+        "validation",
+        "execution"
+      ],
+      "required_inputs": [
+        "snapshot_ref",
+        "execution_config",
+        "cost_bps",
+        "benchmark",
+        "as_of"
+      ],
+      "output_types": [
+        "ResearchPlan",
+        "ValidationChecklist"
+      ],
+      "main_resource": "method-backtest-acceptance",
+      "required_resources": [
+        "method-backtest-acceptance",
+        "factor-validation-v1",
+        "reference-backtest-acceptance"
+      ],
+      "optional_resources": [
+        "source-backtest-acceptance"
+      ],
+      "policy_ref": "factor-validation-v1",
+      "boundaries": [
+        "paper-only",
+        "no-tool-grant",
+        "no-automatic-admission"
+      ]
+    },
+    {
+      "skill_id": "niu-san-distillation",
+      "name": "公开行为证据蒸馏",
+      "version": "1.0.0",
+      "tags": [
+        "public-behavior",
+        "behavior",
+        "hypothesis"
+      ],
+      "required_inputs": [
+        "public_evidence_refs",
+        "as_of",
+        "identity_confidence"
+      ],
+      "output_types": [
+        "BehaviorEvidence",
+        "FactorHypothesis"
+      ],
+      "main_resource": "method-niu-san-distillation",
+      "required_resources": [
+        "method-niu-san-distillation",
+        "factor-validation-v1",
+        "reference-niu-san-distillation"
+      ],
+      "optional_resources": [
+        "source-niu-san-distillation"
+      ],
+      "policy_ref": "factor-validation-v1",
+      "boundaries": [
+        "paper-only",
+        "no-tool-grant",
+        "no-automatic-admission",
+        "public-evidence-only",
+        "not-an-endorsement"
+      ]
+    },
+    {
+      "skill_id": "niu-san-linyuan",
+      "name": "林园公开研究视角",
+      "version": "1.0.0",
+      "tags": [
+        "public-behavior",
+        "linyuan",
+        "fundamental"
+      ],
+      "required_inputs": [
+        "public_evidence_refs",
+        "as_of",
+        "identity_confidence"
+      ],
+      "output_types": [
+        "BehaviorEvidence",
+        "FactorHypothesis"
+      ],
+      "main_resource": "method-niu-san-linyuan",
+      "required_resources": [
+        "method-niu-san-linyuan",
+        "factor-validation-v1",
+        "reference-niu-san-linyuan"
+      ],
+      "optional_resources": [
+        "source-niu-san-linyuan"
+      ],
+      "policy_ref": "factor-validation-v1",
+      "boundaries": [
+        "paper-only",
+        "no-tool-grant",
+        "no-automatic-admission",
+        "public-evidence-only",
+        "not-an-endorsement"
+      ]
+    },
+    {
+      "skill_id": "niu-san-chenxiaoqun",
+      "name": "陈小群公开研究视角",
+      "version": "1.0.0",
+      "tags": [
+        "public-behavior",
+        "chenxiaoqun",
+        "event"
+      ],
+      "required_inputs": [
+        "public_evidence_refs",
+        "as_of",
+        "identity_confidence"
+      ],
+      "output_types": [
+        "BehaviorEvidence",
+        "FactorHypothesis"
+      ],
+      "main_resource": "method-niu-san-chenxiaoqun",
+      "required_resources": [
+        "method-niu-san-chenxiaoqun",
+        "factor-validation-v1",
+        "reference-niu-san-chenxiaoqun"
+      ],
+      "optional_resources": [
+        "source-niu-san-chenxiaoqun"
+      ],
+      "policy_ref": "factor-validation-v1",
+      "boundaries": [
+        "paper-only",
+        "no-tool-grant",
+        "no-automatic-admission",
+        "public-evidence-only",
+        "not-an-endorsement"
+      ]
+    },
+    {
+      "skill_id": "niu-san-zhangmengzhu",
+      "name": "章盟主公开研究视角",
+      "version": "1.0.0",
+      "tags": [
+        "public-behavior",
+        "zhangmengzhu",
+        "capacity"
+      ],
+      "required_inputs": [
+        "public_evidence_refs",
+        "as_of",
+        "identity_confidence"
+      ],
+      "output_types": [
+        "BehaviorEvidence",
+        "FactorHypothesis"
+      ],
+      "main_resource": "method-niu-san-zhangmengzhu",
+      "required_resources": [
+        "method-niu-san-zhangmengzhu",
+        "factor-validation-v1",
+        "reference-niu-san-zhangmengzhu"
+      ],
+      "optional_resources": [
+        "source-niu-san-zhangmengzhu"
+      ],
+      "policy_ref": "factor-validation-v1",
+      "boundaries": [
+        "paper-only",
+        "no-tool-grant",
+        "no-automatic-admission",
+        "public-evidence-only",
+        "not-an-endorsement"
+      ]
+    },
+    {
+      "skill_id": "niu-san-zhaolaoge",
+      "name": "赵老哥公开研究视角",
+      "version": "1.0.0",
+      "tags": [
+        "public-behavior",
+        "zhaolaoge",
+        "limit-event"
+      ],
+      "required_inputs": [
+        "public_evidence_refs",
+        "as_of",
+        "identity_confidence"
+      ],
+      "output_types": [
+        "BehaviorEvidence",
+        "FactorHypothesis"
+      ],
+      "main_resource": "method-niu-san-zhaolaoge",
+      "required_resources": [
+        "method-niu-san-zhaolaoge",
+        "factor-validation-v1",
+        "reference-niu-san-zhaolaoge"
+      ],
+      "optional_resources": [
+        "source-niu-san-zhaolaoge"
+      ],
+      "policy_ref": "factor-validation-v1",
+      "boundaries": [
+        "paper-only",
+        "no-tool-grant",
+        "no-automatic-admission",
+        "public-evidence-only",
+        "not-an-endorsement"
+      ]
+    },
+    {
+      "skill_id": "niu-san-chaoguyangjia",
+      "name": "炒股养家公开研究视角",
+      "version": "1.0.0",
+      "tags": [
+        "public-behavior",
+        "chaoguyangjia",
+        "sentiment"
+      ],
+      "required_inputs": [
+        "public_evidence_refs",
+        "as_of",
+        "identity_confidence"
+      ],
+      "output_types": [
+        "BehaviorEvidence",
+        "FactorHypothesis"
+      ],
+      "main_resource": "method-niu-san-chaoguyangjia",
+      "required_resources": [
+        "method-niu-san-chaoguyangjia",
+        "factor-validation-v1",
+        "reference-niu-san-chaoguyangjia"
+      ],
+      "optional_resources": [
+        "source-niu-san-chaoguyangjia"
+      ],
+      "policy_ref": "factor-validation-v1",
+      "boundaries": [
+        "paper-only",
+        "no-tool-grant",
+        "no-automatic-admission",
+        "public-evidence-only",
+        "not-an-endorsement"
+      ]
+    },
+    {
+      "skill_id": "niu-san-fengliu",
+      "name": "冯柳公开研究视角",
+      "version": "1.0.0",
+      "tags": [
+        "public-behavior",
+        "fengliu",
+        "contrarian"
+      ],
+      "required_inputs": [
+        "public_evidence_refs",
+        "as_of",
+        "identity_confidence"
+      ],
+      "output_types": [
+        "BehaviorEvidence",
+        "FactorHypothesis"
+      ],
+      "main_resource": "method-niu-san-fengliu",
+      "required_resources": [
+        "method-niu-san-fengliu",
+        "factor-validation-v1",
+        "reference-niu-san-fengliu"
+      ],
+      "optional_resources": [
+        "source-niu-san-fengliu"
+      ],
+      "policy_ref": "factor-validation-v1",
+      "boundaries": [
+        "paper-only",
+        "no-tool-grant",
+        "no-automatic-admission",
+        "public-evidence-only",
+        "not-an-endorsement"
+      ]
+    },
+    {
+      "skill_id": "github-maintainer",
+      "name": "研究资产维护检查",
+      "version": "1.0.0",
+      "tags": [
+        "engineering",
+        "provenance",
+        "maintenance"
+      ],
+      "required_inputs": [
+        "artifact_refs",
+        "change_scope"
+      ],
+      "output_types": [
+        "MaintenanceChecklist"
+      ],
+      "main_resource": "method-github-maintainer",
+      "required_resources": [
+        "method-github-maintainer",
+        "factor-validation-v1",
+        "reference-github-maintainer"
+      ],
+      "optional_resources": [
+        "source-github-maintainer"
+      ],
+      "policy_ref": "factor-validation-v1",
+      "boundaries": [
+        "paper-only",
+        "no-tool-grant",
+        "no-automatic-admission"
+      ]
+    }
+  ]
 }
