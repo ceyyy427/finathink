@@ -75,4 +75,6 @@ def select_methods(request: MethodRouteRequest, catalog: ResearchAssetCatalog) -
         required_resources=tuple(required[key] for key in sorted(required)),
         optional_resources=tuple(optional[key] for key in sorted(optional)),
         missing_inputs=tuple(sorted(set(missing))), unsupported=tuple(sorted(set(unsupported))),
+        method_fingerprints=tuple((skill_id, stable_digest(asdict(catalog.get_skill(skill_id))))
+                                  for skill_id in selected),
     )

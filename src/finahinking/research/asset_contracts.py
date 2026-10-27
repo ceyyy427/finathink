@@ -135,6 +135,7 @@ class MethodSelection:
     optional_resources: tuple[ResourceRef, ...]
     missing_inputs: tuple[str, ...] = ()
     unsupported: tuple[str, ...] = ()
+    method_fingerprints: tuple[tuple[str, str], ...] = ()
 
     @property
     def fingerprint(self):
