@@ -1,5 +1,6 @@
 .venv/
 .local-state/
+finathink-private-*.zip
 .venv-quant/
 .venv-qlib-py312/
 .venv-vectorbt/

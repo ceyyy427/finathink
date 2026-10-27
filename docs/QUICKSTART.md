@@ -78,7 +78,7 @@ PowerShell 中先执行 `$env:FINAHINKING_OFFLINE="0"`，再使用上述启动�
 先等待或取消所有后台任务，再关闭应用。保持虚拟环境激活，使用明确的数据库路径与新的备份文件名：
 
 ```bash
-finathink-state backup --db .local-state/app.sqlite3 --output finathink-private-backup.zip
+finathink-state backup --db .local-state/app.sqlite3 --output .local-state/private-backup.zip
 python3 -m pip install --upgrade .
 finathink --offline --db .local-state/app.sqlite3 --port 8765
 ```
@@ -88,8 +88,8 @@ finathink --offline --db .local-state/app.sqlite3 --port 8765
 恢复到一个尚不存在的新目录：
 
 ```bash
-finathink-state restore --archive finathink-private-backup.zip --to recovered-state
-finathink --offline --db recovered-state/app.sqlite3 --port 8765
+finathink-state restore --archive .local-state/private-backup.zip --to .local-state/recovered
+finathink --offline --db .local-state/recovered/app.sqlite3 --port 8765
 ```
 
 恢复先校验文件清单、指纹与 SQLite 完整性，不覆盖原目录。打开研究时继续校验报告 manifest。其他机器上的凭证需要重新配置；不要把私密备份当成脱敏诊断上传。维护工具当前上限为 20,000 个文件、总计 1 GiB、单文件 64 MiB；有未终结任务、链接、损坏包或同名输出时拒绝操作。它是关闭应用后的维护工具，不是在线热备服务。
