@@ -23,6 +23,7 @@ from .contracts import (
     stable_digest,
     to_jsonable,
 )
+from .factor_study_store import FactorStudyStore
 from .job_queue import JobQueue, JobStatus, _ref
 from .run_repository import RunRepository
 from .run_store import ResearchRunStore, _decode_event, _decode_state
@@ -102,7 +103,7 @@ def _model_input_digest(value):
 
 def verify_research_receipt(root, queue, record, reference, *, artifact_digest=None, verify_input=False):
     """Resolve only a current, correctly bound, filesystem-verified publication."""
-    from .reports import verify_report_bundle
+    from .reports import MAX_MANIFEST_BYTES, verify_report_bundle
 
     match = _RECEIPT_REF.fullmatch(reference or "")
     if match is None or record.status not in {JobStatus.RUNNING, JobStatus.COMPLETED}:
@@ -130,7 +131,7 @@ def verify_research_receipt(root, queue, record, reference, *, artifact_digest=N
     manifest_path = bundle / "manifest.json"
     if not manifest_path.resolve().is_relative_to((root / "reports").resolve()):
         raise ValueError("research publication bundle is outside its root")
-    manifest = _read_json(manifest_path)
+    manifest = _read_json(manifest_path, max_bytes=MAX_MANIFEST_BYTES)
     if stable_digest(manifest) != receipt.get("manifest_digest") or manifest.get("run_id") != request.run_id:
         raise ValueError("research publication manifest identity mismatch")
     if any((bundle / relative).is_symlink() or not (bundle / relative).resolve().is_relative_to(bundle.resolve()) for relative in manifest.get("files", {})):
@@ -203,9 +204,22 @@ def run_local_research_stage(invocation, checkpoint_ref, publish_checkpoint, *, 
             current = queue.get(record.job_id)
             return current.cancel_requested or current.status is not JobStatus.RUNNING or current.attempts != record.attempts or current.lease_token != record.lease_token
 
-    tools = SnapshotResearchTools(snapshot)
-    driver, manager = OfflineDriver(), ResearchManager()
     spec = request.research_plan.validation_spec
+    binding = spec.get("factor_study")
+    study = studies = None
+    publication_before = None
+    if binding is not None:
+        studies = FactorStudyStore(queue, scope_id=spec["scope_id"])
+        study = studies.get(binding["study_id"])
+        if study["spec_ref"] != binding["spec_ref"] or study["spec"]["snapshot_ref"] != snapshot.fingerprint or study["spec"]["policy_fingerprint"] != spec["policy_fingerprint"] or binding["phase"] not in {"validation", "test"}:
+            return {"status": "blocked", "failure_kind": "CONTEXT_INTEGRITY_FAILED"}
+        if binding["phase"] == "test" and study["test_key"] is None:
+            return {"status": "blocked", "failure_kind": "VALIDATION_FAILED"}
+        studies.set_job(study["study_id"], binding["phase"], record.job_id)
+        if binding["phase"] == "validation":
+            publication_before = study["spec"]["test_period"][0]
+    tools = SnapshotResearchTools(snapshot, publication_before=publication_before)
+    driver, manager = OfflineDriver(), ResearchManager()
     if spec.get("execution_mode") == "provider-grounded":
         if not allow_model_calls:
             return {"status": "blocked", "failure_kind": "OUTBOUND_DISABLED"}
@@ -247,6 +261,16 @@ def run_local_research_stage(invocation, checkpoint_ref, publish_checkpoint, *, 
             "roles": [{"role": report.role, "status": report.status, "claims": list(report.claims), "evidence_refs": list(report.evidence_refs), "limitations": list(report.limitations)} for report in result.state.analyst_reports],
             "synthesis": driver.synthesis_summary,
             "limitations": ["Citation membership verifies input binding, not semantic truth. Model observations do not set financial metrics or policy."]}
+    if binding is not None:
+        from .factor_workbench import compute_study
+
+        phase = binding["phase"]
+        validation = None
+        if phase == "test":
+            validation_record = queue.get(study["validation_job_id"])
+            validated = verify_research_receipt(root, queue, validation_record, validation_record.result_ref)
+            validation = validated["manifest"]["source_snapshot"].get("factor_study")
+        tools.analysis["factor_study"] = compute_study(snapshot, study, phase=phase, validation=validation)
     if budget is not None:
         budget.check_wall()
     manifest = ReportBundleWriter().write(result, root / "reports" / f"attempt-{attempt_id}", quant_analytics=tools.analysis)
@@ -299,6 +323,7 @@ class ResearchApplicationService:
         finally:
             os.close(descriptor)
         self.queue = JobQueue(queue_path, max_attempts=3, backoff_base_seconds=0.1, backoff_max_seconds=1)
+        self.factor_studies = FactorStudyStore(self.queue, scope_id=self.scope_id)
         runner = run_local_research_stage if allow_model_calls else run_offline_research_stage
         self.runtime = ResearchRuntimeService(self.queue, stage_runners={"local_research": runner}, worker_id=f"application-{uuid.uuid4().hex[:16]}", timeout_seconds=300, autostart=False, supervisor_concurrency=2)
 
@@ -320,7 +345,7 @@ class ResearchApplicationService:
         self.runtime.stop_supervisor()
 
     @staticmethod
-    def _limits(raw):
+    def _limits(raw, *, factor_study=False):
         from .runtime_service import RuntimeLimits
 
         if not isinstance(raw, dict):
@@ -329,12 +354,12 @@ class ResearchApplicationService:
         if set(raw) - defaults.keys() or any(value is None for value in raw.values()):
             raise ValueError("budget contains unsupported limits")
         limits = RuntimeLimits(**{**defaults, **raw}, max_concurrency=2)
-        caps = {"max_wall_seconds": 300, "max_attempts": 3, "max_provider_calls": 10, "max_bytes": 64 * 1024 * 1024, "max_experiments": 6}
+        caps = {"max_wall_seconds": 300, "max_attempts": 3, "max_provider_calls": 10, "max_bytes": 64 * 1024 * 1024, "max_experiments": 256 if factor_study else 6}
         if any(getattr(limits, key) > value for key, value in caps.items()):
             raise ValueError("budget exceeds local resource limits")
         return limits
 
-    def submit(self, values):
+    def submit(self, values, *, factor_study=None):
         if not isinstance(values, dict):
             raise TypeError("research submission must be an object")
         if set(values) - {"idempotency_key", "snapshot_ref", "question", "instrument", "as_of", "model_config_ref", "budget", "materials", "allow_model_calls"}:
@@ -355,12 +380,16 @@ class ResearchApplicationService:
         instrument = values.get("instrument")
         if instrument not in snapshot.instruments:
             raise ValueError("selected snapshot does not contain the requested instrument")
+        if factor_study is not None:
+            study = self.factor_studies.get(factor_study["study_id"])
+            if config is not None or factor_study["spec_ref"] != study["spec_ref"] or study["spec"]["snapshot_ref"] != snapshot.fingerprint or factor_study["phase"] not in {"validation", "test"}:
+                raise ValueError("factor study request binding is invalid")
         raw_budget = values.get("budget", {})
         if config is not None:
             if not isinstance(raw_budget, dict) or raw_budget.get("max_attempts", 1) != 1:
                 raise ValueError("online research has one attempt; resubmit explicitly after failure")
             raw_budget = {"max_attempts": 1, "max_provider_calls": 6, **raw_budget}
-        limits = self._limits(raw_budget)
+        limits = self._limits(raw_budget, factor_study=factor_study is not None)
         budget = asdict(limits)
         from .snapshot_tools import local_research_policy
 
@@ -374,6 +403,11 @@ class ResearchApplicationService:
             config_digest=stable_digest({"workflow": WORKFLOW_VERSION, "budget": budget, "policy_fingerprint": policy_fingerprint}),
             snapshot_ref=snapshot.fingerprint,
         )
+        if factor_study is not None:
+            from dataclasses import replace
+
+            plan = replace(request.research_plan, validation_spec={**request.research_plan.validation_spec, "factor_study": factor_study})
+            request = replace(request, research_plan=plan, config_digest=stable_digest({"base": request.config_digest, "factor_study": factor_study}))
         if config is not None:
             from dataclasses import replace
 
@@ -472,6 +506,8 @@ class ResearchApplicationService:
             "snapshot_ref": request.snapshot_ref, "instrument": request.instrument, "as_of": request.as_of.isoformat(),
             "question": request.research_plan.hypotheses[0], "model_config_ref": request.research_plan.validation_spec.get("model_config_ref", "offline"),
             "model_research": model_research,
+            "factor_study": source.get("factor_study"),
+            "risk_portfolio": source.get("risk_portfolio"),
             "budget": request.research_plan.validation_spec["budget"], "attempts": record.attempts,
             "cancel_requested": record.cancel_requested,
             "created_at": _utc(record.created_at), "updated_at": _utc(record.updated_at),
@@ -497,3 +533,73 @@ class ResearchApplicationService:
         self._request(self.queue.get(job_id))
         self.queue.cancel(job_id)
         return self.get_job(job_id)
+
+    def create_factor_study(self, values):
+        from .factor_workbench import prepare_study
+        from .snapshot_tools import local_research_policy
+
+        if not isinstance(values, dict):
+            raise TypeError("study submission must be an object")
+        key = _ref(values.get("idempotency_key"), "idempotency_key")
+        snapshot = self.snapshots.load(values.get("snapshot_ref"))
+        spec = prepare_study(values, snapshot, policy_fingerprint=stable_digest(local_research_policy()))
+        study_id = "study-" + stable_digest({"scope": self.scope_id, "key": key})[:24]
+        study = self.factor_studies.create(study_id, spec, validation_key=key)
+        job = self._submit_factor_job(study, "validation", key)
+        self.factor_studies.set_job(study_id, "validation", job["job_id"])
+        return self.factor_study(study_id)
+
+    def _submit_factor_job(self, study, phase, key):
+        spec = study["spec"]
+        return self.submit({"idempotency_key": "factor-" + stable_digest({"study": study["study_id"], "phase": phase, "key": key})[:32], **{name: spec[name] for name in ("snapshot_ref", "instrument", "as_of", "question")}, "budget": {"max_wall_seconds": 120, "max_bytes": 64 * 1024 * 1024, "max_experiments": spec["evaluation_units"]}}, factor_study={"study_id": study["study_id"], "spec_ref": study["spec_ref"], "phase": phase})
+
+    def factor_study(self, study_id):
+        study = self.factor_studies.get(study_id)
+        # Reconcile the two durable writes with the ORIGINAL idempotency key.
+        # This also finds an already queued job after loss before set_job.
+        phase = "validation" if study["state"] == "DECLARED" else "test" if study["state"] == "TEST_RESERVED" else None
+        if phase is not None and study[f"{phase}_job_id"] is None:
+            key = study["validation_key"] if phase == "validation" else study["test_key"]
+            job = self._submit_factor_job(study, phase, key)
+            study = self.factor_studies.set_job(study_id, phase, job["job_id"])
+        jobs, results = {}, {}
+        for phase in ("validation", "test"):
+            job_id = study[f"{phase}_job_id"]
+            if job_id is None:
+                continue
+            job = self.get_job(job_id)
+            payload = job["factor_study"]
+            if payload is not None and (payload.get("study_id") != study_id or payload.get("spec_ref") != study["spec_ref"]):
+                raise ValueError("factor study result belongs to another charter")
+            if job["status"] in {"completed", "failed", "cancelled"}:
+                self.factor_studies.complete(study_id, phase, job_id, succeeded=job["status"] == "completed" and payload is not None)
+            jobs[f"{phase}_job"] = job
+            results["validation" if phase == "validation" else "test_result"] = payload
+        return {**self.factor_studies.get(study_id), **jobs, **results}
+
+    def freeze_factor_study(self, study_id, candidate_id):
+        study = self.factor_study(study_id)
+        result = study.get("validation")
+        if study["state"] not in {"VALIDATED", "FROZEN"} or not result:
+            raise ValueError("freeze requires verified validation")
+        candidate = next((record for record in result["experiments"] if record["experiment_id"] == candidate_id and record["failure_reason"] is None), None)
+        if candidate is None:
+            raise ValueError("only a valid declared candidate can be frozen")
+        self.factor_studies.freeze(study_id, candidate_id, candidate["digest"])
+        return self.factor_study(study_id)
+
+    def test_factor_study(self, study_id, idempotency_key):
+        self.factor_study(study_id)
+        study = self.factor_studies.reserve_test(study_id, idempotency_key)
+        job = self._submit_factor_job(study, "test", idempotency_key)
+        self.factor_studies.set_job(study_id, "test", job["job_id"])
+        return self.factor_study(study_id)
+
+    def review_factor_study(self, study_id, decision, reviewer_id):
+        study = self.factor_study(study_id)
+        if not study.get("test_result"):
+            raise ValueError("review requires a verified final-test report")
+        if decision == "APPROVE_FOR_RESEARCH" and study["test_result"]["test_summary"]["failure_reason"] is not None:
+            raise ValueError("failed final-test evidence cannot be approved")
+        self.factor_studies.review(study_id, decision, reviewer_id)
+        return self.factor_study(study_id)

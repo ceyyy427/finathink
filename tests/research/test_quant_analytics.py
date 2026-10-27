@@ -6,14 +6,14 @@ from finahinking.research.quant_analytics import (
 )
 
 
-def test_parameter_surface_honors_explicit_robust_flags_and_regions():
+def test_parameter_surface_flags_can_exclude_but_not_manufacture_a_plateau():
     result = compute_parameter_surface([
         {"parameters": {"window": 1}, "metric": 1.0, "robust": True},
         {"parameters": {"window": 2}, "metric": 2.0, "robust": False},
         {"parameters": {"window": 3}, "metric": 3.0, "passed": True},
-    ])
-    assert [point["robust"] for point in result.points] == [True, False, True]
-    assert [(region["start_index"], region["end_index"]) for region in result.robustness_regions] == [(0, 0), (2, 2)]
+    ], axes={"window": [1, 2, 3]}, min_metric=0.5, max_neighbor_delta=3)
+    assert [point["robust"] for point in result.points] == [False, False, False]
+    assert result.robustness_regions == ()
 
 
 def test_performance_groups_fill_rows_by_timestamp():

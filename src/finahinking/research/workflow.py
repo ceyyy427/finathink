@@ -634,7 +634,12 @@ class ResearchOrchestrator:
             raise ValueError("paper decision requires structured risk, portfolio, and paper gates")
         risk = RiskManager().review(risk_result["snapshot"], risk_result["factor_result"], risk_result["constraints"])
         candidates = risk_result.get("candidates", (instrument,))
-        proposal = PortfolioManager().construct(risk, candidates, risk_result.get("portfolio_constraints", risk_result["constraints"]))
+        if risk_result.get("allocation_method") == "deterministic_constrained.v1":
+            proposal = PortfolioManager().optimize(candidates, risk, risk_result["portfolio_constraints"])
+            if proposal.fingerprint != risk_result.get("allocation_fingerprint"):
+                raise ValueError("portfolio identity changed after risk review")
+        else:
+            proposal = PortfolioManager().construct(risk, candidates, risk_result.get("portfolio_constraints", risk_result["constraints"]))
         if not proposal.passed:
             raise ValueError("cannot make paper decision after blocked portfolio")
         # Simulation is itself a deterministic gate.  The ledger is kept out

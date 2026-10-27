@@ -10,7 +10,7 @@ from typing import Any
 from .user_api_contracts import DataBatch, fingerprint_records
 
 _NUMERIC_FIELDS = frozenset({"open", "high", "low", "close", "volume", "amount", "value"})
-_ALLOWED_FIELDS = frozenset({"instrument", "timestamp", "available_at", "as_of", *_NUMERIC_FIELDS})
+_ALLOWED_FIELDS = frozenset({"instrument", "timestamp", "available_at", "as_of", "industry", "suspended", *_NUMERIC_FIELDS})
 
 
 def _timestamp(value: Any) -> str | None:
@@ -79,6 +79,10 @@ def normalize_records(
                 if converted is None:
                     quality.append(f"record {index}: invalid {canonical}")
                     continue
+            elif canonical == "suspended":
+                if not isinstance(value, bool):
+                    raise ValueError("suspended mapping requires an explicit boolean")
+                converted = value
             elif canonical in _NUMERIC_FIELDS:
                 converted = _number(value)
                 if converted is None:

@@ -28,6 +28,7 @@ def snapshot_from_batch(batch, *, as_of=None, adjustment: str = "UNKNOWN", calen
         observations.append(MarketObservation(
             **{key: record[key] for key in required},
             amount=record.get("amount"), available_at=record.get("available_at"),
+            industry=record.get("industry"), suspended=record.get("suspended"),
             source=batch.connection_id, provider="user-api",
             retrieved_at=batch.retrieved_at, adapter_version="user-snapshot.v1",
         ))

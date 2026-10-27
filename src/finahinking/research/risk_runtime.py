@@ -11,6 +11,7 @@ import math
 import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field, is_dataclass
+from decimal import Decimal
 from types import MappingProxyType
 from typing import Any
 
@@ -579,6 +580,19 @@ class StressReport:
         }
 
 
+def empirical_cvar(returns: Sequence[float], confidence: float = 0.95) -> float:
+    """Fractional empirical lower-tail expected loss, not an estimated forecast."""
+    confidence = _number(confidence, "confidence")
+    if not 0 < confidence < 1 or not returns:
+        raise ValueError("CVaR needs observations and confidence in (0, 1)")
+    losses = sorted((-_number(value, "return") for value in returns), reverse=True)
+    mass = (Decimal(1) - Decimal(str(confidence))) * len(losses)
+    whole = int(mass)
+    fraction = float(mass - whole)
+    loss = sum(losses[:whole]) + (fraction * losses[whole] if fraction else 0.0)
+    return max(0.0, loss / float(mass))
+
+
 class RiskManager:
     """Apply deterministic exposure, liquidity, drawdown and stress gates."""
 
@@ -706,8 +720,7 @@ class RiskManager:
             else:
                 portfolio_returns = [sum(weights[name] * histories[name][period] for name in weights) for period in range(periods)]
             if portfolio_returns:
-                tail_count = max(1, math.ceil((1.0 - confidence) * len(portfolio_returns)))
-                cvar = max(0.0, -sum(sorted(portfolio_returns)[:tail_count]) / tail_count)
+                cvar = empirical_cvar(portfolio_returns, confidence)
             else:
                 reasons.append("CVaR return history is empty")
         else:
@@ -943,6 +956,23 @@ class RiskManager:
                 if not _report_texts(stress_report, "blocking_reasons"):
                     reasons.append("stress: embedded report is invalid or blocked")
             gates.append("stress_report")
+
+        if isinstance(snap.get("proposed_weights"), Mapping):
+            base_snapshot = {key: value for key, value in snap.items() if key not in {"exposure_report", "stress_report"}}
+            portfolio_digest = stable_digest({"weights": snap["proposed_weights"]})
+            for name, report in (("exposure", exposure_report), ("stress", stress_report)):
+                if not isinstance(report, Mapping) or report.get("snapshot_digest") != stable_digest(base_snapshot) or report.get("portfolio_digest") != portfolio_digest:
+                    reasons.append(f"{name} report snapshot/portfolio binding mismatch")
+            gates.append("report_binding")
+        if "max_cvar" in policy:
+            try:
+                cvar_value = _known_number(exposure_report.get("cvar") if isinstance(exposure_report, Mapping) else None, "CVaR")
+                cvar_limit = _number(policy["max_cvar"], "max_cvar")
+                if cvar_value is None or cvar_limit < 0 or cvar_value > cvar_limit + 1e-12:
+                    reasons.append("CVaR metric unavailable or limit failed")
+            except (TypeError, ValueError):
+                reasons.append("CVaR metric unavailable or invalid")
+            gates.append("cvar")
 
         liquidity = _nested(metrics, "liquidity", "min_liquidity", "average_volume")
         if liquidity is None:

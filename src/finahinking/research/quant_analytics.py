@@ -45,14 +45,15 @@ class ParameterSurface:
     table_data: tuple[Mapping[str, Any], ...] = ()
     limitations: tuple[str, ...] = ()
     fingerprint: str = ""
+    criteria: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        payload = {"points": self.points, "parameter_names": self.parameter_names, "regions": self.robustness_regions, "limitations": self.limitations}
+        payload = {"points": self.points, "parameter_names": self.parameter_names, "regions": self.robustness_regions, "limitations": self.limitations, "criteria": self.criteria}
         if not self.fingerprint:
             object.__setattr__(self, "fingerprint", _digest(payload))
 
     def to_dict(self) -> dict[str, Any]:
-        return {"points": list(self.points), "parameter_names": list(self.parameter_names), "robustness_regions": list(self.robustness_regions), "chart_data": dict(self.chart_data), "table_data": list(self.table_data), "limitations": list(self.limitations), "fingerprint": self.fingerprint, "paper_only": True}
+        return {"points": list(self.points), "parameter_names": list(self.parameter_names), "robustness_regions": list(self.robustness_regions), "chart_data": dict(self.chart_data), "table_data": list(self.table_data), "limitations": list(self.limitations), "criteria": dict(self.criteria), "fingerprint": self.fingerprint, "paper_only": True}
 
 
 @dataclass(frozen=True, slots=True)
@@ -73,12 +74,13 @@ class PerformanceReport:
         return {"metrics": dict(self.metrics), "series": list(self.series), "benchmark": self.benchmark, "chart_data": dict(self.chart_data), "table_data": list(self.table_data), "limitations": list(self.limitations), "fingerprint": self.fingerprint, "paper_only": True}
 
 
-def compute_parameter_surface(results: Any) -> ParameterSurface:
-    """Normalize parameter sweep results and identify contiguous robust regions.
+def compute_parameter_surface(results: Any, *, axes=None, min_metric=None, max_neighbor_delta=None, min_region_size=2) -> ParameterSurface:
+    """Connected plateaus on a declared Cartesian grid, never input-order runs.
 
-    A point is robust when it is valid and has ``robust``/``passed`` true, or
-    when no status is supplied and its primary metric is finite.  Regions are
-    descriptive connected runs in input order; they never rank strategies.
+    A component needs at least two eligible vertices above the declared metric
+    floor. Edges change one axis by one declared step and stay within the
+    declared metric delta. Missing/failed grid points cannot bridge a plateau.
+    This describes the tested grid only, not an interpolated parameter range.
     """
     if isinstance(results, Mapping):
         results = results.get("results", results.get("points", results.get("experiments", ())))
@@ -86,6 +88,22 @@ def compute_parameter_surface(results: Any) -> ParameterSurface:
         results = ()
     if isinstance(results, (str, bytes)) or not isinstance(results, Sequence):
         raise TypeError("results must be a sequence or mapping")
+    if len(results) > 4096 or type(min_region_size) is not int or min_region_size < 2:
+        raise ValueError("surface size or minimum region size is invalid")
+    declared = axes is not None and min_metric is not None and max_neighbor_delta is not None
+    grid = {}
+    if declared:
+        if not isinstance(axes, Mapping) or not axes or any(not isinstance(key, str) or not key for key in axes):
+            raise ValueError("parameter axes must be declared")
+        for key, values in sorted(axes.items()):
+            if not isinstance(values, (list, tuple)) or not values or len(values) > 256 or any(isinstance(value, bool) or not isinstance(value, (str, int, float)) or isinstance(value, (int, float)) and _finite(value) is None for value in values):
+                raise ValueError("parameter axis is invalid")
+            if not (all(isinstance(value, str) for value in values) or all(isinstance(value, (int, float)) for value in values)) or len(set(values)) != len(values):
+                raise ValueError("parameter axis contains duplicate or mixed values")
+            grid[key] = sorted(values)
+        if isinstance(min_metric, bool) or isinstance(max_neighbor_delta, bool) or _finite(min_metric) is None or _finite(max_neighbor_delta) is None or float(max_neighbor_delta) < 0:
+            raise ValueError("surface thresholds must be finite")
+    criteria = {"axes": grid, "min_metric": min_metric, "max_neighbor_delta": max_neighbor_delta, "min_region_size": min_region_size, "adjacency": "one declared Cartesian axis step"} if declared else {}
     points: list[dict[str, Any]] = []
     names: set[str] = set()
     limitations: list[str] = []
@@ -102,29 +120,50 @@ def compute_parameter_surface(results: Any) -> ParameterSurface:
         status = str(raw.get("status", "")).upper()
         valid = not status.startswith(("INVALID", "MISSING", "FAILED")) and metric is not None
         explicit_flag = raw.get("robust", raw.get("passed", None))
-        robust = bool(explicit_flag) if explicit_flag is not None else valid
         if explicit_flag is not None and not isinstance(explicit_flag, bool):
-            limitations.append(f"point {index}: robust flag was coerced to boolean")
+            limitations.append("invalid eligibility flag; point excluded")
         if metric is None:
             limitations.append(f"point {index}: missing or invalid metric")
-        point = {"index": index, "parameters": dict(params), "metric": metric, "valid": valid, "robust": robust, "status": status or ("VALID" if valid else "INVALID")}
+        if declared and (set(params) != set(grid) or any(params[key] not in grid[key] for key in grid)):
+            raise ValueError("point does not belong to declared parameter axes")
+        eligible = declared and valid and (explicit_flag is None or explicit_flag is True) and metric >= float(min_metric)
+        point = {"parameters": dict(params), "metric": metric, "valid": valid, "eligible": eligible, "robust": False, "status": status or ("VALID" if valid else "INVALID")}
         for key in ("returns", "volatility", "max_drawdown", "turnover", "costs", "slippage", "fingerprint"):
             if key in raw:
                 point[key] = raw[key]
         points.append(point)
+    points.sort(key=lambda point: tuple(grid[name].index(point["parameters"][name]) for name in grid) if declared else json.dumps(point["parameters"], sort_keys=True))
+    for index, point in enumerate(points):
+        point["index"] = index
+    identities = [json.dumps(point["parameters"], sort_keys=True) for point in points]
+    if len(set(identities)) != len(identities):
+        raise ValueError("duplicate parameter point")
     regions: list[dict[str, Any]] = []
-    run: list[dict[str, Any]] = []
-    for point in points + [{"valid": False}]:
-        if point.get("valid") and point.get("robust"):
-            run.append(point)
-        elif run:
-            regions.append({"start_index": run[0]["index"], "end_index": run[-1]["index"], "size": len(run), "parameter_bounds": {name: [run[0]["parameters"].get(name), run[-1]["parameters"].get(name)] for name in sorted(names)}})
-            run = []
+    remaining = {index for index, point in enumerate(points) if point["eligible"]}
+    coordinates = {index: tuple(grid[name].index(points[index]["parameters"][name]) for name in grid) for index in remaining}
+    while remaining:
+        pending = [min(remaining)]
+        component = []
+        remaining.remove(pending[0])
+        while pending:
+            index = pending.pop()
+            component.append(index)
+            neighbors = [other for other in sorted(remaining) if sum(abs(a - b) for a, b in zip(coordinates[index], coordinates[other])) == 1 and abs(points[index]["metric"] - points[other]["metric"]) <= float(max_neighbor_delta)]
+            remaining.difference_update(neighbors)
+            pending.extend(neighbors)
+        if len(component) >= min_region_size:
+            component.sort()
+            for index in component:
+                points[index]["robust"] = True
+            regions.append({"indices": component, "start_index": component[0], "end_index": component[-1], "size": len(component), "parameter_bounds": {name: [min(points[index]["parameters"][name] for index in component), max(points[index]["parameters"][name] for index in component)] for name in sorted(names)}})
+    if not declared:
+        limitations.append("No declared grid and metric thresholds; finite metrics or flags do not establish robustness.")
+    limitations.append("Plateaus describe tested grid adjacency only; not statistical significance or untested interpolation.")
     if not points:
         limitations.append("no parameter results were supplied")
     table = tuple({"index": p["index"], **p["parameters"], "metric": p["metric"], "status": p["status"], "robust": p["robust"]} for p in points)
     chart = {"x": [p["index"] for p in points], "y": [p["metric"] for p in points], "valid": [p["valid"] for p in points], "robust": [p["robust"] for p in points]}
-    return ParameterSurface(tuple(points), tuple(sorted(names)), tuple(regions), chart, table, tuple(dict.fromkeys(limitations)))
+    return ParameterSurface(tuple(points), tuple(sorted(names)), tuple(regions), chart, table, tuple(dict.fromkeys(limitations)), criteria=criteria)
 
 
 def _entries(ledger: Any) -> list[Mapping[str, Any]]:

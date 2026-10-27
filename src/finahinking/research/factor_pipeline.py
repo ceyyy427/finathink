@@ -29,6 +29,7 @@ from .factor_proposals import (
     FactorTemplateRegistry,
     validate_factor_proposal,
 )
+from .factor_study_store import FactorStudyStore
 from .observability import current_runtime_budget
 
 _SUSPICIOUS_FIELD = re.compile(r"(?:future|lookahead|target|label|forward|next|tomorrow)", re.IGNORECASE)
@@ -372,6 +373,7 @@ __all__ = [
     "FactorRank",
     "FactorResearchPipeline",
     "FactorResearchResult",
+    "FactorStudyStore",
     "HumanAdmissionRecord",
     "admit_factor_proposal",
     "rank_factor_proposals",

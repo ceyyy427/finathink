@@ -309,6 +309,8 @@ class PortfolioManager:
                 score = _number(record.get("score", record.get("rank_score", 1.0)), f"score.{instrument}")
                 records.append({"instrument": instrument, "score": max(0.0, score), "industry": str(record.get("industry", record.get("sector", ""))), "factors": clean_factors})
             unique: dict[str, dict[str, Any]] = {item["instrument"]: item for item in records}
+            if len(unique) != len(records):
+                raise ValueError("duplicate portfolio candidates")
             records = sorted(unique.values(), key=lambda item: (-item["score"], item["instrument"]))
             if not records:
                 raise ValueError("no candidates")
@@ -326,6 +328,8 @@ class PortfolioManager:
             factor_limits = policy.get("factor_limits", policy.get("factor_bounds", policy.get("factor_exposure_limits", {})))
             if not isinstance(industry_limits, Mapping) or not isinstance(factor_limits, Mapping):
                 raise TypeError("exposure limits must be mappings")
+            if any(str(name) not in item["factors"] for name in factor_limits for item in records):
+                raise ValueError("constrained factor exposure is unavailable")
             industry_limits = {str(key): _number(value, f"industry_limits.{key}") for key, value in industry_limits.items()}
             if any(value < 0 or value > 1 for value in industry_limits.values()):
                 raise ValueError("industry limits must be between zero and one")

@@ -177,6 +177,8 @@ class MarketObservation:
     retrieved_at: pd.Timestamp | datetime | str | None = None
     available_at: pd.Timestamp | datetime | str | None = None
     adapter_version: str = "p8.2"
+    industry: str | None = None
+    suspended: bool | None = None
 
     def __post_init__(self) -> None:
         _identifier(self.instrument, "instrument")
@@ -211,6 +213,10 @@ class MarketObservation:
         for key, value in values.items():
             object.__setattr__(self, key, value)
         object.__setattr__(self, "amount", amount)
+        if self.industry is not None:
+            _identifier(self.industry, "industry")
+        if self.suspended is not None and not isinstance(self.suspended, bool):
+            raise TypeError("suspended must be an explicit boolean")
 
     @property
     def symbol(self) -> str:
@@ -258,6 +264,8 @@ class MarketObservation:
             "retrieved_at": self.retrieved_at.isoformat() if self.retrieved_at is not None else None,
             "available_at": self.available_at.isoformat() if self.available_at is not None else None,
             "adapter_version": self.adapter_version,
+            **({"industry": self.industry} if self.industry is not None else {}),
+            **({"suspended": self.suspended} if self.suspended is not None else {}),
         }
 
     @classmethod

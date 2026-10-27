@@ -221,9 +221,11 @@ def evaluate_factor_candidate(
         start = pd.Timestamp(spec["evaluation_start"])
         end = pd.Timestamp(spec["evaluation_end"])
         aligned = aligned.loc[(aligned.index >= start) & (aligned.index <= end)]
+    if spec.get("scoring_index") is not None:
+        aligned = aligned.loc[aligned.index.intersection(spec["scoring_index"])]
     scoring_index = aligned.index
     aligned = aligned.dropna()
-    coverage = len(aligned) / max(len(factor), 1)
+    coverage = len(aligned) / max(len(scoring_index), 1)
     min_samples = int(spec.get("min_samples", 8))
     if len(aligned) < min_samples:
         result = _empty_evaluation(candidate, FactorEvaluationStatus.INSUFFICIENT_DATA, "sample size is below the minimum")

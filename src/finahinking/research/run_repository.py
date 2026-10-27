@@ -18,7 +18,7 @@ from .contracts import (
     stable_digest,
     to_jsonable,
 )
-from .reports import redact_public_payload, verify_report_bundle
+from .reports import MAX_MANIFEST_BYTES, redact_public_payload, verify_report_bundle
 from .run_store import _decode_event, _decode_state
 
 _RUN_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
@@ -88,7 +88,7 @@ class RunRepository:
                 return "MISSING"
             if path.is_symlink() or any(parent.is_symlink() for parent in path.parents if parent.is_relative_to(self.report_root)):
                 return "CORRUPT"
-            if path.stat().st_size > 1_000_000:
+            if path.stat().st_size > MAX_MANIFEST_BYTES:
                 return "CORRUPT"
             actual = json.loads(path.read_text(encoding="utf-8"))
             if stable_digest(actual) != payload["manifest_digest"] or actual.get("run_id") != payload["run_id"]:

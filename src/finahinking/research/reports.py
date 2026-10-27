@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import html
 import json
+import math
 import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, fields, is_dataclass
@@ -22,6 +23,7 @@ _PUBLIC_SENSITIVE_KEY = re.compile(
     r"(?i)(?:api[_-]?key|token|secret|password|credential(?![_-]?ref)|authorization|prompt|raw[_-]?(?:provider[_-]?)?response|endpoint|absolute[_-]?path|file[_-]?path)"
 )
 _REQUIRED_ANALYSTS = ("fundamentals", "technical", "sentiment", "news", "learning")
+MAX_MANIFEST_BYTES = 8 * 1024 * 1024
 _REQUIRED_SECTIONS = ("2_evidence", "3_research", "4_quant", "5_risk", "6_paper_decision")
 _RUNTIME_SECTIONS = ("experiments", "risk_attribution", "learning_history")
 _RUNTIME_STAGE_MARKERS = {
@@ -192,6 +194,8 @@ def _digest_file(path: Path) -> str:
 def write_manifest(manifest: ReportManifest, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = json.dumps(redact_public_payload(manifest), ensure_ascii=False, sort_keys=True, indent=2) + "\n"
+    if len(payload.encode("utf-8")) > MAX_MANIFEST_BYTES:
+        raise ValueError("research manifest size limit exceeded")
     temporary = path.with_suffix(path.suffix + ".tmp")
     temporary.write_text(payload, encoding="utf-8")
     temporary.replace(path)
@@ -308,6 +312,9 @@ class ReportBundleWriter:
             status_model["data_limitations"] = analytics_payload.get("limitations", [])
             status_model["source_metadata"] = analytics_payload.get("source_metadata", {})
             status_model["model_research"] = analytics_payload.get("model_research")
+            status_model["factor_study"] = analytics_payload.get("factor_study")
+            status_model["risk_portfolio"] = analytics_payload.get("risk_portfolio")
+            status_model["publication_scope"] = analytics_payload.get("publication_scope")
         complete_path = bundle / "complete_report.html"
         complete_path.write_text(
             render_status_wall_html(status_model, title="Finathink research report"),
@@ -335,8 +342,10 @@ class ReportBundleWriter:
                 **status_snapshot,
                 **({"data_mode": analytics_payload.get("data_mode", "UNKNOWN"), "data_limitations": analytics_payload.get("limitations", []), "source_metadata": analytics_payload.get("source_metadata", {})} if analytics_payload else {}),
                 **({"model_research": analytics_payload["model_research"]} if analytics_payload and analytics_payload.get("model_research") else {}),
+                **({"factor_study": analytics_payload["factor_study"]} if analytics_payload and analytics_payload.get("factor_study") else {}),
+                **({"risk_portfolio": analytics_payload["risk_portfolio"]} if analytics_payload and analytics_payload.get("risk_portfolio") else {}),
                 **{section: payload for section, payload in runtime_payloads.items()},
-                **({"quant_analytics": {"fingerprint": analytics_payload.get("fingerprint"), "policy_fingerprint": analytics_payload.get("policy_fingerprint"), "metrics": analytics_payload.get("metrics", {}), "limitations": analytics_payload.get("limitations", ())}} if analytics_payload else {}),
+                **({"quant_analytics": {"fingerprint": analytics_payload.get("fingerprint"), "policy_fingerprint": analytics_payload.get("policy_fingerprint"), "metrics": analytics_payload.get("metrics", {}), "comparison_conditions": analytics_payload.get("comparison_conditions", {}), "limitations": analytics_payload.get("limitations", ())}} if analytics_payload else {}),
             },
             created_at=datetime.now(UTC),
         )
@@ -348,6 +357,8 @@ def verify_report_bundle(manifest_path: str | Path) -> BundleVerification:
     manifest_path = Path(manifest_path)
     errors: list[str] = []
     try:
+        if manifest_path.stat().st_size > MAX_MANIFEST_BYTES:
+            return BundleVerification(ok=False, errors=("manifest size limit exceeded",))
         payload = json.loads(manifest_path.read_text(encoding="utf-8"))
         if not isinstance(payload, Mapping):
             return BundleVerification(ok=False, errors=("manifest must be a JSON object",))
@@ -693,5 +704,24 @@ def compare_experiments(runs: Sequence[Mapping[str, Any] | ReportManifest]) -> d
             "inputs": dict(raw_inputs),
             "metrics": dict(metrics),
             "limitations": sorted(set(limitations)),
+            "conditions": safe.get("conditions", snapshot.get("comparison_conditions", {})),
         })
-    return {"schema_version": 1, "paper_only": True, "runs": output}
+    required = {"dataset_fingerprint", "instrument", "sample_period", "scoring_index", "split", "cost", "version", "metric_basis"}
+    groups = {}
+    for row in output:
+        conditions = row["conditions"]
+        if not isinstance(conditions, Mapping) or not required <= conditions.keys() or any(conditions[key] is None or conditions[key] == {} or conditions[key] == [] for key in required):
+            row.update(comparability="UNKNOWN", comparison_group=None)
+            continue
+        reference = stable_digest(conditions)
+        row.update(comparability="MATCHED_CONDITIONS", comparison_group=reference)
+        groups.setdefault(reference, []).append(row)
+    grouped = []
+    for reference, members in sorted(groups.items()):
+        first = members[0]
+        differences = []
+        for row in members[1:]:
+            metrics = {key: value - first["metrics"][key] for key, value in row["metrics"].items() if type(value) in {int, float} and math.isfinite(value) and type(first["metrics"].get(key)) in {int, float} and math.isfinite(first["metrics"][key])}
+            differences.append({"run_id": row["run_id"], "reference_run_id": first["run_id"], "metrics": metrics})
+        grouped.append({"group_id": reference, "run_ids": [row["run_id"] for row in members], "conditions": first["conditions"], "differences": differences})
+    return {"schema_version": 1, "paper_only": True, "runs": output, "groups": grouped, "limitations": ["Differences are descriptive and computed only under identical explicit conditions; unknown or different conditions are not ranked together."]}

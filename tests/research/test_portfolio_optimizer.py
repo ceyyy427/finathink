@@ -51,6 +51,16 @@ def test_optimize_honors_long_only_exposure_cash_single_name_industry_and_factor
     assert -0.2 - 1e-9 <= value_exposure <= 0.2 + 1e-9
 
 
+def test_missing_constrained_factor_is_not_silently_treated_as_zero():
+    proposal = PortfolioManager().optimize([{"instrument": "AAA", "industry": "technology"}], risk(), {"factor_limits": {"value": 0.2}})
+    assert not proposal.passed and not proposal.weights
+
+
+def test_duplicate_candidates_cannot_silently_overwrite_each_other():
+    duplicate = [dict(candidates()[0]), dict(candidates()[0], score=99)]
+    assert not PortfolioManager().optimize(duplicate, risk(), {}).passed
+
+
 def test_optimize_enforces_turnover_and_cost_limits_deterministically() -> None:
     constraints = {
         "max_exposure": 0.8,
