@@ -52,10 +52,15 @@ from finahinking.p6_5.repository import ADDITIVE_MIGRATION_PATHS, apply_migratio
 from finahinking.p7.repository import MIGRATION_PATH as P7_MIGRATION_PATH, apply_p7_migration
 from finahinking.local_app import LocalApplication
 from finahinking.resources import fixture_path
+from finahinking.research.asset_workspace_page import ResearchAssetWorkspace
+from finahinking.research.asset_catalog import ResearchAssetCatalog
+from finahinking.research.report_sections import theme_report_document
 
 assert all(path.is_file() for path in ADDITIVE_MIGRATION_PATHS)
 assert P7_MIGRATION_PATH.is_file()
 assert fixture_path('p6_5/bls_cpi_2024_2025.json').is_file()
+assert ResearchAssetWorkspace(ResearchAssetCatalog.packaged()).list()['catalog_total'] > 0
+assert '#f5f8fd' in theme_report_document('<html><head></head><body>offline</body></html>')
 connection = sqlite3.connect(':memory:')
 apply_migration(connection)
 apply_p7_migration(connection)

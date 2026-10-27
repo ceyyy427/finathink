@@ -111,9 +111,8 @@ def render_asset_items(items):
         href = f'/library/{item["kind"]}?' + urlencode({"asset": item["asset_id"]})
         enter = '/research/jobs?' + urlencode({"question": f'使用「{item["title"]}」提出可验证的研究假设；先检查所需输入与来源。'})
         gaps = '；'.join(item["missing_dependencies"]) or '包内资料可读；用户数据与授权仍需绑定。'
-        result.append(f'<article class="asset-entry"><div><span class="asset-state">{esc(_STATES[item["availability"]])}</span>'
-            f'<h2><a href="{esc(href, quote=True)}">{esc(item["title"])}</a></h2><p>{esc(item["summary"])}</p>'
-            f'<p class="field-help">v{esc(item["version"])} · {esc(" / ".join(item["tags"]))}</p></div>'
+        result.append(f'<article class="asset-entry"><div><h2><a href="{esc(href, quote=True)}">{esc(item["title"])}</a></h2><p>{esc(item["summary"])}</p>'
+            f'<p class="field-help">v{esc(item["version"])} · {esc(" / ".join(item["tags"]))} · <span class="asset-state">{esc(_STATES[item["availability"]])}</span></p></div>'
             f'<details><summary>输入、来源与依赖</summary><p>所需输入：{esc("、".join(item["required_inputs"])) or "反例适用的研究上下文"}</p>'
             f'<p>资料状态：{esc(gaps)}</p><ul>{_source_links(item["source_resources"])}</ul></details>'
             + (f'<a class="asset-action" href="{esc(enter, quote=True)}">带入研究问题</a>' if item["kind"] != "lessons" else '') + '</article>')

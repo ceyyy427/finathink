@@ -144,7 +144,7 @@ FACTOR_DETAIL_CSS = """
 .factor-section{padding:28px 0;border-bottom:1px solid var(--border);min-width:0}.factor-section h2{margin:0 0 14px}
 .factor-section p{max-width:76ch}.factor-code{white-space:pre-wrap;overflow-wrap:anywhere;max-height:400px;overflow:auto;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-size:12px;line-height:1.65}
 .factor-track{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;padding:0;list-style:none}
-.factor-stage{padding:18px;background:var(--surface);border:1px solid var(--border);border-radius:8px;min-width:0}
+.factor-stage{padding:18px;background:var(--surface);border:1px solid var(--border);border-radius:8px;min-width:0;overflow-wrap:anywhere}
 .factor-stage h3{margin:0 0 10px;font-size:14px}.factor-stage>span{font-size:12px;color:var(--text-secondary)}
 .factor-stage--complete>span{color:var(--success)}.factor-stage--blocked_data>span{color:var(--warning)}.factor-stage--execution_error>span{color:var(--error)}
 .factor-section form{display:flex;flex-wrap:wrap;gap:12px;align-items:end}.factor-section details{margin:12px 0}

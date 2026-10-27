@@ -71,7 +71,7 @@ def test_local_app_exposes_read_only_status_and_report_routes(tmp_path) -> None:
     assert "PAPER-ONLY" in page
     report_status, report_type, report = app.route("GET", "/research/run-ui/report/complete")
     assert report_status == 200 and report_type.startswith("text/html")
-    assert "Finathink research report" in report
+    assert "Finathink 研究报告" in report
     missing_status, _, missing = app.route("GET", "/research/missing/status")
     assert missing_status == 404
     assert missing["error"] == "research run not found"

@@ -40,6 +40,17 @@ def main():
 
     try:
         assert '第一次使用' in get('/research/jobs').decode()
+        from finahinking.research.asset_catalog import ResearchAssetCatalog
+
+        catalog = ResearchAssetCatalog.packaged()
+        assets = json.loads(get('/api/research/assets?kind=methods&limit=1'))
+        assert assets['schema_version'] == 'asset-workspace.v1'
+        assert assets['catalog_total'] == len(catalog.skills()) and len(assets['items']) == 1
+        assert assets['items'][0]['loaded'] is False
+        assert '资料展示不代表已加载执行' in get('/library/methods?asset=' + assets['items'][0]['asset_id']).decode()
+        factor = json.loads(get('/api/research/factors/finathink-turnover-freefloat-mean'))
+        assert len(factor['track']) == 9 and all(row['status'] == 'NOT_RUN' for row in factor['track'])
+        assert '来源声明与本地证据' in get('/research/factors/finathink-turnover-freefloat-mean').decode()
         assert not json.loads(get('/api/research/snapshots'))['snapshots']
         snapshot = post('/api/research/snapshots/sample', {'instrument': 'AAA'})
         job = post('/api/research/jobs', {'idempotency_key': 'installed-first-use', 'snapshot_ref': snapshot['snapshot_ref'], 'instrument': 'AAA', 'as_of': snapshot['as_of'][:10], 'question': '检验所选数据的动量、费用与历史回撤', 'model_config_ref': 'offline'})
@@ -51,6 +62,7 @@ def main():
         assert job['report_status'] == 'AVAILABLE'
         report = get(job['report_url'])
         assert snapshot['snapshot_ref'].encode() in report and b'SAMPLE' in report
+        assert b'#f5f8fd' in report and b'Content-Security-Policy' in report
         assert job['elapsed_seconds'] >= 0
     finally:
         server.shutdown()
@@ -73,7 +85,7 @@ def main():
             assert (restored_report.encode() if isinstance(restored_report, str) else restored_report) == report
         finally:
             reopened.close()
-    print('全新 wheel 安装 → 真实 HTTP/独立 spawn 任务 → 首份报告 → 私密备份恢复 → 重复迁移检查：通过。')
+    print('全新 wheel 安装 → 资料与因子证据 → 真实 HTTP/独立 spawn 任务 → 蓝白报告 → 私密备份恢复 → 重复迁移检查：通过。')
     return 0
 
 

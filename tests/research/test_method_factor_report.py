@@ -85,6 +85,13 @@ def test_document_is_self_contained_blue_white_and_has_no_automatic_requests(com
     assert 'href="#' in document and '<details' in document and '<table' in document
 
 
+def test_chart_axes_are_physical_html_text_not_scaled_desktop_svg_labels(computed):
+    sections = api().build_method_factor_sections(computed, None, None, None)
+    assert 'class="report-chart-scale"' in sections.html
+    assert 'class="report-chart-dates"' in sections.html
+    assert '<text ' not in sections.html
+
+
 def test_writer_uses_new_template_but_replays_never_rewrite_a_published_report(tmp_path, computed):
     result = ResearchRunResult(ResearchRunState("offline-report", ResearchState.LEARNING_RECORDED, as_of="2024-06-28"))
     loaded = methods()

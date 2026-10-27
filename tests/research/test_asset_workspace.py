@@ -31,6 +31,13 @@ def test_actual_methods_behavior_and_lessons_with_bounded_pagination():
             service.list(**values)
 
 
+def test_availability_follows_the_entry_title_in_all_library_kinds():
+    module = importlib.import_module("finahinking.research.asset_workspace_page")
+    for kind in ("methods", "behavior", "lessons"):
+        body = module.render_asset_items(workspace().list(kind=kind, limit=1)["items"])
+        assert body.index("<h2>") < body.index('class="asset-state"')
+
+
 def test_detail_returns_version_and_source_but_not_arbitrary_paths():
     service = workspace()
     item = service.list(kind="methods")["items"][0]

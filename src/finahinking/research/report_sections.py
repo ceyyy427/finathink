@@ -61,16 +61,17 @@ def _equity_chart(portfolio):
                 segments.append(segment)
                 segment = []
             continue
-        segment.append(f'{64 + index / (len(equity) - 1) * 792:.3f},{226 - (value - lower) / span * 180:.3f}')
+        segment.append(f'{index / (len(equity) - 1) * 900:.3f},{220 - (value - lower) / span * 200:.3f}')
     if segment:
         segments.append(segment)
-    lines = ''.join(f'<polyline points="{" ".join(points)}" fill="none" stroke="#2563eb" stroke-width="2"/>' for points in segments)
+    lines = ''.join(f'<polyline points="{" ".join(points)}" fill="none" stroke="#2563eb" stroke-width="2" vector-effect="non-scaling-stroke"/>' for points in segments)
     rows = ''.join(f'<tr><td>{html.escape(str(time))}</td><td>{html.escape(str(value)) if value is not None else "未知"}</td></tr>' for time, value in zip(times, equity))
-    return ('<figure data-report-equity><svg viewBox="0 0 900 290" role="img" tabindex="0" aria-labelledby="equity-title equity-desc">'
+    return (f'<figure data-report-equity><div class="report-chart-row"><div class="report-chart-scale" aria-label="净值范围"><span>{upper:.2f}</span><span>{lower:.2f}</span></div>'
+        '<svg viewBox="0 0 900 240" preserveAspectRatio="none" role="img" tabindex="0" aria-labelledby="equity-title equity-desc">'
         '<title id="equity-title">候选实际含费纸面回测净值</title><desc id="equity-desc">来自同一次冻结运行的实际账本，不是已实现投资收益；完整读数见下方表格。</desc>'
-        '<path d="M64 26V236H856" fill="none" stroke="#b6c7df"/>'
-        + lines + f'<text x="8" y="46" fill="#62728a" font-size="12">{upper:.2f}</text><text x="8" y="228" fill="#62728a" font-size="12">{lower:.2f}</text>'
-        f'<text x="64" y="267" fill="#62728a" font-size="12">{html.escape(str(times[0])[:10])}</text><text x="780" y="267" fill="#62728a" font-size="12">{html.escape(str(times[-1])[:10])}</text></svg>'
+        '<path d="M0 0V240H900" fill="none" stroke="#b6c7df" vector-effect="non-scaling-stroke"/>'
+        + lines + '</svg></div>'
+        f'<div class="report-chart-dates"><span>{html.escape(str(times[0])[:10])}</span><span>{html.escape(str(times[-1])[:10])}</span></div>'
         '<figcaption>实际净值含声明费用与滑点；未知点不补值或跨缺口连线。图形不计算新指标。</figcaption></figure>'
         '<details><summary>逐观察净值表（图形的同一数据）</summary><table><caption>候选实际账本</caption><thead><tr><th scope="col">时间</th><th scope="col">净值</th></tr></thead><tbody>' + rows + '</tbody></table></details>')
 

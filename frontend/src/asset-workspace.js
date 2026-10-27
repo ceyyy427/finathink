@@ -31,7 +31,8 @@ export function mountAssetWorkspace(root, { fetcher = globalThis.fetch } = {}) {
         const article = node('article'); article.className = 'asset-entry';
         const state = node('span', { PACKAGED: '方法资料已打包', PARTIAL: '资料待补齐', CORRUPT: '资料校验失败', MISSING: '资料缺失' }[item.availability]); state.className = 'asset-state';
         const heading = node('h2'); const link = node('a', item.title); link.href = `/library/${item.kind}?asset=${encodeURIComponent(item.asset_id)}`; heading.append(link);
-        article.append(state, heading, node('p', item.summary), node('p', `v${item.version} · ${item.tags.join(' / ')}`));
+        const meta = node('p', `v${item.version} · ${item.tags.join(' / ')} · `); meta.append(state);
+        article.append(heading, node('p', item.summary), meta);
         const details = node('details'); details.append(node('summary', '输入、来源与依赖'), node('p', `所需输入：${(item.required_inputs ?? []).join('、') || '反例适用的研究上下文'}`), node('p', `资料缺口：${item.missing_dependencies?.join('；') || '包内资料可读，用户输入仍需绑定。'}`)); article.append(details);
         if (item.kind !== 'lessons') { const enter = node('a', '带入研究问题'); enter.href = `/research/jobs?${new URLSearchParams({ question: `使用「${item.title}」提出可验证的研究假设；先检查所需输入与来源。` })}`; article.append(enter); }
         return article;

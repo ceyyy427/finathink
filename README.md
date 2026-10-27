@@ -45,7 +45,11 @@ Finathink 将用户提供的数据、证据、因子、量化检验、风险检�
 
 ### 因子与量化
 
-- 在“因子实验”从研究问题开始，选择 24 个有公式、来源和数学复现的研究配方，提交有界窗口与成本设置。
+- 在“因子实验”从研究问题开始，选择有公式、来源和数学复现的研究配方，提交有界窗口与成本设置。
+- 从方法、公开行为和反例资料库检索研究材料，展开检查版本、输入要求与来源，再带入研究问题。
+- 按任务导出方法交接包，校验外部返回的类型化提案，绑定数据字段附件，沿同一后台流程建立受控因子研究。
+- 复查数据审计、语义、IC、去重、实际回测、OOS、增量价值、容量和归档九步的原始证据。
+- 在因子详情按版本查看来源声明、原式、数据时间域、本地结果、范围用途决定与反例。
 - 执行扩展式滚动验证、标签 purge/embargo、候选冻结与本地一次性最终测试；保留失败实验和多重检验记录。
 - 按实际样本、成本和方法分组比较，展示预先声明阈值下的相邻参数平台，重启后继续查看同一研究历史。
 - 将自然语言假设映射到固定 DSL 模板和受控因子提案。
@@ -75,7 +79,10 @@ Finathink 将用户提供的数据、证据、因子、量化检验、风险检�
 
 ### HTML 报告与研究界面
 
+- 使用统一蓝白工作台，桌面与移动宽度均可通过键盘操作和可见焦点访问研究内容。
 - 生成自包含的多阶段 HTML 报告、manifest 和 activity 记录。
+- 因子报告将冻结方法清单、公式、数据附件、政策、九步结果与实际账本读数放入同一离线文件。
+- 图形与表格读取同一份计算结果；报告保留原生成版本、校验指纹和创建时间。
 - 报告包含分析师、证据、研究、量化、风险、纸面决策和学习状态。
 - 状态墙提供阶段、角色、重试、checkpoint、工具摘要和 manifest 指纹。
 - 可比较多次实验的输入、指标和限制，并保留离线无 JavaScript 阅读能力。
@@ -100,6 +107,9 @@ finathink --offline --db .local-state/app.sqlite3 --port 8765
 - 因子实验：<http://127.0.0.1:8765/research/experiments>
 - 复盘与学习：<http://127.0.0.1:8765/research/learning>
 - 研究工作区：<http://127.0.0.1:8765/research>
+- 方法资料库：<http://127.0.0.1:8765/library/methods>
+- 公开行为档案：<http://127.0.0.1:8765/library/behavior>
+- 反例与教训：<http://127.0.0.1:8765/library/lessons>
 - 因子策略工作台：<http://127.0.0.1:8765/workbench>
 - Provider 设置：<http://127.0.0.1:8765/settings/providers>
 
@@ -125,6 +135,8 @@ site/                   静态产品入口与前端构建资源
 
 ## 研究文档
 
+- [方法、因子与离线报告指南](docs/PHASE15_RESEARCH_WORKSPACE_GUIDE.md)
+- [当前研究能力与验收](docs/FINATHINK_CAPABILITY_ASSESSMENT_2026-10-27.md)
 - [快速开始](docs/QUICKSTART.md)
 - [Factor Strategy Workbench 指南](docs/FACTOR_STRATEGY_WORKBENCH_GUIDE.md)
 - [Factor Strategy Workbench 验证记录](docs/FACTOR_STRATEGY_WORKBENCH_VALIDATION.md)
@@ -134,20 +146,6 @@ site/                   静态产品入口与前端构建资源
 - [研究运行时指南](docs/RESEARCH_RUNTIME_GUIDE.md)
 - [自主研究运行时发布清单](docs/RESEARCH_RUNTIME_RELEASE_CHECKLIST.md)
 - [研究能力最终报告](docs/RESEARCH_CAPABILITY_FINAL_REPORT.md)
-
-## 能力边界矩阵
-
-| 能力 | 状态 | 说明 |
-| --- | --- | --- |
-| 本地数据标准化、PIT 与指纹 | `OFFLINE_PASS` | 使用用户配置连接合同和可重放 fixture。 |
-| 五类分析师、研究经理与证据引用 | `OFFLINE_PASS` | 只汇总带 evidence refs 的观察。 |
-| 因子提案、回测/OOS、风险与纸面组合 | `OFFLINE_PASS` | 确定性、研究用途、人工准入。 |
-| 队列、checkpoint、报告与学习提案 | `OFFLINE_PASS` | 本地持久化；学习只生成提案。 |
-| 可选 Qlib/vectorbt/QMT 边界 | `ISOLATED_DEFERRED` | 隔离 smoke 或只读合同，不是默认权威引擎。 |
-| 真实供应商、模型、浏览器和生产部署 | `EXTERNAL_UNVERIFIED` | 本仓库没有真实凭证或外部验收证据。 |
-| 券商下单、实盘交易、秘密写入、任意执行 | `NOT_IN_SCOPE` | 永久产品边界。 |
-
-研究工作台页面为 `/workbench`，其结构化接口为 `/api/research/workbench`，离线报告使用 `workbench/index.html`。
 
 ## 开发检查
 
