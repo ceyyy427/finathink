@@ -95,6 +95,7 @@ def research_view_model(run_state: ResearchRunState, manifest: ReportManifest | 
             "model_research": snapshot.get("model_research"),
             "factor_study": snapshot.get("factor_study"),
             "risk_portfolio": snapshot.get("risk_portfolio"),
+            "policy_lineage": snapshot.get("policy_lineage"),
             "paper_only": True,
             "decision_eligible": run_state.decision_eligible,
             "failure_kind": run_state.failure_kind.value if run_state.failure_kind else None,
@@ -358,6 +359,10 @@ def render_status_wall_html(model: Mapping[str, Any], *, title: str = "Finathink
         source_json = esc(json.dumps(safe.get("source_metadata", {}), ensure_ascii=False, sort_keys=True))
         evidence_html += f'<section class="note" aria-labelledby="data-mode"><h2 id="data-mode">Data mode: {esc(safe["data_mode"])}</h2><ul>{data_notes}</ul><details><summary>Source metadata</summary><pre>{source_json}</pre></details></section>'
     model_research = safe.get("model_research")
+    lineage = safe.get("policy_lineage")
+    if isinstance(lineage, Mapping):
+        kind = "回溯比较 · 不计入配置生效后的新学习" if lineage.get("retrospective") else "按所选版本执行的纸面研究"
+        evidence_html += f'<section aria-labelledby="policy-lineage"><h2 id="policy-lineage">配置版本与复跑来源</h2><p>v{esc(lineage.get("version"))} · {esc(kind)}</p><p>配置引用</p><pre>{esc(lineage.get("policy_ref"))}</pre><p>实际参数指纹</p><pre>{esc(lineage.get("runtime_fingerprint"))}</pre><p>父版本 {esc(lineage.get("parent_ref"))} · 批准可用时间 {esc(lineage.get("available_at"))} · 复跑原运行 {esc(lineage.get("rerun_of"))}</p><p>旧观察使用新配置时属于回溯分析，不是当时可获得的预测或独立样本外证据。</p></section>'
     risk_portfolio = safe.get("risk_portfolio")
     if isinstance(risk_portfolio, Mapping):
         effects = "".join(f'<tr><th scope="row">{esc(item.get("constraint"))}</th><td>{esc(item.get("before_weight"))}</td><td>{esc(item.get("after_weight"))}</td><td>{esc(item.get("cash_added"))}</td><td>{esc(item.get("reason"))}</td></tr>' for item in risk_portfolio.get("constraint_effects", []))

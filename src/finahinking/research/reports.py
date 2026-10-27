@@ -314,6 +314,7 @@ class ReportBundleWriter:
             status_model["model_research"] = analytics_payload.get("model_research")
             status_model["factor_study"] = analytics_payload.get("factor_study")
             status_model["risk_portfolio"] = analytics_payload.get("risk_portfolio")
+            status_model["policy_lineage"] = analytics_payload.get("policy_lineage")
             status_model["publication_scope"] = analytics_payload.get("publication_scope")
         complete_path = bundle / "complete_report.html"
         complete_path.write_text(
@@ -344,6 +345,7 @@ class ReportBundleWriter:
                 **({"model_research": analytics_payload["model_research"]} if analytics_payload and analytics_payload.get("model_research") else {}),
                 **({"factor_study": analytics_payload["factor_study"]} if analytics_payload and analytics_payload.get("factor_study") else {}),
                 **({"risk_portfolio": analytics_payload["risk_portfolio"]} if analytics_payload and analytics_payload.get("risk_portfolio") else {}),
+                **({"policy_lineage": analytics_payload["policy_lineage"]} if analytics_payload and analytics_payload.get("policy_lineage") else {}),
                 **{section: payload for section, payload in runtime_payloads.items()},
                 **({"quant_analytics": {"fingerprint": analytics_payload.get("fingerprint"), "policy_fingerprint": analytics_payload.get("policy_fingerprint"), "metrics": analytics_payload.get("metrics", {}), "comparison_conditions": analytics_payload.get("comparison_conditions", {}), "limitations": analytics_payload.get("limitations", ())}} if analytics_payload else {}),
             },

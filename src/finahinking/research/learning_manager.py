@@ -819,34 +819,38 @@ class LearningManager:
             return admitted
         raise TypeError("an approved LearningUpdateProposal or AdmittedUpdate is required")
 
-    def preview_apply(
+    def preview_proposal(
         self,
-        proposal: LearningUpdateProposal | AdmittedUpdate,
+        proposal: LearningUpdateProposal,
         baseline: Mapping[str, Any] | VersionedResearchPolicy,
     ) -> LearningApplyPreview:
-        """Preview an admitted update without changing any production state."""
-
-        admitted = self._resolve_admitted(proposal)
+        """Inspect a draft without authorizing its application."""
+        if not isinstance(proposal, LearningUpdateProposal) or proposal.status is not LearningUpdateStatus.PROPOSAL_READY:
+            raise ValueError("a ready learning proposal is required")
         normalized = self._baseline_payload(baseline)
-        self._check_evidence_binding(admitted.proposal, normalized)
+        self._check_evidence_binding(proposal, normalized)
         next_version = normalized["version"] + 1
         factor_weights = dict(normalized["factor_weights"])
-        factor_weights.update(admitted.proposal.factor_weight_updates)
+        factor_weights.update(proposal.factor_weight_updates)
         risk_rules = dict(normalized["risk_rules"])
-        risk_rules.update(admitted.proposal.risk_rule_updates)
+        risk_rules.update(proposal.risk_rule_updates)
         registry = dict(normalized["registry"])
-        registry.update(admitted.proposal.registry_updates)
+        registry.update(proposal.registry_updates)
         return LearningApplyPreview(
-            proposal_digest=admitted.proposal.proposal_digest,
+            proposal_digest=proposal.proposal_digest,
             baseline_fingerprint=stable_digest(normalized),
             next_version=next_version,
             factor_weights=factor_weights,
             risk_rules=risk_rules,
             registry=registry,
-            settlement_as_of=admitted.proposal.as_of,
-            ledger_digest=admitted.proposal.ledger_digest,
-            dataset_digest=admitted.proposal.dataset_digest,
+            settlement_as_of=proposal.as_of,
+            ledger_digest=proposal.ledger_digest,
+            dataset_digest=proposal.dataset_digest,
         )
+
+    def preview_apply(self, proposal, baseline) -> LearningApplyPreview:
+        """Only an approved admission may become an applied preview."""
+        return self.preview_proposal(self._resolve_admitted(proposal).proposal, baseline)
 
     def apply(
         self,
