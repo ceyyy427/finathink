@@ -54,11 +54,15 @@ def local_research_policy():
 class SnapshotResearchTools(ResearchToolGateway):
     """Use the in-house engine; never resolve a missing input to a fixture."""
 
-    def __init__(self, snapshot: DatasetSnapshot) -> None:
+    def __init__(self, snapshot: DatasetSnapshot, *, publication_before=None) -> None:
         if not isinstance(snapshot, DatasetSnapshot):
             raise TypeError("snapshot must be a DatasetSnapshot")
         # Defensive roundtrip also verifies nested content before it is used.
         self.snapshot = DatasetSnapshot.from_json(snapshot.to_json())
+        self.publication_before = pd.Timestamp(publication_before) if publication_before is not None else None
+        if self.publication_before is not None and (pd.isna(self.publication_before) or self.publication_before.tzinfo is None):
+            raise ValueError("publication boundary must be timezone-aware")
+        self.observations = tuple(item for item in self.snapshot.observations if self.publication_before is None or item.timestamp < self.publication_before)
         self.policy = local_research_policy()
         self.analysis: dict = {}
         self.risk_payload: dict = {}
@@ -102,7 +106,7 @@ class SnapshotResearchTools(ResearchToolGateway):
             result={
                 "dataset_fingerprint": self.snapshot.fingerprint,
                 "data_fingerprint": self.snapshot.provenance.get("data_fingerprint", self.snapshot.fingerprint),
-                "records": [item.to_dict() for item in self.snapshot.observations],
+                "records": [item.to_dict() for item in self.observations],
                 "pit_available": "AVAILABLE", "mode": self.snapshot.mode,
             },
             provenance={"dataset_fingerprint": self.snapshot.fingerprint}, request_digest=digest,
@@ -120,7 +124,7 @@ class SnapshotResearchTools(ResearchToolGateway):
         if requested not in {(), (self.policy["factor_id"],)}:
             raise ValueError("selected factor is not supported by this deterministic workflow")
         instrument = str(parameters["instrument"])
-        rows = [item for item in self.snapshot.observations if item.instrument == instrument]
+        rows = [item for item in self.observations if item.instrument == instrument]
         if len(rows) < 4:
             raise ValueError("selected instrument requires at least four OHLCV observations")
         if len({item.timestamp.date() for item in rows}) != len(rows):
@@ -180,6 +184,8 @@ class SnapshotResearchTools(ResearchToolGateway):
             "backtest": backtest.to_dict(), "config": asdict(config),
             "limitations": sorted(set(evaluation.limitations) | set(source["source_limitations"]) | {"Observation-period metrics; calendar not verified, so annualized return, volatility, Sharpe and Sortino are withheld.", "Historical signal availability is checked against each next-bar execution boundary; delayed feeds are rejected.", "Paper fills use archived marks, not live market execution.", "Single selected instrument only; no implicit purchase of other snapshot instruments. Missing industry stays UNKNOWN and receives a conservative cap.", "Factor exposure is weight times observed momentum return, not an inferred market/style beta. CVaR is a descriptive fractional empirical tail loss, not a probability forecast.", "Volume capacity assumes normalized tradable units and common price/cash currency; a 1% model is not proof of executable liquidity. Latest intents stay pending without a known next observation."}), "paper_only": True,
         }
+        self.analysis["comparison_conditions"]["instrument"] = instrument
+        self.analysis["publication_scope"] = {"kind": "PRE_TEST_ONLY" if self.publication_before is not None else "FULL_SELECTED_PERIOD", "before_exclusive": self.publication_before.isoformat() if self.publication_before is not None else None}
         self.analysis["fingerprint"] = stable_digest(self.analysis)
         return self.analysis
 
@@ -187,7 +193,7 @@ class SnapshotResearchTools(ResearchToolGateway):
         self._check_binding(parameters)
         if not self.analysis or any(self.analysis[key] != parameters[key] for key in ("instrument", "as_of")):
             raise ValueError("risk requires the matching completed backtest")
-        last = next(item for item in reversed(self.snapshot.observations) if item.instrument == parameters["instrument"])
+        last = next(item for item in reversed(self.observations) if item.instrument == parameters["instrument"])
         historical_drawdown = abs(float(self.analysis["metrics"]["max_drawdown"]))
         target_weight = self.analysis["proposed_target_weight"]
         drawdown = historical_drawdown if target_weight else 0.0
@@ -205,7 +211,7 @@ class SnapshotResearchTools(ResearchToolGateway):
             "snapshot": {
                 "dataset_fingerprint": self.snapshot.fingerprint,
                 "snapshot_id": self.snapshot.fingerprint,
-                "as_of": self._boundary(parameters["as_of"]).isoformat(), "pit_status": "AVAILABLE",
+                "as_of": min(self._boundary(parameters["as_of"]), self.publication_before - pd.Timedelta(nanoseconds=1)).isoformat() if self.publication_before is not None else self._boundary(parameters["as_of"]).isoformat(), "pit_status": "AVAILABLE",
                 "observations": [{**{key: last.to_dict()[key] for key in ("instrument", "timestamp", "available_at", "close", "volume")}, "industry": details["industry"], "factors": {policy["factor_id"]: details["momentum"]}, "returns": details["returns"], "suspended": last.suspended is True}],
                 "drawdown": drawdown,
                 "concentration": target_weight, "proposed_target_weight": target_weight,

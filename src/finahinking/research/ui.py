@@ -351,6 +351,8 @@ def render_status_wall_html(model: Mapping[str, Any], *, title: str = "Finathink
     )
     if metric_rows:
         evidence_html += f'<section aria-labelledby="quant-metrics"><h2 id="quant-metrics">Historical metrics</h2><table><tbody>{metric_rows}</tbody></table><p>In-sample deterministic baseline, including declared transaction costs. Not an out-of-sample forecast.</p></section>'
+    if safe.get("publication_scope", {}).get("kind") == "PRE_TEST_ONLY":
+        evidence_html += '<p>验证阶段：辅助回测、风险与归因仅使用最终测试期之前的观察。本报告不展示测试期价格与绩效。</p>'
     if safe.get("data_mode"):
         data_notes = "".join(f'<li>{esc(note)}</li>' for note in safe.get("data_limitations", []))
         source_json = esc(json.dumps(safe.get("source_metadata", {}), ensure_ascii=False, sort_keys=True))

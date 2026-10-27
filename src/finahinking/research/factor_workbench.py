@@ -82,6 +82,7 @@ def _summary(record, spec, spec_ref, *, phase="VALIDATION", evaluation=None):
     samples = record.get("sample_ids", [])
     conditions = {"dataset_fingerprint": spec["snapshot_ref"], "sample_period": spec["sample_period"], "scoring_index": stable_digest(samples), "split": {**spec["split"], "horizon": spec["label_horizon"], "embargo": spec["embargo"], "folds": spec["n_splits"], "phase": phase}, "cost": spec["cost"], "version": METHOD_VERSION, "metric_basis": "OBSERVATION", "policy_fingerprint": spec["policy_fingerprint"]}
     metrics = {key: evaluation.get(key) for key in ("information_coefficient", "information_ratio", "sample_size", "coverage", "turnover", "transaction_cost")}
+    conditions["instrument"] = spec["instrument"]
     return ExperimentSummary.build(snapshot_ref=spec["snapshot_ref"], hypothesis=spec["question"], parameters=record["parameters"], sample_period=spec["sample_period"], split=conditions["split"], cost=spec["cost"], metrics=metrics, failure_reason=record.get("failure_reason"), version=METHOD_VERSION, evidence_refs=["factor-evidence:" + stable_digest({"input": spec_ref, "evaluation": evaluation["fingerprint"], "phase": phase})], experiment_id=record["experiment_id"], conditions=conditions, phase=phase).to_dict()
 
 

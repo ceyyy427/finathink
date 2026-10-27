@@ -2,7 +2,7 @@ from finahinking.research.reports import compare_experiments
 
 
 def run(name, **changes):
-    conditions = {"dataset_fingerprint": "a" * 64, "sample_period": ["2026-01-01", "2026-06-30"], "scoring_index": "b" * 64, "split": {"train": 0.6, "validation": 0.2, "test": 0.2}, "cost": {"fee_bps": 5, "slippage_bps": 5}, "version": "test-evaluator.v1", "metric_basis": "OBSERVATION", **changes}
+    conditions = {"dataset_fingerprint": "a" * 64, "instrument": "AAA", "sample_period": ["2026-01-01", "2026-06-30"], "scoring_index": "b" * 64, "split": {"train": 0.6, "validation": 0.2, "test": 0.2}, "cost": {"fee_bps": 5, "slippage_bps": 5}, "version": "test-evaluator.v1", "metric_basis": "OBSERVATION", **changes}
     return {"run_id": name, "inputs": {}, "metrics": {"ic": 0.2 if name == "a" else 0.4}, "conditions": conditions}
 
 

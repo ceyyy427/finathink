@@ -19,12 +19,15 @@ class FactorStudyStore:
     def __init__(self, queue, *, scope_id):
         self.queue, self.scope_id = queue, scope_id
         with queue._connect() as db:
+            db.execute("BEGIN IMMEDIATE")
             db.execute("""CREATE TABLE IF NOT EXISTS factor_studies (
                 scope_id TEXT NOT NULL, study_id TEXT NOT NULL, spec TEXT NOT NULL,
                 spec_ref TEXT NOT NULL, state TEXT NOT NULL, validation_job_id TEXT,
                 test_job_id TEXT, candidate_id TEXT, candidate_fingerprint TEXT,
                 test_key TEXT, review_decision TEXT, reviewer_id TEXT,
                 PRIMARY KEY(scope_id,study_id))""")
+            if "validation_key" not in {row["name"] for row in db.execute("PRAGMA table_info(factor_studies)")}:
+                db.execute("ALTER TABLE factor_studies ADD COLUMN validation_key TEXT")
             db.execute("""CREATE TABLE IF NOT EXISTS factor_test_claims (
                 scope_id TEXT NOT NULL, study_id TEXT NOT NULL, instrument TEXT NOT NULL,
                 start_ns INTEGER NOT NULL, end_ns INTEGER NOT NULL,
@@ -38,6 +41,7 @@ class FactorStudyStore:
         if stable_digest({"scope_id": self.scope_id, "spec": payload["spec"]}) != payload["spec_ref"]:
             raise ValueError("study immutable input integrity failure")
         payload.pop("scope_id")
+        payload["validation_key"] = payload["validation_key"] or payload["study_id"]
         payload["production_write"] = False
         return payload
 
@@ -54,15 +58,16 @@ class FactorStudyStore:
         with self.queue._connect() as db:
             return [self._decode(row) for row in db.execute("SELECT * FROM factor_studies WHERE scope_id=? ORDER BY rowid DESC LIMIT ?", (self.scope_id, limit)).fetchall()]
 
-    def create(self, study_id, spec):
+    def create(self, study_id, spec, *, validation_key=None):
         study_id = _ref(study_id, "study_id")
+        validation_key = _ref(validation_key or study_id, "validation_key")
         if not isinstance(spec, dict) or not re.fullmatch(r"[0-9a-f]{64}", spec.get("snapshot_ref", "")):
             raise ValueError("study snapshot reference is invalid")
         reference = stable_digest({"scope_id": self.scope_id, "spec": spec})
         with self.queue._connect() as db:
-            db.execute("INSERT OR IGNORE INTO factor_studies (scope_id,study_id,spec,spec_ref,state) VALUES (?,?,?,?,'DECLARED')", (self.scope_id, study_id, json.dumps(spec, ensure_ascii=False, sort_keys=True, allow_nan=False), reference))
+            db.execute("INSERT OR IGNORE INTO factor_studies (scope_id,study_id,spec,spec_ref,state,validation_key) VALUES (?,?,?,?,'DECLARED',?)", (self.scope_id, study_id, json.dumps(spec, ensure_ascii=False, sort_keys=True, allow_nan=False), reference, validation_key))
             row = self._decode(self._row(db, study_id))
-            if row["spec_ref"] != reference:
+            if row["spec_ref"] != reference or row["validation_key"] != validation_key:
                 raise ValueError("immutable study idempotency conflict")
         return self.get(study_id)
 

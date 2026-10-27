@@ -27,7 +27,7 @@ def test_factor_study_page_runs_frozen_test_and_reopens_verified_history(observe
         form.locator('button[type="submit"]').click()
         page.locator('[data-experiment-workspace][data-study-state="VALIDATED"]').wait_for(timeout=30000)
         assert root.locator('[data-study-candidates] tbody tr').count() == 3
-        assert "测试集未读取" in root.locator('[data-study-test-result]').inner_text()
+        assert "最终测试尚未执行" in root.locator('[data-study-test-result]').inner_text()
         root.locator('[data-freeze-ack]').check()
         root.locator('[data-study-candidates] button').first.click()
         page.locator('[data-experiment-workspace][data-study-state="FROZEN"]').wait_for()

@@ -82,7 +82,7 @@ export function mountExperimentWorkspace(root, { fetcher = globalThis.fetch, int
     query('[data-study-groups]').replaceChildren(...groups);
     const multiple = result?.multiple_testing;
     text('[data-study-multiplicity]', multiple ? `多重检验 ${multiple.method} · 本章程 ${multiple.family_size} 次尝试，失败 ${multiple.failed_trials} 次。未知 p 不按零处理；独立、符号对称区块假设尚未得到证明。` : '验证尚未完成；测试标签保持隔离。');
-    text('[data-study-test-result]', result?.test_evaluation ? `冻结候选 ${study.candidate_id} · OOS ${result.test_evaluation.oos_status} · 测试 IC ${numeric(result.test_evaluation.information_coefficient)} · 样本 ${result.test_evaluation.sample_size} · 审核 ${study.review_decision ?? '待决定'}。PASS 不代表盈利。` : '测试集未读取。');
+    text('[data-study-test-result]', result?.test_evaluation ? `冻结候选 ${study.candidate_id} · OOS ${result.test_evaluation.oos_status} · 测试 IC ${numeric(result.test_evaluation.information_coefficient)} · 样本 ${result.test_evaluation.sample_size} · 审核 ${study.review_decision ?? '待决定'}。PASS 不代表盈利。` : '最终测试尚未执行；验证报告不展示测试期价格与绩效。');
     query('[data-study-test]').disabled = study.state !== 'FROZEN';
     query('[data-study-review]').disabled = study.state !== 'TEST_EVALUATED';
     const active = [study.test_job, study.validation_job].find((job) => job && ['queued', 'running', 'retryable'].includes(job.status));

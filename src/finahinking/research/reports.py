@@ -23,6 +23,7 @@ _PUBLIC_SENSITIVE_KEY = re.compile(
     r"(?i)(?:api[_-]?key|token|secret|password|credential(?![_-]?ref)|authorization|prompt|raw[_-]?(?:provider[_-]?)?response|endpoint|absolute[_-]?path|file[_-]?path)"
 )
 _REQUIRED_ANALYSTS = ("fundamentals", "technical", "sentiment", "news", "learning")
+MAX_MANIFEST_BYTES = 8 * 1024 * 1024
 _REQUIRED_SECTIONS = ("2_evidence", "3_research", "4_quant", "5_risk", "6_paper_decision")
 _RUNTIME_SECTIONS = ("experiments", "risk_attribution", "learning_history")
 _RUNTIME_STAGE_MARKERS = {
@@ -193,6 +194,8 @@ def _digest_file(path: Path) -> str:
 def write_manifest(manifest: ReportManifest, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = json.dumps(redact_public_payload(manifest), ensure_ascii=False, sort_keys=True, indent=2) + "\n"
+    if len(payload.encode("utf-8")) > MAX_MANIFEST_BYTES:
+        raise ValueError("research manifest size limit exceeded")
     temporary = path.with_suffix(path.suffix + ".tmp")
     temporary.write_text(payload, encoding="utf-8")
     temporary.replace(path)
@@ -311,6 +314,7 @@ class ReportBundleWriter:
             status_model["model_research"] = analytics_payload.get("model_research")
             status_model["factor_study"] = analytics_payload.get("factor_study")
             status_model["risk_portfolio"] = analytics_payload.get("risk_portfolio")
+            status_model["publication_scope"] = analytics_payload.get("publication_scope")
         complete_path = bundle / "complete_report.html"
         complete_path.write_text(
             render_status_wall_html(status_model, title="Finathink research report"),
@@ -353,6 +357,8 @@ def verify_report_bundle(manifest_path: str | Path) -> BundleVerification:
     manifest_path = Path(manifest_path)
     errors: list[str] = []
     try:
+        if manifest_path.stat().st_size > MAX_MANIFEST_BYTES:
+            return BundleVerification(ok=False, errors=("manifest size limit exceeded",))
         payload = json.loads(manifest_path.read_text(encoding="utf-8"))
         if not isinstance(payload, Mapping):
             return BundleVerification(ok=False, errors=("manifest must be a JSON object",))
@@ -700,7 +706,7 @@ def compare_experiments(runs: Sequence[Mapping[str, Any] | ReportManifest]) -> d
             "limitations": sorted(set(limitations)),
             "conditions": safe.get("conditions", snapshot.get("comparison_conditions", {})),
         })
-    required = {"dataset_fingerprint", "sample_period", "scoring_index", "split", "cost", "version", "metric_basis"}
+    required = {"dataset_fingerprint", "instrument", "sample_period", "scoring_index", "split", "cost", "version", "metric_basis"}
     groups = {}
     for row in output:
         conditions = row["conditions"]
