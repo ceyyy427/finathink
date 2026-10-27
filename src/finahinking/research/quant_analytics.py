@@ -230,7 +230,9 @@ def _cost_total(entries: list[Mapping[str, Any]], field: str, limitations: list[
     return sum(values)
 
 
-def compute_performance_report(ledger: Any, benchmark: Any = None) -> PerformanceReport:
+def compute_performance_report(ledger: Any, benchmark: Any = None, *, annualization: int = 252) -> PerformanceReport:
+    if type(annualization) is not int or not 1 <= annualization <= 366:
+        raise ValueError("annualization must be an explicitly bounded observation scale")
     limitations: list[str] = ["paper-only historical analytics; no investment advice"]
     entries = _entries(ledger)
     aggregated_entries = _aggregate_entries(entries, limitations)
@@ -245,7 +247,7 @@ def compute_performance_report(ledger: Any, benchmark: Any = None) -> Performanc
         equities = [_finite(item.get("equity")) for item in aggregated_entries]
         returns = _returns_from_values(equities, limitations)
     mean = sum(returns) / len(returns) if returns else None
-    volatility = (sum((value - mean) ** 2 for value in returns) / (len(returns) - 1)) ** 0.5 * math.sqrt(252) if len(returns) > 1 and mean is not None else None
+    volatility = (sum((value - mean) ** 2 for value in returns) / (len(returns) - 1)) ** 0.5 * math.sqrt(annualization) if len(returns) > 1 and mean is not None else None
     cumulative = 1.0
     peak = 1.0
     max_drawdown = 0.0

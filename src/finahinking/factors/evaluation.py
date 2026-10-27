@@ -235,10 +235,8 @@ def evaluate_factor_candidate(
     chunk_size = max(3, len(aligned) // 4)
     chunks = [aligned.iloc[start : start + chunk_size] for start in range(0, len(aligned), chunk_size)]
     chunk_ics = [value for value in (_correlation(chunk.factor, chunk.forward) for chunk in chunks) if value is not None]
-    if len(chunk_ics) >= 2 and pd.Series(chunk_ics).std(ddof=1) != 0:
+    if len(chunk_ics) >= 2 and pd.Series(chunk_ics).std(ddof=1) > 1e-12:
         icir = _finite(pd.Series(chunk_ics).mean() / pd.Series(chunk_ics).std(ddof=1))
-    elif ic is not None and aligned["forward"].std(ddof=1) != 0:
-        icir = _finite(ic / aligned["forward"].std(ddof=1))
     else:
         icir = None
 

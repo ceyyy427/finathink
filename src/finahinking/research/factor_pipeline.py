@@ -361,6 +361,12 @@ class FactorResearchPipeline:
 
         return run_factor_experiments(spec, dataset, config)
 
+    def validate_factor(self, spec, panel, policy, *, gateway):
+        """The same typed pilot evidence path, not a separate UI calculation."""
+        from .factor_validation import run_factor_validation
+
+        return run_factor_validation(spec, panel, policy, gateway=gateway)
+
 
 def admit_factor_proposal(result: FactorResearchResult, proposal_id: str, admission_record: HumanAdmissionRecord) -> FactorAdmissionProposal:
     """Apply an explicit human admission record to a research proposal only."""
