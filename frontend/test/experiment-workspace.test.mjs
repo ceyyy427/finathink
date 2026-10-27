@@ -24,3 +24,32 @@ test('nine-step track keeps blocking and not-run states bound to the same run', 
   assert.throws(() => workspace.normalizeFactorValidationTrack({ ...run, steps: run.steps.slice(1) }));
   assert.throws(() => workspace.normalizeFactorValidationTrack({ ...run, binding_digest: 'c'.repeat(64) }));
 });
+
+test('switching a method study to ordinary or pending study clears prior provenance', async () => {
+  class Element {
+    constructor() { this.value = ''; this.textContent = ''; this.children = []; this.dataset = {}; }
+    addEventListener() {}
+    setAttribute() {}
+    removeAttribute() {}
+    append(...items) { this.children.push(...items); }
+    replaceChildren(...items) { this.children = items; }
+  }
+  const elements = new Map(); const get = (selector) => { if (!elements.has(selector)) elements.set(selector, new Element()); return elements.get(selector); };
+  const root = { dataset: {}, setAttribute() {}, querySelector: get, ownerDocument: { createElement: () => new Element() } };
+  const ids = ['scope_data_audit', 'semantic_check', 'information_coefficient', 'deduplication', 'portfolio_backtest', 'oos_stability', 'incremental_value', 'capacity', 'archive_decision'];
+  const spec = { ...study.spec, instrument: 'AAA', recipe_id: 'turnover_mean', windows: [5], n_splits: 2, label_horizon: 1, embargo: 1, method_binding: { methods_digest: 'c'.repeat(64) } };
+  const method = { ...study, study_id: 'study-method', state: 'VALIDATED', spec, validation: { snapshot_ref: spec.snapshot_ref, spec_ref: study.spec_ref, summaries: [], validation_run: { schema_version: 'factor-validation-run.v1', fingerprint: 'd'.repeat(64), binding_digest: 'e'.repeat(64), reproduction_scope: 'FORMULA_FIXTURE', steps: ids.map((stage_id) => ({ stage_id, status: 'COMPLETE', binding_digest: 'e'.repeat(64) })) } } };
+  const records = { 'study-method': method, 'study-ordinary': { ...study, study_id: 'study-ordinary', state: 'VALIDATED', spec: { ...spec, method_binding: undefined } }, 'study-pending': { ...study, study_id: 'study-pending', spec } };
+  const fetcher = async (url) => ({ ok: true, json: async () => url.endsWith('/catalog') ? { recipes: [] } : url.endsWith('/snapshots') ? { snapshots: [] } : url.endsWith('/experiments') ? { studies: [] } : records[url.split('/').pop()] });
+  const api = workspace.mountExperimentWorkspace(root, { fetcher, interval: 100000 });
+  try {
+    await api.ready;
+    for (const next of ['study-ordinary', 'study-pending']) {
+      await api.select('study-method');
+      assert.match(get('[data-study-method-binding]').textContent, /cccccccccccc/);
+      assert.match(get('[data-study-method-binding]').textContent, /dddddddddddd/);
+      await api.select(next);
+      assert.doesNotMatch(get('[data-study-method-binding]').textContent, /cccccccccccc|dddddddddddd|FORMULA_FIXTURE/);
+    }
+  } finally { api.dispose(); }
+});

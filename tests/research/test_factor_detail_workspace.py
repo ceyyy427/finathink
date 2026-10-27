@@ -23,16 +23,51 @@ def detail_api():
     return importlib.import_module(name)
 
 
-def saved_run(app, *, fields=True, version=None):
-    factor = selected() if version is None else replace(selected(), version=version)
+def saved_run(app, *, fields=True, version=None, window=5, run_id="detail-run"):
+    from finahinking.research.factor_recipes import pilot_factor_specs
+
+    factor = next(spec for spec in pilot_factor_specs(window) if spec.factor_id == selected().factor_id)
+    factor = factor if version is None else replace(factor, version=version)
     validation = run_factor_validation(factor, fixture_panel(fields=fields), factor_validation_policy(),
                                        gateway=FactorValidationGateway()).to_dict()
-    result = ResearchRunResult(ResearchRunState("detail-run", ResearchState.LEARNING_RECORDED, as_of="2024-06-28"))
+    result = ResearchRunResult(ResearchRunState(run_id, ResearchState.LEARNING_RECORDED, as_of="2024-06-28"))
     manifest = ReportBundleWriter().write(result, app.research_service.runs.report_root,
         quant_analytics={"publication_scope": {"kind": "PRE_TEST_ONLY"}, "factor_study": {"study_id": "detail-study", "charter": {"policy_fingerprint": "a" * 64,
             "method_binding": {"methods_digest": "b" * 64, "method_manifest_digest": "c" * 64}}, "validation_run": validation}})
     app.research_service.runs.record_result(result, manifest)
     return validation
+
+
+def test_definition_navigation_never_borrows_another_window_and_run_navigation_is_exact(tmp_path):
+    app = LocalApplication(LocalAppConfig(db_path=str(tmp_path / "app.sqlite"), offline=True))
+    try:
+        eight = saved_run(app, window=8, run_id="window-eight")
+        path = f'/api/research/factors/{selected().factor_id}'
+        default = app.route("GET", path)[2]
+        assert default["factor_spec"]["window"] == 5
+        assert default["selected_run"] is None
+        assert all(row["status"] == "NOT_RUN" for row in default["track"])
+        assert default["evidence"]["local_runs"][0]["factor_spec"]["window"] == 8
+        assert default["comparison_runs"][0]["run_ref"] == "window-eight"
+        assert 'href="?run_ref=window-eight"' in app.route("GET", path.replace("/api", "", 1))[2]
+        exact = app.route("GET", path + "?run_ref=window-eight")[2]
+        assert exact["factor_spec"]["window"] == 8
+        assert exact["selected_run"]["definition_matches"] is True
+        assert exact["selected_run"]["evaluation_fingerprint"] == eight["fingerprint"]
+        for query in ("window=5", "version=0.9.0", "version=1.0.0&window=5"):
+            assert app.route("GET", path + f"?run_ref=window-eight&{query}")[0] == 422
+        saved_run(app, version="0.9.0", run_id="old-version")
+        historical = app.route("GET", path + "?run_ref=old-version")[2]
+        assert historical["factor_spec"]["version"] == "0.9.0"
+        assert historical["implementation_available"] is False
+        assert app.route("GET", path)[2]["selected_run"] is None
+        five = saved_run(app, run_id="current-five")
+        saved_run(app, window=8, run_id="newer-eight")
+        latest_matching = app.route("GET", path)[2]
+        assert latest_matching["selected_run"]["run_ref"] == "current-five"
+        assert latest_matching["selected_run"]["evaluation_fingerprint"] == five["fingerprint"]
+    finally:
+        app.close()
 
 
 def test_source_only_factor_has_seven_sections_and_no_local_endorsement(tmp_path):

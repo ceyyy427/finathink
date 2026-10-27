@@ -14,6 +14,7 @@ import hashlib
 import html
 import json
 import os
+import re
 import sqlite3
 import tempfile
 import threading
@@ -2538,7 +2539,12 @@ class _Handler(BaseHTTPRequestHandler):
         if length < 0:
             self._send(400, "application/json", {"error": "invalid content length"})
             return
-        if length > 1_000_000:
+        body_limit = 1_000_000
+        if re.fullmatch(r"/api/research/jobs/[A-Za-z0-9_-]{1,128}/research-fields", urlsplit(self.path).path):
+            from .data.research_fields import MAX_FIELD_BYTES
+
+            body_limit = MAX_FIELD_BYTES + 64 * 1024  # JSON envelope and CSRF overhead, still bounded.
+        if length > body_limit:
             self._send(413, "application/json", {"error": "request body too large"})
             return
         raw = self.rfile.read(length)

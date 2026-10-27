@@ -62,6 +62,7 @@ export function mountExperimentWorkspace(root, { fetcher = globalThis.fetch, int
     current = normalizeFactorStudy(study); root.dataset.studyState = study.state;
     root.setAttribute('aria-busy', 'false'); query('[data-study-status]').setAttribute('role', 'status');
     text('[data-study-status]', `${study.state} · 章程 ${study.study_id} · PAPER-ONLY`);
+    text('[data-study-method-binding]', '当前研究尚无已完成的九步验证产物。');
     const spec = study.spec; const result = study.test_result ?? study.validation;
     text('[data-study-binding]', `${spec.question} · ${spec.instrument} · 配方 ${spec.recipe_id} / 窗口 ${spec.windows.join(', ')} / 折数 ${spec.n_splits} / 标签跨度 ${spec.label_horizon} / 间隔 ${spec.embargo} · 快照 ${spec.snapshot_ref} · 费用 ${spec.cost.fee_bps} bps / 滑点 ${spec.cost.slippage_bps} bps · 观察期口径`);
     const stages = ['问题与章程已固定', '受控候选生成', '扩展式验证 / purge / embargo', '依据验证证据冻结', '冻结后一次测试', '验证排名与测试结果分列', '显式研究审核'];

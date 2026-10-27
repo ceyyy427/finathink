@@ -6,6 +6,7 @@ import html
 import json
 import re
 from dataclasses import asdict
+from urllib.parse import urlencode
 
 from .asset_catalog import ResearchAssetCatalog
 from .asset_contracts import FactorSpec
@@ -39,12 +40,20 @@ def factor_detail(app, factor_id, *, version=None, window=None, run_ref=None):
         raise KeyError(factor_id)
     refs = () if run_ref is None else (run_ref,)
     evidence = app.factor_evidence(factor_id, run_refs=refs)
+    requested_run = next((row for row in evidence["local_runs"] if row["run_ref"] == run_ref), None) if run_ref else None
+    if run_ref is not None and requested_run is None:
+        raise KeyError("该报告不属于所选因子")
     candidates = [spec for spec in (*pilot_factor_specs(window or 5), *family_factor_specs()) if spec.factor_id == factor_id]
     for row in evidence["local_runs"]:
         if row.get("factor_spec") is not None:
             candidates.append(FactorSpec(**{key: value for key, value in row["factor_spec"].items() if key != "schema_version"}))
     spec = next((candidate for candidate in candidates if (version is None or candidate.version == version)
                  and (window is None or candidate.window == window)), None)
+    if requested_run is not None and requested_run.get("factor_spec") is not None:
+        original = FactorSpec(**{key: value for key, value in requested_run["factor_spec"].items() if key != "schema_version"})
+        if (version is not None and version != original.version) or (window is not None and window != original.window):
+            raise ValueError("所选报告的定义版本或窗口与查询不一致，请使用该报告的原定义。")
+        spec = original
     if spec is None and version is not None and evidence["definition"].get("version") != version:
         raise KeyError("指定定义版本没有对应证据")
     available = False
@@ -55,9 +64,12 @@ def factor_detail(app, factor_id, *, version=None, window=None, run_ref=None):
         except ValueError:
             pass
         evidence = app.factor_evidence(spec, run_refs=refs)
-    selected = next((row for row in evidence["local_runs"] if row["run_ref"] == run_ref), None) if run_ref else next(iter(evidence["local_runs"]), None)
+    selected = (next((row for row in evidence["local_runs"] if row["run_ref"] == run_ref), None) if run_ref else
+        next((row for row in evidence["local_runs"] if row["definition_matches"]), None))
     if run_ref is not None and selected is None:
         raise KeyError("该报告不属于所选因子")
+    if selected is not None and selected.get("local_metric") is not None and not selected["definition_matches"]:
+        raise ValueError("报告没有与显示定义建立精确绑定，不能混用计算证据。")
     policy = json.loads(catalog.read_text("factor-validation-v1"))
     actual = {} if selected is None else {step["stage_id"]: step for step in selected.get("stages", ())}
     track = [{**stage, **actual.get(stage["stage_id"], {"status": "NOT_RUN", "reason": "NO_VERIFIED_LOCAL_RUN"}),
@@ -66,6 +78,7 @@ def factor_detail(app, factor_id, *, version=None, window=None, run_ref=None):
     return {"schema_version": "factor-detail.v1", "factor_id": factor_id,
         "version": spec.version if spec else evidence["definition"].get("version"),
         "factor_spec": None if spec is None else spec.to_dict(), "implementation_available": available,
+        "comparison_runs": [row for row in evidence["local_runs"] if not row["definition_matches"]],
         "evidence": evidence, "lifecycle": evidence["lifecycle"], "selected_run": selected, "track": track,
         "lessons": [asdict(lesson) for lesson in catalog.lessons_for(())], "production_write": False}
 
@@ -87,8 +100,11 @@ def factor_detail_page(data, csrf):
         ("validation", "九步验证"), ("lifecycle", "用途审核"), ("lessons", "反例")))
     claims = ''.join('<li>' + esc(str(row["metric_name"])) + ' = ' + esc(str(row["metric_value"]))
         + ' · 来源声明，非本地结果<p>' + esc(row["scope"]) + '</p></li>' for row in evidence["source_claims"])
+    comparison_links = ''.join('<li><a href="?' + esc(urlencode({"run_ref": row["run_ref"]}), quote=True) + '">'
+        + esc(row["run_ref"]) + ' · ' + esc(row["status"]) + '</a> · 非当前已核验定义，不用于本页指标</li>' for row in data.get("comparison_runs", ()))
     source = _section("source", "来源声明与本地证据", '<p>两个口径独立保留，不合并排名，不将资料已打包当作效果已复现。</p>'
-        + ('<ul>' + claims + '</ul>' if claims else '<p>此本地定义没有继承来源指标。</p>') + _pre(evidence["conflicts"] or "无已登记的来源/本地对照冲突。"))
+        + ('<ul>' + claims + '</ul>' if claims else '<p>此本地定义没有继承来源指标。</p>') + _pre(evidence["conflicts"] or "无已登记的来源/本地对照冲突。")
+        + ('<details><summary>其他定义或待核验的独立记录</summary><ul>' + comparison_links + '</ul></details>' if comparison_links else ''))
     definition_html = _section("definition", "定义、版本与实现", _pre(spec or definition)
         + f'<p>当前可信实现：{"可解析" if data["implementation_available"] else "未安装对应实现；历史资料仍可复查"}。工程试点不等于市场效果。</p>')
     formula = spec["formula"] if spec else definition.get("formula") or "原式尚未核定，不使用同名近似实现替代。"
@@ -114,7 +130,8 @@ def factor_detail_page(data, csrf):
     lessons = _section("lessons", "反例与重访条件", ''.join('<details><summary>' + esc(row["title"]) + '</summary><p>'
         + esc(row["summary"]) + '</p><p>重访：' + esc(row["revisit_when"]) + '</p><p>来源反例，不自动构成本因子的金融证伪。</p></details>' for row in data["lessons"]))
     options = ''.join(f'<option value="{esc(row["run_ref"], quote=True)}"' + (' selected' if selected and row['run_ref'] == selected['run_ref'] else '')
-        + f'>{esc(row["run_ref"])} · {esc(row["status"])}</option>' for row in evidence["local_runs"])
+        + f'>{esc(row["run_ref"])} · {esc(row["status"])}</option>' for row in evidence["local_runs"]
+        if row["definition_matches"] or (selected is not None and row["run_ref"] == selected["run_ref"]))
     selector = f'<form class="asset-search" method="get"><label>定义版本<input name="version" value="{esc(data["version"] or "", quote=True)}" maxlength="128"></label>'
     if spec:
         selector += f'<label>观察窗口<input name="window" type="number" min="1" max="252" value="{spec["window"]}"></label>'
