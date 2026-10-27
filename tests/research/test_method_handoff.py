@@ -1,11 +1,13 @@
 """Explicit external handoffs bind context, input evidence and typed artifacts."""
 
+import ast
 import copy
 import hashlib
 import importlib
 import importlib.util
 import json
 import sqlite3
+from pathlib import Path
 
 import pytest
 
@@ -201,6 +203,82 @@ def test_nested_plan_evidence_cannot_cite_another_task(tmp_path):
     ref = store.export(value)
     assert store.accept(ref, answer).status == "REJECTED"
     assert store.artifacts(ref) == ()
+
+
+def test_json_pair_array_cannot_normalize_into_foreign_plan_evidence(tmp_path):
+    api = _api()
+    value = package()
+    output = artifact_for(value)
+    output["payload"]["validation_spec"] = [
+        ["evidence_refs", ["artifact:foreign-task"]], ["paper_only", True],
+    ]
+    output["content_digest"] = stable_digest(output["payload"])
+    answer = response_for(value)
+    answer["output_artifacts"] = [output]
+    store = api.MethodHandoffStore(tmp_path / "state", JobQueue(tmp_path / "queue.sqlite"))
+    ref = store.export(value)
+    assert store.accept(ref, answer).status == "REJECTED"
+    assert store.status(ref)["status"] == "EXTERNAL_HANDOFF_REQUIRED"
+    assert store.artifacts(ref) == ()
+
+
+@pytest.mark.parametrize("key,private", [
+    ("/srv/private/model.json", "fixture"), ("note", r"\\server\private\model.json"),
+])
+def test_machine_path_keys_and_unc_values_are_rejected_before_publication(tmp_path, key, private):
+    api = _api()
+    value = package()
+    output = artifact_for(value)
+    output["payload"]["validation_spec"][key] = private
+    output["content_digest"] = hashlib.sha256(json.dumps(
+        output["payload"], ensure_ascii=False, sort_keys=True, separators=(",", ":"),
+    ).encode()).hexdigest()
+    answer = response_for(value)
+    answer["output_artifacts"] = [output]
+    store = api.MethodHandoffStore(tmp_path / "state", JobQueue(tmp_path / "queue.sqlite"))
+    ref = store.export(value)
+    assert store.accept(ref, answer).status == "REJECTED"
+    assert store.status(ref)["status"] == "EXTERNAL_HANDOFF_REQUIRED"
+    assert store.artifacts(ref) == ()
+
+
+def test_concurrent_identical_callbacks_across_stores_return_same_outcome(tmp_path, monkeypatch):
+    api = _api()
+    root, queue_path = tmp_path / "state", tmp_path / "queue.sqlite"
+    first = api.MethodHandoffStore(root, JobQueue(queue_path))
+    second = api.MethodHandoffStore(root, JobQueue(queue_path))
+    value = package()
+    ref = first.export(value)
+    answer = response_for(value)
+    answer["output_artifacts"] = [artifact_for(value)]
+    receipt_path = root / "method-results" / f"{ref.split(':')[1]}.json"
+    actual_exists = Path.exists
+    interleaved = []
+
+    def exists(path):
+        observed = actual_exists(path)
+        if path == receipt_path and not observed and not interleaved:
+            interleaved.append(True)
+            assert second.accept(ref, answer).status == "READY"
+        return observed
+
+    monkeypatch.setattr(Path, "exists", exists)
+    outcome = first.accept(ref, answer)
+    assert interleaved == [True]
+    assert outcome.status == "READY"
+    assert first.accept(ref, answer).output_digest == outcome.output_digest
+    assert len(first.artifacts(ref)) == 1
+
+
+def test_documented_export_purposes_produce_ready_selection():
+    guide = Path(__file__).resolve().parents[2] / "docs" / "CODEX_METHOD_HANDOFF_GUIDE.md"
+    source = guide.read_text().split("```python", 1)[1].split("```", 1)[0]
+    tree = ast.parse(source)
+    call = next(node for node in ast.walk(tree) if isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Name) and node.func.id == "MethodRouteRequest")
+    fields = {item.arg: ast.literal_eval(item.value) for item in call.keywords}
+    selected = select_methods(MethodRouteRequest(**fields), ResearchAssetCatalog.packaged())
+    assert selected.status == "READY"
 
 
 @pytest.mark.parametrize("key,value", [

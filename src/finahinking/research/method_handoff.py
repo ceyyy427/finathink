@@ -18,6 +18,7 @@ _HASH = re.compile(r"[0-9a-f]{64}")
 _PRIVATE = re.compile(
     r"file://|/(?:Users|home|private|tmp)/|(?:^|[\s\"'=:：])/(?!/)[^\s\"'<>]+|"
     r"(?:^|[\s\"'=])(?:[A-Za-z]:[\\/])|"
+    r"\\\\[^\\/\s]+[\\/][^\s]+|"
     r"sk-[A-Za-z0-9_-]{16,}|https?://[^/\s@]+@|"
     r"(?:api[_-]?key|authorization|password|access_token|token|secret)\s*[:=]\s*[\"']?[A-Za-z0-9_.-]{6,}",
     re.IGNORECASE,
@@ -37,7 +38,8 @@ def _private(value, depth=0):
     if depth > 32:
         return True
     if isinstance(value, Mapping):
-        return any(not isinstance(key, str) or re.sub(r"[^a-z0-9]", "", key.casefold()) in _SECRET_NORMALIZED_KEYS
+        return any(not isinstance(key, str) or bool(_PRIVATE.search(key))
+                   or re.sub(r"[^a-z0-9]", "", key.casefold()) in _SECRET_NORMALIZED_KEYS
                    or _private(item, depth + 1) for key, item in value.items())
     if isinstance(value, (tuple, list)):
         return any(_private(item, depth + 1) for item in value)
@@ -166,18 +168,30 @@ def _outputs(package, response, *, allowed_evidence_refs=None):
             allowed &= set(allowed_evidence_refs)
         _evidence_members(payload, allowed)
         if kind == "ResearchPlan":
-            if set(payload) != {"hypotheses", "required_datasets", "factor_ids",
-                                "validation_spec", "risk_policy_version"}:
+            if (set(payload) != {"hypotheses", "required_datasets", "factor_ids",
+                                 "validation_spec", "risk_policy_version"}
+                    or not isinstance(payload["validation_spec"], dict)
+                    or any(not isinstance(payload[name], list) or not all(isinstance(item, str) for item in payload[name])
+                           for name in ("hypotheses", "required_datasets", "factor_ids"))
+                    or not isinstance(payload["risk_policy_version"], str)):
                 raise ValueError("research plan schema is invalid")
-            to_jsonable(ResearchPlan(**payload))
+            canonical_payload = to_jsonable(ResearchPlan(**payload))
         else:
             from .factor_proposals import FactorProposal, validate_factor_proposal
 
-            if set(payload) != {"proposal_id", "expression", "source_hypothesis", "required_fields",
-                                "constraints", "paper_only"}:
+            if (set(payload) != {"proposal_id", "expression", "source_hypothesis", "required_fields",
+                                 "constraints", "paper_only"}
+                    or not isinstance(payload["constraints"], dict)
+                    or not isinstance(payload["required_fields"], list)
+                    or not all(isinstance(item, str) for item in payload["required_fields"])):
                 raise ValueError("factor proposal schema is invalid")
             proposal = FactorProposal(**{**payload, "required_fields": tuple(payload["required_fields"])})
             validate_factor_proposal(proposal)
+            canonical_payload = to_jsonable(proposal)
+        # Constructors normalize inputs: validate what downstream consumers will see too.
+        _evidence_members(canonical_payload, allowed)
+        if _private(canonical_payload):
+            raise ValueError("canonical typed output boundary is invalid")
         # Existing content-addressed artifact validation rejects executable keys,
         # non-finite numbers and unsupported values without running the payload.
         from finahinking.quant.artifacts import Artifact
@@ -298,8 +312,11 @@ class MethodHandoffStore:
         if not path.exists():
             record = self.queue.external_dispatch(self._digest(reference))
             if record is not None and record["status"] not in {"external_waiting", "queued"}:
-                raise ValueError("accepted method receipt is unavailable")
-            return None
+                # Another callback may have atomically published it since the first check.
+                if not path.exists():
+                    raise ValueError("accepted method receipt is unavailable")
+            else:
+                return None
         receipt = self._read(path)
         package = self.load(reference)
         if (set(receipt) != {"schema_version", "package_digest", "response_digest", "artifacts", "result", "outcome"}

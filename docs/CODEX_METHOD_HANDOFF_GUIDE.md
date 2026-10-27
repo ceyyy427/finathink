@@ -17,7 +17,7 @@ from finahinking.research.asset_contracts import MethodRouteRequest
 
 # service 是已有 ResearchApplicationService；job_id 来自同一用户的研究任务。
 exported = service.export_method_handoff(job_id, MethodRouteRequest(
-    purposes=("factor-mining", "backtest-acceptance"),
+    purposes=("factor-mining", "backtest"),
     factor_families=("momentum",),
     market="CN", available_fields=("close", "volume"),
 ))
