@@ -43,6 +43,7 @@ def factor_validation_policy(**overrides):
               "starting_cash": 10000.0, "target_weight": 0.5, "max_volume_participation": 0.01,
               "min_abs_ic": 0.02, "max_abs_correlation": 0.95, "window_grid": [3, 5, 8],
               "max_neighbor_delta": 0.1, "code_version": _code_commit(), "annualization": 1}
+    values["combination_weights"] = [0.5, 0.5]
     if set(overrides) - set(values):
         raise ValueError("unsupported validation policy fields")
     values.update(overrides)
@@ -71,6 +72,8 @@ def factor_validation_policy(**overrides):
             or _unsafe_public_text(values["code_version"])):
         raise ValueError("validation code version must be explicit")
     values["window_grid"] = sorted(grid)
+    if values["combination_weights"] != [0.5, 0.5]:
+        raise ValueError("the initial pilot blend is frozen at equal train-standardized weights")
     return to_jsonable(values)
 
 
@@ -237,7 +240,7 @@ class FactorValidationGateway:
                 return False
         return True
 
-    def backtest(self, spec, frames, policy, *, train_index, evaluation_index, snapshot_ref):
+    def backtest(self, spec, frames, policy, *, train_index, evaluation_index, snapshot_ref, secondary_spec=None):
         if any(not evaluation_index.isin(frame.index).all() for frame in frames.values()):
             raise ValueError("BLOCKED_DATA: portfolio calendars are not aligned")
         budget = current_runtime_budget()
@@ -250,6 +253,14 @@ class FactorValidationGateway:
             if frame["suspended"].isna().any():
                 raise ValueError("BLOCKED_DATA: suspension availability is unknown")
             signal = evaluate_expression(_oriented(spec), frame)
+            if secondary_spec is not None:
+                secondary = evaluate_expression(_oriented(secondary_spec), frame)
+                first_train = signal.loc[signal.index.intersection(train_index)].dropna()
+                second_train = secondary.loc[secondary.index.intersection(train_index)].dropna()
+                if first_train.std() <= 1e-12 or second_train.std() <= 1e-12:
+                    raise ValueError("BLOCKED_DATA: blend training scale is undefined")
+                signal = (policy["combination_weights"][0] * (signal - first_train.mean()) / first_train.std()
+                          + policy["combination_weights"][1] * (secondary - second_train.mean()) / second_train.std())
             train = signal.loc[signal.index.intersection(train_index)].dropna()
             if len(train) < policy["min_samples"]:
                 raise ValueError("BLOCKED_DATA: training threshold cannot be estimated")
@@ -257,7 +268,8 @@ class FactorValidationGateway:
             if first < 1:
                 raise ValueError("BLOCKED_DATA: signal needs a preceding observable bar")
             strategy = _FrozenSignalStrategy(signal, float(train.median()), policy["target_weight"], frame.index[first - 1])
-            columns = list(dict.fromkeys(["open", "high", "low", "close", "volume", *spec.required_fields]))
+            columns = list(dict.fromkeys(["open", "high", "low", "close", "volume", *spec.required_fields,
+                                         *(secondary_spec.required_fields if secondary_spec else ())]))
             if frame["suspended"].notna().all():
                 columns.append("suspended")
             dataset = Dataset(frame[columns], Provenance("user-snapshot", f"snapshot:{snapshot_ref}", license="USER_SUPPLIED_NOT_VERIFIED"))
@@ -290,7 +302,9 @@ class FactorValidationGateway:
                 "slippage_total": math.fsum(trade["slippage"] for trade in trades), "quant_runs": quant_runs,
                 "snapshot_ref": snapshot_ref, "fee_bps": policy["fee_bps"], "slippage_bps": policy["slippage_bps"],
                 "execution": "previous_observation_signal_next_observed_close",
-                "benchmark": "equal_initial_capital_gross_buy_and_hold", "annualization": policy["annualization"]}
+                "benchmark": "equal_initial_capital_gross_buy_and_hold", "annualization": policy["annualization"],
+                "factor_spec_fingerprint": spec.fingerprint,
+                "secondary_factor_spec_fingerprint": None if secondary_spec is None else secondary_spec.fingerprint}
 
 
 def _baseline(spec):
@@ -489,6 +503,24 @@ def run_factor_validation(spec, panel, policy, *, gateway) -> FactorValidationRu
                 raise
         record(5, "COMPLETE", _stability(spec, bounded, policy, index, split))
         increment = _incremental(spec, baseline, bounded, policy, index[split["train"]], scoring)
+        if spec.factor_id != baseline.factor_id and steps[4]["status"] == "COMPLETE":
+            try:
+                baseline_ledger = gateway.backtest(baseline, bounded, policy, train_index=index[split["train"]],
+                    evaluation_index=raw_phase, snapshot_ref=panel.snapshot_ref)
+                combination_ledger = gateway.backtest(spec, bounded, policy, train_index=index[split["train"]],
+                    evaluation_index=raw_phase, snapshot_ref=panel.snapshot_ref, secondary_spec=baseline)
+                for ledger in (baseline_ledger, combination_ledger):
+                    if (ledger["snapshot_ref"] != panel.snapshot_ref or ledger["fee_bps"] != policy["fee_bps"]
+                            or ledger["slippage_bps"] != policy["slippage_bps"]):
+                        raise ValueError("ablation ledger scope mismatch")
+                increment["portfolio_ablation"] = {"candidate_artifact_ref": steps[4]["artifact_ref"],
+                    "baseline": baseline_ledger, "combination": combination_ledger,
+                    "weights": policy["combination_weights"], "normalization": "TRAIN_ONLY"}
+            except ValueError as exc:
+                if str(exc).startswith("BLOCKED_DATA:"):
+                    increment.update(status="UNDEFINED", portfolio_ablation=None)
+                else:
+                    raise
         record(6, "COMPLETE" if increment["status"] in {"COMPLETE", "BASELINE_SELF"} else "BLOCKED_DATA", increment)
         required_capacity = panel.units.get("volume") == "shares" and panel.units.get("amount") in {"CNY", "USD", "HKD", "EUR", "JPY", "GBP"}
         capacity = pd.concat([frame.loc[frame.index.intersection(raw_phase)] for frame in bounded.values()])

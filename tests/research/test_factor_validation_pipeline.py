@@ -285,3 +285,17 @@ def test_existing_research_pipeline_exposes_the_same_validation_artifacts():
         module.factor_validation_policy(), gateway=module.FactorValidationGateway())
     assert isinstance(result, module.FactorValidationRun)
     assert len(result.to_dict()["steps"]) == 9
+
+
+def test_predeclared_baseline_and_blend_use_actual_ledger_with_identical_cost_scope():
+    module = api()
+    policy = module.factor_validation_policy()
+    result = module.run_factor_validation(selected(), fixture_panel(), policy,
+        gateway=module.FactorValidationGateway())
+    ablation = stages(result)["incremental_value"]["metrics"]["portfolio_ablation"]
+    assert ablation["weights"] == [0.5, 0.5]
+    for key in ("baseline", "combination"):
+        assert ablation[key]["metric_basis"] == "ACTUAL_NET_LEDGER"
+        assert ablation[key]["fee_bps"] == policy["fee_bps"]
+        assert ablation[key]["slippage_bps"] == policy["slippage_bps"]
+        assert ablation[key]["quant_runs"]

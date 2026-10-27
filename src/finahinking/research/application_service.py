@@ -279,7 +279,10 @@ def run_local_research_stage(invocation, checkpoint_ref, publish_checkpoint, *, 
             validation_record = queue.get(study["validation_job_id"])
             validated = verify_research_receipt(root, queue, validation_record, validation_record.result_ref)
             validation = validated["manifest"]["source_snapshot"].get("factor_study")
-        tools.analysis["factor_study"] = compute_study(snapshot, study, phase=phase, validation=validation)
+        from finahinking.data.research_fields import ResearchFieldStore
+
+        tools.analysis["factor_study"] = compute_study(snapshot, study, phase=phase, validation=validation,
+            research_fields_store=ResearchFieldStore(SnapshotStore(root / "snapshots")), study_store=studies)
     if budget is not None:
         budget.check_wall()
     manifest = ReportBundleWriter().write(result, root / "reports" / f"attempt-{attempt_id}", quant_analytics=tools.analysis)
@@ -654,9 +657,43 @@ class ResearchApplicationService:
         self.factor_studies.set_job(study_id, "validation", job["job_id"])
         return self.factor_study(study_id)
 
+    def create_method_factor_study(self, job_id, handoff_ref, artifact_ref, *, attachment_ref=None, idempotency_key):
+        from finahinking.data.research_fields import ResearchFieldStore
+
+        from .asset_catalog import ResearchAssetCatalog
+        from .factor_proposals import proposal_from_handoff
+        from .factor_recipes import pilot_factor_specs
+        from .factor_workbench import prepare_method_study
+
+        request = self._request(self.queue.get(job_id))
+        store, package = self._bound_method_handoff(job_id, handoff_ref)
+        artifact = next((item for item in store.artifacts(handoff_ref) if item["artifact_ref"] == artifact_ref), None)
+        if artifact is None:
+            raise ValueError("factor study requires an accepted persisted method artifact")
+        proposal = proposal_from_handoff(package, artifact, catalog=ResearchAssetCatalog.packaged(), policy={"max_candidates": 1})
+        factor = next((spec for window in (3, 5, 8) for spec in pilot_factor_specs(window)
+                       if spec.formula == proposal.expression), None)
+        if factor is None:
+            raise ValueError("factor proposal has no audited pilot binding")
+        snapshot = self.snapshots.load(request.snapshot_ref)
+        attachment = None if attachment_ref is None else ResearchFieldStore(self.snapshots).load(attachment_ref)
+        manifest = package.to_dict()["manifest"]
+        method_binding = {"handoff_ref": handoff_ref, "artifact_ref": artifact_ref,
+            "package_digest": package.package_digest, "context_digest": package.context.fingerprint,
+            "methods_digest": manifest["methods_digest"], "method_manifest_digest": manifest["method_manifest_digest"]}
+        spec = prepare_method_study(snapshot, attachment, instrument=request.instrument, as_of=request.as_of.isoformat(),
+            question=request.research_plan.hypotheses[0], factor_spec=factor, method_binding=method_binding,
+            policy_fingerprint=request.research_plan.validation_spec["policy_fingerprint"])
+        key = _ref(idempotency_key, "idempotency_key")
+        study_id = "study-" + stable_digest({"scope": self.scope_id, "key": key})[:24]
+        study = self.factor_studies.create(study_id, spec, validation_key=key)
+        job = self._submit_factor_job(study, "validation", key)
+        self.factor_studies.set_job(study_id, "validation", job["job_id"])
+        return self.factor_study(study_id)
+
     def _submit_factor_job(self, study, phase, key):
         spec = study["spec"]
-        return self.submit({"idempotency_key": "factor-" + stable_digest({"study": study["study_id"], "phase": phase, "key": key})[:32], **{name: spec[name] for name in ("snapshot_ref", "instrument", "as_of", "question")}, "budget": {"max_wall_seconds": 120, "max_bytes": 64 * 1024 * 1024, "max_experiments": spec["evaluation_units"]}}, factor_study={"study_id": study["study_id"], "spec_ref": study["spec_ref"], "phase": phase})
+        return self.submit({"idempotency_key": "factor-" + stable_digest({"study": study["study_id"], "phase": phase, "key": key})[:32], **{name: spec[name] for name in ("snapshot_ref", "instrument", "as_of", "question")}, **({"policy_ref": spec["policy_ref"]} if "policy_ref" in spec else {}), "budget": {"max_wall_seconds": 120, "max_bytes": 64 * 1024 * 1024, "max_experiments": spec["evaluation_units"]}}, factor_study={"study_id": study["study_id"], "spec_ref": study["spec_ref"], "phase": phase})
 
     def factor_study(self, study_id):
         study = self.factor_studies.get(study_id)
@@ -677,7 +714,9 @@ class ResearchApplicationService:
             if payload is not None and (payload.get("study_id") != study_id or payload.get("spec_ref") != study["spec_ref"]):
                 raise ValueError("factor study result belongs to another charter")
             if job["status"] in {"completed", "failed", "cancelled"}:
-                self.factor_studies.complete(study_id, phase, job_id, succeeded=job["status"] == "completed" and payload is not None)
+                computed = payload is not None and payload.get("validation_run", {}).get("status") not in {
+                    "BLOCKED_DATA", "BLOCKED_CONTROL", "SEMANTIC_REJECTION", "EXECUTION_ERROR"}
+                self.factor_studies.complete(study_id, phase, job_id, succeeded=job["status"] == "completed" and computed)
             jobs[f"{phase}_job"] = job
             results["validation" if phase == "validation" else "test_result"] = payload
         return {**self.factor_studies.get(study_id), **jobs, **results}

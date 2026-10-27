@@ -34,6 +34,22 @@ def method_handoff_activity(package, status):
         "paper_only": True,
     }
 
+
+def method_factor_activity(validation_run, method_binding):
+    """Project only facts from the same frozen run and explicit method lineage."""
+    from .factor_validation import FactorValidationRun
+
+    run = validation_run if isinstance(validation_run, FactorValidationRun) else FactorValidationRun.from_dict(validation_run)
+    payload = run.to_dict()
+    return {"schema_version": "method-factor-activity.v1", "validation_fingerprint": run.fingerprint,
+        "binding_digest": payload["binding_digest"], "status": payload["status"],
+        "method_package_digest": method_binding["package_digest"],
+        "method_manifest_digest": method_binding["method_manifest_digest"],
+        "snapshot_ref": payload["bindings"]["snapshot_ref"], "attachment_ref": payload["bindings"]["attachment_ref"],
+        "completed_stages": sum(row["status"] == "COMPLETE" for row in payload["steps"]),
+        "total_stages": len(payload["steps"]), "reproduction_scope": payload["reproduction_scope"],
+        "requires_human_admission": True, "paper_only": True}
+
 _SECRET_TEXT = re.compile(r"(?i)(?:api[_-]?key|token|secret|password|endpoint)\s*[=:]\s*[^\s<]+")
 _ABSOLUTE_PATH = re.compile(r"(?:/(?:Users|home|tmp|var|private|etc|opt|root|Volumes|Applications|Library)(?:/[^\s<]+)+|[A-Za-z]:[\\/][^\s<]+)")
 _HTML_HANDLER = re.compile(r"(?i)\bon[a-z]+\s*=")
