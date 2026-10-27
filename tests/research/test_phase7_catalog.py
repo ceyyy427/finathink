@@ -23,6 +23,9 @@ def test_curated_recipes_have_original_formulas_sources_fields_and_reproduction(
 def test_every_recipe_is_prefix_causal_on_real_dsl_evaluation():
     index = pd.date_range("2026-01-01", periods=30, tz="UTC")
     frame = pd.DataFrame({name: [100 + n + n % 4 for n in range(30)] for name in ("open", "high", "low", "close", "volume")}, index=index)
+    # Explicit synthetic optional fields, not substitutes inferred in production.
+    frame["turnover_rate"] = [0.01 + (n % 7) / 1000 for n in range(30)]
+    frame["amount"] = [10000 + 100 * n for n in range(30)]
     changed = frame.copy()
     changed.iloc[20:] *= 100
     for item in factor_catalog_loader.load_research_recipes():

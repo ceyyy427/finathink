@@ -29,6 +29,8 @@ _DEFAULT_OPERATORS = {
     "winsorize",
     "combine",
     "negate",
+    "abs",
+    "divide",
 }
 _KNOWN_OPERATORS = _DEFAULT_OPERATORS | {"ret"}
 _MAX_WINDOW = 252
@@ -57,6 +59,8 @@ def _canonical(node: ast.AST, fields: set[str], operators: set[str]) -> str:
         operator = _OP_ALIASES.get(node.func.id, node.func.id if node.func.id in _KNOWN_OPERATORS else None)
         if operator is None:
             raise ValueError(f"unknown factor operator: {node.func.id}")
+        if (operator == "abs" and len(node.args) != 1) or (operator == "divide" and len(node.args) != 2):
+            raise ValueError("invalid bounded primitive argument count")
         if operator in {"return", "lag", "rolling_mean", "rolling_std", "zscore"}:
             if len(node.args) != 2:
                 raise ValueError(f"{operator} requires a series and a window")
@@ -125,6 +129,10 @@ def _series(value: Any, *, name: str) -> pd.Series:
     return result
 
 
+def _history(series, frame, operation):
+    return series.groupby(frame["asset"].to_numpy(), sort=False).transform(operation) if "asset" in frame else operation(series)
+
+
 def _evaluate_node(node: ast.AST, frame: pd.DataFrame) -> pd.Series | float:
     if isinstance(node, ast.Name):
         if node.id not in frame.columns:
@@ -141,37 +149,36 @@ def _evaluate_node(node: ast.AST, frame: pd.DataFrame) -> pd.Series | float:
     if operator == "return":
         if len(args) != 2 or not isinstance(args[0], pd.Series):
             raise ValueError("return(series, window) is required")
-        return args[0].pct_change(periods=_window(args[1]), fill_method=None)
+        return _history(args[0], frame, lambda values: values.pct_change(periods=_window(args[1]), fill_method=None))
     if operator == "lag":
         if len(args) != 2 or not isinstance(args[0], pd.Series):
             raise ValueError("lag(series, periods) is required")
-        return args[0].shift(_window(args[1]))
+        return _history(args[0], frame, lambda values: values.shift(_window(args[1])))
     if operator in {"rolling_mean", "rolling_std", "zscore"}:
         if len(args) != 2 or not isinstance(args[0], pd.Series):
             raise ValueError(f"{operator}(series, window) is required")
         window = _window(args[1])
-        rolling = args[0].rolling(window, min_periods=window)
+        mean = _history(args[0], frame, lambda values: values.rolling(window, min_periods=window).mean())
         if operator == "rolling_mean":
-            return rolling.mean()
+            return mean
+        std = _history(args[0], frame, lambda values: values.rolling(window, min_periods=window).std(ddof=0))
         if operator == "rolling_std":
-            return rolling.std(ddof=0)
-        mean = rolling.mean()
-        std = rolling.std(ddof=0).replace(0.0, float("nan"))
-        return (args[0] - mean) / std
+            return std
+        return (args[0] - mean) / std.replace(0.0, float("nan"))
     if operator == "rank":
         if len(args) != 1 or not isinstance(args[0], pd.Series):
             raise ValueError("rank(series) is required")
         # Single-instrument DSL: rank the current observation against only
         # its historical prefix, never against future observations.
-        return args[0].expanding(min_periods=1).rank(method="average", pct=True)
+        return _history(args[0], frame, lambda values: values.expanding(min_periods=1).rank(method="average", pct=True))
     if operator == "winsorize":
         if len(args) != 3 or not isinstance(args[0], pd.Series):
             raise ValueError("winsorize(series, lower, upper) is required")
         lower, upper = float(args[1]), float(args[2])
         if not 0 <= lower < upper <= 1:
             raise ValueError("winsorize bounds must satisfy 0 <= lower < upper <= 1")
-        history = args[0].expanding(min_periods=1)
-        return args[0].clip(history.quantile(lower), history.quantile(upper))
+        return _history(args[0], frame, lambda values: values.clip(
+            values.expanding(min_periods=1).quantile(lower), values.expanding(min_periods=1).quantile(upper)))
     if operator == "combine":
         if len(args) < 2 or not all(isinstance(item, pd.Series) for item in args):
             raise ValueError("combine requires at least two series")
@@ -180,6 +187,15 @@ def _evaluate_node(node: ast.AST, frame: pd.DataFrame) -> pd.Series | float:
         if len(args) != 1 or not isinstance(args[0], pd.Series):
             raise ValueError("negate(series) is required")
         return -args[0]
+    if operator == "abs":
+        if len(args) != 1 or not isinstance(args[0], pd.Series):
+            raise ValueError("abs(series) is required")
+        return args[0].abs()
+    if operator == "divide":
+        if len(args) != 2 or not any(isinstance(value, pd.Series) for value in args):
+            raise ValueError("divide requires a series operand")
+        denominator = args[1].replace(0.0, float("nan")) if isinstance(args[1], pd.Series) else (float("nan") if args[1] == 0 else args[1])
+        return args[0] / denominator
     raise ValueError(f"operator is not implemented: {operator}")
 
 
@@ -194,6 +210,27 @@ def evaluate_expression(
 
     if not isinstance(frame, pd.DataFrame) or frame.empty:
         raise ValueError("factor frame must be a non-empty DataFrame")
+    if "asset" in frame:
+        if frame["asset"].isna().any() or not all(isinstance(value, str) and value for value in frame["asset"]):
+            raise ValueError("factor panel requires explicit asset identities")
+        times = pd.DatetimeIndex(pd.to_datetime(frame.get("timestamp", frame.get("date", frame.index)), utc=True))
+        if times.hasnans or pd.MultiIndex.from_arrays([frame["asset"], times]).has_duplicates:
+            raise ValueError("factor panel has invalid or duplicate asset timestamps")
+        if any(not times[positions].is_monotonic_increasing for positions in frame.groupby(frame["asset"].to_numpy(), sort=False).indices.values()):
+            raise ValueError("factor panel history must be ordered within each asset")
+        mask = times <= pd.Timestamp(as_of) if as_of is not None else [True] * len(frame)
+        selected = frame.loc[mask]
+        original_index = selected.index
+        working = selected.reset_index(drop=True)
+        if available_at:
+            cutoff = pd.Timestamp(as_of) if as_of is not None else times.max()
+            if any(field in working and pd.Timestamp(value) > cutoff for field, value in available_at.items()):
+                raise ValueError("field availability is after as_of")
+        parsed = parse_factor_expression(expression, tuple(str(column) for column in working.columns))
+        result = _evaluate_node(ast.parse(_RETURN_ALIAS.sub("ret(", parsed.expression), mode="eval").body, working)
+        if not isinstance(result, pd.Series):
+            raise TypeError("factor expression must produce a series")
+        return result.replace([float("inf"), float("-inf")], float("nan")).set_axis(original_index)
     if not frame.index.is_unique or not frame.index.is_monotonic_increasing:
         raise ValueError("factor frame index must be unique and increasing")
     bounded = frame

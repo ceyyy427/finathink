@@ -6,6 +6,7 @@ synthetic reproduction proves formula execution, never investment efficacy.
 
 from __future__ import annotations
 
+import json
 import math
 from dataclasses import dataclass
 from functools import lru_cache
@@ -33,7 +34,13 @@ class FactorRecipe:
 
     @property
     def required_fields(self):
-        return parse_factor_expression(self.expression(), ("open", "high", "low", "close", "volume")).fields
+        return parse_factor_expression(self.expression(), ("open", "high", "low", "close", "volume", "turnover_rate", "amount")).fields
+
+    @property
+    def implementation_fingerprint(self):
+        return stable_digest({"recipe_id": self.recipe_id, "version": self.version,
+                              "formula": self.formula, "semantics": "bounded-dsl.v2",
+                              "std_ddof": 0, "rank_scope": "asset-historical-prefix"})
 
     def to_dict(self):
         return {"recipe_id": self.recipe_id, "title": self.title, "formula": self.formula, "required_fields": list(self.required_fields), "units": self.units, "version": self.version, "windowed": "{window}" in self.formula, "default_window": 5, "source_ids": ["finathink-native-dsl.v1", self.concept], "implementation_license": "MIT", "data_license": "USER_SUPPLIED_NOT_VERIFIED", "pit_semantics": "historical-prefix features; shifted one observation before label scoring", "effect_status": "NOT_EVALUATED_ON_USER_DATA", "production_write": False, "reproduction": dict(_reproduce(self.recipe_id))}
@@ -66,6 +73,9 @@ _RECIPES = (
     ("low_momentum", "最低价动量", "return(low,{window})", "ratio", "finathink:low-momentum"),
     ("close_open_momentum_gap", "收开动量差的一半", "combine(return(close,{window}),negate(return(open,{window})))", "ratio", "finathink:close-open-momentum-gap"),
     ("momentum_dispersion_balance", "标准化动量与波动平衡", "combine(zscore(return(close,1),{window}),negate(zscore(rolling_std(return(close,1),{window}),{window})))", "standardized", "finathink:momentum-dispersion-balance"),
+    ("turnover_mean", "真实换手率均值", "rolling_mean(turnover_rate,{window})", "declared-turnover-ratio", "finathink:explicit-turnover-mean"),
+    ("turnover_dispersion", "真实换手率离散度", "rolling_std(turnover_rate,{window})", "declared-turnover-ratio", "finathink:explicit-turnover-dispersion"),
+    ("amihud_ratio", "未缩放收益成交额比", "rolling_mean(divide(abs(return(close,1)),amount),{window})", "ratio-per-declared-currency", "finathink:amihud-ratio-unscaled"),
 )
 
 
@@ -74,13 +84,76 @@ def research_recipes():
     return tuple(FactorRecipe(*values) for values in _RECIPES)
 
 
-@lru_cache(maxsize=24)
+@lru_cache(maxsize=32)
 def _reproduce(recipe_id):
     recipe = next(item for item in research_recipes() if item.recipe_id == recipe_id)
     index = pd.date_range("2025-01-01", periods=96, tz="UTC")
     close = [100 + n * 0.07 + math.sin(n / 4) * 2 for n in range(96)]
     opened = [value + 0.2 * math.cos(n) for n, value in enumerate(close)]
     frame = pd.DataFrame({"close": close, "open": opened, "high": [max(a, b) + 1 for a, b in zip(close, opened)], "low": [min(a, b) - 1 for a, b in zip(close, opened)], "volume": [1000 + 3 * n + 50 * math.cos(n / 3) for n in range(96)]}, index=index)
+    if "turnover_rate" in recipe.required_fields:
+        frame["turnover_rate"] = [0.01 + (n % 7) / 1000 for n in range(96)]
+    if "amount" in recipe.required_fields:
+        frame["amount"] = frame["close"] * frame["volume"]
     values = evaluate_expression(recipe.expression(5), frame).dropna()
     payload = {"recipe_id": recipe.recipe_id, "window": 5, "finite_observations": len(values), "first": round(float(values.iloc[0]), 12), "last": round(float(values.iloc[-1]), 12)}
     return {**payload, "dataset_fingerprint": stable_digest({"timestamps": [value.isoformat() for value in index], "data": frame.to_dict(orient="list")}), "result_fingerprint": stable_digest(payload), "data_mode": "SAMPLE", "purpose": "deterministic mathematical reproduction, not evidence of market efficacy"}
+
+
+def _pilot_definitions():
+    from .asset_catalog import ResearchAssetCatalog
+
+    rows = json.loads(ResearchAssetCatalog.packaged().read_text("source-definitions"))["finathink_pilots"]
+    if not isinstance(rows, list) or not 1 <= len(rows) <= 12:
+        raise ValueError("pilot metadata exceeds the bounded initial scope")
+    return rows
+
+
+def pilot_factor_specs(window=5):
+    from .asset_contracts import FactorSpec
+
+    if type(window) is not int or not 1 <= window <= 252:
+        raise ValueError("pilot window must be an integer in1..252")
+    recipes = {recipe.recipe_id: recipe for recipe in research_recipes()}
+    result = []
+    for row in _pilot_definitions():
+        recipe = recipes[row["recipe_id"]]
+        result.append(FactorSpec(row["factor_id"], recipe.version, recipe.expression(window),
+            recipe.required_fields, row["units"], row["direction"], window, "daily",
+            "available-at-or-before-signal", "propagate", f"recipe:{recipe.recipe_id}@{recipe.version}",
+            recipe.implementation_fingerprint, ("source-definitions",)))
+    return tuple(result)
+
+
+def resolve_factor_spec(spec):
+    from .asset_contracts import FactorSpec
+
+    if not isinstance(spec, FactorSpec):
+        raise TypeError("typed factor spec required")
+    expected = next((value for value in pilot_factor_specs(spec.window) if value.factor_id == spec.factor_id), None)
+    if expected is None or expected.fingerprint != spec.fingerprint:
+        raise ValueError("factor spec differs from its audited implementation binding")
+    name = spec.implementation_ref.removeprefix("recipe:").split("@", 1)[0]
+    return next(recipe for recipe in research_recipes() if recipe.recipe_id == name)
+
+
+def factor_input_requirements(spec):
+    resolve_factor_spec(spec)
+    row = next(value for value in _pilot_definitions() if value["factor_id"] == spec.factor_id)
+    return dict(row["required_input_units"])
+
+
+def evaluate_factor_spec(spec, panel):
+    from .factor_inputs import FactorPanel
+
+    resolve_factor_spec(spec)
+    if not isinstance(panel, FactorPanel):
+        raise TypeError("typed factor panel required")
+    if panel.status != "READY" or panel.missing_inputs(spec.required_fields):
+        raise ValueError("BLOCKED_DATA: required factor inputs or availability are missing")
+    requirements = factor_input_requirements(spec)
+    if any(panel.units.get(name) != unit for name, unit in requirements.items()):
+        raise ValueError("BLOCKED_DATA: factor input units or denominator do not match")
+    values = evaluate_expression(spec.formula, panel.to_frame())
+    values.name = spec.factor_id
+    return values

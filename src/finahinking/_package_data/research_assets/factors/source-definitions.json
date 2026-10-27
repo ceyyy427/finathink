@@ -170,5 +170,12 @@
       "units": "ratio; not standardized earnings surprise"
     }
   ],
-  "aliases": []
+  "aliases": [],
+  "finathink_pilots": [
+    {"factor_id": "finathink-turnover-freefloat-mean", "recipe_id": "turnover_mean", "direction": "LOWER", "units": "ratio_free_float", "required_input_units": {"turnover_rate": "ratio_free_float"}, "definition_status": "DEFINED", "reproduction_scope": "FORMULA_FIXTURE", "source_claim_binding": "NONE"},
+    {"factor_id": "finathink-turnover-freefloat-dispersion", "recipe_id": "turnover_dispersion", "direction": "LOWER", "units": "ratio_free_float", "required_input_units": {"turnover_rate": "ratio_free_float"}, "definition_status": "DEFINED", "reproduction_scope": "FORMULA_FIXTURE", "source_claim_binding": "NONE"},
+    {"factor_id": "finathink-return-dispersion", "recipe_id": "return_dispersion", "direction": "LOWER", "units": "ratio-not-annualized", "required_input_units": {}, "definition_status": "DEFINED", "reproduction_scope": "FORMULA_FIXTURE", "source_claim_binding": "NONE"},
+    {"factor_id": "finathink-close-reversal", "recipe_id": "close_reversal", "direction": "HIGHER", "units": "ratio", "required_input_units": {}, "definition_status": "DEFINED", "reproduction_scope": "FORMULA_FIXTURE", "source_claim_binding": "NONE"},
+    {"factor_id": "finathink-amihud-cny-unscaled", "recipe_id": "amihud_ratio", "direction": "LOWER", "units": "ratio-per-CNY", "required_input_units": {"amount": "CNY"}, "definition_status": "DEFINED", "reproduction_scope": "FORMULA_FIXTURE", "source_claim_binding": "NONE"}
+  ]
 }
