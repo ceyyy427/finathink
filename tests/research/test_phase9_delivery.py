@@ -9,6 +9,7 @@ from urllib.request import urlopen
 import pytest
 
 from finahinking.local_app import LocalAppConfig, LocalApplication, create_server
+from finahinking.p8_2.data_sources import FixtureMarketDataSource
 
 
 def test_chinese_shell_and_first_use_do_not_create_data_or_jobs(tmp_path):
@@ -77,5 +78,32 @@ def test_new_application_state_has_private_directory_and_database_permissions(tm
     try:
         assert db.parent.stat().st_mode & 0o777 == 0o700
         assert db.stat().st_mode & 0o777 == 0o600
+    finally:
+        app.close()
+
+
+@pytest.mark.parametrize('damage', ['malformed-json', 'invalid-digest'])
+def test_diagnostic_export_survives_broken_research_metadata_without_fake_counts(tmp_path, damage):
+    app = LocalApplication(LocalAppConfig(db_path=str(tmp_path / 'private-filename.sqlite')))
+    try:
+        service = app.research_service
+        ref = service.snapshots.save(FixtureMarketDataSource(points=20).snapshot('AAA'))
+        job = service.submit({'idempotency_key': 'bad-metadata', 'snapshot_ref': ref, 'instrument': 'AAA', 'as_of': '2026-10-01', 'question': '不应出现在诊断的私人研究', 'model_config_ref': 'offline'})
+        task_ref = service.queue.get(job['job_id']).task_ref
+        with service.queue._connect() as connection:
+            if damage == 'malformed-json':
+                connection.execute('UPDATE request_snapshots SET payload=? WHERE task_ref=?', ('{', task_ref))
+            else:
+                connection.execute('UPDATE request_snapshots SET request_digest=? WHERE task_ref=?', ('0' * 64, task_ref))
+        assert app.route('GET', '/diagnostics')[0] == 200
+        assert app.route('GET', '/api/diagnostics')[0] == 200
+        status, _, bundle = app.route('GET', '/api/diagnostics/bundle')
+        assert status == 200
+        assert bundle['research']['status'] == 'UNAVAILABLE'
+        assert bundle['research']['total_jobs'] is None
+        assert bundle['research']['latest_report_status'] == 'UNKNOWN'
+        raw = json.dumps(bundle, ensure_ascii=False)
+        assert '不应出现在诊断' not in raw and 'private-filename' not in raw
+        assert str(tmp_path) not in raw and ref not in raw
     finally:
         app.close()

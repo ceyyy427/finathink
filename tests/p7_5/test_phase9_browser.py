@@ -4,6 +4,7 @@ import json
 import threading
 import time
 from contextlib import contextmanager
+from dataclasses import replace
 
 from finahinking.data.connection_settings import InMemoryDataCredentialStore
 from finahinking.data.user_api import TransportResponse
@@ -195,4 +196,47 @@ def test_large_task_history_is_paginated_under_cpu_throttle(tmp_path, observed_p
         assert diagnostics['metrics']['cpu_throttled_history_journey_ms'] < 20_000
         page.screenshot(path=str(artifacts / 'paged-history-throttle-375.png'), full_page=True)
         session.detach()
+    assert not diagnostics['errors']
+
+
+def test_history_paging_preserves_multi_instrument_submission_intent(tmp_path, observed_page):
+    page, _, diagnostics = observed_page
+    app = LocalApplication(LocalAppConfig(db_path=str(tmp_path / 'app.sqlite'), offline=True))
+    a = FixtureMarketDataSource(points=20).snapshot('AAA')
+    b = FixtureMarketDataSource(points=20).snapshot('BBB')
+    snapshot = replace(a, observations=(*a.observations, *b.observations))
+    snapshot_reads = []
+    page.on('request', lambda request: snapshot_reads.append(request.url) if request.url.endswith('/api/research/snapshots') else None)
+    with serve(app) as base:
+        app.research_service.close()
+        ref = app.research_service.snapshots.save(snapshot)
+        for index in range(21):
+            app.research_service.submit({'idempotency_key': f'intent-{index}', 'snapshot_ref': ref, 'instrument': 'AAA', 'as_of': '2026-10-01', 'question': '检查有界历史列表', 'model_config_ref': 'offline'})
+        page.goto(base + '/research/jobs')
+        page.wait_for_selector('[data-workspace-state="READY"]')
+        form = page.locator('[data-run-submit]')
+        form.locator('[name="snapshot_ref"]').select_option(ref)
+        form.locator('[name="instrument"]').fill('BBB')
+        form.locator('[name="question"]').fill('保留我选择的 BBB 和研究问题')
+        form.locator('[name="as_of"]').fill('2026-10-01')
+        page.locator('[data-run-history-next]').click()
+        page.wait_for_function("() => document.querySelector('[data-run-history-page]').textContent.includes('21–21')")
+        assert form.locator('[name="instrument"]').input_value() == 'BBB'
+        assert len(snapshot_reads) == 1
+        page.locator('[data-run-history-prev]').click()
+        page.wait_for_function("() => document.querySelector('[data-run-history-page]').textContent.includes('1–20')")
+        form.locator('[name="instrument"]').fill('UNFINISHED-DRAFT')
+        page.locator('[data-run-history-next]').click()
+        page.wait_for_function("() => document.querySelector('[data-run-history-page]').textContent.includes('21–21')")
+        assert form.locator('[name="instrument"]').input_value() == 'UNFINISHED-DRAFT'
+        assert len(snapshot_reads) == 1
+        form.locator('[name="instrument"]').fill('BBB')
+        page.locator('[data-run-refresh]').click()
+        page.wait_for_selector('[data-workspace-state="READY"]')
+        assert form.locator('[name="instrument"]').input_value() == 'BBB'
+        assert form.locator('[name="question"]').input_value() == '保留我选择的 BBB 和研究问题'
+        form.locator('button[type="submit"]').click()
+        page.wait_for_function("() => document.querySelector('[data-run-identity]').textContent.includes('BBB')")
+        job = next(item for item in app.research_service.list_jobs()['jobs'] if item['question'] == '保留我选择的 BBB 和研究问题')
+        assert job['instrument'] == 'BBB' and job['snapshot_ref'] == ref
     assert not diagnostics['errors']

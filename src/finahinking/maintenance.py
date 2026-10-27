@@ -22,6 +22,7 @@ from pathlib import Path, PurePosixPath
 MAX_FILES = 20_000
 MAX_BYTES = 1_073_741_824
 MAX_FILE_BYTES = 67_108_864
+MAX_MANIFEST_BYTES = 8_000_000
 _CONFIGS = (".providers.json", ".data-connections.json")
 
 
@@ -88,6 +89,12 @@ def _stamp(values):
     return result
 
 
+def _archive_limits(sizes):
+    """The same uncompressed member contract applies in both directions."""
+    if len(sizes) > MAX_FILES + 1 or sum(sizes) > MAX_BYTES or any(size > MAX_FILE_BYTES for size in sizes):
+        raise ValueError('备份数量或体积超过上限，清单也计入总大小。')
+
+
 def backup_state(db_path, output):
     """Create a private archive of a quiescent application; refuse overwrites."""
     supplied = Path(db_path).expanduser()
@@ -122,7 +129,11 @@ def backup_state(db_path, output):
                 raw = target.read_bytes()
                 manifest['files'][name] = {'size': len(raw), 'sha256': hashlib.sha256(raw).hexdigest()}
                 bundle.write(target, name)
-            bundle.writestr('manifest.json', json.dumps(manifest, ensure_ascii=False, sort_keys=True))
+            encoded_manifest = json.dumps(manifest, ensure_ascii=False, sort_keys=True).encode('utf-8')
+            _archive_limits([item['size'] for item in manifest['files'].values()] + [len(encoded_manifest)])
+            if len(encoded_manifest) > MAX_MANIFEST_BYTES:
+                raise ValueError('备份清单超过上限，请先归档不需要的研究。')
+            bundle.writestr('manifest.json', encoded_manifest)
         if before != _stamp(_files(db)):
             raise ValueError('备份期间应用状态发生变化。请关闭应用后重新备份。')
         for name, path in values.items():
@@ -141,13 +152,14 @@ def restore_state(archive_path, destination):
     with zipfile.ZipFile(archive_path) as bundle:
         entries = bundle.infolist()
         names = [item.filename for item in entries]
-        if len(entries) > MAX_FILES + 1 or len(set(names)) != len(names) or sum(item.file_size for item in entries) > MAX_BYTES or any(item.file_size > MAX_FILE_BYTES for item in entries):
+        _archive_limits([item.file_size for item in entries])
+        if len(set(names)) != len(names):
             raise ValueError('备份数量、体积或重复文件检查失败。')
         for item in entries:
             _relative(item.filename)
             if item.is_dir() or stat.S_IFMT(item.external_attr >> 16) not in {0, stat.S_IFREG}:
                 raise ValueError('备份包含链接或特殊文件。')
-        if 'manifest.json' not in names or bundle.getinfo('manifest.json').file_size > 8_000_000:
+        if 'manifest.json' not in names or bundle.getinfo('manifest.json').file_size > MAX_MANIFEST_BYTES:
             raise ValueError('备份缺少有效清单。')
         try:
             manifest = json.loads(bundle.read('manifest.json'))

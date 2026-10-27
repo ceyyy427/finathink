@@ -554,7 +554,7 @@ class ResearchApplicationService:
     def diagnostic_summary(self):
         """Bounded, scoped projection; never include questions or data rows."""
         latest = self.list_jobs(limit=1)
-        return {"total_jobs": latest["total"], "latest_report_status": latest["jobs"][0]["report_status"] if latest["jobs"] else "NO_REPORT", "paper_only": True}
+        return {"status": "AVAILABLE", "total_jobs": latest["total"], "latest_report_status": latest["jobs"][0]["report_status"] if latest["jobs"] else "NO_REPORT", "paper_only": True}
 
     def cancel(self, job_id):
         self._request(self.queue.get(job_id))

@@ -149,3 +149,37 @@ def test_legacy_understanding_schema_upgrades_without_losing_data(tmp_path):
         finally:
             app.close()
     assert db.read_bytes() == previous
+
+
+def test_backup_accounts_for_manifest_before_publishing_at_the_size_limit(tmp_path, monkeypatch):
+    from finahinking import maintenance
+
+    db = tmp_path / 'small.sqlite3'
+    with sqlite3.connect(db) as connection:
+        connection.execute('CREATE TABLE retained (id TEXT)')
+    monkeypatch.setattr(maintenance, 'MAX_BYTES', db.stat().st_size)
+    archive = tmp_path / 'must-not-publish.zip'
+    with pytest.raises(ValueError):
+        backup_state(db, archive)
+    assert not archive.exists()
+
+
+def test_exact_serialized_archive_limit_is_accepted_by_both_directions(tmp_path, monkeypatch):
+    from finahinking import maintenance
+
+    db = tmp_path / 'small.sqlite3'
+    with sqlite3.connect(db) as connection:
+        connection.execute('CREATE TABLE retained (id TEXT)')
+    probe = tmp_path / 'probe.zip'
+    backup_state(db, probe)
+    with zipfile.ZipFile(probe) as bundle:
+        total = sum(item.file_size for item in bundle.infolist())
+    monkeypatch.setattr(maintenance, 'MAX_BYTES', total)
+    archive = tmp_path / 'exact.zip'
+    backup_state(db, archive)
+    assert restore_state(archive, tmp_path / 'exact-restored').is_file()
+    monkeypatch.setattr(maintenance, 'MAX_BYTES', total - 1)
+    rejected = tmp_path / 'one-byte-over.zip'
+    with pytest.raises(ValueError):
+        backup_state(db, rejected)
+    assert not rejected.exists()

@@ -982,11 +982,17 @@ class LocalApplication:
     def diagnostics_bundle(self) -> dict[str, Any]:
         """Return a shareable, path-redacted diagnostic bundle."""
 
+        try:
+            research = self.research_service.diagnostic_summary()
+        except (AttributeError, KeyError, ValueError, TypeError, RuntimeError, OSError, sqlite3.Error):
+            # Recovery diagnostics must not depend on reconstructing a healthy
+            # research request. Unknown counts are not zero, nor successful.
+            research = {"status": "UNAVAILABLE", "total_jobs": None, "latest_report_status": "UNKNOWN", "paper_only": True, "error_code": "RESEARCH_METADATA_UNAVAILABLE"}
         return {
             "bundle_version": 2,
             "service": "finahinking-local",
             "diagnostics": self.diagnostics(),
-            "research": self.research_service.diagnostic_summary(),
+            "research": research,
             "schema": {"tables": self.diagnostics()["tables"], "migration": "001-003 additive"},
             "privacy": {"database_path": "redacted", "secrets": "omitted", "personal_payloads": "omitted"},
             "next_action": "Attach this bundle to a local issue only after checking that no private text was added by a future extension.",
