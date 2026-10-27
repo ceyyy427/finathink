@@ -70,6 +70,8 @@ def prepare_study(values, snapshot, *, policy_fingerprint):
     if any(isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or not 0 <= value <= (100 if key.endswith("bps") else 1) for key, value in numeric.items()):
         raise ValueError("study costs and thresholds must be finite and bounded")
     frame = study_frame(snapshot, values.get("instrument"), values.get("as_of"))
+    if set(recipe.required_fields) - set(frame.columns):
+        raise ValueError("BLOCKED_DATA: choose the method-guided study with explicit research fields and units")
     temporal = purged_walk_forward(frame.index, horizon=horizon, embargo=embargo, n_splits=folds)
     if any(len(fold["validation"]) < 8 for fold in temporal["folds"]) or len(temporal["test"]) < 8:
         raise ValueError("not enough samples after purge/embargo; prepare a longer snapshot")
@@ -203,7 +205,7 @@ def _compute_method_study(snapshot, study, *, phase, validation, research_fields
     run = run_factor_validation(factor, panel, policy, gateway=gateway).to_dict()
     steps = {item["stage_id"]: item for item in run["steps"]}
     metric = steps["information_coefficient"]["metrics"].get("mean_oriented_time_series_ic")
-    incomplete = run["status"] in {"BLOCKED_DATA", "BLOCKED_CONTROL", "SEMANTIC_REJECTION", "EXECUTION_ERROR"}
+    incomplete = run["status"] in {"BLOCKED_DATA", "COMPLETE_WITH_BLOCKS", "BLOCKED_CONTROL", "SEMANTIC_REJECTION", "EXECUTION_ERROR"}
     failure = run["status"] if incomplete or metric is None else None
     experiment_id = factor.factor_id
     record = {"experiment_id": experiment_id, "digest": run["candidate_fingerprint"],

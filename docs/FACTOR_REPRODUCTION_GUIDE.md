@@ -43,6 +43,8 @@ study = service.create_method_factor_study(
 
 `service` 是已有 `ResearchApplicationService`；`attachment` 是 `ResearchFieldAttachment` 或其完整 JSON。研究仍由已有 supervisor/spawn worker 执行。相同请求幂等；未知公式、错包产物、错误内容摘要、超额候选在建研究前拒绝。缺少附件也可以形成章程和阻断报告，不会偷偷用模拟数据补齐。
 
+旧的 OHLCV 配方入口如果选中需要额外字段的配方，会在入队前明确返回 `BLOCKED_DATA`，引导使用上述类型化入口；不会将缺输入的候选算成无效因子。带阻断的九步报告可保存复查，但不能冻结或通过研究批准。
+
 章程在计算前冻结研究问题、假设、因子定义、输入附件、方法清单、方向、窗口、低波基线、训练标准化的等权组合、费用、分割及代码版本。风险政策继续使用原主任务选定版本，不由模型替换。
 
 ## 九步证据

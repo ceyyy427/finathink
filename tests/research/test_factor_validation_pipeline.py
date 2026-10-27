@@ -20,7 +20,7 @@ def api():
     return importlib.import_module(name)
 
 
-def fixture_panel(*, fields=True, changed_test=False, suspended=False, assets=2):
+def fixture_panel(*, fields=True, changed_test=False, suspended=False, assets=2, volume_unit_known=True):
     dates = pd.date_range("2024-01-01T16:00:00Z", periods=180)
     rows, extra = [], []
     for number in range(assets):
@@ -35,8 +35,10 @@ def fixture_panel(*, fields=True, changed_test=False, suspended=False, assets=2)
             extra.append({"instrument": instrument, "timestamp": time.isoformat(),
                           "available_at": time.isoformat(), "turnover_rate": 0.02 + math.sin(position / 3 + number) / 100})
     snapshot = DatasetSnapshot("nine-step-fixture", tuple(rows), mode="SAMPLE")
-    attachment = ResearchFieldAttachment(snapshot.fingerprint, "CN",
-        {"turnover_rate": "ratio_free_float", "amount": "CNY", "volume": "shares"}, extra) if fields else None
+    units = {"turnover_rate": "ratio_free_float", "amount": "CNY"}
+    if volume_unit_known:
+        units["volume"] = "shares"
+    attachment = ResearchFieldAttachment(snapshot.fingerprint, "CN", units, extra) if fields else None
     return build_factor_panel(snapshot, attachment, as_of=dates[-1],
                                universe=UniverseSpec("CN", snapshot.instruments))
 
@@ -299,3 +301,39 @@ def test_predeclared_baseline_and_blend_use_actual_ledger_with_identical_cost_sc
         assert ablation[key]["fee_bps"] == policy["fee_bps"]
         assert ablation[key]["slippage_bps"] == policy["slippage_bps"]
         assert ablation[key]["quant_runs"]
+
+
+def test_undeclared_volume_unit_blocks_every_participation_constrained_ledger():
+    module = api()
+    result = module.run_factor_validation(selected(), fixture_panel(volume_unit_known=False),
+        module.factor_validation_policy(), gateway=module.FactorValidationGateway())
+    assert stages(result)["portfolio_backtest"]["status"] == "BLOCKED_DATA"
+    assert "portfolio_ablation" not in stages(result)["incremental_value"]["metrics"]
+
+
+def test_dated_performance_rows_keep_first_execution_cost_and_last_actual_return():
+    module = api()
+    policy = module.factor_validation_policy()
+    result = module.run_factor_validation(selected(), fixture_panel(), policy, gateway=module.FactorValidationGateway())
+    metrics = stages(result)["portfolio_backtest"]["metrics"]
+    previous = policy["starting_cash"]
+    for entry, point in zip(metrics["entries"], metrics["performance"]["series"], strict=True):
+        assert point["timestamp"] == entry["timestamp"]
+        assert point["return"] == pytest.approx(entry["equity"] / previous - 1)
+        previous = entry["equity"]
+
+
+def test_decay_one_observation_label_is_not_reused_from_a_two_observation_target():
+    api()
+    from finahinking.factors.evaluation import evaluate_factor_candidate
+    from finahinking.factors.mining import FactorCandidate
+
+    index = pd.date_range("2025-01-01", periods=80, tz="UTC")
+    frame = pd.DataFrame({"close": [100 + i / 10 + 5 * math.sin(i / 3) for i in range(80)]}, index=index)
+    candidate = FactorCandidate("decay-fixture", "return(close,2)", "fixture", "fixture", {})
+    controls = {"phase": "validation", "min_samples": 8, "scoring_index": index[20:60], "decay_horizons": (1, 5)}
+    one = frame["close"].shift(-1) / frame["close"] - 1
+    two = frame["close"].shift(-2) / frame["close"] - 1
+    first = evaluate_factor_candidate(candidate, frame, one, {**controls, "label_horizon": 1})
+    second = evaluate_factor_candidate(candidate, frame, two, {**controls, "label_horizon": 2})
+    assert second.decay.information_coefficients[0] == pytest.approx(first.decay.information_coefficients[0])

@@ -281,7 +281,21 @@ def compute_performance_report(ledger: Any, benchmark: Any = None, *, annualizat
         metrics["benchmark_total_return"] = benchmark_payload["total_return"]
         if not b_returns:
             limitations.append("benchmark supplied without usable observations")
-    series = tuple({"timestamp": item.get("timestamp"), "equity": _finite(item.get("equity")), "return": returns[i - 1] if i > 0 and i - 1 < len(returns) else None} for i, item in enumerate(aggregated_entries))
+    if isinstance(direct_returns, Sequence) and not isinstance(direct_returns, (str, bytes)):
+        dated_returns = [_finite(value) for value in direct_returns]
+        if len(dated_returns) == len(aggregated_entries) - 1:
+            dated_returns = [None, *dated_returns]
+        elif len(dated_returns) != len(aggregated_entries):
+            limitations.append("direct returns do not align with dated equity entries; dated returns left unknown")
+            dated_returns = [None] * len(aggregated_entries)
+    else:
+        dated_returns = []
+        previous = None
+        for item in aggregated_entries:
+            current = _finite(item.get("equity"))
+            dated_returns.append(current / previous - 1 if current is not None and current > 0 and previous is not None and previous > 0 else None)
+            previous = current
+    series = tuple({"timestamp": item.get("timestamp"), "equity": _finite(item.get("equity")), "return": dated_returns[i]} for i, item in enumerate(aggregated_entries))
     chart = {"timestamps": [item.get("timestamp") for item in series], "equity": [item.get("equity") for item in series], "returns": [item.get("return") for item in series]}
     table = tuple({"timestamp": item.get("timestamp"), "equity": item.get("equity"), "return": item.get("return")} for item in series)
     return PerformanceReport(metrics, series, benchmark_payload, chart, table, tuple(dict.fromkeys(limitations)))

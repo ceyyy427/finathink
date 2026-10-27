@@ -490,6 +490,8 @@ def run_factor_validation(spec, panel, policy, *, gateway) -> FactorValidationRu
         record(3, "COMPLETE" if duplicate["correlation"] is not None else "BLOCKED_DATA", duplicate,
                None if duplicate["correlation"] is not None else duplicate["status"])
         try:
+            if panel.units.get("volume") != "shares":
+                raise ValueError("BLOCKED_DATA: participation-constrained fills require declared shares")
             backtest = gateway.backtest(spec, bounded, policy, train_index=index[split["train"]],
                                         evaluation_index=raw_phase, snapshot_ref=panel.snapshot_ref)
             if (backtest["snapshot_ref"] != panel.snapshot_ref or backtest["fee_bps"] != policy["fee_bps"]

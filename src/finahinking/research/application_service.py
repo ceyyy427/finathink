@@ -715,7 +715,7 @@ class ResearchApplicationService:
                 raise ValueError("factor study result belongs to another charter")
             if job["status"] in {"completed", "failed", "cancelled"}:
                 computed = payload is not None and payload.get("validation_run", {}).get("status") not in {
-                    "BLOCKED_DATA", "BLOCKED_CONTROL", "SEMANTIC_REJECTION", "EXECUTION_ERROR"}
+                    "BLOCKED_DATA", "COMPLETE_WITH_BLOCKS", "BLOCKED_CONTROL", "SEMANTIC_REJECTION", "EXECUTION_ERROR"}
                 self.factor_studies.complete(study_id, phase, job_id, succeeded=job["status"] == "completed" and computed)
             jobs[f"{phase}_job"] = job
             results["validation" if phase == "validation" else "test_result"] = payload
@@ -745,5 +745,11 @@ class ResearchApplicationService:
             raise ValueError("review requires a verified final-test report")
         if decision == "APPROVE_FOR_RESEARCH" and study["test_result"]["test_summary"]["failure_reason"] is not None:
             raise ValueError("failed final-test evidence cannot be approved")
+        validation_run = study["test_result"].get("validation_run")
+        if decision == "APPROVE_FOR_RESEARCH" and validation_run is not None:
+            archived = next(row for row in validation_run["steps"] if row["stage_id"] == "archive_decision")
+            if (validation_run["status"] != "COMPLETE" or any(row["status"] != "COMPLETE" for row in validation_run["steps"])
+                    or archived["metrics"].get("decision") != "PENDING_HUMAN_RESEARCH_REVIEW"):
+                raise ValueError("blocked or observation-only evidence cannot be approved")
         self.factor_studies.review(study_id, decision, reviewer_id)
         return self.factor_study(study_id)

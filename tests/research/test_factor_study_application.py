@@ -114,3 +114,16 @@ def test_failed_final_test_is_visible_and_cannot_be_approved_as_a_proposal(tmp_p
         service.review_factor_study(study["study_id"], "REJECT", "reviewer")
     finally:
         service.close()
+
+
+@pytest.mark.parametrize("recipe_id", ["turnover_mean", "turnover_dispersion", "amihud_ratio"])
+def test_new_optional_field_recipes_do_not_turn_missing_legacy_inputs_into_factor_rejection(tmp_path, recipe_id):
+    service = ResearchApplicationService(tmp_path)
+    reference = service.snapshots.save(FixtureMarketDataSource(points=240).snapshot("AAA"))
+    try:
+        with pytest.raises(ValueError, match="BLOCKED_DATA"):
+            service.create_factor_study(values(reference, recipe_id=recipe_id))
+        assert service.list_jobs()["total"] == 0
+        assert service.factor_studies.list() == []
+    finally:
+        service.close()

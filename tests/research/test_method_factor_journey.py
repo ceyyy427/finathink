@@ -19,9 +19,9 @@ from finahinking.research.method_handoff import MethodHandoffPackage
 from tests.research.test_factor_study_application import wait_study
 
 
-def prepared(service):
+def prepared(service, *, suspended=False, capacity_units=True):
     original = FixtureMarketDataSource(points=240).snapshot("AAA")
-    snapshot = replace(original, observations=tuple(replace(row, suspended=False, amount=row.close * row.volume,
+    snapshot = replace(original, observations=tuple(replace(row, suspended=suspended, amount=row.close * row.volume,
         industry="fixture-industry") for row in original.observations))
     reference = service.snapshots.save(snapshot)
     job = service.submit({"idempotency_key": "method-parent", "snapshot_ref": reference, "instrument": "AAA",
@@ -43,8 +43,10 @@ def prepared(service):
             "status": "READY", "evidence_refs": list(package.context.evidence_index)}, "output_artifacts": [output]}
     accepted = service.accept_method_handoff(job["job_id"], exported["handoff_ref"], response)
     assert accepted["outcome"]["status"] == "READY"
-    attachment = ResearchFieldAttachment(snapshot.fingerprint, "CN",
-        {"turnover_rate": "ratio_free_float", "amount": "CNY", "volume": "shares"},
+    units = {"turnover_rate": "ratio_free_float"}
+    if capacity_units:
+        units.update(amount="CNY", volume="shares")
+    attachment = ResearchFieldAttachment(snapshot.fingerprint, "CN", units,
         [{"instrument": row.instrument, "timestamp": row.timestamp.isoformat(), "available_at": row.available_at.isoformat(),
           "turnover_rate": 0.02 + math.sin(number / 3) / 100} for number, row in enumerate(snapshot.observations)])
     return job, exported["handoff_ref"], accepted["artifacts"][0], package, attachment
@@ -121,5 +123,49 @@ def test_forged_artifact_or_zero_candidate_budget_never_enters_a_study(tmp_path)
         with pytest.raises(ValueError):
             factor_proposals.proposal_from_handoff(package, artifact, catalog=catalog, policy={"max_candidates": 0})
         assert service.factor_studies.list() == []
+    finally:
+        service.close()
+
+
+def test_public_freeze_test_approval_flow_cannot_promote_blocked_evidence(tmp_path):
+    service = ResearchApplicationService(tmp_path, allow_model_calls=False)
+    try:
+        job, handoff, artifact, _, fields = prepared(service, suspended=None, capacity_units=False)
+        service.attach_research_fields(job["job_id"], fields)
+        service.start()
+        created = service.create_method_factor_study(job["job_id"], handoff, artifact["artifact_ref"],
+            attachment_ref=fields.fingerprint, idempotency_key="incomplete-evidence")
+        result = wait_study(service, created["study_id"], "validation")
+        assert result["validation"]["validation_run"]["status"] == "COMPLETE_WITH_BLOCKS"
+        assert result["state"] == "VALIDATION_FAILED"
+        with pytest.raises(ValueError):
+            service.freeze_factor_study(result["study_id"], result["validation"]["experiments"][0]["experiment_id"])
+            service.test_factor_study(result["study_id"], "blocked-final")
+            wait_study(service, result["study_id"], "test")
+            service.review_factor_study(result["study_id"], "APPROVE_FOR_RESEARCH", "fixture-reviewer")
+    finally:
+        service.close()
+
+
+def test_public_approval_checks_the_actual_run_not_only_a_permissive_summary(tmp_path, monkeypatch):
+    from finahinking.research.factor_validation import (
+        FactorValidationGateway,
+        factor_validation_policy,
+        run_factor_validation,
+    )
+    from tests.research.test_factor_validation_pipeline import fixture_panel, selected
+
+    blocked = run_factor_validation(selected(), fixture_panel(suspended=None), factor_validation_policy(),
+                                    gateway=FactorValidationGateway()).to_dict()
+    assert blocked["status"] == "COMPLETE_WITH_BLOCKS"
+    service = ResearchApplicationService(tmp_path, allow_model_calls=False)
+    calls = []
+    try:
+        monkeypatch.setattr(service, "factor_study", lambda _: {
+            "test_result": {"test_summary": {"failure_reason": None}, "validation_run": blocked}})
+        monkeypatch.setattr(service.factor_studies, "review", lambda *args: calls.append(args))
+        with pytest.raises(ValueError):
+            service.review_factor_study("fixture-study", "APPROVE_FOR_RESEARCH", "fixture-reviewer")
+        assert calls == []
     finally:
         service.close()
