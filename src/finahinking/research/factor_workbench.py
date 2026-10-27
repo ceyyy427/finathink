@@ -153,14 +153,17 @@ def prepare_method_study(snapshot, attachment, *, instrument, as_of, question, f
     from .factor_validation import _frames, _temporal, factor_validation_policy
 
     recipe = resolve_factor_spec(factor_spec)
+    from .factor_families import family_for_spec
+
+    audited_family = family_for_spec(factor_spec)
     market = "UNSPECIFIED" if attachment is None else attachment.market
     universe = UniverseSpec(market, (instrument,))
     panel = build_factor_panel(snapshot, attachment, as_of=as_of, universe=universe)
-    policy = factor_validation_policy(window_grid=sorted({3, factor_spec.window, 8}))
+    policy = factor_validation_policy(window_grid=[3, 5, 8] if audited_family else sorted({3, factor_spec.window, 8}))
     index, split = _temporal(_frames(panel), policy)
     if len(split["validation"]) < 8 or len(split["test"]) < 8:
         raise ValueError("not enough observations for the declared pilot study")
-    family = "liquidity" if {"turnover_rate", "amount"} & set(factor_spec.required_fields) else "volatility" if "dispersion" in factor_spec.factor_id else "mean_reversion"
+    family = audited_family or ("liquidity" if {"turnover_rate", "amount"} & set(factor_spec.required_fields) else "volatility" if "dispersion" in factor_spec.factor_id else "mean_reversion")
     hypothesis = FactorHypothesis("method-hyp-" + stable_digest({"question": question, "spec": factor_spec.fingerprint})[:12],
         question, family, factor_spec.required_fields, factor_spec.window,
         "positive" if factor_spec.direction == "HIGHER" else "negative")
@@ -169,7 +172,8 @@ def prepare_method_study(snapshot, attachment, *, instrument, as_of, question, f
         "instrument": instrument, "as_of": as_of, "question": question, "recipe_id": recipe.recipe_id,
         "recipe_version": recipe.version, "factor_spec": factor_spec.to_dict(), "universe": universe.to_dict(),
         "hypothesis": asdict(hypothesis), "method_binding": method_binding, "validation_policy": policy,
-        "baseline_factor_id": "finathink-return-dispersion", "baseline_window": factor_spec.window,
+        "baseline_factor_id": "finathink-return-dispersion", "baseline_window": 5 if audited_family else factor_spec.window,
+        "parameterized": audited_family is None,
         "combination_plan": {"method": "train-standardized-equal-weight", "weights": [0.5, 0.5],
                              "directions": [factor_spec.direction, "LOWER"]},
         "windows": policy["window_grid"], "n_splits": policy["n_splits"], "embargo": policy["embargo"],

@@ -17,8 +17,10 @@ import pandas as pd
 
 from finahinking.factors.dsl import evaluate_expression, parse_factor_expression
 
-_FIELDS = frozenset({"close", "volume", "return_1d", "turnover_rate", "amount"})
-_FAMILIES = frozenset({"mean_reversion", "momentum", "volatility", "liquidity"})
+_FIELDS = frozenset({"open", "high", "low", "close", "volume", "return_1d", "turnover_rate", "amount",
+                     "book_equity", "market_cap", "limit_up_price", "institutional_net_buy", "industry_relative_return"})
+_FAMILIES = frozenset({"mean_reversion", "momentum", "volatility", "liquidity", "financial", "industry",
+                       "price_limit", "institutional", "alpha101"})
 _DIRECTIONS = frozenset({"positive", "negative", "neutral"})
 _UNSAFE = re.compile(r"(?:eval|exec|__import__|shell|subprocess|https?://|file://|/|\\|future|lookahead)", re.IGNORECASE)
 _TEMPLATE_FIELDS = frozenset({"window", "field"})
@@ -275,7 +277,7 @@ def validate_factor_proposal(proposal: FactorProposal) -> None:
 def proposal_from_handoff(package, artifact, *, catalog, policy) -> FactorProposal:
     """Accept a saved typed artifact, never arbitrary executable model output."""
     from .contracts import stable_digest
-    from .factor_recipes import pilot_factor_specs
+    from .factor_recipes import family_factor_specs, pilot_factor_specs
     from .method_handoff import MethodHandoffPackage, _outputs
 
     if not isinstance(package, MethodHandoffPackage) or package.envelope.role != "research":
@@ -312,7 +314,8 @@ def proposal_from_handoff(package, artifact, *, catalog, policy) -> FactorPropos
         if plan["risk_policy_version"] != policy.get("risk_policy_version", "risk.v1"):
             raise ValueError("research plan cannot replace the server risk policy")
         window = plan["validation_spec"].get("window", 5)
-        selected = next((item for item in pilot_factor_specs(window) if item.factor_id == plan["factor_ids"][0]), None)
+        selected = next((item for item in (*pilot_factor_specs(window), *family_factor_specs())
+                         if item.factor_id == plan["factor_ids"][0]), None)
         if selected is None:
             raise ValueError("research plan references an unaudited factor definition")
         source = plan["hypotheses"][0]
@@ -323,6 +326,7 @@ def proposal_from_handoff(package, artifact, *, catalog, policy) -> FactorPropos
     windows = policy.get("window_grid", [3, 5, 8])
     if not isinstance(windows, (list, tuple)) or not 1 <= len(windows) <= 8:
         raise ValueError("factor proposal needs a bounded predeclared window set")
-    if not any(spec.formula == proposal.expression for window in windows for spec in pilot_factor_specs(window)):
+    available = (*[spec for window in windows for spec in pilot_factor_specs(window)], *family_factor_specs())
+    if not any(spec.formula == proposal.expression for spec in available):
         raise ValueError("factor proposal has no audited pilot implementation in the declared windows")
     return proposal

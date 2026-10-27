@@ -56,11 +56,14 @@ def _local(entry, raw, requested):
         "financial_falsification": False, "settled": run["policy"]["phase"] == "test" and run["status"] == "COMPLETE"}
 
 
-def load_factor_evidence(factor_ref, *, catalog, run_repository) -> FactorEvidenceView:
+def load_factor_evidence(factor_ref, *, catalog, run_repository, run_refs=()) -> FactorEvidenceView:
     requested = factor_ref if isinstance(factor_ref, FactorSpec) else None
     factor_id = requested.factor_id if requested else factor_ref
     if not isinstance(factor_id, str) or not _ID.fullmatch(factor_id):
         raise ValueError("factor reference is invalid")
+    if (not isinstance(run_refs, (tuple, list)) or len(run_refs) > 16
+            or any(not isinstance(ref, str) or not _ID.fullmatch(ref) for ref in run_refs)):
+        raise ValueError("explicit factor report references must be bounded")
     definition = _definition(catalog, factor_id)
     claims = [asdict(item) for item in catalog.claims_for(factor_id)]
     missing, conflicts, local = [], [], []
@@ -70,7 +73,8 @@ def load_factor_evidence(factor_ref, *, catalog, run_repository) -> FactorEviden
             missing.append({"code": resource.availability, "resource_id": resource_id})
     if claims:
         missing.append({"code": "UPSTREAM_EXPERIMENT_NOT_REPRODUCED", "resource_id": None})
-    for reference in run_repository.list_run_refs(limit=200):
+    references = tuple(dict.fromkeys((*run_refs, *run_repository.list_run_refs(limit=200))))[:200]
+    for reference in references:
         try:
             entry = run_repository.get_run(reference)
         except (ValueError, KeyError, OSError):

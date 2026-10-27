@@ -13,7 +13,7 @@ from finahinking.p8_2.contracts import DatasetSnapshot
 
 from .contracts import stable_digest
 
-_DAILY_FIELDS = {"turnover_rate", "limit_up_price", "limit_down_price", "institutional_net_buy", "seat_identity_confidence"}
+_DAILY_FIELDS = {"turnover_rate", "market_cap", "limit_up_price", "limit_down_price", "institutional_net_buy", "seat_identity_confidence"}
 
 
 @dataclass(frozen=True, slots=True)
@@ -169,11 +169,28 @@ def build_factor_panel(snapshot, attachment, *, as_of, universe) -> FactorPanel:
             value = None if record is None else record[name]
             if value is not None and original_units[name].startswith("percent"):
                 value /= 100
+            if name == "industry" and value is not None and item.industry is not None and value != item.industry:
+                issues.append("CONFLICTING_HISTORICAL_INDUSTRY")
+                value = None
             row[name] = value
             if record is not None:
                 row["field_provenance"][name] = {key: value for key, value in record.items()
                     if key not in RESEARCH_FIELDS and key != "instrument"}
         rows.append(row)
+    # A contemporaneous cross-section is computed once before splitting assets.
+    # No present-day classification or future date is used as a substitute.
+    groups = {}
+    for row in rows:
+        provenance = row["field_provenance"].get("industry", {})
+        row["industry_relative_return"] = None
+        if (row.get("industry") and row["return_1d"] is not None and provenance.get("effective_from")
+                and field_time(provenance["effective_from"]) <= field_time(row["timestamp"])):
+            groups.setdefault((row["timestamp"], row["industry"]), []).append(row)
+    for group in groups.values():
+        if len(group) >= 2:
+            mean = sum(row["return_1d"] for row in group) / len(group)
+            for row in group:
+                row["industry_relative_return"] = row["return_1d"] - mean
     if len(rows) > 10000:
         raise ValueError("factor panel exceeds the bounded row limit")
     payload = {"schema_version": "factor-panel.v1", "snapshot_ref": snapshot.fingerprint,

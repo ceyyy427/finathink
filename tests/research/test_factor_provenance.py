@@ -140,3 +140,11 @@ def test_real_index_ref_listing_is_scoped_and_corrupt_records_are_isolated(tmp_p
                                         run_repository=repo).to_dict()
     assert result["local_runs"] == []
     assert any(item["code"] == "INDEX_RECORD_CORRUPT" for item in result["missing_dependencies"])
+
+
+def test_explicit_old_report_remains_reviewable_beyond_the_recent_inventory(computed):
+    repository = Repository(*([computed] * 201))
+    result = api().load_factor_evidence(selected(), catalog=ResearchAssetCatalog.packaged(),
+        run_repository=repository, run_refs=("run-200",)).to_dict()
+    assert len(result["local_runs"]) == 200
+    assert result["local_runs"][0]["run_ref"] == "run-200"

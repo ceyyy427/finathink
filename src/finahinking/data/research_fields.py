@@ -18,7 +18,7 @@ NUMERIC_RESEARCH_FIELDS = frozenset({
     "turnover_rate", "profit_yoy", "net_profit", "earnings_per_share", "total_assets",
     "book_equity", "market_cap", "limit_up_price", "limit_down_price", "institutional_net_buy",
 })
-TEXT_RESEARCH_FIELDS = frozenset({"limit_rule_version", "seat_identity_confidence"})
+TEXT_RESEARCH_FIELDS = frozenset({"limit_rule_version", "seat_identity_confidence", "industry"})
 DATE_RESEARCH_FIELDS = frozenset({"announcement_at", "revision_at", "report_period_end", "effective_from", "effective_until"})
 RESEARCH_FIELDS = NUMERIC_RESEARCH_FIELDS | TEXT_RESEARCH_FIELDS
 IDENTITY_FIELDS = frozenset({"instrument", "timestamp", "available_at", "market", "exchange"})
@@ -32,6 +32,7 @@ _UNIT_RULES = {
     "limit_rule_version": frozenset({"rule_version"}),
     "seat_identity_confidence": frozenset({"declared_confidence"}),
     "volume": frozenset({"shares"}), "industry": frozenset({"historical_classification"}),
+    **{name: _CURRENCIES for name in ("open", "high", "low", "close")},
 }
 MAX_FIELD_BYTES = 10 * 1024 * 1024
 

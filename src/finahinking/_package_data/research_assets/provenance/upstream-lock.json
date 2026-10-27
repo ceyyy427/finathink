@@ -907,14 +907,14 @@
     {
       "resource_id": "source-definitions",
       "path": "factors/source-definitions.json",
-      "sha256": "e983386ae5c2aa0b39e4326a61898462dce88b414f3a8b00c2a09daad5871f69",
-      "byte_size": 7956,
+      "sha256": "3a392d70a999ca8be7bcbed9018af7677cfb41868c582367c81ea411d6c383a2",
+      "byte_size": 10188,
       "availability": "PACKAGED",
       "kind": "reference-data",
       "author": "Finahinking contributors; source attribution in individual records",
       "license_id": "MIT",
       "license_ref": "finathink-license",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "derivation": "FINATHINK_ADAPTATION"
     },
     {

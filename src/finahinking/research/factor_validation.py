@@ -308,7 +308,10 @@ class FactorValidationGateway:
 
 
 def _baseline(spec):
-    return next(value for value in pilot_factor_specs(spec.window) if value.factor_id == "finathink-return-dispersion")
+    from .factor_families import family_for_spec
+
+    return next(value for value in pilot_factor_specs(5 if family_for_spec(spec) else spec.window)
+                if value.factor_id == "finathink-return-dispersion")
 
 
 def _factor_values(spec, frames):
@@ -362,6 +365,16 @@ def _stability(spec, frames, policy, index, split):
     if policy["phase"] == "test":
         return {"split": summary, "parameter_surface": None, "ranking": [],
                 "reason": "Final-test results never retune or rerank frozen parameters."}
+    from .factor_families import family_for_spec
+
+    if family_for_spec(spec):
+        folds = []
+        for number, fold in enumerate(split["folds"]):
+            evaluation = _score(spec, frames, policy, index[fold["validation"]])
+            folds.append({"fold": number, "ic": evaluation["mean_oriented_time_series_ic"],
+                          "training_samples": len(fold["train"]), "validation_samples": len(fold["validation"])})
+        return {"split": summary, "folds": folds, "parameter_surface": None, "ranking": [],
+                "reason": "This fixed per-observation definition has no lookback parameter; no fictitious heatmap."}
     points, folds = [], []
     for window in policy["window_grid"]:
         alternate = next(value for value in pilot_factor_specs(window) if value.factor_id == spec.factor_id)
@@ -388,6 +401,10 @@ def run_factor_validation(spec, panel, policy, *, gateway) -> FactorValidationRu
     policy = factor_validation_policy(**policy)
     definition = _policy_definition()
     source = panel.to_dict()
+    from .factor_families import audit_family_inputs, family_for_spec
+
+    family = family_for_spec(spec)
+    family_audit = audit_family_inputs(family, panel, {"factor_spec": spec.to_dict()}).to_dict() if family else None
     frames = _frames(panel) if source["rows"] else {}
     bindings = {"snapshot_ref": panel.snapshot_ref, "attachment_ref": panel.attachment_ref,
         "panel_fingerprint": panel.fingerprint, "as_of": source["as_of"], "universe": source["universe"],
@@ -401,6 +418,9 @@ def run_factor_validation(spec, panel, policy, *, gateway) -> FactorValidationRu
         "source_policy_fingerprint": stable_digest(definition), "code_version": policy["code_version"],
         "train_window": None, "oos_window": None, "final_test_window": None,
         "final_test_usage": "HIDDEN" if policy["phase"] == "validation" else "REQUIRES_RESERVATION"}
+    if family_audit is not None:
+        bindings["family_audit"] = family_audit
+        bindings["baseline_factor_spec_fingerprint"] = _baseline(spec).fingerprint
     index = split = None
     if frames:
         try:
@@ -448,6 +468,9 @@ def run_factor_validation(spec, panel, policy, *, gateway) -> FactorValidationRu
     if not permitted or policy["code_version"] != _code_commit():
         return finish("BLOCKED_CONTROL")
     missing = panel.missing_inputs(spec.required_fields)
+    if family_audit is not None and family_audit["status"] != "READY":
+        record(0, "BLOCKED_DATA", {"family_audit": family_audit}, "FAMILY_INPUT_AUDIT_BLOCKED")
+        return finish("BLOCKED_DATA")
     if panel.status != "READY" or missing or split is None:
         record(0, "BLOCKED_DATA", {"missing_fields": list(missing), "issues": list(panel.issues),
                                    "rows": len(source["rows"])}, "MISSING_FIELDS_AVAILABILITY_OR_SPLIT")

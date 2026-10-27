@@ -31,6 +31,8 @@ _DEFAULT_OPERATORS = {
     "negate",
     "abs",
     "divide",
+    "add",
+    "subtract",
 }
 _KNOWN_OPERATORS = _DEFAULT_OPERATORS | {"ret"}
 _MAX_WINDOW = 252
@@ -59,7 +61,7 @@ def _canonical(node: ast.AST, fields: set[str], operators: set[str]) -> str:
         operator = _OP_ALIASES.get(node.func.id, node.func.id if node.func.id in _KNOWN_OPERATORS else None)
         if operator is None:
             raise ValueError(f"unknown factor operator: {node.func.id}")
-        if (operator == "abs" and len(node.args) != 1) or (operator == "divide" and len(node.args) != 2):
+        if (operator == "abs" and len(node.args) != 1) or (operator in {"divide", "add", "subtract"} and len(node.args) != 2):
             raise ValueError("invalid bounded primitive argument count")
         if operator in {"return", "lag", "rolling_mean", "rolling_std", "zscore"}:
             if len(node.args) != 2:
@@ -196,6 +198,10 @@ def _evaluate_node(node: ast.AST, frame: pd.DataFrame) -> pd.Series | float:
             raise ValueError("divide requires a series operand")
         denominator = args[1].replace(0.0, float("nan")) if isinstance(args[1], pd.Series) else (float("nan") if args[1] == 0 else args[1])
         return args[0] / denominator
+    if operator in {"add", "subtract"}:
+        if len(args) != 2 or not any(isinstance(value, pd.Series) for value in args):
+            raise ValueError("bounded arithmetic requires a series operand")
+        return args[0] + args[1] if operator == "add" else args[0] - args[1]
     raise ValueError(f"operator is not implemented: {operator}")
 
 

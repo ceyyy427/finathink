@@ -34,7 +34,10 @@ class FactorRecipe:
 
     @property
     def required_fields(self):
-        return parse_factor_expression(self.expression(), ("open", "high", "low", "close", "volume", "turnover_rate", "amount")).fields
+        from finahinking.data.research_fields import NUMERIC_RESEARCH_FIELDS
+
+        return parse_factor_expression(self.expression(), (*NUMERIC_RESEARCH_FIELDS,
+            "open", "high", "low", "close", "volume", "amount", "industry_relative_return")).fields
 
     @property
     def implementation_fingerprint(self):
@@ -125,21 +128,51 @@ def pilot_factor_specs(window=5):
     return tuple(result)
 
 
+@lru_cache(maxsize=1)
+def family_recipes():
+    return (
+        FactorRecipe("known_book_to_market", "已公告账面市值比", "divide(book_equity,market_cap)", "ratio", "finathink:known-book-to-market"),
+        FactorRecipe("historical_industry_relative_return", "历史行业同刻相对收益", "industry_relative_return", "ratio", "finathink:point-in-time-industry-relative-return"),
+        FactorRecipe("declared_limit_proximity", "历史涨停价接近度", "divide(close,limit_up_price)", "ratio", "finathink:declared-limit-proximity"),
+        FactorRecipe("institutional_net_buy_fraction", "机构汇总净买入成交额比", "divide(institutional_net_buy,amount)", "ratio", "finathink:aggregate-institutional-flow"),
+        FactorRecipe("intraday_body_fraction_001", "日内实体与振幅比", "divide(subtract(close,open),add(subtract(high,low),0.001))", "ratio", "arxiv:1601.00991v3:Alpha101"),
+    )
+
+
+def family_definitions():
+    from .asset_catalog import ResearchAssetCatalog
+
+    return json.loads(ResearchAssetCatalog.packaged().read_text("source-definitions")).get("family_pilots", [])
+
+
+def family_factor_specs(window=1):
+    from .asset_contracts import FactorSpec
+
+    if type(window) is not int or not 1 <= window <= 252:
+        raise ValueError("family window must be bounded")
+    recipes = {recipe.recipe_id: recipe for recipe in family_recipes()}
+    return tuple(FactorSpec(row["factor_id"], recipes[row["recipe_id"]].version,
+        recipes[row["recipe_id"]].expression(1), recipes[row["recipe_id"]].required_fields,
+        row["units"], row["direction"], 1, "daily", "available-at-or-before-signal", "propagate",
+        f"recipe:{row['recipe_id']}@{recipes[row['recipe_id']].version}",
+        recipes[row["recipe_id"]].implementation_fingerprint, ("source-definitions",)) for row in family_definitions())
+
+
 def resolve_factor_spec(spec):
     from .asset_contracts import FactorSpec
 
     if not isinstance(spec, FactorSpec):
         raise TypeError("typed factor spec required")
-    expected = next((value for value in pilot_factor_specs(spec.window) if value.factor_id == spec.factor_id), None)
+    expected = next((value for value in (*pilot_factor_specs(spec.window), *family_factor_specs()) if value.factor_id == spec.factor_id), None)
     if expected is None or expected.fingerprint != spec.fingerprint:
         raise ValueError("factor spec differs from its audited implementation binding")
     name = spec.implementation_ref.removeprefix("recipe:").split("@", 1)[0]
-    return next(recipe for recipe in research_recipes() if recipe.recipe_id == name)
+    return next(recipe for recipe in (*research_recipes(), *family_recipes()) if recipe.recipe_id == name)
 
 
 def factor_input_requirements(spec):
     resolve_factor_spec(spec)
-    row = next(value for value in _pilot_definitions() if value["factor_id"] == spec.factor_id)
+    row = next(value for value in (*_pilot_definitions(), *family_definitions()) if value["factor_id"] == spec.factor_id)
     return dict(row["required_input_units"])
 
 
@@ -154,6 +187,11 @@ def evaluate_factor_spec(spec, panel):
     requirements = factor_input_requirements(spec)
     if any(panel.units.get(name) != unit for name, unit in requirements.items()):
         raise ValueError("BLOCKED_DATA: factor input units or denominator do not match")
+    from .factor_families import audit_family_inputs, family_for_spec
+
+    family = family_for_spec(spec)
+    if family is not None and audit_family_inputs(family, panel, {"factor_spec": spec.to_dict()}).to_dict()["status"] != "READY":
+        raise ValueError("BLOCKED_DATA: family input audit failed")
     values = evaluate_expression(spec.formula, panel.to_frame())
     values.name = spec.factor_id
     return values

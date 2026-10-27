@@ -665,7 +665,7 @@ class ResearchApplicationService:
 
         from .asset_catalog import ResearchAssetCatalog
         from .factor_proposals import proposal_from_handoff
-        from .factor_recipes import pilot_factor_specs
+        from .factor_recipes import family_factor_specs, pilot_factor_specs
         from .factor_workbench import prepare_method_study
 
         request = self._request(self.queue.get(job_id))
@@ -674,8 +674,8 @@ class ResearchApplicationService:
         if artifact is None:
             raise ValueError("factor study requires an accepted persisted method artifact")
         proposal = proposal_from_handoff(package, artifact, catalog=ResearchAssetCatalog.packaged(), policy={"max_candidates": 1})
-        factor = next((spec for window in (3, 5, 8) for spec in pilot_factor_specs(window)
-                       if spec.formula == proposal.expression), None)
+        available = (*[spec for window in (3, 5, 8) for spec in pilot_factor_specs(window)], *family_factor_specs())
+        factor = next((spec for spec in available if spec.formula == proposal.expression), None)
         if factor is None:
             raise ValueError("factor proposal has no audited pilot binding")
         snapshot = self.snapshots.load(request.snapshot_ref)
@@ -744,7 +744,8 @@ class ResearchApplicationService:
             decision = FactorUseDecision(**values)
         except TypeError as exc:
             raise ValueError("factor use review fields are invalid") from exc
-        evidence = load_factor_evidence(factor_ref, catalog=ResearchAssetCatalog.packaged(), run_repository=self.runs)
+        evidence = load_factor_evidence(factor_ref, catalog=ResearchAssetCatalog.packaged(), run_repository=self.runs,
+                                       run_refs=(decision.run_ref,))
         with self.queue._connect() as db:
             db.execute("BEGIN IMMEDIATE")
             if decision.decision in {"APPROVE_FOR_RESEARCH", "REJECT"}:
@@ -795,9 +796,9 @@ class ResearchApplicationService:
             from .factor_lifecycle import FactorUseDecision
             from .factor_provenance import load_factor_evidence
 
-            evidence = load_factor_evidence(validation_run["bindings"]["factor_id"],
-                catalog=ResearchAssetCatalog.packaged(), run_repository=self.runs)
             run_ref = self._request(self.queue.get(study["test_job_id"])).run_id
+            evidence = load_factor_evidence(validation_run["bindings"]["factor_id"],
+                catalog=ResearchAssetCatalog.packaged(), run_repository=self.runs, run_refs=(run_ref,))
             record = next(row for row in evidence.to_dict()["local_runs"] if row["run_ref"] == run_ref
                           and row["evaluation_fingerprint"] == validation_run["fingerprint"])
             universe = record["scope"]["universe"]
