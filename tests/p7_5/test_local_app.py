@@ -14,7 +14,7 @@ def test_local_shell_defaults_to_offline_sample_mode() -> None:
     assert diagnostics["offline"] is True
     assert diagnostics["real_money_execution"] is False
     assert app.route("GET", "/")[1].startswith("text/html")
-    assert "Skip to content" in app.route("GET", "/")[2]
+    assert "跳到主要内容" in app.route("GET", "/")[2]
     app.close()
 
 
@@ -46,7 +46,7 @@ def test_routes_expose_each_product_world_and_structured_knowledge() -> None:
 def test_shared_shell_has_product_hierarchy_and_semantic_states() -> None:
     app = LocalApplication(connection=sqlite3.connect(":memory:"))
     page = app.route("GET", "/")[2]
-    for label in ("Home", "Events", "Explore", "Knowledge", "Quant", "Strategy Lab", "Workspace"):
+    for label in ("研究总览", "市场事件", "探索研究", "知识学习", "量化分析", "策略实验室", "个人工作区"):
         assert label in page
     for token in ("--background", "--surface", "--evidence", "--hypothesis", "--focus"):
         assert token in page
@@ -55,7 +55,7 @@ def test_shared_shell_has_product_hierarchy_and_semantic_states() -> None:
     assert "finathink-research-splash.jpg" in page
     assert "splash-spin" in page and "prefers-reduced-motion" in page
     assert "prefers-reduced-motion" in page
-    assert "aria-label=\"Primary\"" in page
+    assert "aria-label=\"主导航\"" in page
     app.close()
 
 
@@ -64,11 +64,11 @@ def test_dark_intelligence_shell_has_grouped_navigation_and_truthful_local_statu
     page = app.route("GET", "/")[2]
     for token in ("#050B18", "#081326", "#8B5CF6", "#38BDF8", "#34D399", ".topbar", ".panel"):
         assert token in page
-    for label in ("Workspace", "Learn", "System", "Local Workspace", "PAPER-ONLY"):
+    for label in ("研究", "学习", "系统", "Local Workspace", "PAPER-ONLY"):
         assert label in page
-    assert "aria-label=\"Workspace\"" in page
-    assert "aria-label=\"Learn\"" in page
-    assert "aria-label=\"System\"" in page
+    assert "aria-label=\"研究\"" in page
+    assert "aria-label=\"学习\"" in page
+    assert "aria-label=\"系统\"" in page
     assert "🧠" not in page and "📊" not in page
     assert "outline: 3px solid var(--focus)" in page
     app.close()
@@ -113,7 +113,7 @@ def test_knowledge_search_and_recoverable_html_routes() -> None:
     assert "value=\"volatility\"" in filtered
     assert "Volatility" in filtered
     missing = app.route("GET", "/knowledge/not-a-concept")
-    assert missing[0] == 404 and "Skip to content" in missing[2] and "Browse Knowledge" in missing[2]
+    assert missing[0] == 404 and "跳到主要内容" in missing[2] and "Browse Knowledge" in missing[2]
     asset = app.route("GET", "/assets/finathink-splash-map.jpg")
     assert asset[0] == 200 and asset[1] == "image/jpeg" and asset[2][:3] == b"\xff\xd8\xff"
     asset_two = app.route("GET", "/assets/finathink-research-splash.jpg")
@@ -222,7 +222,7 @@ def test_research_comparison_projection_is_empty_safe_and_route_is_read_only() -
     assert "No registered research runs" in page
     assert page.lower().startswith("<!doctype html>")
     assert '<main class="workspace" id="main"' in page
-    assert 'aria-label="Primary"' in page
+    assert 'aria-label="主导航"' in page
     assert 'href="/research/compare" aria-current="page"' in page
     assert app.route("POST", "/research/compare")[0] == 405
     app.close()

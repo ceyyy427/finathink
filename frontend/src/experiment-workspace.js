@@ -1,4 +1,5 @@
 // Server-owned factor evidence: no financial computation or strategy execution.
+import { readLocalJSON, userErrorMessage } from './local-request.js';
 const STATES = new Set(['DECLARED', 'VALIDATING', 'VALIDATED', 'VALIDATION_FAILED', 'FROZEN', 'TEST_RESERVED', 'TESTING', 'TEST_EVALUATED', 'TEST_FAILED', 'REVIEWED']);
 const ACTIVE = new Set(['DECLARED', 'VALIDATING', 'TEST_RESERVED', 'TESTING']);
 const mounted = new WeakMap();
@@ -21,16 +22,11 @@ export function mountExperimentWorkspace(root, { fetcher = globalThis.fetch, int
   const csrf = query('[data-study-csrf]').value;
   const numeric = (value) => typeof value === 'number' && Number.isFinite(value) ? String(Number(value.toPrecision(6))) : '未提供';
   let generation = 0; let timer; let controller; let current; let snapshots = []; let recipes = []; let createKey;
-  const request = async (url, options = {}) => {
-    const response = await fetcher(url, { credentials: 'same-origin', ...options });
-    const payload = await response.json();
-    if (!response.ok) throw new Error(payload.error ?? '本地请求失败，请检查数据与输入后重试。');
-    return payload;
-  };
+  const request = (url, options) => readLocalJSON(fetcher, url, options);
   const post = (url, values) => request(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...values, _csrf: csrf }) });
   function stop() { generation++; clearTimeout(timer); controller?.abort(); }
   function error(reason) {
-    text('[data-study-status]', `需要处理：${reason.message}`);
+    text('[data-study-status]', `需要处理：${userErrorMessage(reason)} 输入已保留，可重新读取记录。`);
     query('[data-study-status]').setAttribute('role', 'alert');
   }
   async function history() {

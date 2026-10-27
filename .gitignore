@@ -1,4 +1,5 @@
 .venv/
+.local-state/
 .venv-quant/
 .venv-qlib-py312/
 .venv-vectorbt/

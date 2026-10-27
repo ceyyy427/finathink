@@ -141,7 +141,7 @@ def test_overview_and_comparison_keep_shell_and_fit_viewports(http_app, observed
     page.set_viewport_size({"width": width, "height": height})
     for path, name in (("/", "overview"), ("/research/compare", "comparison")):
         page.goto(base + path, wait_until="networkidle")
-        assert page.get_by_role("navigation", name="Primary").is_visible()
+        assert page.get_by_role("navigation", name="主导航").is_visible()
         assert page.locator("main#main").is_visible()
         assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
         if path != "/":
@@ -189,7 +189,7 @@ def test_no_javascript_overview_and_comparison_are_complete(http_app, observed_p
     page.screenshot(path=str(artifacts / "overview-no-js.png"), full_page=True)
     page.goto(base + "/research/compare", wait_until="networkidle")
     assert page.locator("main#main").is_visible()
-    assert page.get_by_role("navigation", name="Primary").is_visible()
+    assert page.get_by_role("navigation", name="主导航").is_visible()
     assert page.get_by_role("table", name="Research run comparison").is_visible()
 
 

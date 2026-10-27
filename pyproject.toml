@@ -12,6 +12,7 @@ dependencies = ["numpy>=2.0,<3", "pandas>=2.2,<4"]
 [project.scripts]
 finahinking = "finahinking.local_app:main"
 finathink = "finahinking.local_app:main"
+finathink-state = "finahinking.maintenance:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=8,<10", "ruff>=0.8,<1", "playwright>=1.61,<1.62"]

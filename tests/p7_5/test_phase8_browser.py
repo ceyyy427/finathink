@@ -98,6 +98,8 @@ def test_learning_loading_error_recovery_and_empty_states(observed_page, tmp_pat
         root.locator('[data-learning-status][role="alert"]').wait_for()
         assert root.get_attribute("aria-busy") == "false"
         assert "重试" in root.locator('[data-learning-status]').inner_text()
+        assert "响应的数据格式异常" in root.locator('[data-learning-status]').inner_text()
+        assert "reading" not in root.locator('[data-learning-status]').inner_text()
         page.screenshot(path=str(artifacts / "learning-error.png"), full_page=True)
         page.unroute("**/api/research/learning")
         root.locator('[data-learning-refresh]').click()
