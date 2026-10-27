@@ -11,6 +11,37 @@ from tests.p7_5.test_phase4_browser import browser, http_app, observed_page
 __all__ = ["browser", "http_app", "observed_page"]
 
 
+@pytest.mark.parametrize("width,height", [(1440, 900), (1920, 1080)])
+def test_overview_heading_spans_columns_and_context_aligns_with_composer(
+    http_app, observed_page, width, height
+):
+    _, base = http_app
+    page, _, _ = observed_page
+    page.set_viewport_size({"width": width, "height": height})
+    page.goto(base, wait_until="networkidle")
+    heading = page.locator(".overview-header").bounding_box()
+    intro = page.locator(".research-intro").bounding_box()
+    context = page.locator(".inspector").bounding_box()
+    assert abs(intro["y"] - context["y"]) <= 1
+    assert heading["y"] + heading["height"] <= intro["y"]
+    assert heading["x"] + heading["width"] >= context["x"] + context["width"] - 1
+    assert page.get_by_role("main").get_by_role("heading", level=1).count() == 1
+
+
+@pytest.mark.parametrize("width", [1024, 390])
+def test_search_opener_keeps_accessible_name_when_caption_is_hidden(
+    http_app, observed_page, width
+):
+    _, base = http_app
+    page, _, _ = observed_page
+    page.set_viewport_size({"width": width, "height": 900})
+    page.goto(base, wait_until="networkidle")
+    opener = page.get_by_role("button", name="搜索功能入口", exact=True)
+    assert opener.is_visible()
+    opener.click()
+    assert page.get_by_role("dialog", name="搜索功能入口").is_visible()
+
+
 def test_reference_theme_preserves_real_counts_and_readable_brand(http_app, observed_page):
     _, base = http_app
     page, artifacts, diagnostics = observed_page

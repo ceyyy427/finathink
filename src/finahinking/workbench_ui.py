@@ -1,5 +1,12 @@
 """Shared blue/white presentation; no data, model, or execution side effects."""
 
+OVERVIEW_HEADER_HTML = (
+    '<header class="overview-header"><div class="overview-header-copy">'
+    '<h1>你的研究，从这里继续。</h1><p class="lede">把问题变成假设，让每一步都有证据。</p>'
+    '</div><div class="overview-meta"><span>本地研究工作空间</span>'
+    '<span>PAPER-ONLY</span></div></header>'
+)
+
 BLUE_WHITE_CSS = """
 :root {
   color-scheme: light;
@@ -90,6 +97,7 @@ h3 { font-size: 14px; font-weight: 600; line-height: 1.5; }
 .inspector dd { font-size: 12px; }
 .inspector .context-card + .context-card { margin-top: 20px; }
 .overview-header { align-items: start; margin-bottom: 23px; }
+.workspace-layout--overview > .overview-header { grid-column: 1 / -1; margin-bottom: 0; }
 .overview-header h1 { font-size: 25px; }
 .overview-meta { font-size: 11px; }
 .research-intro { padding: 24px 25px 19px; margin-bottom: 20px; border: 1px solid #dce8fc; border-radius: 13px; background: #edf4ff; }

@@ -58,7 +58,12 @@ from finahinking.p8_2b.context import ContextSnapshot, no_context, resolve_conte
 from finahinking.p8_2b.export import export_bibtex, export_csl_json, export_latex, export_markdown
 from finahinking.p8_2b.math import render_latex, render_mathml
 from finahinking.p8_2b.widgets import WidgetSpec, run_widget
-from finahinking.workbench_ui import BLUE_WHITE_CSS, nav_icon, shell_search_dialog
+from finahinking.workbench_ui import (
+    BLUE_WHITE_CSS,
+    OVERVIEW_HEADER_HTML,
+    nav_icon,
+    shell_search_dialog,
+)
 
 
 def default_db_path() -> str:
@@ -1203,6 +1208,19 @@ class LocalApplication:
         script_tags = "".join(f'<script src="{html.escape(path)}" defer></script>' for path in dict.fromkeys(("/assets/finathink-research.js", *scripts)))
         from .research.learning_workspace_page import LEARNING_CSS
 
+        content = f'<div class="workspace-inner"><p class="eyebrow">{html.escape(eyebrow)}</p>{body}</div>'
+        if page == "/":
+            # The shared heading precedes both columns, as in the supplied HTML.
+            # Keep it within the main landmark and the context after the body.
+            layout = (
+                '<main class="workspace-layout workspace-layout--overview" id="main" tabindex="-1">'
+                f'{OVERVIEW_HEADER_HTML}<div class="workspace">{content}</div>{inspector_html}</main>'
+            )
+        else:
+            layout = (
+                '<div class="workspace-layout"><main class="workspace" id="main" tabindex="-1">'
+                f'{content}</main>{inspector_html}</div>'
+            )
         return (
             '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">'
             '<meta name="viewport" content="width=device-width,initial-scale=1">'
@@ -1216,11 +1234,8 @@ class LocalApplication:
             '<button type="button" class="shell-shade" data-shell-shade aria-label="关闭导航遮罩" tabindex="-1" hidden></button>'
             '<div class="app-frame" data-shell-frame><header class="topbar" aria-label="Workspace context">'
             f'<div class="topbar-context"><button type="button" class="shell-icon-button shell-menu" data-shell-menu aria-controls="shell-navigation" aria-label="展开导航" aria-expanded="false" hidden>{nav_icon("menu")}</button><span>工作空间 /</span><strong>{html.escape(title)}</strong></div>'
-            f'<div class="topbar-actions"><button type="button" class="shell-search-open" data-shell-search-open aria-controls="shell-search" hidden>{nav_icon("search")}<span>搜索功能入口</span><kbd>⌘ K</kbd></button><span class="local-status">本地研究</span><a class="button" href="/research/jobs">新建研究</a></div></header>'
-            '<div class="workspace-layout"><main class="workspace" id="main" tabindex="-1"><div class="workspace-inner">'
-            f'<p class="eyebrow">{html.escape(eyebrow)}</p>{body}'
-            '</div></main>'
-            f'{inspector_html}</div><footer class="footer-note shell-footer">本地优先 · 可追溯研究与学习 · PAPER-ONLY</footer>'
+            f'<div class="topbar-actions"><button type="button" class="shell-search-open" data-shell-search-open aria-controls="shell-search" aria-label="搜索功能入口" hidden>{nav_icon("search")}<span>搜索功能入口</span><kbd>⌘ K</kbd></button><span class="local-status">本地研究</span><a class="button" href="/research/jobs">新建研究</a></div></header>'
+            f'{layout}<footer class="footer-note shell-footer">本地优先 · 可追溯研究与学习 · PAPER-ONLY</footer>'
             f"</div></div>{shell_search_dialog()}</body></html>"
         )
 
@@ -2243,7 +2258,6 @@ class LocalApplication:
         return (
             f'<section class="overview" data-finathink-overview data-overview-payload-url="/api/overview" aria-busy="false">'
             '<p class="loading-state" data-overview-loading aria-live="polite" hidden>正在读取研究概况…</p><p class="error-state" data-overview-error role="alert" aria-live="assertive" hidden></p><a class="button-secondary" data-overview-retry href="/" hidden>重新载入总览</a>'
-            '<header class="overview-header"><div class="overview-header-copy"><h1>你的研究，从这里继续。</h1><p class="lede">把问题变成假设，让每一步都有证据。</p></div><div class="overview-meta"><span>本地研究工作空间</span><span>PAPER-ONLY</span></div></header>'
             '<section class="research-intro" aria-labelledby="research-intro-title"><h2 id="research-intro-title">从一个好问题，<span>走向可验证的结论。</span></h2><p>连接数据、数学、代码与实验，保留验证和反例。</p>'
             '<form class="question-composer" action="/research/jobs" method="get"><label for="overview-question">你想验证什么？</label><textarea id="overview-question" name="question" required maxlength="1000" rows="2" placeholder="例如：动量窗口改变后，换手、费用和历史回撤会怎样变化？"></textarea>'
             '<div class="composer-footer"><span>先配置数据与边界，提交后才运行。</span><button type="submit">建立研究 '
