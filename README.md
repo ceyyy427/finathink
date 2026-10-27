@@ -70,6 +70,8 @@ Finathink 将用户提供的数据、证据、因子、量化检验、风险检�
 - Worker 使用 checkpoint 和资源限制恢复长任务。
 - 结算后的纸面事件可以生成因子权重、风险规则和注册表更新提案。
 - 学习提案保留 as-of、结算指纹和证据引用，并经过显式准入记录。
+- 在复盘页查看固定观察期的纸面结果、因子衰减与修改预览，显式批准或拒绝提案。
+- 批准创建新配置版本，按所选版本复跑或选择旧版本比较；保留原报告、父版本和回溯标识。
 
 ### HTML 报告与研究界面
 
@@ -96,6 +98,7 @@ python3 scripts/run_local_app.py --sample --port 8765
 - 首页：<http://127.0.0.1:8765/>
 - 后台研究任务：<http://127.0.0.1:8765/research/jobs>
 - 因子实验：<http://127.0.0.1:8765/research/experiments>
+- 复盘与学习：<http://127.0.0.1:8765/research/learning>
 - 研究工作区：<http://127.0.0.1:8765/research>
 - 因子策略工作台：<http://127.0.0.1:8765/workbench>
 - Provider 设置：<http://127.0.0.1:8765/settings/providers>
@@ -103,6 +106,8 @@ python3 scripts/run_local_app.py --sample --port 8765
 低频数据准备、任务接口与验收说明见[本地研究闭环指南](docs/PHASE5_LOCAL_RESEARCH_GUIDE.md)。
 
 研究配方、滚动验证、可比条件和风险执行口径见[量化实验与稳健性验证指南](docs/PHASE7_QUANT_RESEARCH_GUIDE.md)。
+
+复盘观察期、提案审批、配置版本和复跑操作见[复盘与学习审核指南](docs/PHASE8_LEARNING_REVIEW_GUIDE.md)。
 
 ## 仓库结构
 

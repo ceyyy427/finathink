@@ -1236,6 +1236,7 @@ class LocalApplication:
             "/research": "Research Workspace",
             "/research/jobs": "研究任务",
             "/research/experiments": "因子实验",
+            "/research/learning": "复盘与学习",
             "/research/compare": "Research Comparison",
             "/workbench": "Factor Strategy Workbench",
             "/ml": "ML Lab",
@@ -1324,7 +1325,7 @@ class LocalApplication:
     def _nav(self, page: str) -> str:
         names = self._page_names()
         groups = (
-            ("Workspace", "nav-workspace", ("/", "/events", "/explore", "/research/jobs", "/research/experiments", "/research", "/research/compare", "/workbench", "/workspace")),
+            ("Workspace", "nav-workspace", ("/", "/events", "/explore", "/research/jobs", "/research/experiments", "/research/learning", "/research", "/research/compare", "/workbench", "/workspace")),
             ("Learn", "nav-learn", ("/knowledge", "/quant", "/strategy", "/ml", "/parameter")),
             ("System", "nav-system", ("/community", "/settings/engines", "/settings/providers", "/settings/data-sources", "/diagnostics")),
         )
@@ -1379,13 +1380,15 @@ class LocalApplication:
         )
         style_tags = "".join(f'<link rel="stylesheet" href="{html.escape(path)}">' for path in styles)
         script_tags = "".join(f'<script src="{html.escape(path)}" defer></script>' for path in scripts)
+        from .research.learning_workspace_page import LEARNING_CSS
+
         return (
             '<!doctype html><html lang="en"><head><meta charset="utf-8">'
             '<meta name="viewport" content="width=device-width,initial-scale=1">'
             f"<title>{html.escape(title)} · Finathink</title>"
             '<meta name="theme-color" content="#050B18">'
             '<meta http-equiv="Content-Security-Policy" content="default-src \'self\'; img-src \'self\'; style-src \'self\' \'unsafe-inline\'; script-src \'self\'; connect-src \'self\'; form-action \'self\'">'
-            f"<style>{_DARK_APP_CSS}{_RESEARCH_JOBS_CSS if page == '/research/jobs' else ''}{_FACTOR_STUDY_CSS if page == '/research/experiments' else ''}</style>{style_tags}{script_tags}</head><body>"
+            f"<style>{_DARK_APP_CSS}{_RESEARCH_JOBS_CSS if page == '/research/jobs' else ''}{_FACTOR_STUDY_CSS if page == '/research/experiments' else ''}{LEARNING_CSS if page == '/research/learning' else ''}</style>{style_tags}{script_tags}</head><body>"
             '<a class="skip-link" href="#main">Skip to content</a>'
             '<div class="app-shell">'
             f'<nav class="sidebar" aria-label="Primary">{self._nav(clean_page)}</nav>'
@@ -1406,7 +1409,7 @@ class LocalApplication:
         return {"snapshot_ref": snapshot.fingerprint, "instruments": list(snapshot.instruments), "record_count": len(snapshot.observations), "mode": snapshot.mode, "as_of": snapshot.as_of.isoformat(), "pit_status": "AVAILABLE" if snapshot.pit_available() else "UNKNOWN"}
 
     def _research_jobs_route(self, method, clean, body, query):
-        if not (clean in {"/api/research/jobs", "/api/research/experiments"} or clean.startswith(("/api/research/jobs/", "/api/research/snapshots", "/api/research/experiments/"))):
+        if not (clean in {"/api/research/jobs", "/api/research/experiments", "/api/research/learning"} or clean.startswith(("/api/research/jobs/", "/api/research/snapshots", "/api/research/experiments/", "/api/research/learning/"))):
             return None
         content_type = "application/json"
         if method not in {"GET", "POST"}:
@@ -1418,6 +1421,19 @@ class LocalApplication:
         values = {key: value for key, value in (body or {}).items() if key != "_csrf"} if isinstance(body, Mapping) else {}
         try:
             service = self.research_service
+            if clean == "/api/research/learning":
+                return (201, content_type, service.learning.settle(values)) if method == "POST" else (200, content_type, {"reviews": service.learning.list_reviews()})
+            if clean == "/api/research/learning/policies":
+                return (200, content_type, {"policies": service.learning.policies()}) if method == "GET" else (405, content_type, {"error": "配置版本只读，请通过提案审核创建新版本。"})
+            if clean == "/api/research/learning/rerun":
+                return (201, content_type, service.learning.rerun(values)) if method == "POST" else (405, content_type, {"error": "请显式提交版本复跑。"})
+            if clean.startswith("/api/research/learning/"):
+                parts = clean.removeprefix("/api/research/learning/").split("/")
+                if len(parts) == 1 and method == "GET":
+                    return 200, content_type, service.learning.get(parts[0])
+                if len(parts) == 2 and parts[1] == "decision" and method == "POST":
+                    return 200, content_type, service.learning.decide(parts[0], values)
+                return 405, content_type, {"error": "复盘记录只支持读取和显式审核。"}
             if clean == "/api/research/experiments/catalog" and method == "GET":
                 from finahinking.research.factor_catalog_loader import load_research_recipes
 
@@ -1481,7 +1497,12 @@ class LocalApplication:
             return 404, content_type, {"error": "未找到当前会话的研究任务或数据连接。"}
         except DataConnectorError as exc:
             return 502, content_type, {"error": "数据获取失败，请检查连接、字段映射及数据权限。", "code": exc.code}
-        except (ValueError, TypeError):
+        except (ValueError, TypeError) as exc:
+            if clean.startswith("/api/research/learning"):
+                from .research.contracts import _unsafe_public_text
+
+                message = str(exc)
+                return 422, content_type, {"error": message if message and len(message) <= 240 and not _unsafe_public_text(message) else "复盘输入未通过校验，请核对原报告、观察期、数据可用时间和修改预览后重试。"}
             return 422, content_type, {"error": "输入未通过校验，请检查快照、标的、日期、研究问题和资源上限；研究问题中不要粘贴凭证。"}
         except (OSError, sqlite3.Error):
             return 503, content_type, {"error": "本地研究存储暂不可用，请检查磁盘空间和文件权限后重试。"}
@@ -1700,7 +1721,7 @@ class LocalApplication:
             if method != "GET":
                 return 405, "application/json", {"error": "research comparison is read-only"}
             return 200, "text/html; charset=utf-8", self.render_page(clean, query=query)
-        if clean == "/research/experiments" and method == "GET":
+        if clean in {"/research/experiments", "/research/learning"} and method == "GET":
             return 200, "text/html; charset=utf-8", self.render_page(clean, query=query)
         if clean.startswith("/research/"):
             if method != "GET":
@@ -1941,7 +1962,7 @@ class LocalApplication:
         title = names.get(page, "Finathink")
         body = self._page_body(page, query=query)
         inspector = self._page_inspector(page)
-        scripts = ("/assets/finathink-research.js",) if page in {"/", "/research", "/research/jobs", "/research/experiments", "/research/compare", "/workbench", "/settings/providers"} else ()
+        scripts = ("/assets/finathink-research.js",) if page in {"/", "/research", "/research/jobs", "/research/experiments", "/research/learning", "/research/compare", "/workbench", "/settings/providers"} else ()
         return self.render_shell(active_page, title, body, inspector=inspector, scripts=scripts)
 
     def render_result_page(self, title: str, payload: Any) -> str:
@@ -2373,6 +2394,10 @@ class LocalApplication:
         )
 
     def _page_body(self, page: str, *, query: Mapping[str, list[str]] | None = None) -> str:
+        if page == "/research/learning":
+            from .research.learning_workspace_page import learning_workspace_page
+
+            return learning_workspace_page(self.csrf_token)
         if page == "/research/experiments":
             from .research.factor_workspace_page import factor_workspace_page
 

@@ -54,7 +54,7 @@ def local_research_policy():
 class SnapshotResearchTools(ResearchToolGateway):
     """Use the in-house engine; never resolve a missing input to a fixture."""
 
-    def __init__(self, snapshot: DatasetSnapshot, *, publication_before=None) -> None:
+    def __init__(self, snapshot: DatasetSnapshot, *, publication_before=None, policy=None, policy_lineage=None) -> None:
         if not isinstance(snapshot, DatasetSnapshot):
             raise TypeError("snapshot must be a DatasetSnapshot")
         # Defensive roundtrip also verifies nested content before it is used.
@@ -63,7 +63,8 @@ class SnapshotResearchTools(ResearchToolGateway):
         if self.publication_before is not None and (pd.isna(self.publication_before) or self.publication_before.tzinfo is None):
             raise ValueError("publication boundary must be timezone-aware")
         self.observations = tuple(item for item in self.snapshot.observations if self.publication_before is None or item.timestamp < self.publication_before)
-        self.policy = local_research_policy()
+        self.policy = dict(local_research_policy() if policy is None else policy)
+        self.policy_lineage = dict(policy_lineage or {})
         self.analysis: dict = {}
         self.risk_payload: dict = {}
         self.run_id: str | None = None
@@ -185,6 +186,8 @@ class SnapshotResearchTools(ResearchToolGateway):
             "limitations": sorted(set(evaluation.limitations) | set(source["source_limitations"]) | {"Observation-period metrics; calendar not verified, so annualized return, volatility, Sharpe and Sortino are withheld.", "Historical signal availability is checked against each next-bar execution boundary; delayed feeds are rejected.", "Paper fills use archived marks, not live market execution.", "Single selected instrument only; no implicit purchase of other snapshot instruments. Missing industry stays UNKNOWN and receives a conservative cap.", "Factor exposure is weight times observed momentum return, not an inferred market/style beta. CVaR is a descriptive fractional empirical tail loss, not a probability forecast.", "Volume capacity assumes normalized tradable units and common price/cash currency; a 1% model is not proof of executable liquidity. Latest intents stay pending without a known next observation."}), "paper_only": True,
         }
         self.analysis["comparison_conditions"]["instrument"] = instrument
+        if self.policy_lineage:
+            self.analysis["policy_lineage"] = self.policy_lineage
         self.analysis["publication_scope"] = {"kind": "PRE_TEST_ONLY" if self.publication_before is not None else "FULL_SELECTED_PERIOD", "before_exclusive": self.publication_before.isoformat() if self.publication_before is not None else None}
         self.analysis["fingerprint"] = stable_digest(self.analysis)
         return self.analysis

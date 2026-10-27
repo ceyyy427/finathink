@@ -165,7 +165,7 @@ def run_local_research_stage(invocation, checkpoint_ref, publish_checkpoint, *, 
     from .drivers import OfflineDriver
     from .observability import current_runtime_budget
     from .reports import ReportBundleWriter
-    from .snapshot_tools import SnapshotResearchTools, local_research_policy
+    from .snapshot_tools import SnapshotResearchTools
     from .workflow import ResearchOrchestrator
 
     del checkpoint_ref  # Replay deterministic work; never trust partial tool output.
@@ -181,12 +181,21 @@ def run_local_research_stage(invocation, checkpoint_ref, publish_checkpoint, *, 
         request = queue.load_request_snapshot(record.task_ref, expected_digest=queue.task_input_digest(record.task_ref))
     except (KeyError, ValueError, TypeError):
         return {"status": "blocked", "failure_kind": "REQUEST_UNAVAILABLE"}
-    if request.workflow_version != WORKFLOW_VERSION or not isinstance(request.research_plan, ResearchPlan) or request.research_plan.validation_spec.get("policy_fingerprint") != stable_digest(local_research_policy()):
+    if request.workflow_version != WORKFLOW_VERSION or not isinstance(request.research_plan, ResearchPlan):
         return {"status": "blocked", "failure_kind": "POLICY_CHANGED"}
     try:
         snapshot = SnapshotStore(root / "snapshots").load(request.snapshot_ref)
     except (OSError, ValueError, TypeError):
         return {"status": "blocked", "failure_kind": "SNAPSHOT_INTEGRITY_FAILED"}
+    from .learning_review import LearningReviewService, LearningReviewStore
+
+    try:
+        policy_record = LearningReviewStore(queue, root, scope_id=request.research_plan.validation_spec["scope_id"]).policy(request.previous_policy_fingerprint, as_of=request.as_of)
+        lineage = LearningReviewService.lineage(policy_record, snapshot, request.instrument, rerun_of=request.research_plan.validation_spec.get("rerun_of"))
+        if request.research_plan.validation_spec.get("policy_fingerprint") != policy_record["runtime_fingerprint"] or request.research_plan.validation_spec.get("policy_lineage", lineage) != lineage:
+            raise ValueError("policy binding mismatch")
+    except (KeyError, ValueError, TypeError, OSError):
+        return {"status": "blocked", "failure_kind": "POLICY_CHANGED"}
     budget = current_runtime_budget()
     if budget is not None:
         budget.charge_bytes(len(snapshot.to_json().encode("utf-8")))
@@ -218,7 +227,7 @@ def run_local_research_stage(invocation, checkpoint_ref, publish_checkpoint, *, 
         studies.set_job(study["study_id"], binding["phase"], record.job_id)
         if binding["phase"] == "validation":
             publication_before = study["spec"]["test_period"][0]
-    tools = SnapshotResearchTools(snapshot, publication_before=publication_before)
+    tools = SnapshotResearchTools(snapshot, publication_before=publication_before, policy=policy_record["effective"], policy_lineage=lineage)
     driver, manager = OfflineDriver(), ResearchManager()
     if spec.get("execution_mode") == "provider-grounded":
         if not allow_model_calls:
@@ -324,6 +333,9 @@ class ResearchApplicationService:
             os.close(descriptor)
         self.queue = JobQueue(queue_path, max_attempts=3, backoff_base_seconds=0.1, backoff_max_seconds=1)
         self.factor_studies = FactorStudyStore(self.queue, scope_id=self.scope_id)
+        from .learning_review import LearningReviewService
+
+        self.learning = LearningReviewService(self)
         runner = run_local_research_stage if allow_model_calls else run_offline_research_stage
         self.runtime = ResearchRuntimeService(self.queue, stage_runners={"local_research": runner}, worker_id=f"application-{uuid.uuid4().hex[:16]}", timeout_seconds=300, autostart=False, supervisor_concurrency=2)
 
@@ -359,10 +371,10 @@ class ResearchApplicationService:
             raise ValueError("budget exceeds local resource limits")
         return limits
 
-    def submit(self, values, *, factor_study=None):
+    def submit(self, values, *, factor_study=None, rerun_of=None):
         if not isinstance(values, dict):
             raise TypeError("research submission must be an object")
-        if set(values) - {"idempotency_key", "snapshot_ref", "question", "instrument", "as_of", "model_config_ref", "budget", "materials", "allow_model_calls"}:
+        if set(values) - {"idempotency_key", "snapshot_ref", "question", "instrument", "as_of", "model_config_ref", "budget", "materials", "allow_model_calls", "policy_ref"}:
             raise ValueError("research submission contains unsupported fields")
         key = _ref(values.get("idempotency_key"), "idempotency_key")
         question = values.get("question")
@@ -391,17 +403,22 @@ class ResearchApplicationService:
             raw_budget = {"max_attempts": 1, "max_provider_calls": 6, **raw_budget}
         limits = self._limits(raw_budget, factor_study=factor_study is not None)
         budget = asdict(limits)
-        from .snapshot_tools import local_research_policy
-
-        policy = local_research_policy()
+        policy_record = self.learning.store.policy(values.get("policy_ref"), as_of=values.get("as_of"))
+        policy = policy_record["effective"]
+        if rerun_of is not None:
+            _ref(rerun_of, "rerun_of")
+        lineage = self.learning.lineage(policy_record, snapshot, instrument, rerun_of=rerun_of)
+        if factor_study is not None and policy_record["version"] != 0:
+            raise ValueError("因子实验只能使用其预先冻结的基准配置")
         policy_fingerprint = stable_digest(policy)
         request = ResearchRequest(
             run_id=f"research-{stable_digest({'scope': self.scope_id, 'key': key})[:24]}",
             instrument=instrument, as_of=values.get("as_of"),
-            research_plan=ResearchPlan(hypotheses=(question.strip(),), factor_ids=(policy["factor_id"],), validation_spec={"scope_id": self.scope_id, "execution_mode": "provider-grounded" if config is not None else "local-deterministic", "model_config_ref": selected_provider, "data_mode": snapshot.mode, "budget": budget, "policy_fingerprint": policy_fingerprint, "strategy_version": policy["strategy_version"]}),
+            research_plan=ResearchPlan(hypotheses=(question.strip(),), factor_ids=(policy["factor_id"],), validation_spec={"scope_id": self.scope_id, "execution_mode": "provider-grounded" if config is not None else "local-deterministic", "model_config_ref": selected_provider, "data_mode": snapshot.mode, "budget": budget, "policy_fingerprint": policy_fingerprint, "strategy_version": policy["strategy_version"], "policy_lineage": lineage, **({"rerun_of": rerun_of} if rerun_of else {})}),
             analyst_roles=_ROLES, asset_class="EQUITY_OR_ETF", workflow_version=WORKFLOW_VERSION,
             config_digest=stable_digest({"workflow": WORKFLOW_VERSION, "budget": budget, "policy_fingerprint": policy_fingerprint}),
             snapshot_ref=snapshot.fingerprint,
+            previous_policy_fingerprint=policy_record["policy_ref"],
         )
         if factor_study is not None:
             from dataclasses import replace
@@ -508,6 +525,8 @@ class ResearchApplicationService:
             "model_research": model_research,
             "factor_study": source.get("factor_study"),
             "risk_portfolio": source.get("risk_portfolio"),
+            "policy_ref": request.previous_policy_fingerprint or request.research_plan.validation_spec["policy_fingerprint"],
+            "policy_lineage": source.get("policy_lineage", request.research_plan.validation_spec.get("policy_lineage")),
             "budget": request.research_plan.validation_spec["budget"], "attempts": record.attempts,
             "cancel_requested": record.cancel_requested,
             "created_at": _utc(record.created_at), "updated_at": _utc(record.updated_at),

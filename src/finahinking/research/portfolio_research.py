@@ -1,5 +1,6 @@
 """Causal single-instrument research caps; no optimizer or inferred industry."""
 
+import math
 from itertools import pairwise
 
 import pandas as pd
@@ -42,6 +43,12 @@ def constrained_target(rows, raw_weight, policy):
         after = min(weight, max(0.0, cap))
         effects.append({"constraint": name, "limit_weight": cap, "before_weight": weight, "after_weight": after, "cash_added": weight - after, "reason": reason})
         weight = after
+    scale = policy.get("signal_budget_scale", 1.0)
+    if isinstance(scale, bool) or not math.isfinite(float(scale)) or not 0 <= scale <= 1:
+        raise ValueError("signal budget scale must be in [0, 1]")
+    if scale != 1:
+        effects.append({"constraint": "learned_signal_budget", "limit_weight": weight * scale, "before_weight": weight, "after_weight": weight * scale, "cash_added": weight * (1 - scale), "reason": "explicitly approved learned signal-budget multiplier"})
+        weight *= scale
     return weight, effects, {"industry": industry, "momentum": momentum, "unit_cvar": cvar, "returns": returns}
 
 
