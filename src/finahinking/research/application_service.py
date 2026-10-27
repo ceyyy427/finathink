@@ -760,6 +760,23 @@ class ResearchApplicationService:
                     self.factor_studies.review(study_id, decision.decision, decision.reviewer, connection=db)
             return self.factor_uses.record(decision, evidence=evidence, connection=db)
 
+    def refresh_factor_monitoring(self, factor_ref, values):
+        from .asset_catalog import ResearchAssetCatalog
+        from .factor_monitoring import evaluate_factor_monitoring
+        from .factor_provenance import load_factor_evidence
+
+        if not isinstance(values, dict):
+            raise TypeError("factor monitoring refresh must be an object")
+        allowed = {"as_of", "min_windows", "decline_windows", "drop_threshold", "run_refs", "parent_policy_ref"}
+        if set(values) - allowed:
+            raise ValueError("factor monitoring accepts controls and report references, not metrics")
+        evidence = load_factor_evidence(factor_ref, catalog=ResearchAssetCatalog.packaged(), run_repository=self.runs,
+                                       run_refs=values.get("run_refs", ()))
+        controls = {key: value for key, value in values.items() if key not in {"run_refs", "parent_policy_ref"}}
+        proposal = evaluate_factor_monitoring(factor_ref, evidence.to_dict()["local_runs"], controls)
+        review = self.learning.review_factor_monitoring(proposal, parent_policy_ref=values.get("parent_policy_ref")) if proposal.to_dict()["status"] == "REVIEW_RECOMMENDED" else None
+        return {"proposal": proposal.to_dict(), "learning_review": review}
+
     def freeze_factor_study(self, study_id, candidate_id):
         study = self.factor_study(study_id)
         result = study.get("validation")

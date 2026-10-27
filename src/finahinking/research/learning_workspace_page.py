@@ -34,10 +34,10 @@ def learning_workspace_page(csrf_token):
 <p class="field-help">沿用原研究的配置、费用和下一观察成交规则。只使用研究截止日之后的观察；首个成交观察后固定5个观察间隔估值。数据未到期、未知可用时间或未成交时不生成已实现学习结果。</p>
 <p><a href="/research/jobs">准备数据并运行研究</a> · <button type="button" data-learning-refresh>重新读取本地记录</button></p></section>
 <section class="section" data-learning-detail hidden aria-label="所选复盘详情">
-<h2>假设与纸面结果</h2><ul data-learning-hypotheses></ul>
+<h2 data-learning-outcome-heading>假设与纸面结果</h2><ul data-learning-hypotheses></ul>
 <p data-learning-binding class="learning-evidence"></p>
 <div class="table-wrap" tabindex="0" role="region" aria-label="复盘结果，可横向滚动"><table data-learning-outcome><caption>固定观察末价估值，非平仓收益；含入场费用与滑点。价格和现金使用输入数据声明的共同单位。</caption><thead><tr><th scope="col">观察</th><th scope="col">结果</th></tr></thead><tbody></tbody></table></div>
-<h3>因子衰减诊断</h3><p>按已知观察计算不同标签跨度的 IC；属于描述性复盘，不是新增样本外检验。缺失值保留为未知。</p>
+<h3 data-learning-decay-heading>因子衰减诊断</h3><p data-learning-decay-description>按已知观察计算不同标签跨度的 IC；属于描述性复盘，不是新增样本外检验。缺失值保留为未知。</p>
 <div class="table-wrap" tabindex="0" role="region" aria-label="因子衰减，可横向滚动"><table data-learning-decay><thead><tr><th scope="col">标签跨度（观察数）</th><th scope="col">IC</th></tr></thead><tbody></tbody></table></div>
 <h2>审核修改预览</h2><p data-learning-basis class="learning-rule"></p>
 <div class="table-wrap" tabindex="0" role="region" aria-label="配置修改预览，可横向滚动"><table data-learning-preview><caption>只展示服务器计算的原值与提议值；审批前不应用</caption><thead><tr><th scope="col">配置</th><th scope="col">原版本</th><th scope="col">建议新版本</th></tr></thead><tbody></tbody></table></div>
