@@ -36,11 +36,11 @@
 
 **Interfaces:** 新增只读 `/library/methods`、`/library/behavior`、`/library/lessons`。GET `/api/research/assets` 接受 kind、受限标签、limit/offset；GET `/api/research/assets/{asset_id}` 返回公开安全视图。分页默认 20、最大 100，不返回任意本地路径。
 
-- [ ] 测试实际目录分页、空/缺失/损坏资源、未知 ID、特殊字符、错误重试和只读无副作用；先运行上述 Python/Node 文件观察 RED。
-- [ ] 使用蓝白外壳增加方法卡、六类公开行为档案与反例检索；来源、事实/转述/假设、触发条件与资料缺口可展开检查。
-- [ ] 由 ResearchAssetCatalog 与 FactorEvidenceView 计算页面数据，不硬编码示例数量；选择方法后进入既有研究入口，仍需选择数据和授权。
-- [ ] Expected: “12 个可发现方法”由索引生成；每张卡都能定位版本与来源；未准备资料不显示就绪。
-- [ ] 提交 `feat: expose research methods behavior evidence and lessons`。
+- [x] 测试实际目录分页、空/缺失/损坏资源、未知 ID、特殊字符、错误重试和只读无副作用；先运行上述 Python/Node 文件观察 RED。
+- [x] 使用蓝白外壳增加方法卡、六类公开行为档案与反例检索；来源、事实/转述/假设、触发条件与资料缺口可展开检查。
+- [x] 由 ResearchAssetCatalog 与 FactorEvidenceView 计算页面数据，不硬编码示例数量；选择方法后进入既有研究入口，仍需选择数据和授权。
+- [x] Expected: “12 个可发现方法”由索引生成；每张卡都能定位版本与来源；未准备资料不显示就绪。
+- [x] 提交 `feat: expose research methods behavior evidence and lessons`。
 
 ### Task 2：因子详情、九步轨道与研究决策
 
@@ -48,11 +48,11 @@
 
 **Interfaces:** 新增 `/research/factors/{factor_id}`，版本以有界 query 明确指定；详情由 FactorSpec、FactorEvidenceView 和 FactorLifecycleView 组成。九步轨道消费 FactorValidationRun，操作调用现有研究/审核服务，不直接改数据库或注册表。
 
-- [ ] 测试来源/定义/公式/数据/验证/生命周期/反例七个分区；负 OOS、未知容量、BLOCKED_DATA、EXECUTION_ERROR、未批准及跨版本比较都有明确表达。
-- [ ] 运行新 Python 文件和既有实验/运行 Node 测试，确认缺失状态绑定时 RED。
-- [ ] 显示本次方法、选择原因与 hash；九步按真实状态标记，保留失败与 NOT_RUN；来源指标和本地结果并列，不生成无根据的综合健康分。
-- [ ] Expected: 从问题可追溯到方法、公式、数据、运行与结论；未经审核没有批准标签；对比保留数据/费用/OOS 可比性约束。
-- [ ] 提交 `feat: connect factor evidence and validation stages to the workbench`。
+- [x] 测试来源/定义/公式/数据/验证/生命周期/反例七个分区；负 OOS、未知容量、BLOCKED_DATA、EXECUTION_ERROR、未批准及跨版本比较都有明确表达。
+- [x] 运行新 Python 文件和既有实验/运行 Node 测试，确认缺失状态绑定时 RED。
+- [x] 显示本次方法、选择原因与 hash；九步按真实状态标记，保留失败与 NOT_RUN；来源指标和本地结果并列，不生成无根据的综合健康分。
+- [x] Expected: 从问题可追溯到方法、公式、数据、运行与结论；未经审核没有批准标签；对比保留数据/费用/OOS 可比性约束。
+- [x] 提交 `feat: connect factor evidence and validation stages to the workbench`。
 
 ### Task 3：统一蓝白离线研究报告
 
@@ -60,11 +60,11 @@
 
 **Interfaces:** `build_method_factor_sections(validation_run, loaded_methods, evidence_view, lifecycle_view) -> ReportSections`。新模板消费同一运行对象，manifest 增加方法清单、数据附件、政策与验证产物的摘要引用；共用同一主题，不另造暗色模板。
 
-- [ ] 测试内容与运行指纹一致、来源/本地数值不混用、失败实验保留、XSS/不安全链接转义和旧报告不被重写；先观察 RED。
-- [ ] 增加研究问题、方法、九步验证、来源对照、实际结果、反例和下一步；图表与 meta 使用同一结构化结果。
-- [ ] 导出自包含 HTML：嵌入必要样式与数据图形，保留表格、目录锚点和原生折叠；打开文件不访问本地 API 或 CDN。复杂图形不可用时仍可完整读数。
-- [ ] Expected: 离线文件可复查，方法/数据/公式/政策指纹齐全；重启后仍可下载原版本；未计算部分不生成曲线或分数。
-- [ ] 提交 `feat: export traceable blue-white offline research reports`。
+- [x] 测试内容与运行指纹一致、来源/本地数值不混用、失败实验保留、XSS/不安全链接转义和旧报告不被重写；先观察 RED。
+- [x] 增加研究问题、方法、九步验证、来源对照、实际结果、反例和下一步；图表与 meta 使用同一结构化结果。
+- [x] 导出自包含 HTML：嵌入必要样式与数据图形，保留表格、目录锚点和原生折叠；打开文件不访问本地 API 或 CDN。复杂图形不可用时仍可完整读数。
+- [x] Expected: 离线文件可复查，方法/数据/公式/政策指纹齐全；重启后仍可下载原版本；未计算部分不生成曲线或分数。
+- [x] 提交 `feat: export traceable blue-white offline research reports`。
 
 ### Task 4：完整旅程、安装验收与发布候选
 
@@ -72,11 +72,11 @@
 
 **Interfaces:** 延用 CI 的 `frontend-browser-evidence`；新增页面、离线文件和安装后的工作台进入同一必跑门禁，不以源码 smoke 代替安装包验收。
 
-- [ ] 浏览器验证“选方法→提问题→绑数据→受控提案→计算/阻断→读报告→复盘→显式审核→版本复跑”；真实模型与数据调用另记外部验收状态。
-- [ ] 批量检查 1440×900、1920×1080、1024 和 375/390 移动宽度，覆盖键盘、焦点、减少动态效果、无 JS 基本入口、Loading/Error/Empty 和超长内容，保存截图与错误诊断。
-- [ ] 验证新 wheel、旧状态升级、重启、备份恢复和历史报告完整性；离线打开报告时监测外部请求为零。
-- [ ] 运行全量 Python、Node、构建、性能、Ruff、治理、依赖与密钥扫描；独立代码/视觉审查并修复重要问题。Expected: 门禁通过，剩余外部验证和未完成条目如实列出。
-- [ ] 提交并形成发布候选；在既有用户发布授权范围内创建独立 PR，等待精确 head 的 CI 和证据，再合并并核对 main。本次计划审阅轮不推送或发布。
+- [x] 浏览器验证“选方法→提问题→绑数据→受控提案→计算/阻断→读报告→复盘→显式审核→版本复跑”；真实模型与数据调用另记外部验收状态。
+- [x] 批量检查 1440×900、1920×1080、1024 和 375/390 移动宽度，覆盖键盘、焦点、减少动态效果、无 JS 基本入口、Loading/Error/Empty 和超长内容，保存截图与错误诊断。
+- [x] 验证新 wheel、旧状态升级、重启、备份恢复和历史报告完整性；离线打开报告时监测外部请求为零。
+- [x] 运行全量 Python、Node、构建、性能、Ruff、治理、依赖与密钥扫描；独立代码/视觉审查并修复重要问题。Expected: 门禁通过，剩余外部验证和未完成条目如实列出。
+- [x] 提交并形成发布候选；在既有用户发布授权范围内创建独立 PR，等待精确 head 的 CI 和证据，再合并并核对 main。本次计划审阅轮不推送或发布。
 
 ## 交付验收
 
