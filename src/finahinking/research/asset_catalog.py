@@ -32,6 +32,16 @@ class ResearchAssetCatalog:
         self._resources = {}
         try:
             for item in manifest["resources"]:
+                if not self._text_fields(
+                    item, ("resource_id", "availability", "kind", "author", "version"),
+                    ("path", "sha256", "license_id", "license_ref", "source_url",
+                     "source_path", "source_sha256", "derivation"),
+                ):
+                    raise AssetLoadError("INVALID_MANIFEST", "manifest")
+                if item.get("byte_size") is not None and (
+                    type(item["byte_size"]) is not int or item["byte_size"] < 0
+                ):
+                    raise AssetLoadError("INVALID_SIZE", "manifest")
                 ref = ResourceRef(**item)
                 if not ref.resource_id or ref.resource_id in self._resources:
                     raise AssetLoadError("DUPLICATE_RESOURCE", str(ref.resource_id))
@@ -55,13 +65,25 @@ class ResearchAssetCatalog:
         return cls(files("finahinking").joinpath("_package_data", "research_assets"))
 
     @staticmethod
+    def _text_fields(item, required, optional=()):
+        """Type hints alone cannot make JSON-derived scalar fields immutable."""
+        if not isinstance(item, dict):
+            return False
+        if any(not isinstance(item.get(name), str) or not item[name].strip()
+               for name in required):
+            return False
+        return all(item.get(name) is None or (
+            isinstance(item[name], str) and bool(item[name].strip())
+        ) for name in optional)
+
+    @staticmethod
     def _json(text, resource_id):
         try:
             value = json.loads(text)
             if not isinstance(value, dict):
                 raise TypeError("object required")
             return value
-        except (ValueError, TypeError) as exc:
+        except (RecursionError, ValueError, TypeError) as exc:
             raise AssetLoadError("INVALID_JSON", resource_id) from exc
 
     def _path(self, relative):
@@ -132,6 +154,10 @@ class ResearchAssetCatalog:
                         "optional_resources", "boundaries")
         try:
             for row in index["skills"]:
+                if not self._text_fields(
+                    row, ("skill_id", "name", "version", "main_resource", "policy_ref")
+                ):
+                    raise AssetLoadError("INVALID_DESCRIPTOR", "skill-index")
                 item = dict(row)
                 for name in tuple_fields:
                     if not isinstance(item[name], list) or not all(
@@ -173,6 +199,19 @@ class ResearchAssetCatalog:
                 if not line.strip():
                     continue
                 item = self._json(line, resource_id)
+                if record_type is EvidenceClaim:
+                    valid = self._text_fields(
+                        item, ("claim_id", "subject_id", "evidence_status", "metric_name",
+                               "metric_units", "definition", "scope"),
+                        ("local_run_ref", "reproduction_scope"),
+                    )
+                else:
+                    valid = self._text_fields(
+                        item, ("lesson_id", "title", "failure_type", "summary", "mitigation",
+                               "regression_check", "revisit_when"), ("evidence_status",),
+                    )
+                if not valid:
+                    raise AssetLoadError("INVALID_EVIDENCE", resource_id)
                 for name in tuple_fields:
                     if not isinstance(item[name], list) or not all(
                         isinstance(value, str) and value for value in item[name]

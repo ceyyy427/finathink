@@ -129,3 +129,45 @@ def test_packaged_catalog_is_the_installed_resource_authority():
     catalog = _api().ResearchAssetCatalog.packaged()
     assert "DeepSeek HARNESS Quant" in catalog.read_text("upstream-license")
     assert isinstance(catalog.skills(), tuple)
+
+
+@pytest.mark.parametrize("field,value", [("name", []), ("version", {}),
+                                        ("main_resource", []), ("policy_ref", {})])
+def test_descriptor_rejects_mutable_scalar_metadata(tmp_path, field, value):
+    api = _api()
+    manifest = _write_catalog(tmp_path)
+    target = tmp_path / "skills/index.json"
+    index = json.loads(target.read_text())
+    index["skills"][0][field] = value
+    body = json.dumps(index).encode()
+    target.write_bytes(body)
+    ref = next(r for r in manifest["resources"] if r["resource_id"] == "skill-index")
+    ref.update(sha256=hashlib.sha256(body).hexdigest(), byte_size=len(body))
+    (tmp_path / "provenance/upstream-lock.json").write_text(json.dumps(manifest))
+    with pytest.raises(api.AssetLoadError) as error:
+        api.ResearchAssetCatalog(tmp_path)
+    assert error.value.code == "INVALID_DESCRIPTOR"
+
+
+@pytest.mark.parametrize("field,value", [("author", ["mutable"]), ("version", {}),
+                                        ("source_url", {}), ("source_sha256", []),
+                                        ("license_id", [])])
+def test_resource_rejects_mutable_scalar_metadata(tmp_path, field, value):
+    api = _api()
+    manifest = _write_catalog(tmp_path)
+    manifest["resources"][0][field] = value
+    (tmp_path / "provenance/upstream-lock.json").write_text(json.dumps(manifest))
+    with pytest.raises(api.AssetLoadError) as error:
+        api.ResearchAssetCatalog(tmp_path)
+    assert error.value.code == "INVALID_MANIFEST"
+
+
+def test_deep_json_within_byte_limit_has_structured_error(tmp_path):
+    api = _api()
+    _write_catalog(tmp_path)
+    text = '{"schema_version":"research-assets.v1","nested":' + "[" * 20000 + "0" + "]" * 20000 + "}"
+    assert len(text.encode()) < 524288
+    (tmp_path / "provenance/upstream-lock.json").write_text(text)
+    with pytest.raises(api.AssetLoadError) as error:
+        api.ResearchAssetCatalog(tmp_path)
+    assert error.value.code == "INVALID_JSON"

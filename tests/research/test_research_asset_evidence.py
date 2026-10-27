@@ -116,3 +116,17 @@ def test_real_source_inventory_is_explicit_about_unresolved_formulas():
     assert catalog.claims_for("dshq-turn-mid-prox")
     lessons = catalog.lessons_for(("correlation",))
     assert lessons and all(lesson.regression_check and lesson.revisit_when for lesson in lessons)
+
+
+@pytest.mark.parametrize("field", ["title", "failure_type", "summary", "mitigation",
+                                  "regression_check", "revisit_when"])
+def test_lesson_rejects_mutable_scalar_metadata(tmp_path, field):
+    lesson = {"lesson_id": "lesson", "title": "研究教训", "tags": ["coverage"],
+              "failure_type": "DATA_SEMANTICS", "summary": "summary",
+              "source_resource_ids": ["guide"], "mitigation": "check inputs",
+              "regression_check": "check coverage", "revisit_when": "new data"}
+    lesson[field] = []
+    catalog = _catalog(tmp_path, lessons=[lesson])
+    with pytest.raises(AssetLoadError) as error:
+        catalog.lessons_for(())
+    assert error.value.code == "INVALID_EVIDENCE"

@@ -10,6 +10,8 @@
 
 **Spec:** `docs/superpowers/specs/2026-10-27-finathink-research-assets-integration-design.md`。
 
+**状态：** 本地完成。49 项阶段/安装验证、1391 项全量通过，1 项既有条件性跳过；Node 44。独立审查发现的元数据类型与 JSON 错误边界已复现修正并回归。来源指标保持来源状态，运行时接入从 Phase 12 开始。
+
 ## 用户将得到什么
 
 能查到每个方法解决什么问题、需要什么输入、资料是否齐全，以及引用了什么来源。12 是拟适配的技能身份数，不是有效策略数；未取得的原始数据或报告会显示缺口。
@@ -45,11 +47,11 @@
 
 **Interfaces:** 定义设计中的 SkillDescriptor、ResourceRef、EvidenceClaim、LessonRecord、AssetInventory；实现 `ResearchAssetCatalog.packaged()`、`skills()`、`get_skill()`、`resources_for()`、`read_text()`，签名与设计一致。
 
-- [ ] 写测试 `test_asset_hash_mismatch_rejected`、`test_asset_path_cannot_escape_package`、`test_missing_source_is_not_a_local_file`：篡改/越界被拒绝，缺失资源有结构化状态。
-- [ ] 运行 `python3 -m pytest tests/research/test_research_asset_catalog.py -q`；Expected: 缺少上述合同导致失败，不因测试导入路径错误失败。
-- [ ] 核查固定上游，记录逐文件来源、作者、许可、hash 和缺口；实现有界只读加载，单资源默认上限 65536 UTF-8 字节。
-- [ ] 构建 wheel 并在独立环境、源码目录外加载；运行上述两个测试文件。Expected: 包内资源完整、hash 一致、许可缺失内容不进入发行包。
-- [ ] 提交 `feat: add audited packaged research asset catalog`。
+- [x] 写测试 `test_asset_hash_mismatch_rejected`、`test_asset_path_cannot_escape_package`、`test_missing_source_is_not_a_local_file`：篡改/越界被拒绝，缺失资源有结构化状态。
+- [x] 运行 `python3 -m pytest tests/research/test_research_asset_catalog.py -q`；Expected: 缺少上述合同导致失败，不因测试导入路径错误失败。
+- [x] 核查固定上游，记录逐文件来源、作者、许可、hash 和缺口；实现有界只读加载，单资源默认上限 65536 UTF-8 字节。
+- [x] 构建 wheel 并在独立环境、源码目录外加载；运行上述两个测试文件。Expected: 包内资源完整、hash 一致、许可缺失内容不进入发行包。
+- [x] 提交 `feat: add audited packaged research asset catalog`。
 
 ### Task 2：12 个技能适配与共用验证政策
 
@@ -57,11 +59,11 @@
 
 **Interfaces:** L0 索引只含名称、触发标签、输入、输出、必需/可选资源、版本、边界；所有技能通过同一个版本化政策引用验证规则。
 
-- [ ] 测试 12 个身份唯一、索引和实际资源相符、必需引用可解析、缺失外部材料保留缺口；索引不能宣称计算已完成或授予工具权限。
-- [ ] 运行 `python3 -m pytest tests/research/test_research_method_descriptors.py -q`；Expected: 未适配目录与必需引用检查失败。
-- [ ] 使用技能编写规范改写方法：移除原身份、机器路径和过期待办；保留方法、来源与反例；人物技能输出公开证据和假设而非背书。
-- [ ] 运行本阶段全部 `test_research_asset*`、`test_research_method_descriptors.py`。Expected: 12 个可发现身份；每份必需方法能完整读取，来源/本地改写版可区分。
-- [ ] 提交 `feat: adapt twelve research methods with shared validation policy`。
+- [x] 测试 12 个身份唯一、索引和实际资源相符、必需引用可解析、缺失外部材料保留缺口；索引不能宣称计算已完成或授予工具权限。
+- [x] 运行 `python3 -m pytest tests/research/test_research_method_descriptors.py -q`；Expected: 未适配目录与必需引用检查失败。
+- [x] 使用技能编写规范改写方法：移除原身份、机器路径和过期待办；保留方法、来源与反例；人物技能输出公开证据和假设而非背书。
+- [x] 运行本阶段全部 `test_research_asset*`、`test_research_method_descriptors.py`。Expected: 12 个可发现身份；每份必需方法能完整读取，来源/本地改写版可区分。
+- [x] 提交 `feat: adapt twelve research methods with shared validation policy`。
 
 ### Task 3：来源主张、因子线索与反例卡
 
@@ -69,11 +71,11 @@
 
 **Interfaces:** 实现 `claims_for(subject_id)`、`lessons_for(tags)`、`inventory()`；主张含指标口径/范围/复现状态，反例含失败类型、来源、缓解、回归检查与重访条件。
 
-- [ ] 测试 `test_source_icir_is_not_a_local_metric`、`test_conflicting_claims_are_both_retained`、`test_alias_does_not_increase_unique_definition_count`、`test_missing_report_is_not_falsification_evidence`。
-- [ ] 运行该文件，确认上述错误尚未被合同阻断，记录 RED。
-- [ ] 登记可定位条目；turn_mid_prox、f_score、sue 等定义问题单独保存，不沿用原指标；所有数字说明是来源记录还是本地结果。
-- [ ] 运行本阶段测试和安装测试；Expected: 数量来自去重后的真实清单，资源缺口可追溯，读取不产生任务或验证完成记录。
-- [ ] 提交 `feat: catalog source claims and reproducible counterexamples`，更新资产清单和阶段验收。
+- [x] 测试 `test_source_icir_is_not_a_local_metric`、`test_conflicting_claims_are_both_retained`、`test_alias_does_not_increase_unique_definition_count`、`test_missing_report_is_not_falsification_evidence`。
+- [x] 运行该文件，确认上述错误尚未被合同阻断，记录 RED。
+- [x] 登记可定位条目；turn_mid_prox、f_score、sue 等定义问题单独保存，不沿用原指标；所有数字说明是来源记录还是本地结果。
+- [x] 运行本阶段测试和安装测试；Expected: 数量来自去重后的真实清单，资源缺口可追溯，读取不产生任务或验证完成记录。
+- [x] 提交 `feat: catalog source claims and reproducible counterexamples`，更新资产清单和阶段验收。
 
 ## 交付验收
 
