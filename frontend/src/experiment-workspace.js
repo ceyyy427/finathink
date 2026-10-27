@@ -5,6 +5,12 @@ const ACTIVE = new Set(['DECLARED', 'VALIDATING', 'TEST_RESERVED', 'TESTING']);
 const mounted = new WeakMap();
 const digest = /^[0-9a-f]{64}$/;
 
+export function normalizeFactorValidationTrack(value) {
+  const ids = ['scope_data_audit', 'semantic_check', 'information_coefficient', 'deduplication', 'portfolio_backtest', 'oos_stability', 'incremental_value', 'capacity', 'archive_decision'];
+  if (value?.schema_version !== 'factor-validation-run.v1' || !digest.test(value.fingerprint ?? '') || !digest.test(value.binding_digest ?? '') || !Array.isArray(value.steps) || value.steps.length !== 9 || value.steps.some((step, index) => step.stage_id !== ids[index] || step.binding_digest !== value.binding_digest || !['COMPLETE', 'BLOCKED_DATA', 'EXECUTION_ERROR', 'NOT_RUN'].includes(step.status))) throw new TypeError('九步验证身份、顺序或绑定不一致。');
+  return value.steps;
+}
+
 export function normalizeFactorStudy(payload) {
   if (!payload || !/^study-[A-Za-z0-9_-]+$/.test(payload.study_id ?? '') || !STATES.has(payload.state) || payload.production_write !== false || !digest.test(payload.spec_ref ?? '') || !digest.test(payload.spec?.snapshot_ref ?? '')) throw new TypeError('实验身份、状态或快照绑定无效。');
   for (const result of [payload.validation, payload.test_result]) {
@@ -60,6 +66,11 @@ export function mountExperimentWorkspace(root, { fetcher = globalThis.fetch, int
     text('[data-study-binding]', `${spec.question} · ${spec.instrument} · 配方 ${spec.recipe_id} / 窗口 ${spec.windows.join(', ')} / 折数 ${spec.n_splits} / 标签跨度 ${spec.label_horizon} / 间隔 ${spec.embargo} · 快照 ${spec.snapshot_ref} · 费用 ${spec.cost.fee_bps} bps / 滑点 ${spec.cost.slippage_bps} bps · 观察期口径`);
     const stages = ['问题与章程已固定', '受控候选生成', '扩展式验证 / purge / embargo', '依据验证证据冻结', '冻结后一次测试', '验证排名与测试结果分列', '显式研究审核'];
     query('[data-study-stages]').replaceChildren(...stages.map((value) => node('li', value)));
+    if (result?.validation_run) {
+      const steps = normalizeFactorValidationTrack(result.validation_run);
+      query('[data-study-stages]').replaceChildren(...steps.map((step, index) => node('li', `${index + 1}. ${step.name ?? step.stage_id} · ${step.status}${step.reason ? ` · ${step.reason}` : ''}`)));
+      text('[data-study-method-binding]', `方法 ${spec.method_binding?.methods_digest ?? '未记录'} · 验证产物 ${result.validation_run.fingerprint} · ${result.validation_run.reproduction_scope}`);
+    }
     const body = query('[data-study-candidates] tbody');
     body.replaceChildren(...(result?.experiments ?? []).map((item) => {
       const row = node('tr');
@@ -132,7 +143,11 @@ export function mountExperimentWorkspace(root, { fetcher = globalThis.fetch, int
   }));
   const ready = Promise.all([loadSnapshots(), history(), request('/api/research/experiments/catalog').then((payload) => {
     recipes = payload.recipes; query('[name="recipe_id"]').replaceChildren(...recipes.map((item) => { const option = node('option', item.title); option.value = item.recipe_id; return option; })); recipeNote();
-  })]).then(() => { text('[data-study-status]', '本地目录已就绪。请选择快照，或显式生成示例。'); }).catch(error);
+  })]).then(async () => {
+    const requested = new URLSearchParams(document.defaultView?.location?.search ?? '').get('study_id');
+    if (requested) await select(requested);
+    else text('[data-study-status]', '本地目录已就绪。请选择快照，或显式生成示例。');
+  }).catch(error);
   const api = { ready, select, dispose: stop }; mounted.set(root, api);
   document.defaultView?.addEventListener('pagehide', stop, { once: true });
   return api;

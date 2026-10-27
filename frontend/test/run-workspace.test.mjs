@@ -69,3 +69,12 @@ test('mounting one workspace twice coalesces its initial requests', async () => 
   assert.equal(calls, 4);
   first.stop();
 });
+import { parseMethodResponse } from '../src/method-handoff.js';
+
+test('method callback accepts bounded bound JSON, never an executable blob', () => {
+  const value = { schema_version: 'method-result.v1', package_digest: 'a'.repeat(64) };
+  assert.deepEqual(parseMethodResponse(JSON.stringify(value)), value);
+  assert.throws(() => parseMethodResponse('run_python()'));
+  assert.throws(() => parseMethodResponse(JSON.stringify({ ...value, package_digest: 'other' })));
+  assert.throws(() => parseMethodResponse('x'.repeat(131073)));
+});

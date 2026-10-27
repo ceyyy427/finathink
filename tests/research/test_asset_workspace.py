@@ -95,5 +95,8 @@ def test_corrupt_installed_catalog_has_a_shared_shell_recovery_page(tmp_path, mo
         assert status == 503 and "html" in content_type
         assert 'class="app-shell"' in body and '资料' in body
         assert app.route("GET", "/api/research/assets")[0] == 503
+        status, _, body = app.route("GET", "/research/experiments")
+        assert status == 200 and 'data-experiment-workspace' in body
+        assert '资料目录校验失败' in body
     finally:
         app.close()

@@ -37,9 +37,10 @@ def _local(entry, raw, requested):
         raise ValueError("factor definition binding is corrupt")
     try:
         resolve_factor_spec(spec)
-        matches = requested is None or requested.fingerprint == spec.fingerprint
+        available = True
     except ValueError:
-        matches = False
+        available = False
+    matches = requested.fingerprint == spec.fingerprint if requested is not None else available
     charter = entry["manifest"]["source_snapshot"]["factor_study"].get("charter", {})
     policy = {key: value for key, value in run["policy"].items() if key != "phase"}
     return {"run_ref": entry["run_id"], "status": run["status"], "definition_matches": matches,
@@ -50,6 +51,7 @@ def _local(entry, raw, requested):
         "policy_fingerprint": stable_digest({"research_policy": charter.get("policy_fingerprint"),
                                              "validation_policy": policy}),
         "source_policy_fingerprint": bindings["source_policy_fingerprint"],
+        "implementation_available": available, "method_binding": charter.get("method_binding", {}),
         "reproduction_scope": run["reproduction_scope"],
         "local_metric": {step["stage_id"]: step["metrics"] for step in run["steps"]},
         "stages": [{key: step[key] for key in ("stage_id", "status", "reason")} for step in run["steps"]],

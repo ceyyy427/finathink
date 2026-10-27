@@ -24,7 +24,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from importlib import resources as importlib_resources
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qs, urlencode, urlsplit
+from urllib.parse import parse_qs, unquote, urlencode, urlsplit
 
 from finahinking.data.connection_settings import (
     DataConnectionSettingsStore,
@@ -1211,6 +1211,7 @@ class LocalApplication:
         style_tags = "".join(f'<link rel="stylesheet" href="{html.escape(path)}">' for path in styles)
         script_tags = "".join(f'<script src="{html.escape(path)}" defer></script>' for path in dict.fromkeys(("/assets/finathink-research.js", *scripts)))
         from .research.asset_workspace_page import ASSET_WORKSPACE_CSS
+        from .research.factor_detail_page import FACTOR_DETAIL_CSS
         from .research.learning_workspace_page import LEARNING_CSS
 
         content = f'<div class="workspace-inner"><p class="eyebrow">{html.escape(eyebrow)}</p>{body}</div>'
@@ -1232,7 +1233,7 @@ class LocalApplication:
             f"<title>{html.escape(title)} · Finathink</title>"
             '<meta name="theme-color" content="#f5f8fd">'
             '<meta http-equiv="Content-Security-Policy" content="default-src \'self\'; img-src \'self\'; style-src \'self\' \'unsafe-inline\'; script-src \'self\'; connect-src \'self\'; form-action \'self\'">'
-            f"<style>{_APP_CSS}{BLUE_WHITE_CSS}{_RESEARCH_JOBS_CSS if page == '/research/jobs' else ''}{_FACTOR_STUDY_CSS if page == '/research/experiments' else ''}{LEARNING_CSS if page == '/research/learning' else ''}{ASSET_WORKSPACE_CSS if page.startswith('/library/') else ''}</style>{style_tags}{script_tags}</head><body>"
+            f"<style>{_APP_CSS}{BLUE_WHITE_CSS}{_RESEARCH_JOBS_CSS if page == '/research/jobs' else ''}{_FACTOR_STUDY_CSS if page == '/research/experiments' else ''}{LEARNING_CSS if page == '/research/learning' else ''}{ASSET_WORKSPACE_CSS if page.startswith('/library/') or page == '/research/experiments' else ''}{FACTOR_DETAIL_CSS if page == '/research/experiments' else ''}</style>{style_tags}{script_tags}</head><body>"
             '<a class="skip-link" href="#main">跳到主要内容</a>'
             '<div class="app-shell" data-finathink-shell>'
             f'<nav class="sidebar" id="shell-navigation" aria-label="主导航">{self._nav(clean_page)}</nav>'
@@ -1292,6 +1293,41 @@ class LocalApplication:
         except (ValueError, TypeError):
             return 422, "application/json", {"error": "资料检索参数无效，请核对类别、分页与资料身份。"}
 
+    def _factor_detail_route(self, method, clean, body, query):
+        from .research.factor_detail_page import factor_detail, factor_detail_page
+
+        public = clean.startswith("/research/factors/")
+        api = clean.startswith("/api/research/factors/")
+        if not public and not api:
+            return None
+        parts = clean.removeprefix("/research/factors/" if public else "/api/research/factors/").split("/")
+        if public and method != "GET":
+            return 405, "application/json", {"error": "因子详情只读，决定请通过显式审核。"}
+        if method == "POST":
+            denied = self._data_write_guard(body)
+            if denied is not None:
+                return denied
+        try:
+            if api and method == "POST" and len(parts) == 2:
+                values = {key: value for key, value in (body or {}).items() if key != "_csrf"}
+                if parts[1] == "decisions":
+                    return 201, "application/json", self.research_service.review_factor_use(parts[0], values)
+                if parts[1] == "monitor":
+                    return 200, "application/json", self.research_service.refresh_factor_monitoring(parts[0], values)
+            if method != "GET" or len(parts) != 1:
+                return 405, "application/json", {"error": "不支持此因子操作。"}
+            values = query or {}
+            data = factor_detail(self.research_service, parts[0], version=values.get("version", [None])[0],
+                window=int(values["window"][0]) if values.get("window") else None, run_ref=values.get("run_ref", [None])[0])
+            if api:
+                return 200, "application/json", data
+            return 200, "text/html; charset=utf-8", self.render_shell("/research/experiments", "因子证据", factor_detail_page(data, self.csrf_token),
+                inspector=self._inspector("因子上下文", {"身份": data["factor_id"], "定义": data["version"], "边界": "来源、计算、用途分别判断"}))
+        except KeyError:
+            return 404, "application/json", {"error": "没有匹配的因子、版本或报告；不会回退到另一版本。"}
+        except (ValueError, TypeError):
+            return 422, "application/json", {"error": "因子输入或证据绑定无效，请重新读取定义和范围。"}
+
     def _research_jobs_route(self, method, clean, body, query):
         if not (clean in {"/api/research/jobs", "/api/research/experiments", "/api/research/learning"} or clean.startswith(("/api/research/jobs/", "/api/research/snapshots", "/api/research/experiments/", "/api/research/learning/"))):
             return None
@@ -1305,6 +1341,28 @@ class LocalApplication:
         values = {key: value for key, value in (body or {}).items() if key != "_csrf"} if isinstance(body, Mapping) else {}
         try:
             service = self.research_service
+            if clean.startswith("/api/research/jobs/"):
+                parts = clean.removeprefix("/api/research/jobs/").split("/")
+                if len(parts) >= 2 and parts[1] == "methods":
+                    if len(parts) == 2 and method == "POST":
+                        from .research.asset_contracts import MethodRouteRequest
+
+                        return 200, content_type, service.export_method_handoff(parts[0], MethodRouteRequest(**values))
+                    if len(parts) == 3 and method == "GET":
+                        return 200, content_type, service.get_method_handoff(parts[0], unquote(parts[2]))
+                    if len(parts) == 4 and parts[3] == "result" and method == "POST":
+                        if set(values) != {"response"}:
+                            raise ValueError("交接回传只接受绑定的结果对象")
+                        return 200, content_type, service.accept_method_handoff(parts[0], unquote(parts[2]), values["response"])
+                if len(parts) == 2 and parts[1] == "research-fields" and method == "POST":
+                    if set(values) != {"attachment"}:
+                        raise ValueError("字段保存只接受不可变附件")
+                    return 201, content_type, service.attach_research_fields(parts[0], values["attachment"])
+                if len(parts) == 2 and parts[1] == "method-studies" and method == "POST":
+                    if set(values) - {"handoff_ref", "artifact_ref", "attachment_ref", "idempotency_key"}:
+                        raise ValueError("受控研究提交字段无效")
+                    return 201, content_type, service.create_method_factor_study(parts[0], values.get("handoff_ref"),
+                        values.get("artifact_ref"), attachment_ref=values.get("attachment_ref"), idempotency_key=values.get("idempotency_key"))
             if clean == "/api/research/learning":
                 return (201, content_type, service.learning.settle(values)) if method == "POST" else (200, content_type, {"reviews": service.learning.list_reviews()})
             if clean == "/api/research/learning/policies":
@@ -1433,6 +1491,12 @@ class LocalApplication:
             '<p data-run-empty>还没有研究任务。先选择快照并提交研究。</p><p data-run-state></p><p data-run-budget></p><p data-run-identity class="snapshot-fingerprint"></p><ol class="research-stage-list" data-run-stages></ol>'
             '<p class="field-help" data-run-data-note></p><p data-run-model-summary></p><ul class="overview-list" data-run-call-records></ul><ul class="overview-list" data-run-model-roles></ul><div data-run-synthesis></div><dl data-run-metrics></dl><p data-run-failure></p><div class="action-row"><button type="button" data-run-cancel disabled>取消任务</button><a data-run-report hidden>打开完整 HTML 报告</a><a data-run-detail hidden>查看研究档案</a></div></section>'
             '<section class="panel section"><h2>最近的后台任务</h2><p>刷新页面或重启服务后，可从这里继续查看；相同提交标识不会重复排队。</p><ul class="overview-list" data-run-history></ul><div class="action-row"><button type="button" class="button-secondary" data-run-history-prev disabled>上一页任务</button><span data-run-history-page role="status"></span><button type="button" class="button-secondary" data-run-history-next disabled>下一页任务</button></div><a href="/research/compare">比较已发布的研究</a></section>'
+            '<section class="panel section" data-method-handoff><h2>方法交接与受控因子研究</h2><p>为当前任务按需加载方法并导出交接包。外部工具负责推理，回传只接受有绑定的 JSON；这里不会自动调用 Codex 或执行模型代码。</p>'
+            '<p role="status" aria-live="polite" data-method-status>先选择一个已保存的研究任务。</p><button type="button" data-method-export disabled>导出因子研究交接包</button>'
+            '<details><summary>查看交接包与方法指纹</summary><label>可复制给外部研究工具的 JSON<textarea data-method-package rows="8" readonly></textarea></label></details>'
+            '<form data-method-result-form><label>外部结果 JSON<textarea name="response" rows="6" maxlength="131072" required></textarea></label><button type="submit" data-method-accept disabled>校验并保存回传</button></form>'
+            '<details><summary>绑定可选研究字段附件</summary><p>使用已声明单位和可用时间的 ResearchFieldAttachment JSON，快照指纹必须与当前任务一致；不接供应商 SDK。</p><form data-method-fields-form><label>字段附件文件<input type="file" name="attachment" accept="application/json,.json" required></label><button type="submit" data-method-fields-save disabled>明确保存字段附件</button></form></details>'
+            '<form data-method-study-form><label>已验证并保存的提案<select name="artifact_ref" required><option value="">尚无回传提案</option></select></label><button type="submit" data-method-study-create disabled>固定章程并执行受控验证</button></form><a data-method-study-link hidden>进入此因子实验</a></section>'
             '<noscript><p>任务提交和跟踪需要 JavaScript。已发布的 HTML 报告可离线阅读。</p></noscript></section>'
         )
 
@@ -1515,6 +1579,9 @@ class LocalApplication:
         asset_response = self._asset_workspace_route(method, clean, query)
         if asset_response is not None:
             return asset_response
+        factor_response = self._factor_detail_route(method, clean, body, query)
+        if factor_response is not None:
+            return factor_response
         job_response = self._research_jobs_route(method, clean, body, query)
         if job_response is not None:
             return job_response

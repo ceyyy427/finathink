@@ -1,5 +1,6 @@
 // Reference-only submission and bounded observation; no financial computation.
 import { readLocalJSON, userErrorMessage } from './local-request.js';
+import { mountMethodHandoff } from './method-handoff.js';
 const TERMINAL = new Set(['completed', 'failed', 'cancelled']);
 const STATUSES = new Set(['queued', 'running', 'retryable', ...TERMINAL]);
 const REF = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/;
@@ -67,6 +68,8 @@ export function mountRunWorkspace(root, { fetcher = globalThis.fetch, location =
   const errorBox = query('[data-run-error]');
   const observer = createJobObserver({ fetcher });
   const csrf = query('[data-run-csrf]')?.value;
+  const methodRoot = query('[data-method-handoff]');
+  const methodWorkspace = methodRoot ? mountMethodHandoff(methodRoot, { fetcher, csrf }) : null;
   let selectedId; let snapshots = []; let requestKey; let lastIntent; let stopped = false; let historyOffset = 0; let loadingHistory = false; let loadGeneration = 0;
   const text = (selector, value) => { const target = query(selector); if (target) target.textContent = value ?? ''; };
   function showError(error) {
@@ -80,6 +83,7 @@ export function mountRunWorkspace(root, { fetcher = globalThis.fetch, location =
   function render(job) {
     if (stopped) return;
     root.dataset.jobStatus = job.status;
+    methodWorkspace?.setJob(job);
     root.dataset.workspaceState = 'READY';
     const empty = query('[data-run-empty]'); if (empty) empty.hidden = true;
     text('[data-run-state]', `${LABELS[job.status]} · ${STAGES[job.state] ?? job.state} · 第 ${job.attempts} 次尝试`);

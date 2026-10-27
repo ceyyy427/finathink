@@ -683,7 +683,8 @@ class ResearchApplicationService:
         manifest = package.to_dict()["manifest"]
         method_binding = {"handoff_ref": handoff_ref, "artifact_ref": artifact_ref,
             "package_digest": package.package_digest, "context_digest": package.context.fingerprint,
-            "methods_digest": manifest["methods_digest"], "method_manifest_digest": manifest["method_manifest_digest"]}
+            "methods_digest": manifest["methods_digest"], "method_manifest_digest": manifest["method_manifest_digest"],
+            "loaded_methods": package.context.to_dict()["method_context"]}
         spec = prepare_method_study(snapshot, attachment, instrument=request.instrument, as_of=request.as_of.isoformat(),
             question=request.research_plan.hypotheses[0], factor_spec=factor, method_binding=method_binding,
             policy_fingerprint=request.research_plan.validation_spec["policy_fingerprint"])
@@ -724,12 +725,12 @@ class ResearchApplicationService:
             results["validation" if phase == "validation" else "test_result"] = payload
         return {**self.factor_studies.get(study_id), **jobs, **results}
 
-    def factor_evidence(self, factor_ref, *, use_scope=None):
+    def factor_evidence(self, factor_ref, *, use_scope=None, run_refs=()):
         from .asset_catalog import ResearchAssetCatalog
         from .factor_lifecycle import project_factor_lifecycle
         from .factor_provenance import load_factor_evidence
 
-        evidence = load_factor_evidence(factor_ref, catalog=ResearchAssetCatalog.packaged(), run_repository=self.runs)
+        evidence = load_factor_evidence(factor_ref, catalog=ResearchAssetCatalog.packaged(), run_repository=self.runs, run_refs=run_refs)
         identity = evidence.to_dict()["factor_id"]
         reference = getattr(factor_ref, "fingerprint", None)
         current = self.factor_uses.current(identity, factor_ref=reference, use_scope=use_scope)
@@ -738,7 +739,7 @@ class ResearchApplicationService:
             history = [event for event in history if all(event["decision"][key] == value
                        for key, value in current["requested_scope"].items())]
         events = {event["event_ref"]: event for event in (*history, *current["events"])}
-        references = tuple(dict.fromkeys(event["decision"]["run_ref"] for event in (*current["events"], *history)))[:200]
+        references = tuple(dict.fromkeys((*run_refs, *(event["decision"]["run_ref"] for event in (*current["events"], *history)))))[:200]
         if references:
             evidence = load_factor_evidence(factor_ref, catalog=ResearchAssetCatalog.packaged(), run_repository=self.runs,
                                            run_refs=references)
