@@ -70,6 +70,19 @@ def test_writer_creates_required_bundle_and_verifier_accepts_it(tmp_path) -> Non
     assert verification.errors == ()
 
 
+def test_new_reports_are_themed_offline_and_old_publications_are_immutable(tmp_path):
+    import hashlib
+
+    result = result_with_claim()
+    writer = ReportBundleWriter()
+    manifest = writer.write(result, tmp_path, quant_analytics={"metrics": {"unknown": None}})
+    path = tmp_path / result.state.run_id / "complete_report.html"
+    before = hashlib.sha256(path.read_bytes()).hexdigest()
+    assert "#f5f8fd" in path.read_text() and "Content-Security-Policy" in path.read_text()
+    assert writer.write(result, tmp_path).files == manifest.files
+    assert hashlib.sha256(path.read_bytes()).hexdigest() == before
+
+
 def test_model_and_news_text_are_html_escaped_and_not_executable() -> None:
     rendered = render_section_html(
         "News <script>alert(1)</script>",

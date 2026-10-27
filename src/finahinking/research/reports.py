@@ -15,6 +15,11 @@ from pathlib import Path
 from typing import Any
 
 from .contracts import ReportManifest, ResearchRunResult, RunEvent, stable_digest, to_jsonable
+from .report_sections import (
+    build_method_factor_sections,
+    render_factor_report_document,
+    theme_report_document,
+)
 
 
 def method_handoff_activity(package, status):
@@ -94,7 +99,7 @@ def render_section_html(
     )
     evidence_html = "".join(f"<li>{html.escape(_scrub(str(ref)), quote=True)}</li>" for ref in evidence_refs)
     limitations_html = "".join(f"<li>{html.escape(_scrub(str(item)), quote=True)}</li>" for item in limitations)
-    return (
+    return theme_report_document(
         "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">"
         f"<title>{safe_title}</title></head><body><main>"
         f"<h1>{safe_title}</h1><h2>Findings</h2><pre>{safe_payload}</pre>"
@@ -261,6 +266,58 @@ class ReportBundleWriter:
         quant_analytics: Mapping[str, Any] | Any | None = None,
     ) -> ReportManifest:
         bundle = Path(output_root) / result.state.run_id
+        if quant_analytics is not None:
+            if hasattr(quant_analytics, "to_dict") and callable(quant_analytics.to_dict):
+                quant_analytics = quant_analytics.to_dict()
+            elif not isinstance(quant_analytics, Mapping):
+                raise TypeError("quant_analytics must be a mapping or to_dict object")
+        factor_sections = None
+        raw_study = quant_analytics.get("factor_study") if quant_analytics else None
+        if isinstance(raw_study, Mapping) and isinstance(raw_study.get("validation_run"), Mapping):
+            binding = raw_study.get("charter", {}).get("method_binding", {})
+            # Verify the private, immutable methods BEFORE generic public text
+            # redaction.  Public reports retain the manifest, not method bodies.
+            factor_sections = build_method_factor_sections(raw_study["validation_run"], binding.get("loaded_methods"),
+                _scrub(raw_study.get("factor_evidence")), _scrub(raw_study.get("factor_lifecycle")))
+            if binding.get("loaded_methods") is not None and (
+                binding.get("methods_digest") != factor_sections.metadata["methods_digest"]
+                or binding.get("method_manifest_digest") != factor_sections.metadata["method_manifest_digest"]):
+                raise ValueError("frozen method summary does not match loaded methods")
+        analytics_payload = _scrub(quant_analytics) if quant_analytics is not None else None
+        study = analytics_payload.get("factor_study") if analytics_payload else None
+        if factor_sections is not None and isinstance(study.get("charter", {}).get("method_binding"), dict):
+            public_binding = study["charter"]["method_binding"]
+            loaded = public_binding.pop("loaded_methods", None)
+            if loaded is not None:
+                public_binding["method_manifest_snapshot"] = loaded["manifest"]
+        inputs = {"state": stable_digest(result.state), "decision": stable_digest(result.decision),
+            "events": stable_digest(result.events), "analytics": stable_digest(analytics_payload),
+            "workbench": stable_digest(_scrub(workbench_payload)), "explanation": stable_digest(_scrub(explanation_package))}
+        existing_path = bundle / "manifest.json"
+        if existing_path.exists():
+            verification = verify_report_bundle(existing_path)
+            if not verification.ok:
+                raise ValueError("published report is corrupt; restore it instead of overwriting")
+            previous = json.loads(existing_path.read_text(encoding="utf-8"))
+            snapshot = previous["source_snapshot"]
+            original_inputs = snapshot.get("report_input_digests")
+            if original_inputs is not None:
+                required = {"state", "decision", "events"}
+                required.update(key for key, value in (("analytics", quant_analytics), ("workbench", workbench_payload),
+                    ("explanation", explanation_package)) if value is not None)
+                unchanged = all(original_inputs.get(key) == inputs[key] for key in required)
+            else:
+                unchanged = (snapshot.get("state_digest") == inputs["state"]
+                    and snapshot.get("decision_digest") == (inputs["decision"] if result.decision else None)
+                    and workbench_payload is None and explanation_package is None)
+                if quant_analytics is not None:
+                    old_analytics = bundle / "4_quant" / "analytics.json"
+                    unchanged = unchanged and old_analytics.exists() and old_analytics.stat().st_size <= MAX_MANIFEST_BYTES
+                    if unchanged:
+                        unchanged = stable_digest(json.loads(old_analytics.read_text(encoding="utf-8"))) == inputs["analytics"]
+            if not unchanged or previous["run_id"] != result.state.run_id:
+                raise FileExistsError("published reports are immutable; use a new run ID for changed inputs")
+            return ReportManifest(**previous)
         bundle.mkdir(parents=True, exist_ok=True)
         analyst_by_role = {report.role: report for report in result.state.analyst_reports}
 
@@ -302,19 +359,11 @@ class ReportBundleWriter:
         if workbench_payload is not None:
             workbench_path = bundle / "workbench" / "index.html"
             workbench_path.parent.mkdir(parents=True, exist_ok=True)
-            workbench_path.write_text(render_workbench_report_html(workbench_payload, explanation_package), encoding="utf-8")
+            workbench_path.write_text(theme_report_document(render_workbench_report_html(workbench_payload, explanation_package)), encoding="utf-8")
 
         # Analytics are computed on the server and persisted as a redacted,
         # content-addressed snapshot.  The HTML only displays these values.
-        analytics_payload: Mapping[str, Any] | None = None
-        if quant_analytics is not None:
-            if hasattr(quant_analytics, "to_dict") and callable(quant_analytics.to_dict):
-                analytics_payload = quant_analytics.to_dict()
-            elif isinstance(quant_analytics, Mapping):
-                analytics_payload = dict(quant_analytics)
-            else:
-                raise TypeError("quant_analytics must be a mapping or to_dict object")
-            analytics_payload = _scrub(analytics_payload)
+        if analytics_payload is not None:
             analytics_path = bundle / "4_quant" / "analytics.json"
             analytics_path.parent.mkdir(parents=True, exist_ok=True)
             analytics_path.write_text(json.dumps(analytics_payload, ensure_ascii=False, sort_keys=True, indent=2) + "\n", encoding="utf-8")
@@ -351,10 +400,10 @@ class ReportBundleWriter:
             status_model["policy_lineage"] = analytics_payload.get("policy_lineage")
             status_model["publication_scope"] = analytics_payload.get("publication_scope")
         complete_path = bundle / "complete_report.html"
-        complete_path.write_text(
-            render_status_wall_html(status_model, title="Finathink research report"),
-            encoding="utf-8",
-        )
+        complete_document = (render_factor_report_document(factor_sections, run_id=result.state.run_id,
+            question=study.get("charter", {}).get("question", "按冻结章程核对因子假设")) if factor_sections is not None
+            else theme_report_document(render_status_wall_html(status_model, title="Finathink 研究报告")))
+        complete_path.write_text(complete_document, encoding="utf-8")
         activity_path = bundle / "activity.jsonl"
         if activity_path.exists():
             activity_path.unlink()
@@ -372,6 +421,9 @@ class ReportBundleWriter:
             files=files,
             source_snapshot={
                 "as_of": result.state.as_of,
+                "report_template": "blue-white.v1",
+                "report_input_digests": inputs,
+                **({"method_factor_snapshot": factor_sections.metadata} if factor_sections is not None else {}),
                 "state_digest": stable_digest(result.state),
                 "decision_digest": stable_digest(result.decision) if result.decision else None,
                 **status_snapshot,

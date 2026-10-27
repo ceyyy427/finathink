@@ -263,6 +263,21 @@ def nav_icon(name: str) -> str:
     return f'<svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">{paths.get(name, paths["system"])}</svg>'
 
 
+def blue_white_report_css():
+    """Share the actual AppShell tokens without its navigation geometry."""
+    tokens = BLUE_WHITE_CSS[:BLUE_WHITE_CSS.index("}") + 1]
+    return tokens + """
+html{color-scheme:light;scroll-behavior:auto}body{margin:0;background:var(--background);color:var(--text-primary);font:14px/1.75 "PingFang SC","Microsoft YaHei",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overflow-wrap:anywhere;max-width:none;padding:0}
+main{max-width:1060px;margin:0 auto;padding:40px clamp(18px,4vw,48px) 64px}h1{font-size:28px;line-height:1.5;margin:0 0 12px;letter-spacing:-.025em}h2{font-size:20px;margin:32px 0 14px}h3{font-size:15px;margin:24px 0 10px}p{max-width:78ch}a{color:var(--evidence);text-underline-offset:3px}
+.report-header{padding:28px;background:var(--surface-raised);border:1px solid var(--border);border-radius:13px}.report-status{color:var(--learning);font-weight:600}.report-toc{display:flex;gap:14px;flex-wrap:wrap;padding:20px 0;border-bottom:1px solid var(--border)}
+.report-section{padding:12px 0 28px;border-bottom:1px solid var(--border)}.report-meta{display:grid;grid-template-columns:150px minmax(0,1fr);gap:10px 16px}.report-meta dt{color:var(--text-secondary)}.report-meta dd{margin:0;font-family:ui-monospace,monospace;font-size:12px;overflow-wrap:anywhere}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;margin:16px 0}th,td{text-align:left;vertical-align:top;border-bottom:1px solid var(--border);padding:10px 12px;overflow-wrap:anywhere}th{color:var(--text-secondary);font-weight:500}caption{text-align:left;color:var(--text-secondary);padding:8px 0}pre,code{font-family:ui-monospace,monospace;font-size:12px}pre{padding:16px;border:1px solid var(--border);background:var(--surface);border-radius:8px;white-space:pre-wrap;overflow-wrap:anywhere;max-height:440px;overflow:auto}
+.report-stages{padding:0;list-style:none}.report-stage{padding:20px 0;border-bottom:1px solid var(--border)}.report-stage h3{margin:0 0 8px}.stage-COMPLETE{color:var(--success)}.stage-BLOCKED_DATA{color:var(--warning)}.stage-EXECUTION_ERROR{color:var(--error)}.stage-NOT_RUN,.meta{color:var(--text-secondary)}details{margin:14px 0}summary{cursor:pointer;min-height:32px;color:var(--evidence)}.note{border:0;padding:0;color:var(--warning)}svg{max-width:100%;height:auto}.grid li{border-color:var(--border);border-radius:8px;background:var(--surface)}
+:focus-visible{outline:2px solid var(--focus);outline-offset:3px}::selection{background:#dbe8ff;color:var(--text-primary)}*{scrollbar-color:var(--border-strong) var(--background);scrollbar-width:thin}
+@media(max-width:600px){main{padding:24px 18px 40px}.report-header{padding:20px}.report-meta{grid-template-columns:minmax(0,1fr);gap:4px}.report-meta dd{margin-bottom:10px}th,td{padding:8px 6px}h1{font-size:23px}}@media print{body{background:white}main{max-width:none;padding:0}details{break-inside:avoid}.report-header{background:white}nav{display:none}}
+"""
+
+
 def shell_search_dialog() -> str:
     return (
         '<dialog class="shell-search-dialog" id="shell-search" aria-labelledby="shell-search-title">'
