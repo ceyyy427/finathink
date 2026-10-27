@@ -1056,6 +1056,9 @@ class LocalApplication:
             "/research/experiments": "因子实验",
             "/research/learning": "复盘与学习",
             "/research/compare": "研究对比",
+            "/library/methods": "研究方法",
+            "/library/behavior": "公开行为档案",
+            "/library/lessons": "反例与复盘",
             "/workbench": "因子策略工作台",
             "/ml": "机器学习实验",
             "/parameter": "参数实验",
@@ -1145,6 +1148,7 @@ class LocalApplication:
         names = self._page_names()
         groups = (
             ("研究", "nav-workspace", ("/", "/research/jobs", "/events", "/knowledge", "/research/experiments", "/strategy", "/research/learning")),
+            ("资料", "nav-library", ("/library/methods", "/library/behavior", "/library/lessons")),
             ("学习", "nav-learn", ("/explore", "/quant", "/research", "/research/compare", "/workbench", "/ml", "/parameter", "/workspace", "/community", "/settings/engines", "/settings/data-sources")),
             ("系统", "nav-system", ("/settings/data-connections", "/settings/providers", "/diagnostics")),
         )
@@ -1206,6 +1210,7 @@ class LocalApplication:
         )
         style_tags = "".join(f'<link rel="stylesheet" href="{html.escape(path)}">' for path in styles)
         script_tags = "".join(f'<script src="{html.escape(path)}" defer></script>' for path in dict.fromkeys(("/assets/finathink-research.js", *scripts)))
+        from .research.asset_workspace_page import ASSET_WORKSPACE_CSS
         from .research.learning_workspace_page import LEARNING_CSS
 
         content = f'<div class="workspace-inner"><p class="eyebrow">{html.escape(eyebrow)}</p>{body}</div>'
@@ -1227,7 +1232,7 @@ class LocalApplication:
             f"<title>{html.escape(title)} · Finathink</title>"
             '<meta name="theme-color" content="#f5f8fd">'
             '<meta http-equiv="Content-Security-Policy" content="default-src \'self\'; img-src \'self\'; style-src \'self\' \'unsafe-inline\'; script-src \'self\'; connect-src \'self\'; form-action \'self\'">'
-            f"<style>{_APP_CSS}{BLUE_WHITE_CSS}{_RESEARCH_JOBS_CSS if page == '/research/jobs' else ''}{_FACTOR_STUDY_CSS if page == '/research/experiments' else ''}{LEARNING_CSS if page == '/research/learning' else ''}</style>{style_tags}{script_tags}</head><body>"
+            f"<style>{_APP_CSS}{BLUE_WHITE_CSS}{_RESEARCH_JOBS_CSS if page == '/research/jobs' else ''}{_FACTOR_STUDY_CSS if page == '/research/experiments' else ''}{LEARNING_CSS if page == '/research/learning' else ''}{ASSET_WORKSPACE_CSS if page.startswith('/library/') else ''}</style>{style_tags}{script_tags}</head><body>"
             '<a class="skip-link" href="#main">跳到主要内容</a>'
             '<div class="app-shell" data-finathink-shell>'
             f'<nav class="sidebar" id="shell-navigation" aria-label="主导航">{self._nav(clean_page)}</nav>'
@@ -1247,6 +1252,45 @@ class LocalApplication:
     @staticmethod
     def _snapshot_summary(snapshot):
         return {"snapshot_ref": snapshot.fingerprint, "instruments": list(snapshot.instruments), "record_count": len(snapshot.observations), "mode": snapshot.mode, "as_of": snapshot.as_of.isoformat(), "pit_status": "AVAILABLE" if snapshot.pit_available() else "UNKNOWN"}
+
+    def _asset_workspace_route(self, method, clean, query):
+        from .research.asset_catalog import ResearchAssetCatalog
+        from .research.asset_contracts import AssetLoadError
+        from .research.asset_workspace_page import (
+            KINDS,
+            ResearchAssetWorkspace,
+            asset_workspace_page,
+        )
+
+        library = clean in {f"/library/{kind}" for kind in KINDS}
+        api = clean == "/api/research/assets" or clean.startswith("/api/research/assets/")
+        if not library and not api:
+            return None
+        if method != "GET":
+            return 405, "application/json", {"error": "资料目录只读，浏览不会执行研究。"}
+        try:
+            service = ResearchAssetWorkspace(ResearchAssetCatalog.packaged())
+            if library:
+                kind = clean.rsplit("/", 1)[-1]
+                content = asset_workspace_page(service, kind, query or {})
+                return 200, "text/html; charset=utf-8", self.render_shell(clean, KINDS[kind], content,
+                    inspector=self._inspector("资料上下文", {"来源": "包内校验资源", "执行": "尚未加载到研究", "下一步": "检查输入后带入问题"}))
+            if clean != "/api/research/assets":
+                return 200, "application/json", service.detail(clean.removeprefix("/api/research/assets/"))
+            values = query or {}
+            payload = service.list(kind=values.get("kind", ["methods"])[0], tags=tuple(values.get("tag", ())),
+                query=values.get("q", [""])[0], limit=int(values.get("limit", ["20"])[0]), offset=int(values.get("offset", ["0"])[0]))
+            return 200, "application/json", payload
+        except AssetLoadError as exc:
+            if library:
+                return 503, "text/html; charset=utf-8", self.render_error_page("资料目录暂不可用",
+                    "资料校验没有通过，尚未加载到研究。", "请重新读取；如果仍失败，检查安装包或诊断记录。",
+                    links=((clean, "重新读取资料"), ("/diagnostics", "检查诊断")))
+            return 503, "application/json", {"error": "资料校验失败，请重新读取或检查安装包。", "code": exc.code}
+        except KeyError:
+            return 404, "application/json", {"error": "未找到这项资料，请返回目录选择。"}
+        except (ValueError, TypeError):
+            return 422, "application/json", {"error": "资料检索参数无效，请核对类别、分页与资料身份。"}
 
     def _research_jobs_route(self, method, clean, body, query):
         if not (clean in {"/api/research/jobs", "/api/research/experiments", "/api/research/learning"} or clean.startswith(("/api/research/jobs/", "/api/research/snapshots", "/api/research/experiments/", "/api/research/learning/"))):
@@ -1468,6 +1512,9 @@ class LocalApplication:
         clean = parsed.path.rstrip("/") or "/"
         if clean == "/research/jobs" and method == "GET":
             return 200, "text/html; charset=utf-8", self.render_page(clean, query=query)
+        asset_response = self._asset_workspace_route(method, clean, query)
+        if asset_response is not None:
+            return asset_response
         job_response = self._research_jobs_route(method, clean, body, query)
         if job_response is not None:
             return job_response
