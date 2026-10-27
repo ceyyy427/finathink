@@ -452,6 +452,17 @@ class ResearchApplicationService:
 
         return MethodHandoffStore(self.root / "method-workspace" / stable_digest(self.scope_id), self.queue)
 
+    def attach_research_fields(self, job_id, value):
+        from finahinking.data.research_fields import ResearchFieldAttachment, ResearchFieldStore
+
+        request = self._request(self.queue.get(job_id))
+        attachment = value if isinstance(value, ResearchFieldAttachment) else ResearchFieldAttachment.from_dict(value)
+        if attachment.snapshot_ref != request.snapshot_ref:
+            raise ValueError("research fields belong to another snapshot")
+        reference = ResearchFieldStore(self.snapshots).save(attachment)
+        return {"snapshot_ref": request.snapshot_ref, "attachment_ref": reference,
+                "fields": sorted(attachment.units), "status": "SAVED_NOT_EVALUATED", "paper_only": True}
+
     def export_method_handoff(self, job_id, route_request):
         """Explicit local export; it performs no provider call or market fetch."""
         from .asset_catalog import ResearchAssetCatalog

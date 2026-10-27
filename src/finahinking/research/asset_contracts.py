@@ -144,3 +144,65 @@ class MethodSelection:
         from .contracts import stable_digest
 
         return stable_digest({"schema_version": "method-selection.v1", **asdict(self)})
+
+
+@dataclass(frozen=True, slots=True)
+class FactorSpec:
+    """Definition/provenance only; execution resolves an existing trusted recipe."""
+
+    factor_id: str
+    version: str
+    formula: str
+    required_fields: tuple[str, ...]
+    units: str
+    direction: str
+    window: int
+    frequency: str
+    availability: str
+    missing_policy: str
+    implementation_ref: str
+    implementation_fingerprint: str
+    source_resource_ids: tuple[str, ...] = ()
+
+    def __post_init__(self):
+        import re
+
+        from finahinking.factors.dsl import parse_factor_expression
+
+        from .contracts import _unsafe_public_text
+
+        for name in ("factor_id", "version", "formula", "units", "implementation_ref"):
+            value = getattr(self, name)
+            if not isinstance(value, str) or not value.strip() or len(value) > 512 or _unsafe_public_text(value):
+                raise ValueError("factor definition requires bounded non-sensitive metadata")
+        for name in ("required_fields", "source_resource_ids"):
+            values = getattr(self, name)
+            if (not isinstance(values, (tuple, list)) or len(values) > 32
+                    or any(not isinstance(value, str) or not value or len(value) > 160 or _unsafe_public_text(value) for value in values)):
+                raise ValueError("factor definition collections must be immutable text references")
+            object.__setattr__(self, name, tuple(sorted(set(values))))
+        if (type(self.window) is not int or not 1 <= self.window <= 252 or self.direction not in {"HIGHER", "LOWER"}
+                or self.frequency != "daily" or self.availability != "available-at-or-before-signal"
+                or self.missing_policy != "propagate"):
+            raise ValueError("unsupported factor timing or missing-value semantics")
+        if (not isinstance(self.implementation_fingerprint, str)
+                or not re.fullmatch(r"[0-9a-f]{64}", self.implementation_fingerprint)
+                or not re.fullmatch(r"(?:recipe|feature):[A-Za-z0-9_.:-]+@[A-Za-z0-9_.:-]+", self.implementation_ref)):
+            raise ValueError("factor definition requires a versioned implementation binding")
+        parsed = parse_factor_expression(self.formula, self.required_fields)
+        if parsed.fields != self.required_fields:
+            raise ValueError("factor definition fields disagree with its formula")
+        object.__setattr__(self, "formula", parsed.expression)
+
+    def to_dict(self):
+        from dataclasses import asdict
+
+        from .contracts import to_jsonable
+
+        return {"schema_version": "factor-spec.v1", **to_jsonable(asdict(self))}
+
+    @property
+    def fingerprint(self):
+        from .contracts import stable_digest
+
+        return stable_digest(self.to_dict())
