@@ -94,6 +94,24 @@ class AssetInventory:
     unresolved_definition_count: int = 0
 
 
+@dataclass(frozen=True, slots=True)
+class FactorEvidenceView:
+    """An immutable projection of existing facts, not an approval or new metric."""
+
+    _json: str
+
+    def to_dict(self):
+        import json
+
+        return json.loads(self._json)
+
+    @property
+    def fingerprint(self):
+        from .contracts import stable_digest
+
+        return stable_digest(self.to_dict())
+
+
 def _route_values(value, name, maximum):
     from .contracts import _unsafe_public_text
 

@@ -198,6 +198,15 @@ class RunRepository:
         with self._connect() as db:
             return db.execute(f"SELECT COUNT(*) FROM research_run_index WHERE {where}", (self.scope_id, code) if code else (self.scope_id,)).fetchone()[0]
 
+    def list_run_refs(self, *, limit=200, offset=0):
+        """Bounded identities let projections isolate a single corrupt record."""
+        if type(limit) is not int or not 1 <= limit <= 200 or type(offset) is not int or offset < 0:
+            raise ValueError("research pagination is invalid")
+        with self._connect() as db:
+            return tuple(row[0] for row in db.execute(
+                "SELECT run_id FROM research_run_index WHERE scope_id=? ORDER BY created_at DESC, run_id DESC LIMIT ? OFFSET ?",
+                (self.scope_id, limit, offset)))
+
     def counts_by_state(self):
         with self._connect() as db:
             return {row["state"]: row["count"] for row in db.execute("SELECT state, COUNT(*) AS count FROM research_run_index WHERE scope_id=? GROUP BY state", (self.scope_id,))}
