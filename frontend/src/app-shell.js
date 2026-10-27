@@ -87,6 +87,11 @@ export function mountAppShell(doc) {
     target?.focus();
   };
   const onKey = (event) => {
+    if (event.key === 'Escape' && search.open) {
+      event.preventDefault();
+      closeSearch();
+      return;
+    }
     if ((event.metaKey || event.ctrlKey) && !event.altKey && event.key.toLowerCase() === 'k') {
       event.preventDefault();
       openSearch();

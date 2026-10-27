@@ -99,11 +99,11 @@ def test_overview_loads_once_and_keeps_daily_keyboard_data_after_chart_resize(ht
     page.goto(base, wait_until="networkidle")
     assert len(requests) == 1
     assert page.locator('[data-overview-day]').count() == 3
-    assert page.get_by_role("table", name="Daily activity data").is_visible()
+    assert page.get_by_role("table", name="每日活动数据").is_visible()
     day = page.locator('[data-overview-day][data-date="2026-10-02"]')
     day.focus()
     assert "2026-10-02" in page.locator('[data-overview-tooltip]').inner_text()
-    assert "3 recorded" in page.locator('[data-overview-tooltip]').inner_text()
+    assert "3 条记录" in page.locator('[data-overview-tooltip]').inner_text()
     assert day.evaluate("el => getComputedStyle(el).outlineStyle") == "solid"
     page.keyboard.press("Tab")
     assert page.locator(":focus").get_attribute("data-date") == "2026-10-03"
@@ -141,7 +141,12 @@ def test_overview_and_comparison_keep_shell_and_fit_viewports(http_app, observed
     page.set_viewport_size({"width": width, "height": height})
     for path, name in (("/", "overview"), ("/research/compare", "comparison")):
         page.goto(base + path, wait_until="networkidle")
-        assert page.get_by_role("navigation", name="主导航").is_visible()
+        if width <= 800:
+            page.get_by_role("button", name="展开导航", exact=True).click()
+            assert page.get_by_role("navigation", name="主导航").is_visible()
+            page.keyboard.press("Escape")
+        else:
+            assert page.get_by_role("navigation", name="主导航").is_visible()
         assert page.locator("main#main").is_visible()
         assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
         if path != "/":
@@ -159,13 +164,13 @@ def test_empty_loading_and_error_states_keep_readable_fallback(http_app, observe
     page.goto(base, wait_until="domcontentloaded")
     page.locator('[data-overview-loading]').wait_for(state="visible")
     assert page.locator('[data-finathink-overview]').get_attribute("aria-busy") == "true"
-    assert page.get_by_text("No saved research activity yet").is_visible()
+    assert page.get_by_text("还没有保存的研究活动").is_visible()
     page.screenshot(path=str(artifacts / "loading.png"), full_page=True)
     page.wait_for_function("() => document.querySelector('[data-finathink-overview]').dataset.overviewStatus === 'LOADING'")
     assert len(pending) == 1
     pending[0].fulfill(status=200, content_type="application/json", body="{}")
     page.locator('[data-overview-error]').wait_for(state="visible")
-    assert "retry" in page.locator('[data-overview-error]').inner_text()
+    assert "重试" in page.locator('[data-overview-error]').inner_text()
     assert page.locator('[data-finathink-overview]').get_attribute("aria-busy") == "false"
     assert page.locator('[data-overview-loading]').is_hidden()
     page.screenshot(path=str(artifacts / "error.png"), full_page=True)
@@ -173,7 +178,7 @@ def test_empty_loading_and_error_states_keep_readable_fallback(http_app, observe
     page.reload(wait_until="networkidle")
     assert page.locator('[data-overview-error]').is_hidden()
     assert page.locator('[data-finathink-overview]').get_attribute("data-overview-status") == "READY"
-    assert page.get_by_text("No topics are recorded yet").is_visible()
+    assert page.get_by_text("还没有记录的研究主题").is_visible()
     assert page.locator('[data-overview-day]').count() == 0
 
 
@@ -183,7 +188,7 @@ def test_no_javascript_overview_and_comparison_are_complete(http_app, observed_p
     page, artifacts, _ = observed_page
     page.set_viewport_size({"width": 390, "height": 844})
     page.goto(base, wait_until="networkidle")
-    assert page.get_by_role("table", name="Daily activity data").is_visible()
+    assert page.get_by_role("table", name="每日活动数据").is_visible()
     assert page.locator('[data-overview-loading]').is_hidden()
     assert page.locator('[data-finathink-overview]').get_attribute("aria-busy") == "false"
     page.screenshot(path=str(artifacts / "overview-no-js.png"), full_page=True)
@@ -203,11 +208,11 @@ def test_empty_payload_replaces_server_daily_rows(http_app, observed_page):
     page.goto(base, wait_until="networkidle")
     assert page.locator('[data-overview-day]').count() == 0
     assert page.locator('[data-overview-canvas]').is_hidden()
-    assert page.get_by_role("table", name="Daily activity data").get_by_text("No dated activity recorded", exact=False).is_visible()
-    page.get_by_text("Activity records", exact=True).click()
-    summary = page.get_by_role("list", name="Activity text summary")
+    assert page.get_by_role("table", name="每日活动数据").get_by_text("还没有带日期的活动记录", exact=False).is_visible()
+    page.get_by_text("查看活动记录", exact=True).click()
+    summary = page.get_by_role("list", name="活动文字记录")
     assert summary.locator("li").count() == 1
-    assert summary.get_by_text("No saved research activity yet").is_visible()
+    assert summary.get_by_text("还没有保存的研究活动").is_visible()
 
 
 def test_empty_rerender_clears_focused_activity_tooltip(http_app, observed_page):
@@ -215,7 +220,7 @@ def test_empty_rerender_clears_focused_activity_tooltip(http_app, observed_page)
     page, _, _ = observed_page
     page.goto(base, wait_until="networkidle")
     page.locator('[data-overview-day][data-date="2026-10-02"]').focus()
-    assert "3 recorded" in page.locator('[data-overview-tooltip]').inner_text()
+    assert "3 条记录" in page.locator('[data-overview-tooltip]').inner_text()
     payload = app.overview()
     payload["activity_series"] = []
     payload["activity"] = []
@@ -224,4 +229,4 @@ def test_empty_rerender_clears_focused_activity_tooltip(http_app, observed_page)
     page.evaluate("document.querySelector('[data-finathink-overview]')._finathinkOverviewMount = null")
     page.add_script_tag(url=base + "/assets/finathink-research.js")
     page.locator('[data-overview-day]').first.wait_for(state="hidden")
-    assert page.locator('[data-overview-tooltip]').inner_text() == "Focus a date or topic to inspect recorded values."
+    assert page.locator('[data-overview-tooltip]').inner_text() == "聚焦日期或主题，查看对应的记录数量。"
