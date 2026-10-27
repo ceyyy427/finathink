@@ -1,6 +1,7 @@
 """Explicit external handoffs bind context, input evidence and typed artifacts."""
 
 import copy
+import hashlib
 import importlib
 import importlib.util
 import json
@@ -212,7 +213,10 @@ def test_nested_private_metadata_never_enters_output_store(tmp_path, key, value)
     answer = response_for(package_value)
     output = artifact_for(package_value)
     output["payload"]["validation_spec"][key] = value
-    output["content_digest"] = stable_digest(output["payload"])
+    # Simulate untrusted JSON, bypassing the client contract's credential-key rejection.
+    output["content_digest"] = hashlib.sha256(json.dumps(
+        output["payload"], ensure_ascii=False, sort_keys=True, separators=(",", ":"),
+    ).encode()).hexdigest()
     answer["output_artifacts"] = [output]
     store = api.MethodHandoffStore(tmp_path / "state", JobQueue(tmp_path / "queue.sqlite"))
     ref = store.export(package_value)
