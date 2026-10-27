@@ -724,14 +724,28 @@ class ResearchApplicationService:
             results["validation" if phase == "validation" else "test_result"] = payload
         return {**self.factor_studies.get(study_id), **jobs, **results}
 
-    def factor_evidence(self, factor_ref):
+    def factor_evidence(self, factor_ref, *, use_scope=None):
         from .asset_catalog import ResearchAssetCatalog
         from .factor_lifecycle import project_factor_lifecycle
         from .factor_provenance import load_factor_evidence
 
         evidence = load_factor_evidence(factor_ref, catalog=ResearchAssetCatalog.packaged(), run_repository=self.runs)
-        events = self.factor_uses.list()
-        return {**evidence.to_dict(), "lifecycle": project_factor_lifecycle(evidence, events).to_dict()}
+        identity = evidence.to_dict()["factor_id"]
+        reference = getattr(factor_ref, "fingerprint", None)
+        current = self.factor_uses.current(identity, factor_ref=reference, use_scope=use_scope)
+        history = self.factor_uses.list(factor_id=identity, factor_ref=reference)
+        if current["requested_scope"] is not None:
+            history = [event for event in history if all(event["decision"][key] == value
+                       for key, value in current["requested_scope"].items())]
+        events = {event["event_ref"]: event for event in (*history, *current["events"])}
+        references = tuple(dict.fromkeys(event["decision"]["run_ref"] for event in (*current["events"], *history)))[:200]
+        if references:
+            evidence = load_factor_evidence(factor_ref, catalog=ResearchAssetCatalog.packaged(), run_repository=self.runs,
+                                           run_refs=references)
+        lifecycle = project_factor_lifecycle(evidence, list(events.values())).to_dict()
+        lifecycle.update(history=history, history_truncated=current["history_count"] > len(history),
+                         scope_truncated=current["scope_truncated"])
+        return {**evidence.to_dict(), "lifecycle": lifecycle}
 
     def review_factor_use(self, factor_ref, values):
         from .asset_catalog import ResearchAssetCatalog
@@ -746,6 +760,8 @@ class ResearchApplicationService:
             raise ValueError("factor use review fields are invalid") from exc
         evidence = load_factor_evidence(factor_ref, catalog=ResearchAssetCatalog.packaged(), run_repository=self.runs,
                                        run_refs=(decision.run_ref,))
+        if evidence.to_dict()["factor_id"] != decision.factor_id:
+            raise ValueError("factor use route and decision identity disagree")
         with self.queue._connect() as db:
             db.execute("BEGIN IMMEDIATE")
             if decision.decision in {"APPROVE_FOR_RESEARCH", "REJECT"}:
@@ -770,6 +786,8 @@ class ResearchApplicationService:
         allowed = {"as_of", "min_windows", "decline_windows", "drop_threshold", "run_refs", "parent_policy_ref"}
         if set(values) - allowed:
             raise ValueError("factor monitoring accepts controls and report references, not metrics")
+        if not isinstance(values.get("run_refs", ()), (tuple, list)) or len(values.get("run_refs", ())) > 16:
+            raise ValueError("factor monitoring refresh accepts at most16 explicit reports")
         evidence = load_factor_evidence(factor_ref, catalog=ResearchAssetCatalog.packaged(), run_repository=self.runs,
                                        run_refs=values.get("run_refs", ()))
         controls = {key: value for key, value in values.items() if key not in {"run_refs", "parent_policy_ref"}}
@@ -823,7 +841,7 @@ class ResearchApplicationService:
                 universe_ref=stable_digest(universe), purpose="FORMULA_RESEARCH" if record["reproduction_scope"] == "FORMULA_FIXTURE" else "PAPER_RESEARCH",
                 policy_fingerprint=record["policy_fingerprint"], evaluation_fingerprint=record["evaluation_fingerprint"],
                 reviewer=reviewer_id, decision=decision, idempotency_key="study-review-" + stable_digest([study_id, decision, reviewer_id])[:32],
-                run_ref=run_ref)
+                run_ref=run_ref, factor_id=record["factor_id"], time_domain=tuple(record["scope"]["final_test_window"]))
         with self.queue._connect() as db:
             db.execute("BEGIN IMMEDIATE")
             self.factor_studies.review(study_id, decision, reviewer_id, connection=db)

@@ -61,7 +61,7 @@ def load_factor_evidence(factor_ref, *, catalog, run_repository, run_refs=()) ->
     factor_id = requested.factor_id if requested else factor_ref
     if not isinstance(factor_id, str) or not _ID.fullmatch(factor_id):
         raise ValueError("factor reference is invalid")
-    if (not isinstance(run_refs, (tuple, list)) or len(run_refs) > 16
+    if (not isinstance(run_refs, (tuple, list)) or len(run_refs) > 200
             or any(not isinstance(ref, str) or not _ID.fullmatch(ref) for ref in run_refs)):
         raise ValueError("explicit factor report references must be bounded")
     definition = _definition(catalog, factor_id)

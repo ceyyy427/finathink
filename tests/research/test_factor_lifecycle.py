@@ -21,7 +21,8 @@ def evidence(*, status="COMPLETE", mode="FORMULA_FIXTURE", archive="PENDING_HUMA
     universe = {"market": "CN", "instruments": ["CN:A"], "membership_policy": "STATIC_USER_DECLARED"}
     local = {"run_ref": "run-0", "factor_ref": "a" * 64, "factor_id": "fixture-factor", "version": "1.0.0",
         "evaluation_fingerprint": "b" * 64, "policy_fingerprint": "c" * 64, "definition_matches": True,
-        "status": status, "phase": "test", "settled": status == "COMPLETE", "scope": {"universe": universe},
+        "status": status, "phase": "test", "settled": status == "COMPLETE", "scope": {"universe": universe,
+            "final_test_window": ["2024-01-01T00:00:00+00:00", "2024-01-21T00:00:00+00:00"]},
         "reproduction_scope": mode, "local_metric": {"archive_decision": {"decision": archive}},
         "stages": [{"stage_id": str(n), "status": "COMPLETE" if status == "COMPLETE" else "EXECUTION_ERROR"} for n in range(9)]}
     return FactorEvidenceView(json.dumps({"factor_id": "fixture-factor", "factor_ref": "a" * 64,
@@ -32,7 +33,8 @@ def evidence(*, status="COMPLETE", mode="FORMULA_FIXTURE", archive="PENDING_HUMA
 def decision(**changes):
     values = {"factor_ref": "a" * 64, "market": "CN", "universe_ref": stable_digest(evidence().to_dict()["local_runs"][0]["scope"]["universe"]),
         "purpose": "FORMULA_RESEARCH", "policy_fingerprint": "c" * 64, "evaluation_fingerprint": "b" * 64,
-        "reviewer": "local-reviewer", "decision": "APPROVE_FOR_RESEARCH", "idempotency_key": "approve-one", "run_ref": "run-0"}
+        "reviewer": "local-reviewer", "decision": "APPROVE_FOR_RESEARCH", "idempotency_key": "approve-one", "run_ref": "run-0",
+        "factor_id": "fixture-factor", "time_domain": evidence().to_dict()["local_runs"][0]["scope"]["final_test_window"]}
     return api().FactorUseDecision(**{**values, **changes})
 
 
@@ -64,7 +66,7 @@ def test_approval_applies_only_to_exact_scope_and_retirement_keeps_history(tmp_p
     approved = store.record(decision(), evidence=evidence())
     projected = api().project_factor_lifecycle(evidence(), store.list()).to_dict()
     assert projected["state"] == "RESEARCH_APPROVED"
-    scope = {key: decision().to_dict()[key] for key in ("factor_ref", "market", "universe_ref", "purpose", "policy_fingerprint")}
+    scope = {key: decision().to_dict()[key] for key in ("factor_ref", "market", "universe_ref", "time_domain", "purpose", "policy_fingerprint", "evaluation_fingerprint")}
     assert api().use_is_approved(projected, **scope)
     for key, value in (("market", "US"), ("purpose", "PAPER_SCREENING"), ("factor_ref", "d" * 64),
                        ("universe_ref", "d" * 64), ("policy_fingerprint", "d" * 64)):
