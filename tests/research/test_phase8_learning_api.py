@@ -1,4 +1,18 @@
+from html.parser import HTMLParser
+
 from finahinking.local_app import LocalAppConfig, LocalApplication
+
+
+class _CurrentLinks(HTMLParser):
+    def __init__(self, source):
+        super().__init__()
+        self.links = []
+        self.feed(source)
+
+    def handle_starttag(self, tag, attrs):
+        values = dict(attrs)
+        if tag == "a" and values.get("aria-current") == "page":
+            self.links.append(values.get("href"))
 
 
 def test_learning_review_uses_shared_shell_csrf_scoped_lists_and_method_guards(tmp_path):
@@ -8,7 +22,8 @@ def test_learning_review_uses_shared_shell_csrf_scoped_lists_and_method_guards(t
         assert status == 200
         assert 'class="app-shell"' in page and 'data-learning-workspace' in page
         assert 'data-learning-form' in page and 'data-learning-review-form' in page
-        assert 'data-learning-rerun-form' in page and 'aria-current="page">复盘与学习' in page
+        assert 'data-learning-rerun-form' in page
+        assert _CurrentLinks(page).links == ['/research/learning']
         assert '/assets/finathink-research.js' in page
         assert app.route("GET", "/api/research/learning")[2] == {"reviews": []}
         policies = app.route("GET", "/api/research/learning/policies")[2]["policies"]

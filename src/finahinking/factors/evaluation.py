@@ -174,10 +174,11 @@ def _decay_profile(
     horizons: tuple[int, ...],
     shift_periods: int,
     scoring_index: pd.Index,
+    label_horizon: int = 1,
 ) -> FactorDecayProfile:
     values: list[float | None] = []
     for horizon in horizons:
-        if horizon == 1:
+        if horizon == label_horizon:
             future = forward_return
         elif f"forward_return_{horizon}d" in frame:
             future = frame[f"forward_return_{horizon}d"]
@@ -235,10 +236,8 @@ def evaluate_factor_candidate(
     chunk_size = max(3, len(aligned) // 4)
     chunks = [aligned.iloc[start : start + chunk_size] for start in range(0, len(aligned), chunk_size)]
     chunk_ics = [value for value in (_correlation(chunk.factor, chunk.forward) for chunk in chunks) if value is not None]
-    if len(chunk_ics) >= 2 and pd.Series(chunk_ics).std(ddof=1) != 0:
+    if len(chunk_ics) >= 2 and pd.Series(chunk_ics).std(ddof=1) > 1e-12:
         icir = _finite(pd.Series(chunk_ics).mean() / pd.Series(chunk_ics).std(ddof=1))
-    elif ic is not None and aligned["forward"].std(ddof=1) != 0:
-        icir = _finite(ic / aligned["forward"].std(ddof=1))
     else:
         icir = None
 
@@ -286,7 +285,7 @@ def evaluate_factor_candidate(
         long_short_return=_finite(long_short),
         turnover=turnover,
         transaction_cost=_finite(transaction_cost),
-        decay=_decay_profile(factor, bounded_frame, forward_return.loc[factor.index], decay_horizons, shift_periods, scoring_index),
+        decay=_decay_profile(factor, bounded_frame, forward_return.loc[factor.index], decay_horizons, shift_periods, scoring_index, label_horizon),
         oos_status=oos_status,
         oos_information_coefficient=oos_ic,
         warnings=tuple(warnings),

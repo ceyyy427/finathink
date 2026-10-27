@@ -17,7 +17,7 @@ from finahinking.research.reports import ReportBundleWriter
 from finahinking.research.run_repository import RunRepository
 
 
-def completed(root: Path, run_id="persisted-run"):
+def completed(root: Path, run_id="persisted-run", *, include_events=True):
     state = ResearchRunState(
         run_id, ResearchState.LEARNING_RECORDED, as_of="2020-01-01",
         state_history=(ResearchState.RECEIVED, ResearchState.LEARNING_RECORDED),
@@ -28,7 +28,7 @@ def completed(root: Path, run_id="persisted-run"):
         RunEvent(f"{run_id}:received", run_id, ResearchState.RECEIVED, "workflow", "2026-10-15T12:00:00Z", "a" * 64),
         RunEvent(f"{run_id}:done", run_id, ResearchState.LEARNING_RECORDED, "workflow", "2026-10-15T12:01:00Z", "b" * 64, metadata={"dataset_fingerprint": "a" * 64}),
     )
-    result = ResearchRunResult(state, events)
+    result = ResearchRunResult(state, events if include_events else ())
     manifest = ReportBundleWriter().write(result, root)
     return result, manifest
 
@@ -123,7 +123,7 @@ def test_application_restart_keeps_overview_history_comparison_and_report(tmp_pa
         status, _, history = reopened.route("GET", "/api/research/runs?limit=1")
         assert status == 200 and history["total"] == 1
         status, _, report = reopened.route("GET", "/research/persisted-run/report/complete")
-        assert status == 200 and "Finathink research report" in report
+        assert status == 200 and "Finathink 研究报告" in report
     finally:
         reopened.close()
 
@@ -144,9 +144,7 @@ def test_application_refuses_corrupt_report_bytes_but_keeps_history(tmp_path):
 
 
 def test_missing_execution_start_is_not_invented_from_report_creation(tmp_path):
-    result, _ = completed(tmp_path / "reports")
-    result = replace(result, events=())
-    manifest = ReportBundleWriter().write(result, tmp_path / "reports")
+    result, manifest = completed(tmp_path / "reports", include_events=False)
     repo = repository(tmp_path)
     repo.record_result(result, manifest)
     assert repo.get_run("persisted-run")["started_at"] is None

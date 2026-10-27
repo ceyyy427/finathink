@@ -37,7 +37,7 @@ def _as_frame(data: pd.DataFrame | pd.Series) -> pd.DataFrame:
         frame.index = pd.to_datetime(frame["date"], errors="raise")
     elif not isinstance(frame.index, pd.DatetimeIndex):
         frame.index = pd.to_datetime(frame.index)
-    frame = frame.sort_index()
+    frame = frame.sort_index(kind="stable")
     if frame.index.has_duplicates and "asset" not in frame.columns:
         raise ValueError("feature input index contains duplicate timestamps")
     return frame
@@ -93,19 +93,19 @@ def _primitive(definition: FeatureDefinition, frame: pd.DataFrame, inputs: Mappi
     if window < 1 or window > 10_000:
         raise ValueError("feature window is outside the supported bounds")
     if name == "return" or name == "momentum":
-        values = base.pct_change(periods=window)
+        values = base.pct_change(periods=window, fill_method=None)
     elif name == "rolling_mean":
         values = base.rolling(window=window, min_periods=window).mean()
     elif name == "rolling_volatility":
-        values = base.pct_change().rolling(window=window, min_periods=window).std() * float(parameters.get("annualization", 252.0)) ** 0.5
+        values = base.pct_change(fill_method=None).rolling(window=window, min_periods=window).std() * float(parameters.get("annualization", 252.0)) ** 0.5
     elif name == "cross_sectional_rank":
         if definition.cross_sectional_scope == "date":
             groups = frame["date"] if "date" in frame.columns else frame.index
             values = base.groupby(groups).rank(pct=True)
         elif "asset" in frame.columns:
-            values = base.groupby(frame["asset"]).rank(pct=True)
+            values = base.groupby(frame["asset"].to_numpy(), sort=False).transform(lambda group: group.expanding(min_periods=1).rank(pct=True))
         else:
-            values = base.rank(pct=True)
+            values = base.expanding(min_periods=1).rank(pct=True)
     elif name == "z_score":
         mean = base.rolling(window=window, min_periods=window).mean()
         std = base.rolling(window=window, min_periods=window).std()
@@ -126,7 +126,9 @@ def _primitive(definition: FeatureDefinition, frame: pd.DataFrame, inputs: Mappi
     else:
         raise ValueError(f"unsupported feature primitive: {name}")
     if definition.lag:
-        values = values.shift(definition.lag)
+        values = values.groupby(frame["asset"].to_numpy(), sort=False).shift(definition.lag) if "asset" in frame else values.shift(definition.lag)
+    if definition.missing_policy == "ffill" and "asset" in frame:
+        return values.groupby(frame["asset"].to_numpy(), sort=False).ffill().astype(float)
     return _apply_missing(values.astype(float), definition.missing_policy)
 
 
@@ -165,7 +167,13 @@ class FeatureRegistry:
             raise ValueError(f"unsupported feature primitive: {version.definition.category}")
         frame = _as_frame(data)
         assert_point_in_time(frame)
-        result = _primitive(version.definition, frame, inputs)
+        if "asset" in frame and version.definition.category != "cross_sectional_rank":
+            result = pd.Series(float("nan"), index=frame.index)
+            for positions in frame.groupby(frame["asset"].to_numpy(), sort=False).indices.values():
+                selected_inputs = {name: values.iloc[positions] for name, values in (inputs or {}).items()}
+                result.iloc[positions] = _primitive(version.definition, frame.iloc[positions], selected_inputs).to_numpy()
+        else:
+            result = _primitive(version.definition, frame, inputs)
         result.name = version.feature_id
         return result
 

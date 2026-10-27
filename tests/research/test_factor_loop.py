@@ -23,8 +23,8 @@ def _charter(max_experiments: int = 4) -> ResearchCharter:
     )
 
 
-def _dataset() -> dict[str, object]:
-    index = pd.date_range("2024-01-01", periods=24, freq="D", tz="UTC")
+def _dataset(points=24) -> dict[str, object]:
+    index = pd.date_range("2024-01-01", periods=points, freq="D", tz="UTC")
     close = pd.Series([100 + i + (i % 3) for i in range(len(index))], index=index, dtype=float)
     return {"frame": pd.DataFrame({"close": close}, index=index), "forward_return": close.pct_change().shift(-1)}
 
@@ -34,7 +34,8 @@ def _candidate(candidate_id: str, expression: str = "rank(close)") -> FactorCand
 
 
 def test_factor_research_hides_oos_and_retains_each_attempt() -> None:
-    run = run_factor_research(_charter(), (_candidate("candidate-1"), _candidate("candidate-2", "negate(rank(close))")), _dataset())
+    # Control-flow coverage needs enough validation blocks for a genuine ICIR.
+    run = run_factor_research(_charter(), (_candidate("candidate-1"), _candidate("candidate-2", "negate(rank(close))")), _dataset(120))
 
     assert run.state is FactorResearchState.CANDIDATE_POOL
     assert len(run.rounds) == 2
@@ -44,19 +45,20 @@ def test_factor_research_hides_oos_and_retains_each_attempt() -> None:
 
 
 def test_factor_research_budget_is_bounded_and_freeze_controls_test_access() -> None:
-    run = run_factor_research(_charter(max_experiments=1), (_candidate("candidate-1"), _candidate("candidate-2")), _dataset())
+    data = _dataset(120)
+    run = run_factor_research(_charter(max_experiments=1), (_candidate("candidate-1"), _candidate("candidate-2")), data)
     admitted = next(item for item in run.rounds if item.admission.status == "ADMITTED")
 
     with pytest.raises(ValueError, match="frozen"):
-        run.evaluate_test(_dataset())
+        run.evaluate_test(data)
     frozen = run.freeze(admitted.candidate.candidate_id)
-    tested = frozen.evaluate_test(_dataset())
+    tested = frozen.evaluate_test(data)
 
     assert len(tested.rounds) == 1
     assert tested.state is FactorResearchState.TEST_EVALUATED
     assert tested.test_evaluation is not None
     with pytest.raises(ValueError, match="once-only"):
-        tested.evaluate_test(_dataset())
+        tested.evaluate_test(data)
 
 
 def test_test_period_mutation_cannot_change_validation_evidence() -> None:

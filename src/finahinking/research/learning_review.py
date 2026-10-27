@@ -132,6 +132,10 @@ class LearningReviewStore:
         manager = LearningManager()
         proposal = manager.propose_update(event)
         record = {**record, "proposal_digest": proposal.proposal_digest, "settlement": to_jsonable(event), "settlement_fingerprint": event.fingerprint}
+        return self.save_proposal(record, proposal)
+
+    def save_proposal(self, record, proposal):
+        record = {**record, "proposal_digest": proposal.proposal_digest}
         with self.queue._connect() as db:
             db.execute("BEGIN IMMEDIATE")
             prior = db.execute("SELECT * FROM learning_reviews WHERE scope_id=? AND (run_id=? OR semantic_key=?)", (self.scope_id, record["run_id"], record["semantic_key"])).fetchone()
@@ -240,6 +244,23 @@ class LearningReviewService:
 
     def get(self, review_id):
         return self.store.get(review_id)
+
+    def review_factor_monitoring(self, monitoring, *, parent_policy_ref=None):
+        parent = self.store.policy(parent_policy_ref)
+        proposal = LearningManager().propose_factor_monitoring(monitoring,
+            existing_notes=parent["registry"].get("factor_monitoring", {}))
+        value = monitoring.to_dict()
+        identity = stable_digest([self.app.scope_id, monitoring.fingerprint])
+        record = {"review_id": "learning-" + identity[:32], "run_id": "factor-monitoring-" + identity[:32],
+            "job_id": None, "source_kind": "FACTOR_VALIDATION_MONITORING", "parent_policy_ref": parent["policy_ref"],
+            "input_digest": stable_digest([monitoring.fingerprint, parent["policy_ref"]]), "semantic_key": identity,
+            "source_snapshot_ref": None, "evidence_snapshot_ref": None, "observed_snapshot_ref": None,
+            "as_of": value["as_of"], "source_report_url": None, "hypotheses": ["复核同定义、同范围的独立样本外窗口变化"],
+            "observation": {"has_updates": True, "instrument": value["factor_ref"], "monitoring": value,
+                "recommendation_basis": "仅登记研究复核建议；不调整因子权重、风险规则或用途批准。"},
+            "settlement": None, "settlement_fingerprint": None, "paper_only": True,
+            "observed_at": datetime.now(UTC).isoformat()}
+        return self.store.save_proposal(record, proposal)
 
     def list_reviews(self):
         return self.store.list_reviews()

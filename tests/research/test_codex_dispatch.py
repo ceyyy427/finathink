@@ -30,6 +30,20 @@ def test_dispatch_is_digest_only_and_external_until_callback(tmp_path):
     assert bridge.record_external_result(envelope, None).status == "EXTERNAL_HANDOFF_REQUIRED"
 
 
+def test_persisted_callback_accepts_context_evidence_digest_without_body(tmp_path):
+    queue = JobQueue(tmp_path / "jobs.sqlite")
+    bridge = CodexBridge(queue=queue)
+    envelope = bridge.create_handoff(Task())
+    dispatch = bridge.enqueue(envelope)
+    valid = {"schema_version": envelope.schema_version, "input_digest": envelope.input_digest,
+             "paper_only": True, "status": "READY", "evidence_refs": ["evidence:" + "a" * 64]}
+    assert bridge.record_external_result(envelope, valid).status == "READY"
+    stored = queue.external_dispatch(dispatch.envelope_digest)
+    assert stored["status"] == "READY"
+    assert set(stored) == {"envelope_digest", "task_id", "external_ref", "status",
+                           "result_digest", "failure_kind", "output_digest"}
+
+
 def test_dispatch_rejects_input_fingerprint_and_duplicate_callback_is_idempotent():
     bridge = CodexBridge()
     envelope = bridge.create_handoff(Task())

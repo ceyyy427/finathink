@@ -11,6 +11,43 @@ from tests.research.test_phase8_learning_flow import inputs
 __all__ = ["browser", "observed_page"]
 
 
+def test_factor_monitoring_review_is_not_presented_as_paper_settlement(observed_page, tmp_path):
+    from finahinking.research.factor_monitoring import evaluate_factor_monitoring
+    from tests.research.test_factor_monitoring import history, policy
+
+    page, artifacts, diagnostics = observed_page
+    app = LocalApplication(LocalAppConfig(db_path=str(tmp_path / "app.sqlite"), offline=True))
+    review = app.research_service.learning.review_factor_monitoring(
+        evaluate_factor_monitoring("a" * 64, history(), policy()))
+    server = create_server(app, host="127.0.0.1", port=0)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        page.set_viewport_size({"width": 1440, "height": 900})
+        page.goto(f"http://127.0.0.1:{server.server_address[1]}/research/learning")
+        root = page.locator('[data-learning-workspace]')
+        root.locator('[data-learning-history] button').first.click()
+        page.locator('[data-learning-state="PENDING_REVIEW"]').wait_for()
+        assert "非纸面成交结算" in root.locator('[data-learning-binding]').inner_text()
+        assert "不修改权重" in root.locator('[data-learning-outcome]').inner_text()
+        assert "非成交估值" in root.locator('[data-learning-outcome] caption').inner_text()
+        assert "独立最终测试窗口" == root.locator('[data-learning-decay] th').first.inner_text()
+        assert root.locator('[data-learning-rerun-form]').is_hidden()
+        root.locator('[name="rationale"]').fill("仅登记研究复核建议，没有已实现收益或自动调权。")
+        root.locator('[data-learning-ack]').check()
+        root.locator('[data-learning-approve]').click()
+        page.locator('[data-learning-state="APPROVED"]').wait_for()
+        assert app.research_service.learning.get(review["review_id"])["settlement"] is None
+        assert not diagnostics["errors"]
+        page.evaluate("window.scrollTo(0, 0)")
+        page.screenshot(path=str(artifacts / "factor-monitoring-review-1440.png"), full_page=True)
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=3)
+        app.close()
+
+
 def test_learning_review_approves_actual_rerun_and_reopens_history(observed_page, tmp_path):
     page, artifacts, diagnostics = observed_page
     app = LocalApplication(LocalAppConfig(db_path=str(tmp_path / "app.sqlite"), offline=True))

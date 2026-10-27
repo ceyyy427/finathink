@@ -59,12 +59,11 @@ def test_shared_shell_has_product_hierarchy_and_semantic_states() -> None:
     app.close()
 
 
-def test_dark_intelligence_shell_has_grouped_navigation_and_truthful_local_status() -> None:
+def test_workbench_shell_has_grouped_navigation_and_truthful_local_status() -> None:
     app = LocalApplication(connection=sqlite3.connect(":memory:"))
     page = app.route("GET", "/")[2]
-    for token in ("#050B18", "#081326", "#8B5CF6", "#38BDF8", "#34D399", ".topbar", ".panel"):
-        assert token in page
-    for label in ("研究", "学习", "系统", "Local Workspace", "PAPER-ONLY"):
+    assert 'id="shell-navigation"' in page and 'data-finathink-shell' in page
+    for label in ("研究", "学习", "系统", "本地研究", "PAPER-ONLY"):
         assert label in page
     assert "aria-label=\"研究\"" in page
     assert "aria-label=\"学习\"" in page
@@ -80,7 +79,7 @@ def test_overview_dashboard_is_evidence_bound_and_has_no_data_fallbacks() -> Non
     assert 'data-finathink-overview' in page
     assert 'data-overview-payload-url="/api/overview"' in page
     assert 'class="overview-header"' in page
-    for label in ("Events", "Saved items", "Learning evidence", "Research runs"):
+    for label in ("事件样例", "已保存条目", "学习证据", "研究运行"):
         assert label in page
     for region in ('data-overview-chart', 'data-overview-topics', 'data-overview-heatmap', 'data-overview-comparison', 'data-overview-activity-series'):
         assert region in page
@@ -88,9 +87,9 @@ def test_overview_dashboard_is_evidence_bound_and_has_no_data_fallbacks() -> Non
         assert marker in page
     assert '[tabindex="0"]:focus-visible' in page
     assert 'prefers-reduced-motion' in page
-    assert "PAPER-ONLY" in page and "OFFLINE" in page
-    assert "No saved research activity yet" in page
-    assert "No topics are recorded yet" in page
+    assert "PAPER-ONLY" in page and app.route("GET", "/api/overview")[2]["mode"] == "OFFLINE"
+    assert "还没有保存的研究活动" in page
+    assert "还没有记录的研究主题" in page
     assert "api_key" not in page and "prompt" not in page
     assert "/research/compare" in page
     app.close()
@@ -100,7 +99,7 @@ def test_home_shell_exposes_human_questions_and_workspace_alias() -> None:
     app = LocalApplication(connection=sqlite3.connect(":memory:"))
     home = app.route("GET", "/")[2]
     workspace = app.route("GET", "/workspace")[2]
-    for phrase in ("What can I understand today?", "Continue learning", "Current research", "Paper simulation"):
+    for phrase in ("你的研究，从这里继续。", "继续学习", "建立研究", "PAPER-ONLY"):
         assert phrase in home
     assert "Personal continuity" in workspace
     assert "Research" in workspace and "Learning" in workspace

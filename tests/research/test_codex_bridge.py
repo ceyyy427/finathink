@@ -45,6 +45,19 @@ def test_accept_result_requires_external_handoff_when_result_is_missing() -> Non
     assert outcome.message_digest
 
 
+@pytest.mark.parametrize("reference,expected", [
+    ("evidence:" + "a" * 64, "READY"),
+    ("evidence:short", "REJECTED"),
+    ("evidence:" + "a" * 64 + "/private", "REJECTED"),
+])
+def test_context_evidence_digest_reference_is_narrowly_supported(reference, expected):
+    bridge = CodexBridge()
+    envelope = bridge.create_handoff(Task())
+    result = {"schema_version": envelope.schema_version, "input_digest": envelope.input_digest,
+              "status": "READY", "paper_only": True, "evidence_refs": [reference]}
+    assert bridge.accept_result(envelope, result).status == expected
+
+
 def test_accept_result_rejects_digest_mismatch_without_echoing_values() -> None:
     bridge = CodexBridge()
     envelope = bridge.create_handoff(Task())

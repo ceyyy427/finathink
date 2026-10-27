@@ -13,3 +13,14 @@ test('a changed preview, missing evidence, fabricated outcome or execution is re
     assert.throws(() => normalizeLearningReview({ ...review, ...patch }));
   }
 });
+
+test('factor monitoring is labeled separately and cannot impersonate a settlement or weight update', () => {
+  const value = { ...review, source_kind: 'FACTOR_VALIDATION_MONITORING', settlement: null,
+    source_snapshot_ref: null, evidence_snapshot_ref: null, observed_snapshot_ref: null,
+    proposal: { settlement_digest: null, factor_weight_updates: {}, risk_rule_updates: {} },
+    observation: { monitoring: { schema_version: 'factor-monitoring.v1', status: 'REVIEW_RECOMMENDED',
+      fingerprint: digest, evidence_refs: [1, 2, 3].map(() => ({ evaluation_fingerprint: digest })) } } };
+  assert.equal(normalizeLearningReview(value), value);
+  assert.throws(() => normalizeLearningReview({ ...value, settlement: { invented: true } }));
+  assert.throws(() => normalizeLearningReview({ ...value, proposal: { ...value.proposal, factor_weight_updates: { foo: 1 } } }));
+});

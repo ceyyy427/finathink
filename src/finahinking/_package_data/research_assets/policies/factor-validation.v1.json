@@ -1,0 +1,103 @@
+{
+  "schema_version": "factor-validation.v1",
+  "version": "1.0.0",
+  "purpose": "Research evidence policy, not investment-use approval",
+  "paper_only": true,
+  "tool_grants": [],
+  "automatic_admission": false,
+  "runtime_execution_status": "NOT_RUN",
+  "required_bindings": [
+    "snapshot_ref",
+    "as_of",
+    "universe",
+    "factor_version",
+    "execution_config",
+    "cost_bps",
+    "benchmark",
+    "train_window",
+    "oos_window",
+    "final_test_usage",
+    "code_version"
+  ],
+  "stage_statuses": [
+    "COMPLETE",
+    "BLOCKED_DATA",
+    "EXECUTION_ERROR",
+    "NOT_RUN"
+  ],
+  "stages": [
+    {
+      "stage_id": "scope_data_audit",
+      "name": "定域与数据审计",
+      "checks": "检查市场身份、字段单位、覆盖率、重复值、PIT 与用户提供的数据许可声明。"
+    },
+    {
+      "stage_id": "semantic_check",
+      "name": "公式与语义检查",
+      "checks": "只使用受限 DSL；校验字段、窗口、热身区、单位、方向与缺失策略。"
+    },
+    {
+      "stage_id": "information_coefficient",
+      "name": "IC 与标签",
+      "checks": "横截面按同日可用股票池；标签与可成交回测收益分别记录，保留序列相关诊断。"
+    },
+    {
+      "stage_id": "deduplication",
+      "name": "机制去重",
+      "checks": "比较绝对相关；负相关同构也应识别，别名和参数不增加独立机制数量。"
+    },
+    {
+      "stage_id": "portfolio_backtest",
+      "name": "组合回测",
+      "checks": "用同一运行的执行与费用模型计算；记录不可成交、现金和基准。"
+    },
+    {
+      "stage_id": "oos_stability",
+      "name": "样本外与稳健性",
+      "checks": "冻结范围；保留 purge/embargo、参数区域、分段表现及最终测试使用历史。"
+    },
+    {
+      "stage_id": "incremental_value",
+      "name": "增量价值",
+      "checks": "使用同域基线与消融，区分新增信息、暴露差异及混合稀释。"
+    },
+    {
+      "stage_id": "capacity",
+      "name": "容量与可交易性",
+      "checks": "结合真实成交额、换手、流动性与冲击；缺字段则阻断相应结论。"
+    },
+    {
+      "stage_id": "archive_decision",
+      "name": "归档与研究用途建议",
+      "checks": "保存已完成与失败产物，显式审核用途；不自动更改生产注册表。"
+    }
+  ],
+  "deduplication": {
+    "correlation_measure": "max_absolute_spearman",
+    "undefined_correlation": "UNDEFINED_NOT_ZERO",
+    "aliases_are_independent_factors": false
+  },
+  "timing": {
+    "unknown_available_at": "UNKNOWN_NOT_INFERRED",
+    "group_rolling_by": "instrument",
+    "cross_section_by": "date_and_asof_universe",
+    "final_test": "frozen_and_once_reserved"
+  },
+  "costs": {
+    "unit": "bps",
+    "conversion": "fraction = bps / 10000",
+    "assumptions": "User run configuration, no permanent upstream tax schedule"
+  },
+  "failure_separation": {
+    "missing_data": "BLOCKED_DATA",
+    "invalid_formula": "SEMANTIC_REJECTION",
+    "implementation_error": "EXECUTION_ERROR",
+    "failed_validation": "COMPLETED_WITH_REJECTION"
+  },
+  "evidence": {
+    "source_metrics": "SOURCE_REPORTED_NOT_LOCAL_RESULTS",
+    "fixture_scope": "FORMULA_FIXTURE_NOT_SOURCE_EXPERIMENT_REPRODUCTION",
+    "identity": "PUBLIC_LABEL_NOT_CONFIRMED_PERSON"
+  },
+  "source_thresholds": "Upstream thresholds and dates are context-specific source claims, not universal Finathink acceptance limits"
+}

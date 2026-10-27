@@ -87,7 +87,7 @@ class ResearchContextBundle:
             raise ValueError("model evidence is not bound to this run, role and context")
 
 
-def build_context_bundle(request, snapshot, role, *, materials=(), reports: Sequence = (), max_bytes=32768):
+def build_context_bundle(request, snapshot, role, *, materials=(), reports: Sequence = (), max_bytes=32768, loaded_methods=None):
     if role not in ROLES or type(max_bytes) is not int or not 1 <= max_bytes <= 131072:
         raise ValueError("research context limits or role are invalid")
     boundary = datetime.combine(request.as_of, time.max, UTC)
@@ -138,4 +138,21 @@ def build_context_bundle(request, snapshot, role, *, materials=(), reports: Sequ
     encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False)
     if len(encoded.encode("utf-8")) > max_bytes:
         raise ValueError("research context exceeds its byte limit")
+    bundle = ResearchContextBundle(encoded)
+    return merge_method_context(bundle, loaded_methods, max_bytes=max_bytes) if loaded_methods is not None else bundle
+
+
+def merge_method_context(context, loaded_methods, *, max_bytes=32768):
+    """The merged context has one byte cap, not one allowance per component."""
+    from .method_context import CONTEXT_MAX_BYTES, LoadedMethods, MethodContextError
+
+    if (not isinstance(context, ResearchContextBundle) or not isinstance(loaded_methods, LoadedMethods)
+            or loaded_methods.status != "READY" or type(max_bytes) is not int
+            or not 1 <= max_bytes <= CONTEXT_MAX_BYTES):
+        raise MethodContextError()
+    payload = context.to_dict()
+    payload["method_context"] = loaded_methods.to_dict()
+    encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False)
+    if len(encoded.encode("utf-8")) > max_bytes:
+        raise MethodContextError()
     return ResearchContextBundle(encoded)

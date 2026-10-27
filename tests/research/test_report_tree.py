@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from datetime import UTC, date, datetime
 
@@ -12,6 +13,26 @@ from finahinking.research.contracts import (
     RunEvent,
 )
 from finahinking.research.reports import ReportBundleWriter, verify_report_bundle
+
+
+def test_pre_theme_report_keeps_original_bytes_manifest_and_creation_date(tmp_path):
+    result = _result()
+    writer = ReportBundleWriter()
+    writer.write(result, tmp_path)
+    bundle = tmp_path / result.state.run_id
+    report = bundle / "complete_report.html"
+    report.write_text('<!doctype html><html lang="en"><title>Original legacy publication</title><body>Original legacy publication</body></html>')
+    path = bundle / "manifest.json"
+    payload = json.loads(path.read_text())
+    payload["files"]["complete_report.html"] = hashlib.sha256(report.read_bytes()).hexdigest()
+    for key in ("report_template", "report_input_digests", "method_factor_snapshot"):
+        payload["source_snapshot"].pop(key, None)
+    path.write_text(json.dumps(payload))
+    original = {item.name: item.read_bytes() for item in (path, report)}
+    replay = writer.write(result, tmp_path)
+    assert replay.created_at.isoformat() == payload["created_at"]
+    assert {item.name: item.read_bytes() for item in (path, report)} == original
+    assert verify_report_bundle(path).ok
 from finahinking.research.ui import research_runtime_view_model
 
 

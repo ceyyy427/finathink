@@ -225,6 +225,19 @@ class DataBatch:
             "pit_available": self.pit_available,
         }
 
+    def to_research_attachment(self, snapshot_ref, *, market, units):
+        from .research_fields import (
+            DATE_RESEARCH_FIELDS,
+            IDENTITY_FIELDS,
+            RESEARCH_FIELDS,
+            ResearchFieldAttachment,
+        )
+
+        records = [{name: value for name, value in record.items()
+                    if name in IDENTITY_FIELDS | RESEARCH_FIELDS | DATE_RESEARCH_FIELDS}
+                   for record in self.records if set(record) & RESEARCH_FIELDS]
+        return ResearchFieldAttachment(snapshot_ref, market, units, records, self.source_declaration)
+
     def __repr__(self) -> str:
         return f"DataBatch(records={len(self.records)}, connection_id={self.connection_id!r}, pit_available={self.pit_available!r})"
 

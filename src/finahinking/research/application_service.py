@@ -279,7 +279,10 @@ def run_local_research_stage(invocation, checkpoint_ref, publish_checkpoint, *, 
             validation_record = queue.get(study["validation_job_id"])
             validated = verify_research_receipt(root, queue, validation_record, validation_record.result_ref)
             validation = validated["manifest"]["source_snapshot"].get("factor_study")
-        tools.analysis["factor_study"] = compute_study(snapshot, study, phase=phase, validation=validation)
+        from finahinking.data.research_fields import ResearchFieldStore
+
+        tools.analysis["factor_study"] = compute_study(snapshot, study, phase=phase, validation=validation,
+            research_fields_store=ResearchFieldStore(SnapshotStore(root / "snapshots")), study_store=studies)
     if budget is not None:
         budget.check_wall()
     manifest = ReportBundleWriter().write(result, root / "reports" / f"attempt-{attempt_id}", quant_analytics=tools.analysis)
@@ -333,6 +336,9 @@ class ResearchApplicationService:
             os.close(descriptor)
         self.queue = JobQueue(queue_path, max_attempts=3, backoff_base_seconds=0.1, backoff_max_seconds=1)
         self.factor_studies = FactorStudyStore(self.queue, scope_id=self.scope_id)
+        from .factor_lifecycle import FactorUseStore
+
+        self.factor_uses = FactorUseStore(self.queue, scope_id=self.scope_id)
         from .learning_review import LearningReviewService
 
         self.learning = LearningReviewService(self)
@@ -446,6 +452,84 @@ class ResearchApplicationService:
             request = replace(request, research_plan=plan, config_digest=stable_digest({"base": request.config_digest, "context_input_ref": reference}))
         record = self.runtime.submit(request, idempotency_key=f"application:{stable_digest({'scope': self.scope_id, 'key': key})[:40]}", limits=limits)
         return self.get_job(record.job_id)
+
+    def _method_store(self):
+        from .method_handoff import MethodHandoffStore
+
+        return MethodHandoffStore(self.root / "method-workspace" / stable_digest(self.scope_id), self.queue)
+
+    def attach_research_fields(self, job_id, value):
+        from finahinking.data.research_fields import ResearchFieldAttachment, ResearchFieldStore
+
+        request = self._request(self.queue.get(job_id))
+        attachment = value if isinstance(value, ResearchFieldAttachment) else ResearchFieldAttachment.from_dict(value)
+        if attachment.snapshot_ref != request.snapshot_ref:
+            raise ValueError("research fields belong to another snapshot")
+        reference = ResearchFieldStore(self.snapshots).save(attachment)
+        return {"snapshot_ref": request.snapshot_ref, "attachment_ref": reference,
+                "fields": sorted(attachment.units), "status": "SAVED_NOT_EVALUATED", "paper_only": True}
+
+    def export_method_handoff(self, job_id, route_request):
+        """Explicit local export; it performs no provider call or market fetch."""
+        from .asset_catalog import ResearchAssetCatalog
+        from .context_bundle import build_context_bundle
+        from .contracts import AgentTask
+        from .method_context import MethodContextError, load_methods
+        from .method_handoff import build_method_handoff
+        from .method_router import select_methods
+
+        request = self._request(self.queue.get(job_id))
+        snapshot = self.snapshots.load(request.snapshot_ref)
+        catalog = ResearchAssetCatalog.packaged()
+        selected = select_methods(route_request, catalog)
+        loaded = load_methods(selected, catalog)
+        if loaded.status != "READY":
+            raise MethodContextError()
+        materials = ()
+        source = request.research_plan.validation_spec.get("context_input_ref")
+        if source is not None:
+            if not isinstance(source, str) or not re.fullmatch(r"[0-9a-f]{64}", source):
+                raise ValueError("model context reference is invalid")
+            stored = _read_json(self.root / "model-inputs" / f"{source}.json")
+            if _model_input_digest(stored) != source:
+                raise ValueError("model context integrity mismatch")
+            materials = stored["materials"]
+        context = build_context_bundle(request, snapshot, "research", materials=materials)
+        digest = stable_digest({"request": to_jsonable(request), "context": context.fingerprint,
+                                "methods": loaded.fingerprint})
+        task = AgentTask("research", f"method-{digest[:32]}", digest,
+                         capabilities=("paper_only", "structured_output", "evidence_refs", "reasoning"))
+        package = build_method_handoff(task, context, loaded)
+        reference = self._method_store().export(package)
+        return self.get_method_handoff(job_id, reference)
+
+    def _bound_method_handoff(self, job_id, reference):
+        request = self._request(self.queue.get(job_id))
+        store = self._method_store()
+        package = store.load(reference)
+        if (package.context.to_dict()["run_id"] != request.run_id
+                or package.context.to_dict()["dataset_fingerprint"] != request.snapshot_ref):
+            raise KeyError(reference)
+        return store, package
+
+    def get_method_handoff(self, job_id, reference):
+        from .reports import method_handoff_activity
+
+        store, package = self._bound_method_handoff(job_id, reference)
+        state = store.status(reference)
+        return {"handoff_ref": reference, **state, "package": package.to_dict(),
+                "summary": method_handoff_activity(package, state["status"])}
+
+    def accept_method_handoff(self, job_id, reference, response):
+        store, _ = self._bound_method_handoff(job_id, reference)
+        outcome = store.accept(reference, response)
+        return {"outcome": to_jsonable(outcome),
+                "summary": self.get_method_handoff(job_id, reference)["summary"],
+                "artifacts": list(store.artifacts(reference))}
+
+    def method_handoff_artifacts(self, job_id, reference):
+        store, _ = self._bound_method_handoff(job_id, reference)
+        return store.artifacts(reference)
 
     def _request(self, record):
         request = self.queue.load_request_snapshot(record.task_ref, expected_digest=self.queue.task_input_digest(record.task_ref))
@@ -576,9 +660,44 @@ class ResearchApplicationService:
         self.factor_studies.set_job(study_id, "validation", job["job_id"])
         return self.factor_study(study_id)
 
+    def create_method_factor_study(self, job_id, handoff_ref, artifact_ref, *, attachment_ref=None, idempotency_key):
+        from finahinking.data.research_fields import ResearchFieldStore
+
+        from .asset_catalog import ResearchAssetCatalog
+        from .factor_proposals import proposal_from_handoff
+        from .factor_recipes import family_factor_specs, pilot_factor_specs
+        from .factor_workbench import prepare_method_study
+
+        request = self._request(self.queue.get(job_id))
+        store, package = self._bound_method_handoff(job_id, handoff_ref)
+        artifact = next((item for item in store.artifacts(handoff_ref) if item["artifact_ref"] == artifact_ref), None)
+        if artifact is None:
+            raise ValueError("factor study requires an accepted persisted method artifact")
+        proposal = proposal_from_handoff(package, artifact, catalog=ResearchAssetCatalog.packaged(), policy={"max_candidates": 1})
+        available = (*[spec for window in (3, 5, 8) for spec in pilot_factor_specs(window)], *family_factor_specs())
+        factor = next((spec for spec in available if spec.formula == proposal.expression), None)
+        if factor is None:
+            raise ValueError("factor proposal has no audited pilot binding")
+        snapshot = self.snapshots.load(request.snapshot_ref)
+        attachment = None if attachment_ref is None else ResearchFieldStore(self.snapshots).load(attachment_ref)
+        manifest = package.to_dict()["manifest"]
+        method_binding = {"handoff_ref": handoff_ref, "artifact_ref": artifact_ref,
+            "package_digest": package.package_digest, "context_digest": package.context.fingerprint,
+            "methods_digest": manifest["methods_digest"], "method_manifest_digest": manifest["method_manifest_digest"],
+            "loaded_methods": package.context.to_dict()["method_context"]}
+        spec = prepare_method_study(snapshot, attachment, instrument=request.instrument, as_of=request.as_of.isoformat(),
+            question=request.research_plan.hypotheses[0], factor_spec=factor, method_binding=method_binding,
+            policy_fingerprint=request.research_plan.validation_spec["policy_fingerprint"])
+        key = _ref(idempotency_key, "idempotency_key")
+        study_id = "study-" + stable_digest({"scope": self.scope_id, "key": key})[:24]
+        study = self.factor_studies.create(study_id, spec, validation_key=key)
+        job = self._submit_factor_job(study, "validation", key)
+        self.factor_studies.set_job(study_id, "validation", job["job_id"])
+        return self.factor_study(study_id)
+
     def _submit_factor_job(self, study, phase, key):
         spec = study["spec"]
-        return self.submit({"idempotency_key": "factor-" + stable_digest({"study": study["study_id"], "phase": phase, "key": key})[:32], **{name: spec[name] for name in ("snapshot_ref", "instrument", "as_of", "question")}, "budget": {"max_wall_seconds": 120, "max_bytes": 64 * 1024 * 1024, "max_experiments": spec["evaluation_units"]}}, factor_study={"study_id": study["study_id"], "spec_ref": study["spec_ref"], "phase": phase})
+        return self.submit({"idempotency_key": "factor-" + stable_digest({"study": study["study_id"], "phase": phase, "key": key})[:32], **{name: spec[name] for name in ("snapshot_ref", "instrument", "as_of", "question")}, **({"policy_ref": spec["policy_ref"]} if "policy_ref" in spec else {}), "budget": {"max_wall_seconds": 120, "max_bytes": 64 * 1024 * 1024, "max_experiments": spec["evaluation_units"]}}, factor_study={"study_id": study["study_id"], "spec_ref": study["spec_ref"], "phase": phase})
 
     def factor_study(self, study_id):
         study = self.factor_studies.get(study_id)
@@ -599,10 +718,83 @@ class ResearchApplicationService:
             if payload is not None and (payload.get("study_id") != study_id or payload.get("spec_ref") != study["spec_ref"]):
                 raise ValueError("factor study result belongs to another charter")
             if job["status"] in {"completed", "failed", "cancelled"}:
-                self.factor_studies.complete(study_id, phase, job_id, succeeded=job["status"] == "completed" and payload is not None)
+                computed = payload is not None and payload.get("validation_run", {}).get("status") not in {
+                    "BLOCKED_DATA", "COMPLETE_WITH_BLOCKS", "BLOCKED_CONTROL", "SEMANTIC_REJECTION", "EXECUTION_ERROR"}
+                self.factor_studies.complete(study_id, phase, job_id, succeeded=job["status"] == "completed" and computed)
             jobs[f"{phase}_job"] = job
             results["validation" if phase == "validation" else "test_result"] = payload
         return {**self.factor_studies.get(study_id), **jobs, **results}
+
+    def factor_evidence(self, factor_ref, *, use_scope=None, run_refs=()):
+        from .asset_catalog import ResearchAssetCatalog
+        from .factor_lifecycle import project_factor_lifecycle
+        from .factor_provenance import load_factor_evidence
+
+        evidence = load_factor_evidence(factor_ref, catalog=ResearchAssetCatalog.packaged(), run_repository=self.runs, run_refs=run_refs)
+        identity = evidence.to_dict()["factor_id"]
+        reference = getattr(factor_ref, "fingerprint", None)
+        current = self.factor_uses.current(identity, factor_ref=reference, use_scope=use_scope)
+        history = self.factor_uses.list(factor_id=identity, factor_ref=reference)
+        if current["requested_scope"] is not None:
+            history = [event for event in history if all(event["decision"][key] == value
+                       for key, value in current["requested_scope"].items())]
+        events = {event["event_ref"]: event for event in (*history, *current["events"])}
+        references = tuple(dict.fromkeys((*run_refs, *(event["decision"]["run_ref"] for event in (*current["events"], *history)))))[:200]
+        if references:
+            evidence = load_factor_evidence(factor_ref, catalog=ResearchAssetCatalog.packaged(), run_repository=self.runs,
+                                           run_refs=references)
+        lifecycle = project_factor_lifecycle(evidence, list(events.values())).to_dict()
+        lifecycle.update(history=history, history_truncated=current["history_count"] > len(history),
+                         scope_truncated=current["scope_truncated"])
+        return {**evidence.to_dict(), "lifecycle": lifecycle}
+
+    def review_factor_use(self, factor_ref, values):
+        from .asset_catalog import ResearchAssetCatalog
+        from .factor_lifecycle import FactorUseDecision
+        from .factor_provenance import load_factor_evidence
+
+        if not isinstance(values, dict):
+            raise TypeError("factor use review requires an object")
+        try:
+            decision = FactorUseDecision(**values)
+        except TypeError as exc:
+            raise ValueError("factor use review fields are invalid") from exc
+        evidence = load_factor_evidence(factor_ref, catalog=ResearchAssetCatalog.packaged(), run_repository=self.runs,
+                                       run_refs=(decision.run_ref,))
+        if evidence.to_dict()["factor_id"] != decision.factor_id:
+            raise ValueError("factor use route and decision identity disagree")
+        with self.queue._connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            if decision.decision in {"APPROVE_FOR_RESEARCH", "REJECT"}:
+                entry = self.runs.get_run(decision.run_ref)
+                study_id = entry["manifest"]["source_snapshot"]["factor_study"]["study_id"]
+                study = self.factor_studies._decode(self.factor_studies._row(db, study_id))
+                if self._request(self.queue.get(study["test_job_id"])).run_id != decision.run_ref:
+                    raise ValueError("factor use review is not bound to the final-test job")
+                if study["review_decision"] not in {None, decision.decision}:
+                    raise ValueError("factor test already has a different immutable review")
+                if study["review_decision"] is None:
+                    self.factor_studies.review(study_id, decision.decision, decision.reviewer, connection=db)
+            return self.factor_uses.record(decision, evidence=evidence, connection=db)
+
+    def refresh_factor_monitoring(self, factor_ref, values):
+        from .asset_catalog import ResearchAssetCatalog
+        from .factor_monitoring import evaluate_factor_monitoring
+        from .factor_provenance import load_factor_evidence
+
+        if not isinstance(values, dict):
+            raise TypeError("factor monitoring refresh must be an object")
+        allowed = {"as_of", "min_windows", "decline_windows", "drop_threshold", "run_refs", "parent_policy_ref"}
+        if set(values) - allowed:
+            raise ValueError("factor monitoring accepts controls and report references, not metrics")
+        if not isinstance(values.get("run_refs", ()), (tuple, list)) or len(values.get("run_refs", ())) > 16:
+            raise ValueError("factor monitoring refresh accepts at most16 explicit reports")
+        evidence = load_factor_evidence(factor_ref, catalog=ResearchAssetCatalog.packaged(), run_repository=self.runs,
+                                       run_refs=values.get("run_refs", ()))
+        controls = {key: value for key, value in values.items() if key not in {"run_refs", "parent_policy_ref"}}
+        proposal = evaluate_factor_monitoring(factor_ref, evidence.to_dict()["local_runs"], controls)
+        review = self.learning.review_factor_monitoring(proposal, parent_policy_ref=values.get("parent_policy_ref")) if proposal.to_dict()["status"] == "REVIEW_RECOMMENDED" else None
+        return {"proposal": proposal.to_dict(), "learning_review": review}
 
     def freeze_factor_study(self, study_id, candidate_id):
         study = self.factor_study(study_id)
@@ -628,5 +820,32 @@ class ResearchApplicationService:
             raise ValueError("review requires a verified final-test report")
         if decision == "APPROVE_FOR_RESEARCH" and study["test_result"]["test_summary"]["failure_reason"] is not None:
             raise ValueError("failed final-test evidence cannot be approved")
-        self.factor_studies.review(study_id, decision, reviewer_id)
+        validation_run = study["test_result"].get("validation_run")
+        if decision == "APPROVE_FOR_RESEARCH" and validation_run is not None:
+            archived = next(row for row in validation_run["steps"] if row["stage_id"] == "archive_decision")
+            if (validation_run["status"] != "COMPLETE" or any(row["status"] != "COMPLETE" for row in validation_run["steps"])
+                    or archived["metrics"].get("decision") != "PENDING_HUMAN_RESEARCH_REVIEW"):
+                raise ValueError("blocked or observation-only evidence cannot be approved")
+        scoped = None
+        if validation_run is not None:
+            from .asset_catalog import ResearchAssetCatalog
+            from .factor_lifecycle import FactorUseDecision
+            from .factor_provenance import load_factor_evidence
+
+            run_ref = self._request(self.queue.get(study["test_job_id"])).run_id
+            evidence = load_factor_evidence(validation_run["bindings"]["factor_id"],
+                catalog=ResearchAssetCatalog.packaged(), run_repository=self.runs, run_refs=(run_ref,))
+            record = next(row for row in evidence.to_dict()["local_runs"] if row["run_ref"] == run_ref
+                          and row["evaluation_fingerprint"] == validation_run["fingerprint"])
+            universe = record["scope"]["universe"]
+            scoped = FactorUseDecision(factor_ref=record["factor_ref"], market=universe["market"],
+                universe_ref=stable_digest(universe), purpose="FORMULA_RESEARCH" if record["reproduction_scope"] == "FORMULA_FIXTURE" else "PAPER_RESEARCH",
+                policy_fingerprint=record["policy_fingerprint"], evaluation_fingerprint=record["evaluation_fingerprint"],
+                reviewer=reviewer_id, decision=decision, idempotency_key="study-review-" + stable_digest([study_id, decision, reviewer_id])[:32],
+                run_ref=run_ref, factor_id=record["factor_id"], time_domain=tuple(record["scope"]["final_test_window"]))
+        with self.queue._connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            self.factor_studies.review(study_id, decision, reviewer_id, connection=db)
+            if scoped is not None:
+                self.factor_uses.record(scoped, evidence=evidence, connection=db)
         return self.factor_study(study_id)

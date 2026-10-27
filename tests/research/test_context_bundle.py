@@ -79,3 +79,44 @@ def test_snapshot_substitution_and_future_market_data_are_rejected():
 def test_context_byte_limit_blocks_before_provider_invocation():
     with pytest.raises(ValueError, match="context"):
         build(max_bytes=64)
+
+
+def test_method_context_is_optional_and_uses_same_merged_budget():
+    import importlib.util
+
+    assert importlib.util.find_spec("finahinking.research.method_context") is not None
+    from finahinking.research.asset_catalog import ResearchAssetCatalog
+    from finahinking.research.asset_contracts import MethodRouteRequest
+    from finahinking.research.method_context import load_methods
+    from finahinking.research.method_router import select_methods
+
+    catalog = ResearchAssetCatalog.packaged()
+    loaded = load_methods(select_methods(MethodRouteRequest(purposes=("factor-mining",)), catalog), catalog)
+    original = build()
+    combined = build(loaded_methods=loaded)
+    assert combined.evidence_index == original.evidence_index
+    assert combined.to_dict()["method_context"] == loaded.to_dict()
+    assert len(combined._json.encode()) <= 32768
+    assert original.to_dict().get("method_context") is None
+    assert original.fingerprint == build(loaded_methods=None).fingerprint
+
+
+def test_methods_do_not_receive_an_extra_budget_above_materials():
+    import importlib.util
+    import json
+
+    assert importlib.util.find_spec("finahinking.research.method_context") is not None
+    from finahinking.research.asset_catalog import ResearchAssetCatalog
+    from finahinking.research.asset_contracts import MethodRouteRequest
+    from finahinking.research.context_bundle import ResearchContextBundle, merge_method_context
+    from finahinking.research.method_context import load_methods
+    from finahinking.research.method_router import select_methods
+
+    catalog = ResearchAssetCatalog.packaged()
+    loaded = load_methods(select_methods(MethodRouteRequest(purposes=("factor-mining",)), catalog), catalog)
+    payload = build().to_dict()
+    payload["authorized_extra"] = "研" * 7000
+    original = ResearchContextBundle(json.dumps(payload, ensure_ascii=False))
+    assert len(original._json.encode()) < 32768 and loaded.actual_bytes < 32768
+    with pytest.raises(ValueError, match="BLOCKED_CONTEXT"):
+        merge_method_context(original, loaded)

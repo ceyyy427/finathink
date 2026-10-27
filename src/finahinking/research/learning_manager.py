@@ -731,6 +731,21 @@ class LearningManager:
         self._proposals[digest] = proposal
         return proposal
 
+    def propose_factor_monitoring(self, monitoring, *, existing_notes=None):
+        from .factor_monitoring import MonitoringProposal
+
+        if not isinstance(monitoring, MonitoringProposal) or monitoring.to_dict()["status"] != "REVIEW_RECOMMENDED":
+            raise ValueError("factor monitoring requires a review-worthy typed observation")
+        value = monitoring.to_dict()
+        notes = _clean_mapping(existing_notes or {}, "factor_monitoring")
+        notes[value["scope_fingerprint"]] = {
+            "factor_ref": value["factor_ref"], "observation_fingerprint": monitoring.fingerprint,
+            "status": value["status"], "as_of": value["as_of"], "scope": "|".join(value["reproduction_scope"]),
+            "action": "RECHECK_RESEARCH_EVIDENCE"}
+        return LearningUpdateProposal(LearningUpdateStatus.PROPOSAL_READY, None, _as_date(value["as_of"], "monitoring as_of"),
+            registry_updates={"factor_monitoring": notes},
+            evidence_refs=tuple("factor-run:" + row["evaluation_fingerprint"] for row in value["evidence_refs"]))
+
     def admit_update(self, proposal: LearningUpdateProposal, admission_record: LearningAdmissionRecord) -> AdmittedUpdate:
         if not isinstance(proposal, LearningUpdateProposal) or not isinstance(admission_record, LearningAdmissionRecord):
             raise TypeError("explicit typed admission record is required")

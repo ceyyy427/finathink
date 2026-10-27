@@ -179,7 +179,7 @@ def test_browser_acceptance_real_engine_keyboard_responsive_failures_and_evidenc
             page.on("console", lambda msg: browser_errors.append(f"console:{msg.text}") if msg.type == "error" else None)
             page.goto(f"{base}/", wait_until="networkidle")
             assert page.locator("[data-finathink-overview]").is_visible()
-            assert page.get_by_text("Overview", exact=True).count() >= 1
+            assert page.get_by_role("heading", name="你的研究，从这里继续。", exact=True).count() == 1
             assert page.get_by_text("PAPER-ONLY", exact=True).count() >= 1
             assert page.locator("body").evaluate("el => el.scrollWidth <= window.innerWidth")
             assert page.locator("[data-finathink-overview]").get_attribute("aria-busy") == "false"

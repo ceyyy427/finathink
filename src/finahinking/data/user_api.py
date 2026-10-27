@@ -213,6 +213,12 @@ class JsonApiConnector:
             return response
         raise DataConnectorError("transport", "data request failed") from None
 
+    def fetch_research_fields(self, request: DataRequest, *, snapshot_ref, market, units):
+        """Explicit fetch through the same authenticated, bounded JSON connector."""
+        if request.dataset_kind != "research_fields":
+            raise ValueError("research field request must declare its dataset kind")
+        return self.fetch(request).to_research_attachment(snapshot_ref, market=market, units=units)
+
     def fetch(self, request: DataRequest) -> DataBatch:
         if self.config.auth_mode != "no_auth" and not self._transport_supports_no_redirect():
             raise DataConnectorError("transport_policy", "authenticated data transport must disable redirects")

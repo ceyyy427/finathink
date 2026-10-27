@@ -35,7 +35,7 @@ _ALLOWED_CAPABILITIES = frozenset(
         "paper_gateway",
     }
 )
-_ARTIFACT_REF_RE = re.compile(r"^(?:artifact:[A-Za-z0-9][A-Za-z0-9._:-]{0,127}|(?:digest|sha256):[0-9a-f]{64})$")
+_ARTIFACT_REF_RE = re.compile(r"^(?:artifact:[A-Za-z0-9][A-Za-z0-9._:-]{0,127}|(?:digest|sha256|evidence):[0-9a-f]{64})$")
 _SENSITIVE_KEYS = frozenset(
     {
         "api_key",

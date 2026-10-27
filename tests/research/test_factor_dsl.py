@@ -64,3 +64,37 @@ def test_historical_factor_values_cannot_change_when_future_rows_are_appended(ex
     prefix = evaluate_expression(expression, frame.iloc[:5])
     full = evaluate_expression(expression, frame)
     pd.testing.assert_series_equal(prefix, full.iloc[:5])
+
+
+def test_feature_graph_temporal_nodes_and_lags_do_not_cross_asset_boundaries():
+    from finahinking.p6_6.features import FeatureRegistry
+    from finahinking.p6_6.models import FeatureDefinition, FeatureGraph, FeatureNode, FeatureVersion
+
+    times = list(pd.date_range("2025-01-01", periods=3, tz="UTC")) * 2
+    frame = pd.DataFrame({"asset": ["A"] * 3 + ["B"] * 3, "date": times,
+                          "available_at": times, "close": [10, 11, 12, 100, 90, 81]})
+    feature = FeatureVersion(FeatureDefinition("asset-return", "return", "grouped return", "return",
+        "close.pct_change(1)", input_fields=("close",), window=1, lag=1))
+    graph = FeatureGraph((FeatureNode("ret", feature),), ("ret",))
+    result = FeatureRegistry().evaluate_graph(graph, frame)["ret"]
+    first_day = pd.Timestamp("2025-01-01T00:00:00Z")
+    second_day = pd.Timestamp("2025-01-02T00:00:00Z")
+    assert result.loc[first_day].isna().all()
+    assert result.loc[second_day].isna().all()
+    assert sorted(result.loc[pd.Timestamp("2025-01-03T00:00:00Z")].tolist()) == pytest.approx([-0.1, 0.1])
+
+
+def test_feature_graph_date_rank_is_same_day_not_historical_or_full_time():
+    from finahinking.p6_6.features import FeatureRegistry
+    from finahinking.p6_6.models import FeatureDefinition, FeatureVersion
+
+    dates = list(pd.date_range("2025-01-01", periods=2, tz="UTC")) * 2
+    frame = pd.DataFrame({"asset": ["A", "A", "B", "B"], "date": dates,
+                          "available_at": dates, "close": [10, 500, 100, 20]})
+    version = FeatureVersion(FeatureDefinition("date-rank", "rank", "same-day rank", "cross_sectional_rank",
+        "rank(close)", input_fields=("close",), cross_sectional_scope="date"))
+    actual = FeatureRegistry().evaluate(version, frame)
+    assert actual.iloc[:2].tolist() == [0.5, 1.0]
+    assert actual.iloc[2:].tolist() == [1.0, 0.5]
+    prefix = frame.loc[frame["date"] == dates[0]]
+    pd.testing.assert_series_equal(FeatureRegistry().evaluate(version, prefix), actual.iloc[:2])

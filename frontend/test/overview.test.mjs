@@ -52,7 +52,7 @@ test('renderOverview exposes reduced-motion and keyboard text-summary affordance
   renderOverview(root, payload);
   assert.equal(root.dataset.animation, 'reduced');
   assert.equal(chart.tabindex, '0');
-  assert.match(chart['aria-label'], /text summary/i);
+  assert.match(chart['aria-label'], /文字记录/);
   delete globalThis.window;
 });
 
@@ -92,7 +92,7 @@ test('mountOverview exposes loading and actionable error states', async () => {
   const failed = { dataset: {}, setAttribute(name, value) { this[name] = value; }, querySelector: (selector) => selector === '[data-overview-loading]' ? { hidden: true } : selector === '[data-overview-error]' ? error : null };
   await assert.rejects(() => mountOverview(failed, { payload: { ...payload, schema_version: 99 } }), /schema/);
   assert.equal(failed.dataset.overviewStatus, 'ERROR');
-  assert.match(error.textContent, /Check the local service/);
+  assert.match(error.textContent, /本地服务/);
 });
 
 test('mountOverview coalesces repeated calls into one request and render', async () => {
@@ -115,4 +115,25 @@ test('mountOverview coalesces repeated calls into one request and render', async
   } finally {
     globalThis.fetch = originalFetch;
   }
+});
+
+test('overview refreshes visible counts from the response, and missing counts stay unknown', () => {
+  const saved = { dataset: { overviewMetric: 'saved_items' }, textContent: '99' };
+  const missing = { dataset: { overviewMetric: 'not_reported' }, textContent: '99' };
+  const root = { dataset: {}, querySelector: () => null, querySelectorAll: () => [saved, missing] };
+  renderOverview(root, payload);
+  assert.equal(saved.textContent, '2');
+  assert.equal(missing.textContent, '—');
+});
+
+test('overview failures keep safe Chinese recovery copy rather than native diagnostics', async () => {
+  const error = { hidden: true, textContent: '' };
+  const root = { dataset: {}, querySelector: (selector) => selector === '[data-overview-error]' ? error : null };
+  const previous = globalThis.fetch;
+  globalThis.fetch = async () => { throw new TypeError('Failed to fetch /Users/private-state'); };
+  try {
+    await assert.rejects(mountOverview(root, { payloadUrl: '/api/overview' }));
+    assert.match(error.textContent, /本地服务/);
+    assert.doesNotMatch(error.textContent, /Failed|Users|private-state|TypeError/);
+  } finally { globalThis.fetch = previous; }
 });

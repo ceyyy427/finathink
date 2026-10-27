@@ -6,6 +6,7 @@ synthetic reproduction proves formula execution, never investment efficacy.
 
 from __future__ import annotations
 
+import json
 import math
 from dataclasses import dataclass
 from functools import lru_cache
@@ -33,7 +34,16 @@ class FactorRecipe:
 
     @property
     def required_fields(self):
-        return parse_factor_expression(self.expression(), ("open", "high", "low", "close", "volume")).fields
+        from finahinking.data.research_fields import NUMERIC_RESEARCH_FIELDS
+
+        return parse_factor_expression(self.expression(), (*NUMERIC_RESEARCH_FIELDS,
+            "open", "high", "low", "close", "volume", "amount", "industry_relative_return")).fields
+
+    @property
+    def implementation_fingerprint(self):
+        return stable_digest({"recipe_id": self.recipe_id, "version": self.version,
+                              "formula": self.formula, "semantics": "bounded-dsl.v2",
+                              "std_ddof": 0, "rank_scope": "asset-historical-prefix"})
 
     def to_dict(self):
         return {"recipe_id": self.recipe_id, "title": self.title, "formula": self.formula, "required_fields": list(self.required_fields), "units": self.units, "version": self.version, "windowed": "{window}" in self.formula, "default_window": 5, "source_ids": ["finathink-native-dsl.v1", self.concept], "implementation_license": "MIT", "data_license": "USER_SUPPLIED_NOT_VERIFIED", "pit_semantics": "historical-prefix features; shifted one observation before label scoring", "effect_status": "NOT_EVALUATED_ON_USER_DATA", "production_write": False, "reproduction": dict(_reproduce(self.recipe_id))}
@@ -66,6 +76,9 @@ _RECIPES = (
     ("low_momentum", "最低价动量", "return(low,{window})", "ratio", "finathink:low-momentum"),
     ("close_open_momentum_gap", "收开动量差的一半", "combine(return(close,{window}),negate(return(open,{window})))", "ratio", "finathink:close-open-momentum-gap"),
     ("momentum_dispersion_balance", "标准化动量与波动平衡", "combine(zscore(return(close,1),{window}),negate(zscore(rolling_std(return(close,1),{window}),{window})))", "standardized", "finathink:momentum-dispersion-balance"),
+    ("turnover_mean", "真实换手率均值", "rolling_mean(turnover_rate,{window})", "declared-turnover-ratio", "finathink:explicit-turnover-mean"),
+    ("turnover_dispersion", "真实换手率离散度", "rolling_std(turnover_rate,{window})", "declared-turnover-ratio", "finathink:explicit-turnover-dispersion"),
+    ("amihud_ratio", "未缩放收益成交额比", "rolling_mean(divide(abs(return(close,1)),amount),{window})", "ratio-per-declared-currency", "finathink:amihud-ratio-unscaled"),
 )
 
 
@@ -74,13 +87,111 @@ def research_recipes():
     return tuple(FactorRecipe(*values) for values in _RECIPES)
 
 
-@lru_cache(maxsize=24)
+@lru_cache(maxsize=32)
 def _reproduce(recipe_id):
     recipe = next(item for item in research_recipes() if item.recipe_id == recipe_id)
     index = pd.date_range("2025-01-01", periods=96, tz="UTC")
     close = [100 + n * 0.07 + math.sin(n / 4) * 2 for n in range(96)]
     opened = [value + 0.2 * math.cos(n) for n, value in enumerate(close)]
     frame = pd.DataFrame({"close": close, "open": opened, "high": [max(a, b) + 1 for a, b in zip(close, opened)], "low": [min(a, b) - 1 for a, b in zip(close, opened)], "volume": [1000 + 3 * n + 50 * math.cos(n / 3) for n in range(96)]}, index=index)
+    if "turnover_rate" in recipe.required_fields:
+        frame["turnover_rate"] = [0.01 + (n % 7) / 1000 for n in range(96)]
+    if "amount" in recipe.required_fields:
+        frame["amount"] = frame["close"] * frame["volume"]
     values = evaluate_expression(recipe.expression(5), frame).dropna()
     payload = {"recipe_id": recipe.recipe_id, "window": 5, "finite_observations": len(values), "first": round(float(values.iloc[0]), 12), "last": round(float(values.iloc[-1]), 12)}
     return {**payload, "dataset_fingerprint": stable_digest({"timestamps": [value.isoformat() for value in index], "data": frame.to_dict(orient="list")}), "result_fingerprint": stable_digest(payload), "data_mode": "SAMPLE", "purpose": "deterministic mathematical reproduction, not evidence of market efficacy"}
+
+
+def _pilot_definitions():
+    from .asset_catalog import ResearchAssetCatalog
+
+    rows = json.loads(ResearchAssetCatalog.packaged().read_text("source-definitions"))["finathink_pilots"]
+    if not isinstance(rows, list) or not 1 <= len(rows) <= 12:
+        raise ValueError("pilot metadata exceeds the bounded initial scope")
+    return rows
+
+
+def pilot_factor_specs(window=5):
+    from .asset_contracts import FactorSpec
+
+    if type(window) is not int or not 1 <= window <= 252:
+        raise ValueError("pilot window must be an integer in1..252")
+    recipes = {recipe.recipe_id: recipe for recipe in research_recipes()}
+    result = []
+    for row in _pilot_definitions():
+        recipe = recipes[row["recipe_id"]]
+        result.append(FactorSpec(row["factor_id"], recipe.version, recipe.expression(window),
+            recipe.required_fields, row["units"], row["direction"], window, "daily",
+            "available-at-or-before-signal", "propagate", f"recipe:{recipe.recipe_id}@{recipe.version}",
+            recipe.implementation_fingerprint, ("source-definitions",)))
+    return tuple(result)
+
+
+@lru_cache(maxsize=1)
+def family_recipes():
+    return (
+        FactorRecipe("known_book_to_market", "已公告账面市值比", "divide(book_equity,market_cap)", "ratio", "finathink:known-book-to-market"),
+        FactorRecipe("historical_industry_relative_return", "历史行业同刻相对收益", "industry_relative_return", "ratio", "finathink:point-in-time-industry-relative-return"),
+        FactorRecipe("declared_limit_proximity", "历史涨停价接近度", "divide(close,limit_up_price)", "ratio", "finathink:declared-limit-proximity"),
+        FactorRecipe("institutional_net_buy_fraction", "机构汇总净买入成交额比", "divide(institutional_net_buy,amount)", "ratio", "finathink:aggregate-institutional-flow"),
+        FactorRecipe("intraday_body_fraction_001", "日内实体与振幅比", "divide(subtract(close,open),add(subtract(high,low),0.001))", "ratio", "arxiv:1601.00991v3:Alpha101"),
+    )
+
+
+def family_definitions():
+    from .asset_catalog import ResearchAssetCatalog
+
+    return json.loads(ResearchAssetCatalog.packaged().read_text("source-definitions")).get("family_pilots", [])
+
+
+def family_factor_specs(window=1):
+    from .asset_contracts import FactorSpec
+
+    if type(window) is not int or not 1 <= window <= 252:
+        raise ValueError("family window must be bounded")
+    recipes = {recipe.recipe_id: recipe for recipe in family_recipes()}
+    return tuple(FactorSpec(row["factor_id"], recipes[row["recipe_id"]].version,
+        recipes[row["recipe_id"]].expression(1), recipes[row["recipe_id"]].required_fields,
+        row["units"], row["direction"], 1, "daily", "available-at-or-before-signal", "propagate",
+        f"recipe:{row['recipe_id']}@{recipes[row['recipe_id']].version}",
+        recipes[row["recipe_id"]].implementation_fingerprint, ("source-definitions",)) for row in family_definitions())
+
+
+def resolve_factor_spec(spec):
+    from .asset_contracts import FactorSpec
+
+    if not isinstance(spec, FactorSpec):
+        raise TypeError("typed factor spec required")
+    expected = next((value for value in (*pilot_factor_specs(spec.window), *family_factor_specs()) if value.factor_id == spec.factor_id), None)
+    if expected is None or expected.fingerprint != spec.fingerprint:
+        raise ValueError("factor spec differs from its audited implementation binding")
+    name = spec.implementation_ref.removeprefix("recipe:").split("@", 1)[0]
+    return next(recipe for recipe in (*research_recipes(), *family_recipes()) if recipe.recipe_id == name)
+
+
+def factor_input_requirements(spec):
+    resolve_factor_spec(spec)
+    row = next(value for value in (*_pilot_definitions(), *family_definitions()) if value["factor_id"] == spec.factor_id)
+    return dict(row["required_input_units"])
+
+
+def evaluate_factor_spec(spec, panel):
+    from .factor_inputs import FactorPanel
+
+    resolve_factor_spec(spec)
+    if not isinstance(panel, FactorPanel):
+        raise TypeError("typed factor panel required")
+    if panel.status != "READY" or panel.missing_inputs(spec.required_fields):
+        raise ValueError("BLOCKED_DATA: required factor inputs or availability are missing")
+    requirements = factor_input_requirements(spec)
+    if any(panel.units.get(name) != unit for name, unit in requirements.items()):
+        raise ValueError("BLOCKED_DATA: factor input units or denominator do not match")
+    from .factor_families import audit_family_inputs, family_for_spec
+
+    family = family_for_spec(spec)
+    if family is not None and audit_family_inputs(family, panel, {"factor_spec": spec.to_dict()}).to_dict()["status"] != "READY":
+        raise ValueError("BLOCKED_DATA: family input audit failed")
+    values = evaluate_expression(spec.formula, panel.to_frame())
+    values.name = spec.factor_id
+    return values

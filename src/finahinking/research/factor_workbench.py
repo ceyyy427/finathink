@@ -70,6 +70,8 @@ def prepare_study(values, snapshot, *, policy_fingerprint):
     if any(isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or not 0 <= value <= (100 if key.endswith("bps") else 1) for key, value in numeric.items()):
         raise ValueError("study costs and thresholds must be finite and bounded")
     frame = study_frame(snapshot, values.get("instrument"), values.get("as_of"))
+    if set(recipe.required_fields) - set(frame.columns):
+        raise ValueError("BLOCKED_DATA: choose the method-guided study with explicit research fields and units")
     temporal = purged_walk_forward(frame.index, horizon=horizon, embargo=embargo, n_splits=folds)
     if any(len(fold["validation"]) < 8 for fold in temporal["folds"]) or len(temporal["test"]) < 8:
         raise ValueError("not enough samples after purge/embargo; prepare a longer snapshot")
@@ -86,8 +88,11 @@ def _summary(record, spec, spec_ref, *, phase="VALIDATION", evaluation=None):
     return ExperimentSummary.build(snapshot_ref=spec["snapshot_ref"], hypothesis=spec["question"], parameters=record["parameters"], sample_period=spec["sample_period"], split=conditions["split"], cost=spec["cost"], metrics=metrics, failure_reason=record.get("failure_reason"), version=METHOD_VERSION, evidence_refs=["factor-evidence:" + stable_digest({"input": spec_ref, "evaluation": evaluation["fingerprint"], "phase": phase})], experiment_id=record["experiment_id"], conditions=conditions, phase=phase).to_dict()
 
 
-def compute_study(snapshot, study, *, phase, validation=None):
+def compute_study(snapshot, study, *, phase, validation=None, research_fields_store=None, study_store=None):
     spec = study["spec"]
+    if spec["version"] == "factor-workbench.pilot.v1":
+        return _compute_method_study(snapshot, study, phase=phase, validation=validation,
+                                     research_fields_store=research_fields_store, study_store=study_store)
     if spec["version"] != METHOD_VERSION or spec["snapshot_ref"] != snapshot.fingerprint:
         raise ValueError("study version or selected snapshot changed")
     frame = study_frame(snapshot, spec["instrument"], spec["as_of"])
@@ -134,5 +139,99 @@ def compute_study(snapshot, study, *, phase, validation=None):
         raise ValueError("unknown study phase")
     result.update(paper_only=True, requires_human_admission=True, production_write=False)
     result["limitations"] = [*result["limitations"], "Validation ranking is descriptive; final-test metrics never re-rank candidates.", "OOS PASS means calculable held-out evidence, not profitable or production-admitted.", "Baseline portfolio returns and factor IC diagnostics are different quantities and are not compared as the same metric."]
+    result["fingerprint"] = stable_digest(result)
+    return result
+
+
+def prepare_method_study(snapshot, attachment, *, instrument, as_of, question, factor_spec, method_binding,
+                         policy_fingerprint):
+    from dataclasses import asdict
+
+    from .factor_inputs import UniverseSpec, build_factor_panel
+    from .factor_proposals import FactorHypothesis
+    from .factor_recipes import resolve_factor_spec
+    from .factor_validation import _frames, _temporal, factor_validation_policy
+
+    recipe = resolve_factor_spec(factor_spec)
+    from .factor_families import family_for_spec
+
+    audited_family = family_for_spec(factor_spec)
+    market = "UNSPECIFIED" if attachment is None else attachment.market
+    universe = UniverseSpec(market, (instrument,))
+    panel = build_factor_panel(snapshot, attachment, as_of=as_of, universe=universe)
+    policy = factor_validation_policy(window_grid=[3, 5, 8] if audited_family else sorted({3, factor_spec.window, 8}))
+    index, split = _temporal(_frames(panel), policy)
+    if len(split["validation"]) < 8 or len(split["test"]) < 8:
+        raise ValueError("not enough observations for the declared pilot study")
+    family = audited_family or ("liquidity" if {"turnover_rate", "amount"} & set(factor_spec.required_fields) else "volatility" if "dispersion" in factor_spec.factor_id else "mean_reversion")
+    hypothesis = FactorHypothesis("method-hyp-" + stable_digest({"question": question, "spec": factor_spec.fingerprint})[:12],
+        question, family, factor_spec.required_fields, factor_spec.window,
+        "positive" if factor_spec.direction == "HIGHER" else "negative")
+    return {"version": "factor-workbench.pilot.v1", "snapshot_ref": snapshot.fingerprint,
+        "attachment_ref": None if attachment is None else attachment.fingerprint,
+        "instrument": instrument, "as_of": as_of, "question": question, "recipe_id": recipe.recipe_id,
+        "recipe_version": recipe.version, "factor_spec": factor_spec.to_dict(), "universe": universe.to_dict(),
+        "hypothesis": asdict(hypothesis), "method_binding": method_binding, "validation_policy": policy,
+        "baseline_factor_id": "finathink-return-dispersion", "baseline_window": 5 if audited_family else factor_spec.window,
+        "parameterized": audited_family is None,
+        "combination_plan": {"method": "train-standardized-equal-weight", "weights": [0.5, 0.5],
+                             "directions": [factor_spec.direction, "LOWER"]},
+        "windows": policy["window_grid"], "n_splits": policy["n_splits"], "embargo": policy["embargo"],
+        "label_horizon": policy["label_horizon"], "policy_fingerprint": policy_fingerprint,
+        "policy_ref": policy_fingerprint, "cost": {"fee_bps": policy["fee_bps"], "slippage_bps": policy["slippage_bps"]},
+        "test_period": [index[split["validation_end"]].isoformat(), index[-1].isoformat()],
+        "sample_period": [index[0].isoformat(), index[-1].isoformat()], "metric_basis": "OBSERVATION",
+        "evaluation_units": len(policy["window_grid"]) * (2 * policy["n_splits"] + 1) + 4}
+
+
+def _compute_method_study(snapshot, study, *, phase, validation, research_fields_store, study_store):
+    from .asset_contracts import FactorSpec
+    from .factor_inputs import UniverseSpec, build_factor_panel
+    from .factor_validation import FactorValidationGateway, run_factor_validation
+    from .reports import method_factor_activity
+
+    spec = study["spec"]
+    if spec["snapshot_ref"] != snapshot.fingerprint:
+        raise ValueError("pilot study snapshot binding changed")
+    attachment = None
+    if spec["attachment_ref"] is not None:
+        if research_fields_store is None:
+            raise ValueError("pilot study requires the original field store")
+        attachment = research_fields_store.load(spec["attachment_ref"])
+    universe = UniverseSpec(spec["universe"]["market"], tuple(spec["universe"]["instruments"]))
+    panel = build_factor_panel(snapshot, attachment, as_of=spec["as_of"], universe=universe)
+    factor = FactorSpec(**{key: item for key, item in spec["factor_spec"].items() if key != "schema_version"})
+    policy = {**spec["validation_policy"], "phase": phase}
+    if phase == "test" and (not validation or validation.get("spec_ref") != study["spec_ref"]
+                            or validation["experiments"][0]["digest"] != study["candidate_fingerprint"]):
+        raise ValueError("pilot final test requires original frozen validation")
+    gateway = FactorValidationGateway(study_store=study_store, study_ids={spec["instrument"]: study["study_id"]})
+    run = run_factor_validation(factor, panel, policy, gateway=gateway).to_dict()
+    steps = {item["stage_id"]: item for item in run["steps"]}
+    metric = steps["information_coefficient"]["metrics"].get("mean_oriented_time_series_ic")
+    incomplete = run["status"] in {"BLOCKED_DATA", "COMPLETE_WITH_BLOCKS", "BLOCKED_CONTROL", "SEMANTIC_REJECTION", "EXECUTION_ERROR"}
+    failure = run["status"] if incomplete or metric is None else None
+    experiment_id = factor.factor_id
+    record = {"experiment_id": experiment_id, "digest": run["candidate_fingerprint"],
+              "parameters": {"expression": factor.formula, "window": factor.window},
+              "failure_reason": failure, "ic": metric, "ir": None,
+              "evaluation": {"information_coefficient": metric, "status": run["status"]}}
+    conditions = {"dataset_fingerprint": snapshot.fingerprint, "attachment_ref": spec["attachment_ref"],
+        "factor_spec": factor.fingerprint, "cost": spec["cost"], "policy_fingerprint": spec["policy_fingerprint"],
+        "code_version": policy["code_version"], "phase": phase, "scoring_window": run["bindings"]["oos_window"] if phase == "validation" else run["bindings"]["final_test_window"]}
+    summary = {"experiment_id": experiment_id, "snapshot_ref": snapshot.fingerprint, "metrics": {"ic": metric},
+               "conditions": conditions, "failure_reason": failure, "phase": phase.upper(),
+               "parameters": record["parameters"], "evidence_refs": list(run["artifacts"]), "fingerprint": run["fingerprint"]}
+    result = {"study_id": study["study_id"], "spec_ref": study["spec_ref"], "snapshot_ref": snapshot.fingerprint,
+        "charter": spec, "validation_run": run, "phase": phase.upper(), "experiments": [record],
+        "summaries": [summary], "ranking": [] if failure else [experiment_id], "ranking_groups": [],
+        "selected_candidate": study.get("candidate_id"), "surfaces": [], "comparison": {"groups": [], "runs": []},
+        "state": "BLOCKED" if incomplete else "CANDIDATE_POOL" if phase == "validation" else "TEST_EVALUATED",
+        "test_evaluation": run["final_test_metrics"], "paper_only": True, "requires_human_admission": True,
+        "production_write": False, "limitations": run["limitations"]}
+    result["method_factor_activity"] = method_factor_activity(run, spec["method_binding"])
+    if phase == "test":
+        rejected = steps["archive_decision"]["metrics"].get("evaluation_outcome") == "COMPLETED_WITH_REJECTION"
+        result["test_summary"] = {**summary, "failure_reason": failure or ("HELDOUT_REJECTION" if rejected else None)}
     result["fingerprint"] = stable_digest(result)
     return result

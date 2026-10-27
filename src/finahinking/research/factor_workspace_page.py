@@ -5,10 +5,18 @@ import json
 
 
 def factor_workspace_page(csrf):
+    from .factor_detail_page import factor_directory
+    from .factor_recipes import research_recipes
+
+    try:
+        directory = ''.join(f'<li><a href="/research/factors/{html.escape(item["factor_id"], quote=True)}?version={html.escape(item["version"], quote=True)}">{html.escape(item["title"])}</a> · {html.escape(item["implementation"])}</li>' for item in factor_directory())
+    except ValueError:
+        directory = '<li role="alert">资料目录校验失败，旧实验入口仍可使用。请检查安装包后重新读取。</li>'
     return f'''
 <section data-experiment-workspace data-study-state="EMPTY">
 <header class="overview-header"><div><p class="eyebrow">FACTOR RESEARCH / PAPER-ONLY</p><h1>因子实验</h1><p class="lede">先固定问题、样本与成本，再验证候选；冻结后只查看一次测试集。</p></div></header>
-<p class="field-help">候选来自 24 个有来源、公式和数学复现的受控配方；不是 24 个已证明盈利的因子。不调用模型或外部数据服务，浏览器不计算研究指标。</p>
+<p class="field-help">旧实验入口有 {len(research_recipes())} 个受控配方；工程复现不代表盈利。附加字段配方需走类型化研究入口，不使用成交量代替真实换手率。</p>
+<details id="factor-directory"><summary>查看来源与本地定义目录</summary><ul>{directory}</ul></details>
 <input type="hidden" data-study-csrf value="{html.escape(csrf, quote=True)}">
 <p data-study-status role="status" aria-live="polite">正在读取本地目录和快照…</p>
 <section class="panel"><h2>01 / 新建研究章程</h2><p class="field-help">下面用于创建新研究，不会改写当前历史记录；当前章程的实际设置见候选区。</p>
@@ -32,6 +40,7 @@ def factor_workspace_page(csrf):
 <p class="field-help">默认 60% 训练 / 20% 验证 / 20% 测试；标签跨界会被 purge，隔离间隔按观察数计。费用为秩换手诊断口径，不冒充组合净收益。</p></section>
 <section class="panel section"><h2>02 / 候选、验证与冻结</h2><p data-study-binding>尚未提交研究。请选择快照与受控配方。</p>
 <ol data-study-stages aria-label="实验阶段"></ol>
+<p class="learning-evidence" data-study-method-binding></p>
 <p><label class="study-freeze-ack"><input type="checkbox" data-freeze-ack> 我确认先依据验证证据冻结候选，不根据测试结果换选。</label></p>
 <div class="table-wrap" tabindex="0" role="region" aria-label="候选证据，可左右滚动查看全部字段"><table data-study-candidates><caption>候选证据 · 排名仅依据验证集，测试结果单列；窄屏可左右滚动</caption><thead><tr><th scope="col">候选 / 窗口</th><th scope="col">状态</th><th scope="col">验证 IC</th><th scope="col">样本</th><th scope="col">校正 p</th><th scope="col">操作</th></tr></thead><tbody><tr><td colspan="6">尚无实验结果。</td></tr></tbody></table></div>
 <h3>可比条件与验证平台</h3><ul class="overview-list" data-study-groups></ul><p class="field-help" data-study-multiplicity></p></section>

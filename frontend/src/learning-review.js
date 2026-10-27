@@ -8,8 +8,13 @@ const labels = { PENDING_REVIEW: '待审核', APPROVED: '已批准', REJECTED: '
 
 export function normalizeLearningReview(value) {
   if (!value || !/^learning-[0-9a-f]{32}$/.test(value.review_id ?? '') || !/^[A-Za-z0-9_-]+$/.test(value.run_id ?? '') || value.paper_only !== true || !STATES.has(value.status)) throw new TypeError('复盘身份或状态无效。');
-  for (const key of ['source_snapshot_ref', 'evidence_snapshot_ref', 'observed_snapshot_ref', 'parent_policy_ref', 'proposal_digest', 'preview_fingerprint']) if (!DIGEST.test(value[key] ?? '')) throw new TypeError('复盘缺少完整证据引用。');
-  if (value.preview?.proposal_digest !== value.proposal_digest || value.preview?.policy_fingerprint !== value.preview_fingerprint || value.observation?.horizon_observations !== 5 || !Number.isFinite(value.observation?.equity) || !Number.isFinite(value.observation?.net_return) || (value.status === 'APPROVED' && !DIGEST.test(value.policy_ref ?? ''))) throw new TypeError('复盘结果与审核预览不一致。');
+  const monitoring = value.source_kind === 'FACTOR_VALIDATION_MONITORING';
+  for (const key of ['parent_policy_ref', 'proposal_digest', 'preview_fingerprint', ...(monitoring ? [] : ['source_snapshot_ref', 'evidence_snapshot_ref', 'observed_snapshot_ref'])]) if (!DIGEST.test(value[key] ?? '')) throw new TypeError('复盘缺少完整证据引用。');
+  if (value.preview?.proposal_digest !== value.proposal_digest || value.preview?.policy_fingerprint !== value.preview_fingerprint || (value.status === 'APPROVED' && !DIGEST.test(value.policy_ref ?? ''))) throw new TypeError('复盘结果与审核预览不一致。');
+  if (monitoring) {
+    const observation = value.observation?.monitoring;
+    if (value.settlement !== null || value.proposal?.settlement_digest !== null || Object.keys(value.proposal?.factor_weight_updates ?? {}).length || Object.keys(value.proposal?.risk_rule_updates ?? {}).length || observation?.schema_version !== 'factor-monitoring.v1' || observation.status !== 'REVIEW_RECOMMENDED' || !DIGEST.test(observation.fingerprint ?? '') || !Array.isArray(observation.evidence_refs) || observation.evidence_refs.length < 3 || observation.evidence_refs.some((row) => !DIGEST.test(row.evaluation_fingerprint ?? ''))) throw new TypeError('因子观察不能冒充纸面结算或直接调权。');
+  } else if (value.observation?.horizon_observations !== 5 || !Number.isFinite(value.observation?.equity) || !Number.isFinite(value.observation?.net_return)) throw new TypeError('复盘结果与审核预览不一致。');
   return value;
 }
 
@@ -22,6 +27,7 @@ export function mountLearningReview(root, { fetcher = globalThis.fetch, interval
   const number = (value) => Number.isFinite(value) ? new Intl.NumberFormat('zh-CN', { maximumFractionDigits: 6 }).format(value) : '未知';
   const percent = (value) => Number.isFinite(value) ? new Intl.NumberFormat('zh-CN', { style: 'percent', maximumFractionDigits: 3 }).format(value) : '未知';
   const form = q('[data-learning-form]'); const reviewForm = q('[data-learning-review-form]'); const rerunForm = q('[data-learning-rerun-form]');
+  const originalLabels = Object.fromEntries(['[data-learning-outcome-heading]', '[data-learning-outcome] caption', '[data-learning-decay-heading]', '[data-learning-decay-description]', '[data-learning-decay] th'].map((selector) => [selector, q(selector).textContent]));
   const csrf = q('[data-learning-csrf]').value;
   let current; let snapshots = []; let policies = []; let busy = false; let disposed = false; let generation = 0; let timer; let controller; let activeJob; let rerunKey;
   const request = (url, options) => readLocalJSON(fetcher, url, options);
@@ -56,17 +62,23 @@ export function mountLearningReview(root, { fetcher = globalThis.fetch, interval
     text('[data-learning-status]', `${labels[current.status]} · ${current.review_id} · PAPER-ONLY`);
     q('[data-learning-hypotheses]').replaceChildren(...current.hypotheses.map((hypothesis) => node('li', hypothesis)));
     const observed = current.observation;
-    text('[data-learning-binding]', `${current.run_id} · 原数据 ${current.data_modes?.source ?? 'UNKNOWN'} / 后续数据 ${current.data_modes?.evidence ?? 'UNKNOWN'} / 估值数据 ${current.data_modes?.observed ?? 'UNKNOWN'} · 观察到 ${observed.mark_timestamp} · 证据可用 ${observed.available_at} · 原数据指纹 ${current.source_snapshot_ref} · 估值数据指纹 ${current.observed_snapshot_ref}`);
-    rows('[data-learning-outcome]', [['计划目标仓位', percent(observed.planned_weight)], ['实际纸面成交仓位', percent(observed.filled_weight)], ['成交参考价 / 观察末价', `${number(observed.reference_price)} / ${number(observed.mark_price)}`], ['观察末净值 / 纸面净收益', `${number(observed.equity)} / ${percent(observed.net_return)}`], ['费用 / 滑点成本', `${number(observed.fees)} / ${number(observed.slippage)}`], ['现金 / 持有数量', `${number(observed.cash)} / ${number(observed.quantity)}`]]);
-    rows('[data-learning-decay]', observed.factor_decay.horizons.map((horizon, index) => [String(horizon), number(observed.factor_decay.information_coefficients[index])]));
+    const monitoring = current.source_kind === 'FACTOR_VALIDATION_MONITORING';
+    const monitoringLabels = ['假设与验证观察', '独立最终测试的描述性变化，非成交估值；没有已实现纸面收益。', '独立窗口变化', '仅比较同定义、同范围且互不重叠的已完成最终测试；描述性变化不等于统计显著衰减。', '独立最终测试窗口'];
+    Object.keys(originalLabels).forEach((selector, index) => text(selector, monitoring ? monitoringLabels[index] : originalLabels[selector]));
+    text('[data-learning-binding]', monitoring ? `${current.run_id} · 因子最终测试观察，非纸面成交结算 · 截止 ${current.as_of} · ${observed.monitoring.evidence_refs.length} 个独立窗口 · 观察指纹 ${observed.monitoring.fingerprint}` : `${current.run_id} · 原数据 ${current.data_modes?.source ?? 'UNKNOWN'} / 后续数据 ${current.data_modes?.evidence ?? 'UNKNOWN'} / 估值数据 ${current.data_modes?.observed ?? 'UNKNOWN'} · 观察到 ${observed.mark_timestamp} · 证据可用 ${observed.available_at} · 原数据指纹 ${current.source_snapshot_ref} · 估值数据指纹 ${current.observed_snapshot_ref}`);
+    rows('[data-learning-outcome]', monitoring ? [['证据类型', '独立最终测试，不代表已实现收益'], ['早期 / 最近描述性 IC', `${number(observed.monitoring.baseline_ic)} / ${number(observed.monitoring.recent_ic)}`], ['适用范围', observed.monitoring.reproduction_scope.join(' / ')], ['动作', '登记研究复核建议，不修改权重或风险规则']] : [['计划目标仓位', percent(observed.planned_weight)], ['实际纸面成交仓位', percent(observed.filled_weight)], ['成交参考价 / 观察末价', `${number(observed.reference_price)} / ${number(observed.mark_price)}`], ['观察末净值 / 纸面净收益', `${number(observed.equity)} / ${percent(observed.net_return)}`], ['费用 / 滑点成本', `${number(observed.fees)} / ${number(observed.slippage)}`], ['现金 / 持有数量', `${number(observed.cash)} / ${number(observed.quantity)}`]]);
+    rows('[data-learning-decay]', monitoring ? observed.monitoring.evidence_refs.map((row) => [row.window?.join(' → ') ?? row.run_ref, number(row.ic)]) : observed.factor_decay.horizons.map((horizon, index) => [String(horizon), number(observed.factor_decay.information_coefficients[index])]));
     text('[data-learning-basis]', observed.recommendation_basis);
     rows('[data-learning-preview]', [['动量信号预算乘数', number(current.baseline.factor_weights.momentum_2obs), number(current.preview.factor_weights.momentum_2obs)], ['经验 CVaR 上限', percent(current.baseline.risk_rules.max_cvar), percent(current.preview.risk_rules.max_cvar)]]);
     text('[data-learning-preview-binding]', `原版本 v${current.baseline.version} · ${current.status === 'KEEP_POLICY' ? '本次不创建新版本' : `建议 v${current.preview.next_version}`} · 原配置 ${current.parent_policy_ref} · 预览 ${current.preview_fingerprint}`);
     text('[data-learning-admission]', current.admission ? `${labels[current.status]} · ${current.admission.rationale} · ${current.admission.as_of}${current.policy_ref ? ` · 新配置 ${current.policy_ref}` : ' · 未创建配置版本'}` : current.status === 'KEEP_POLICY' ? '本次没有数值修改，不创建空版本。' : '等待显式审核；尚未改变任何配置。');
     reportLink(q('[data-learning-original-report]'), current.source_report_url);
-    form.elements.run_id.value = current.run_id; rerunForm.elements.run_id.value = current.run_id;
-    rerunForm.elements.snapshot_ref.value = current.source_snapshot_ref;
-    rerunForm.elements.policy_ref.value = current.policy_ref ?? current.parent_policy_ref;
+    rerunForm.hidden = monitoring;
+    if (!monitoring) {
+      form.elements.run_id.value = current.run_id; rerunForm.elements.run_id.value = current.run_id;
+      rerunForm.elements.snapshot_ref.value = current.source_snapshot_ref;
+      rerunForm.elements.policy_ref.value = current.policy_ref ?? current.parent_policy_ref;
+    }
     reviewForm.elements.rationale.value = current.admission?.rationale ?? '';
     q('[data-learning-ack]').checked = false;
     rerunDate(); controls();

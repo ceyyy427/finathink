@@ -7,10 +7,11 @@ from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from typing import Any
 
+from .research_fields import DATE_RESEARCH_FIELDS, NUMERIC_RESEARCH_FIELDS, TEXT_RESEARCH_FIELDS
 from .user_api_contracts import DataBatch, fingerprint_records
 
-_NUMERIC_FIELDS = frozenset({"open", "high", "low", "close", "volume", "amount", "value"})
-_ALLOWED_FIELDS = frozenset({"instrument", "timestamp", "available_at", "as_of", "industry", "suspended", *_NUMERIC_FIELDS})
+_NUMERIC_FIELDS = frozenset({"open", "high", "low", "close", "volume", "amount", "value"}) | NUMERIC_RESEARCH_FIELDS
+_ALLOWED_FIELDS = frozenset({"instrument", "timestamp", "available_at", "as_of", "industry", "suspended", "market", "exchange", *_NUMERIC_FIELDS}) | TEXT_RESEARCH_FIELDS | DATE_RESEARCH_FIELDS
 
 
 def _timestamp(value: Any) -> str | None:
@@ -62,7 +63,7 @@ def normalize_records(
         raise ValueError("field mapping source names must be plain fields")
     quality: list[str] = []
     normalized: list[dict[str, object]] = []
-    seen: set[tuple[str, str]] = set()
+    seen: set[tuple[str, ...]] = set()
     as_of_value = _timestamp(as_of) if as_of is not None else None
     for index, raw in enumerate(records):
         if not isinstance(raw, Mapping):
@@ -74,7 +75,7 @@ def normalize_records(
                 quality.append(f"record {index}: missing {canonical}")
                 continue
             value = raw[source]
-            if canonical in {"timestamp", "available_at", "as_of"}:
+            if canonical in {"timestamp", "available_at", "as_of"} | DATE_RESEARCH_FIELDS:
                 converted = _timestamp(value)
                 if converted is None:
                     quality.append(f"record {index}: invalid {canonical}")
@@ -102,6 +103,8 @@ def normalize_records(
             quality.append(f"record {index}: missing close")
         if "instrument" in item and "timestamp" in item:
             key = (str(item["instrument"]), str(item["timestamp"]))
+            if dataset_kind == "research_fields":
+                key = (*key, str(item.get("available_at", "")))
             if key in seen:
                 quality.append(f"record {index}: duplicate instrument/timestamp")
             seen.add(key)

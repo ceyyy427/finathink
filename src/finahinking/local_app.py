@@ -14,6 +14,7 @@ import hashlib
 import html
 import json
 import os
+import re
 import sqlite3
 import tempfile
 import threading
@@ -24,7 +25,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from importlib import resources as importlib_resources
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qs, urlencode, urlsplit
+from urllib.parse import parse_qs, unquote, urlencode, urlsplit
 
 from finahinking.data.connection_settings import (
     DataConnectionSettingsStore,
@@ -58,6 +59,12 @@ from finahinking.p8_2b.context import ContextSnapshot, no_context, resolve_conte
 from finahinking.p8_2b.export import export_bibtex, export_csl_json, export_latex, export_markdown
 from finahinking.p8_2b.math import render_latex, render_mathml
 from finahinking.p8_2b.widgets import WidgetSpec, run_widget
+from finahinking.workbench_ui import (
+    BLUE_WHITE_CSS,
+    OVERVIEW_HEADER_HTML,
+    nav_icon,
+    shell_search_dialog,
+)
 
 
 def default_db_path() -> str:
@@ -83,7 +90,7 @@ _EVENT = {
 
 _APP_CSS = """
 :root {
-  color-scheme: dark;
+  color-scheme: light;
   --background: #f5f7f7;
   --surface: #ffffff;
   --surface-elevated: #fbfcfc;
@@ -304,9 +311,8 @@ th { color: var(--text-muted); font-size: .78rem; letter-spacing: .06em; text-tr
 """
 
 
-# Phase 1 visual system.  The legacy rules above remain as a compatibility
-# reference for older embedded pages; the shell opts into this dark system
-# explicitly so every new surface shares the same tokens.
+# Shared form overrides for the run and experiment workspaces. The blue-white
+# theme is defined separately so all shell pages use the same visual tokens.
 _RESEARCH_JOBS_CSS = """
 [data-run-onboarding] { font-size: 16px; }
 .snapshot-fingerprint { overflow-wrap: anywhere; font-family: var(--font-mono, monospace); font-size: .85rem; color: var(--text-secondary); }
@@ -337,209 +343,6 @@ _FACTOR_STUDY_CSS = """
 @media(max-width: 760px) { [data-experiment-workspace] .study-form { grid-template-columns: minmax(0,1fr); } }
 """
 
-_DARK_APP_CSS = """
-:root {
-  --background: #050B18;
-  color-scheme: dark;
-  --surface: #081326;
-  --surface-elevated: #071122;
-  --surface-raised: #0B1730;
-  --border: rgba(167, 139, 250, .18);
-  --border-strong: rgba(167, 139, 250, .42);
-  --text-primary: #E6EEF9;
-  --text-secondary: #AAB8CC;
-  --text-muted: #71819A;
-  --focus: #38BDF8;
-  --evidence: #38BDF8;
-  --success: #34D399;
-  --warning: #FBBF24;
-  --error: #FB7185;
-  --quant-finding: #A78BFA;
-  --learning: #8B5CF6;
-  --limitation: #FB7185;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --shadow-sm: 0 8px 24px rgba(0, 0, 0, .18);
-  --shadow-md: 0 18px 48px rgba(0, 0, 0, .28);
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 20px;
-  --space-6: 24px;
-  --space-8: 32px;
-  --space-10: 40px;
-  --measure: 72ch;
-}
-* { box-sizing: border-box; }
-html { background: var(--background); color: var(--text-primary); color-scheme: dark; }
-body { margin: 0; min-width: 320px; overflow-x: hidden; background: var(--background); color: var(--text-primary); font: 15px/1.55 Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; -webkit-tap-highlight-color: rgba(56, 189, 248, .24); }
-a { color: var(--evidence); text-underline-offset: 3px; }
-a:hover { color: #7DD3FC; }
-a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, summary:focus-visible, [tabindex="0"]:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
-button, input, textarea, select { font: inherit; }
-button, .button, a { touch-action: manipulation; }
-button, .button { min-height: 44px; border: 1px solid transparent; border-radius: var(--radius-sm); padding: 9px 15px; cursor: pointer; transition: background-color .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease; }
-button, .button-primary { background: var(--learning); color: #fff; }
-button:hover, .button-primary:hover { background: #7C3AED; }
-.button-secondary { display: inline-flex; align-items: center; justify-content: center; background: transparent; color: var(--text-primary); border-color: var(--border-strong); text-decoration: none; }
-.button-secondary:hover { background: rgba(139, 92, 246, .12); }
-input, textarea, select { width: 100%; min-height: 44px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 9px 11px; background: var(--surface); color: var(--text-primary); }
-textarea { min-height: 112px; resize: vertical; }
-label { display: grid; gap: var(--space-2); font-weight: 650; color: var(--text-primary); }
-small, .meta { color: var(--text-muted); font-size: .86rem; }
-code, pre { font-family: "Fira Code", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
-code { overflow-wrap: anywhere; }
-pre { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; padding: var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-sm); background: #040A15; }
-.skip-link { position: absolute; left: -10000px; top: var(--space-3); z-index: 20; padding: var(--space-2) var(--space-3); background: var(--surface-raised); color: #fff; }
-.skip-link:focus-visible { left: var(--space-3); }
-.app-shell { min-height: 100dvh; display: grid; grid-template-columns: 240px minmax(0, 1fr) 264px; background: var(--background); }
-.sidebar { position: sticky; top: 0; align-self: start; min-height: 100dvh; padding: var(--space-6) var(--space-4); border-right: 1px solid var(--border); background: #060D1D; }
-.brand { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-8); color: var(--text-primary); text-decoration: none; }
-.brand-mark { display: grid; place-items: center; width: 34px; height: 34px; border: 1px solid var(--border-strong); border-radius: 10px; background: rgba(139, 92, 246, .16); color: var(--text-primary); font-weight: 800; }
-.brand-name { font: 700 1.16rem/1 "Fira Sans", Inter, ui-sans-serif, sans-serif; letter-spacing: .01em; }
-.nav-section { margin: 0 0 var(--space-5); }
-.nav-section-title { margin: 0 0 var(--space-2); padding: 0 var(--space-2); color: var(--text-muted); font-size: .68rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
-.nav-list { display: grid; gap: 3px; margin: 0; padding: 0; list-style: none; }
-.nav-link { display: flex; align-items: center; min-height: 40px; padding: 8px 10px; border-radius: var(--radius-sm); color: var(--text-secondary); text-decoration: none; }
-.nav-link:hover { background: rgba(139, 92, 246, .12); color: var(--text-primary); }
-.nav-link[aria-current="page"] { background: rgba(139, 92, 246, .2); color: #EDE9FE; box-shadow: inset 3px 0 0 var(--learning); font-weight: 750; }
-.sidebar-note { margin-top: auto; padding-top: var(--space-8); color: var(--text-muted); font-size: .8rem; }
-.workspace { min-width: 0; padding: 0 clamp(var(--space-5), 4vw, var(--space-10)) var(--space-8); }
-.workspace-inner { width: min(100%, 1120px); margin: 0 auto; }
-.topbar { display: flex; justify-content: space-between; gap: var(--space-4); align-items: center; min-height: 64px; margin: 0 0 var(--space-8); border-bottom: 1px solid var(--border); color: var(--text-muted); }
-.topbar-context { display: flex; gap: var(--space-2); align-items: center; font-size: .82rem; }
-.topbar-context strong { color: var(--text-primary); }
-.topbar-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-2); align-items: center; }
-.local-status { color: var(--success); font-size: .76rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
-.eyebrow { margin: 0 0 var(--space-2); color: var(--evidence); font-size: .72rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
-h1, h2, h3 { margin-top: 0; line-height: 1.18; letter-spacing: -.02em; text-wrap: balance; }
-h1 { max-width: 26ch; margin-bottom: var(--space-3); font-size: clamp(2rem, 4vw, 3.2rem); }
-h2 { font-size: 1.25rem; }
-h3 { font-size: 1rem; }
-.lede { max-width: var(--measure); margin: 0 0 var(--space-6); color: var(--text-secondary); font-size: 1.04rem; }
-.status-row, .action-row, .tag-row, .metric-row { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
-.status { display: inline-flex; align-items: center; min-height: 26px; padding: 3px 9px; border: 1px solid currentColor; border-radius: 999px; font-size: .68rem; font-weight: 800; letter-spacing: .08em; }
-.status--sample, .status--offline { color: var(--warning); background: rgba(251, 191, 36, .1); }
-.status--complete, .status--ready, .status--fact { color: var(--success); background: rgba(52, 211, 153, .1); }
-.status--evidence, .status--quant { color: var(--evidence); background: rgba(56, 189, 248, .1); }
-.status--hypothesis { color: var(--warning); background: rgba(251, 191, 36, .1); }
-.status--limitation, .status--unknown { color: var(--error); background: rgba(251, 113, 133, .1); }
-.status--learning { color: #C4B5FD; background: rgba(139, 92, 246, .12); }
-.hero { display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(260px, .92fr); gap: var(--space-6); align-items: stretch; margin-bottom: var(--space-8); }
-.hero-copy, .hero-art, .card, .panel, .research-panel { min-width: 0; padding: var(--space-5); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); box-shadow: var(--shadow-sm); }
-.hero-art { display: grid; align-content: center; gap: var(--space-3); background: var(--surface-elevated); }
-.hero-art img { display: block; width: 100%; height: auto; border: 1px solid var(--border); border-radius: var(--radius-md); }
-.splash-stage { position: relative; isolation: isolate; overflow: hidden; border-radius: var(--radius-md); background: #071122; }
-.splash-stage::before { content: ""; position: absolute; inset: 7%; z-index: -1; border-radius: 50%; background: conic-gradient(from 15deg, rgba(56,189,248,.16), rgba(139,92,246,.22), rgba(52,211,153,.14), rgba(56,189,248,.16)); filter: blur(18px); animation: splash-spin 18s linear 2; animation-fill-mode: both; }
-.splash-frame { position: relative; z-index: 1; animation: splash-crossfade 14s ease-in-out 2; animation-fill-mode: both; }
-.splash-frame--secondary { position: absolute !important; inset: 0; object-fit: cover; opacity: 0; animation-delay: -7s; }
-@keyframes splash-spin { to { transform: rotate(360deg); } }
-@keyframes splash-crossfade { 0%, 42% { opacity: 1; transform: scale(1) rotate(0deg); } 50%, 92% { opacity: .08; transform: scale(1.015) rotate(1deg); } 100% { opacity: 1; transform: scale(1) rotate(0deg); } }
-.section { margin: 0 0 var(--space-8); }
-.section-heading { display: flex; justify-content: space-between; gap: var(--space-4); align-items: baseline; margin-bottom: var(--space-3); }
-.section-heading h2 { margin-bottom: 0; }
-.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
-.card--evidence { border-left: 3px solid var(--evidence); }
-.card--quiet { background: var(--surface-elevated); }
-.card p:last-child, .card ul:last-child, .card ol:last-child { margin-bottom: 0; }
-.card h2, .card h3 { margin-bottom: var(--space-2); }
-.prose { max-width: var(--measure); }
-.prose p, .prose li { color: var(--text-secondary); }
-.form-grid { display: grid; gap: var(--space-4); }
-.field-help { margin: 0; color: var(--text-muted); font-size: .88rem; }
-.stepper { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; margin: var(--space-4) 0 var(--space-6); }
-.step { min-height: 54px; padding: 8px; border-top: 3px solid var(--border); color: var(--text-muted); font-size: .78rem; }
-.step--active { border-top-color: var(--learning); color: var(--text-primary); font-weight: 750; }
-.evidence-list { display: grid; gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
-.evidence-item { padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-elevated); }
-.evidence-item strong { display: block; margin-bottom: var(--space-1); }
-.inspector { min-width: 0; padding: var(--space-8) var(--space-4); border-left: 1px solid var(--border); background: #060D1D; }
-.inspector-inner { position: sticky; top: var(--space-6); }
-.inspector h2 { font-size: 1rem; }
-.inspector dl { margin: 0; }
-.inspector dt { margin-top: var(--space-3); color: var(--text-muted); font-size: .7rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
-.inspector dd { margin: 0; color: var(--text-secondary); overflow-wrap: anywhere; }
-.empty-state, .loading-state, .error-state { padding: var(--space-5); border: 1px dashed var(--border-strong); border-radius: var(--radius-md); background: var(--surface-elevated); }
-.loading-state { border-style: solid; }
-.error-state { border-color: rgba(251, 113, 133, .55); background: rgba(251, 113, 133, .08); }
-.result { border-top: 3px solid var(--quant-finding); }
-.metric { min-width: 120px; padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-elevated); }
-.metric-value { display: block; font-variant-numeric: tabular-nums; font-size: 1.28rem; font-weight: 800; }
-.metric-label { display: block; color: var(--text-muted); font-size: .76rem; }
-.table-wrap { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
-th, td { padding: 9px 10px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
-th { color: var(--text-muted); font-size: .78rem; letter-spacing: .06em; text-transform: uppercase; }
-.research-workspace { display: grid; gap: var(--space-5); }
-.research-chart, .research-sweep { min-height: 240px; width: 100%; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface-elevated); }
-.research-chart { height: clamp(300px, 42vw, 480px); }
-.research-sweep { height: 260px; }
-.research-tooltip, .research-inspector, .overview-tooltip { min-height: 32px; margin-top: var(--space-2); padding: 6px 9px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-elevated); color: var(--text-secondary); font-size: .84rem; font-variant-numeric: tabular-nums; }
-.overview-chart-bars i, .overview-topic-cell { cursor: help; }
-.overview-chart-bars i:focus-visible, .overview-topic-cell:focus-visible { outline-offset: 2px; }
-.overview-chart-canvas { width: 100%; height: 210px; min-width: 0; }
-.overview-chart [hidden] { display: none; }
-.overview-daily-table { margin-top: var(--space-3); max-height: 280px; }
-.overview-daily-table th, .overview-daily-table td { padding: 8px 6px; font-size: .76rem; letter-spacing: 0; }
-.overview-day { min-height: 44px; padding: 4px; background: transparent; color: var(--evidence); white-space: nowrap; }
-.overview-day:hover { background: var(--surface-raised); color: var(--text-primary); }
-.overview-history { margin-top: var(--space-3); }
-.overview-history summary { cursor: pointer; color: var(--text-secondary); }
-.overview-topic-heatmap { display: grid; grid-template-columns: repeat(auto-fit, minmax(88px, 1fr)); gap: 6px; margin-bottom: var(--space-3); }
-.overview-topic-cell { min-height: 54px; display: grid; place-items: center; padding: 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-primary); font-size: .78rem; text-align: center; overflow-wrap: anywhere; }
-.overview-topic-cell[data-intensity="1"] { background: rgba(56, 189, 248, .12); }
-.overview-topic-cell[data-intensity="2"] { background: rgba(56, 189, 248, .2); }
-.overview-topic-cell[data-intensity="3"] { background: rgba(56, 189, 248, .3); }
-.overview-topic-cell[data-intensity="4"] { background: rgba(139, 92, 246, .34); }
-.overview-topic-cell[data-intensity="5"] { background: rgba(139, 92, 246, .48); }
-.overview-comparison { margin-top: var(--space-5); }
-.overview-comparison h2 span { display: block; margin-top: 6px; color: var(--text-secondary); font-size: .76rem; font-weight: 500; }
-.comparison-workspace { display: grid; gap: var(--space-4); }
-.comparison-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-4); align-items: baseline; }
-[data-tooltip] { position: relative; }
-[data-tooltip]:hover::after, [data-tooltip]:focus-visible::after { content: attr(data-tooltip); position: absolute; left: 50%; bottom: calc(100% + 8px); z-index: 5; width: max-content; max-width: 220px; padding: 6px 8px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface-raised); color: var(--text-primary); box-shadow: var(--shadow-sm); font-size: .75rem; line-height: 1.3; transform: translateX(-50%); pointer-events: none; }
-.workbench-frame { display: grid; gap: var(--space-4); margin-top: var(--space-5); padding: clamp(18px, 3vw, 28px); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); color: var(--text-primary); }
-.workbench-head { display: flex; justify-content: space-between; gap: var(--space-4); align-items: baseline; border-bottom: 1px solid var(--border); padding-bottom: var(--space-3); }
-.workbench-head h2 { margin: 0; font-weight: 650; }
-.overview-header { display: flex; justify-content: space-between; gap: var(--space-6); align-items: flex-end; margin-bottom: var(--space-6); }
-.overview-header h1 { margin-bottom: var(--space-2); }
-.overview-header-copy { min-width: 0; }
-.overview-meta { display: grid; justify-items: end; gap: var(--space-2); color: var(--text-muted); font-size: .82rem; }
-.metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3); margin-bottom: var(--space-6); }
-.metric-card { min-width: 0; padding: var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); box-shadow: var(--shadow-sm); }
-.metric-card .metric-value { font-size: 1.7rem; color: var(--text-primary); }
-.overview-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(280px, .8fr); gap: var(--space-4); }
-.overview-region { min-width: 0; }
-.overview-region h2 { display: flex; justify-content: space-between; gap: var(--space-3); align-items: baseline; }
-.overview-region h2 span { color: var(--text-muted); font-size: .72rem; font-weight: 500; }
-.overview-chart { min-height: 210px; display: grid; align-content: center; gap: var(--space-3); padding: var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-sm); background: #060D1D; }
-.overview-chart-bars { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; align-items: end; height: 110px; }
-.overview-chart-bars i { display: block; min-height: 8px; border-radius: 3px 3px 0 0; background: linear-gradient(180deg, var(--evidence), var(--learning)); opacity: .7; }
-.overview-list, .overview-heatmap { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
-.overview-list li, .overview-heatmap li { display: flex; justify-content: space-between; gap: var(--space-3); padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-secondary); }
-.overview-heatmap li { display: grid; grid-template-columns: 1fr auto; }
-.overview-links { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); }
-.workbench-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
-.workbench-metric { min-height: 76px; padding: var(--space-3); border-right: 1px solid var(--border); }
-.workbench-metric:last-child { border-right: 0; }
-.workbench-metric strong { display: block; font-size: 1.15rem; font-variant-numeric: tabular-nums; }
-.workbench-metric span { color: var(--text-muted); font-size: .76rem; text-transform: capitalize; }
-.workbench-grid, .workbench-notes { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(260px, .9fr); gap: var(--space-4); }
-.workbench-inspector, .workbench-preview { padding: var(--space-3); border: 1px solid var(--border); background: var(--surface-elevated); color: var(--text-secondary); }
-.knowledge-layout { display: grid; gap: var(--space-5); }
-.knowledge-context { border-left: 3px solid var(--learning); background: rgba(139, 92, 246, .08); }
-.knowledge-equation { display: grid; gap: var(--space-2); padding: var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-elevated); overflow-x: auto; }
-.knowledge-symbols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); }
-.knowledge-symbol { padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-elevated); }
-.settings-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
-.footer-note { margin-top: var(--space-8); padding-top: var(--space-4); border-top: 1px solid var(--border); color: var(--text-muted); font-size: .82rem; }
-@media (min-width: 1600px) { .workspace-inner { width: min(100%, 1320px); } .app-shell { grid-template-columns: 256px minmax(0, 1fr) 288px; } }
-@media (max-width: 1180px) { .app-shell { grid-template-columns: 220px minmax(0, 1fr); } .inspector { grid-column: 2; border-top: 1px solid var(--border); border-left: 0; padding-top: var(--space-5); } .inspector-inner { position: static; } }
-@media (max-width: 880px) { .app-shell { display: block; } .sidebar { position: static; min-height: auto; padding: var(--space-4); border-right: 0; border-bottom: 1px solid var(--border); } .brand { margin-bottom: var(--space-4); } .nav-list { display: flex; flex-wrap: wrap; } .nav-section-title, .sidebar-note { display: none; } .workspace { padding: 0 var(--space-4) var(--space-6); } .topbar { align-items: flex-start; flex-direction: column; padding: var(--space-4) 0; margin-bottom: var(--space-6); } .hero, .grid, .research-grid, .settings-grid, .workbench-grid, .workbench-notes { grid-template-columns: 1fr; } .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .overview-header, .overview-grid { display: grid; grid-template-columns: 1fr; align-items: start; } .overview-meta { justify-items: start; } .overview-links { grid-template-columns: 1fr; } .workbench-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } .workbench-metric:nth-child(2n) { border-right: 0; } .stepper { grid-template-columns: 1fr; } .step { min-height: auto; border-top: 0; border-left: 3px solid var(--border); } .step--active { border-left-color: var(--learning); } .knowledge-symbols { grid-template-columns: 1fr; } }
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation: none !important; } .splash-frame--secondary { display: none; } }
-"""
 
 
 @dataclass(frozen=True)
@@ -1254,6 +1057,9 @@ class LocalApplication:
             "/research/experiments": "因子实验",
             "/research/learning": "复盘与学习",
             "/research/compare": "研究对比",
+            "/library/methods": "研究方法",
+            "/library/behavior": "公开行为档案",
+            "/library/lessons": "反例与复盘",
             "/workbench": "因子策略工作台",
             "/ml": "机器学习实验",
             "/parameter": "参数实验",
@@ -1342,26 +1148,34 @@ class LocalApplication:
     def _nav(self, page: str) -> str:
         names = self._page_names()
         groups = (
-            ("研究", "nav-workspace", ("/", "/events", "/explore", "/research/jobs", "/research/experiments", "/research/learning", "/research", "/research/compare", "/workbench", "/workspace")),
-            ("学习", "nav-learn", ("/knowledge", "/quant", "/strategy", "/ml", "/parameter")),
-            ("系统", "nav-system", ("/community", "/settings/engines", "/settings/providers", "/settings/data-connections", "/settings/data-sources", "/diagnostics")),
+            ("研究", "nav-workspace", ("/", "/research/jobs", "/events", "/knowledge", "/research/experiments", "/strategy", "/research/learning")),
+            ("资料", "nav-library", ("/library/methods", "/library/behavior", "/library/lessons")),
+            ("学习", "nav-learn", ("/explore", "/quant", "/research", "/research/compare", "/workbench", "/ml", "/parameter", "/workspace", "/community", "/settings/engines", "/settings/data-sources")),
+            ("系统", "nav-system", ("/settings/data-connections", "/settings/providers", "/diagnostics")),
         )
+        icons = {"/": "overview", "/research/jobs": "codex", "/events": "events", "/knowledge": "knowledge", "/research/experiments": "factor", "/strategy": "strategy", "/research/learning": "report", "/settings/data-connections": "data"}
 
         # Keep the conditional attribute construction explicit so the rendered
         # HTML remains easy to inspect in a browser and in snapshot tests.
         def nav_item(href: str) -> str:
             current = ' aria-current="page"' if href == page else ""
-            return f'<li><a class="nav-link" href="{href}"{current}>{html.escape(names[href])}</a></li>'
+            return f'<li><a class="nav-link" href="{href}"{current}>{nav_icon(icons.get(href, "system"))}<span>{html.escape(names[href])}</span></a></li>'
 
         sections = []
         for label, section_id, links in groups:
             items = "".join(nav_item(href) for href in links)
-            sections.append(f'<section class="nav-section" aria-label="{label}" aria-labelledby="{section_id}"><h2 class="nav-section-title" id="{section_id}">{label}</h2><ul class="nav-list">{items}</ul></section>')
+            if section_id == "nav-learn":
+                expanded = ' open' if page in links else ''
+                sections.append(f'<details class="nav-section nav-more" aria-label="{label}"{expanded}><summary>更多研究工具</summary><ul class="nav-list">{items}</ul></details>')
+            else:
+                sections.append(f'<section class="nav-section" aria-label="{label}" aria-labelledby="{section_id}"><h2 class="nav-section-title" id="{section_id}">{label}</h2><ul class="nav-list">{items}</ul></section>')
         return (
+            f'<button type="button" class="shell-icon-button shell-close" data-shell-close aria-label="关闭导航" hidden>{nav_icon("close")}</button>'
             '<a class="brand" href="/" aria-label="Finathink home">'
-            '<span class="brand-mark" aria-hidden="true">F</span><span class="brand-name">Finathink</span></a>'
+            '<span class="brand-mark" aria-hidden="true">F</span><span><span class="brand-name">Finathink<small>.</small></span><span class="brand-caption">RESEARCH WITH EVIDENCE</span></span></a>'
+            '<div class="space-switch"><span class="space-symbol" aria-hidden="true">F</span><strong>个人研究空间<small>Local workspace</small></strong></div>'
             + "".join(sections)
-            + '<p class="sidebar-note">本地研究 · 可追溯证据 · 纸面策略验证</p>'
+            + '<p class="sidebar-note"><strong>本地优先 · 证据可追溯</strong>研究 → 验证 → 解释 → 学习</p>'
         )
 
     @staticmethod
@@ -1396,24 +1210,40 @@ class LocalApplication:
             },
         )
         style_tags = "".join(f'<link rel="stylesheet" href="{html.escape(path)}">' for path in styles)
-        script_tags = "".join(f'<script src="{html.escape(path)}" defer></script>' for path in scripts)
+        script_tags = "".join(f'<script src="{html.escape(path)}" defer></script>' for path in dict.fromkeys(("/assets/finathink-research.js", *scripts)))
+        from .research.asset_workspace_page import ASSET_WORKSPACE_CSS
+        from .research.factor_detail_page import FACTOR_DETAIL_CSS
         from .research.learning_workspace_page import LEARNING_CSS
 
+        content = f'<div class="workspace-inner"><p class="eyebrow">{html.escape(eyebrow)}</p>{body}</div>'
+        if page == "/":
+            # The shared heading precedes both columns, as in the supplied HTML.
+            # Keep it within the main landmark and the context after the body.
+            layout = (
+                '<main class="workspace-layout workspace-layout--overview" id="main" tabindex="-1">'
+                f'{OVERVIEW_HEADER_HTML}<div class="workspace">{content}</div>{inspector_html}</main>'
+            )
+        else:
+            layout = (
+                '<div class="workspace-layout"><main class="workspace" id="main" tabindex="-1">'
+                f'{content}</main>{inspector_html}</div>'
+            )
         return (
             '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">'
             '<meta name="viewport" content="width=device-width,initial-scale=1">'
             f"<title>{html.escape(title)} · Finathink</title>"
-            '<meta name="theme-color" content="#050B18">'
+            '<meta name="theme-color" content="#f5f8fd">'
             '<meta http-equiv="Content-Security-Policy" content="default-src \'self\'; img-src \'self\'; style-src \'self\' \'unsafe-inline\'; script-src \'self\'; connect-src \'self\'; form-action \'self\'">'
-            f"<style>{_DARK_APP_CSS}{_RESEARCH_JOBS_CSS if page == '/research/jobs' else ''}{_FACTOR_STUDY_CSS if page == '/research/experiments' else ''}{LEARNING_CSS if page == '/research/learning' else ''}</style>{style_tags}{script_tags}</head><body>"
+            f"<style>{_APP_CSS}{BLUE_WHITE_CSS}{_RESEARCH_JOBS_CSS if page == '/research/jobs' else ''}{_FACTOR_STUDY_CSS if page == '/research/experiments' else ''}{LEARNING_CSS if page == '/research/learning' else ''}{ASSET_WORKSPACE_CSS if page.startswith('/library/') or page == '/research/experiments' else ''}{FACTOR_DETAIL_CSS if page == '/research/experiments' else ''}</style>{style_tags}{script_tags}</head><body>"
             '<a class="skip-link" href="#main">跳到主要内容</a>'
-            '<div class="app-shell">'
-            f'<nav class="sidebar" aria-label="主导航">{self._nav(clean_page)}</nav>'
-            f'<main class="workspace" id="main" tabindex="-1"><header class="topbar" aria-label="Workspace context"><div class="topbar-context"><strong>Finathink</strong><span>/</span><span>{html.escape(title)}</span></div><div class="topbar-actions"><span class="local-status">Local Workspace</span><span class="status status--offline">PAPER-ONLY</span></div></header><div class="workspace-inner">'
-            f'<p class="eyebrow">{html.escape(eyebrow)}</p>{body}'
-            '<p class="footer-note">Finathink is a local-first research and education tool. Results are descriptive, bounded, and not trading instructions.</p>'
-            '</div></main>'
-            f"{inspector_html}</div></body></html>"
+            '<div class="app-shell" data-finathink-shell>'
+            f'<nav class="sidebar" id="shell-navigation" aria-label="主导航">{self._nav(clean_page)}</nav>'
+            '<button type="button" class="shell-shade" data-shell-shade aria-label="关闭导航遮罩" tabindex="-1" hidden></button>'
+            '<div class="app-frame" data-shell-frame><header class="topbar" aria-label="Workspace context">'
+            f'<div class="topbar-context"><button type="button" class="shell-icon-button shell-menu" data-shell-menu aria-controls="shell-navigation" aria-label="展开导航" aria-expanded="false" hidden>{nav_icon("menu")}</button><span>工作空间 /</span><strong>{html.escape(title)}</strong></div>'
+            f'<div class="topbar-actions"><button type="button" class="shell-search-open" data-shell-search-open aria-controls="shell-search" aria-label="搜索功能入口" hidden>{nav_icon("search")}<span>搜索功能入口</span><kbd>⌘ K</kbd></button><span class="local-status">本地研究</span><a class="button" href="/research/jobs">新建研究</a></div></header>'
+            f'{layout}<footer class="footer-note shell-footer">本地优先 · 可追溯研究与学习 · PAPER-ONLY</footer>'
+            f"</div></div>{shell_search_dialog()}</body></html>"
         )
 
     def _data_write_guard(self, body: Any) -> tuple[int, str, Any] | None:
@@ -1424,6 +1254,80 @@ class LocalApplication:
     @staticmethod
     def _snapshot_summary(snapshot):
         return {"snapshot_ref": snapshot.fingerprint, "instruments": list(snapshot.instruments), "record_count": len(snapshot.observations), "mode": snapshot.mode, "as_of": snapshot.as_of.isoformat(), "pit_status": "AVAILABLE" if snapshot.pit_available() else "UNKNOWN"}
+
+    def _asset_workspace_route(self, method, clean, query):
+        from .research.asset_catalog import ResearchAssetCatalog
+        from .research.asset_contracts import AssetLoadError
+        from .research.asset_workspace_page import (
+            KINDS,
+            ResearchAssetWorkspace,
+            asset_workspace_page,
+        )
+
+        library = clean in {f"/library/{kind}" for kind in KINDS}
+        api = clean == "/api/research/assets" or clean.startswith("/api/research/assets/")
+        if not library and not api:
+            return None
+        if method != "GET":
+            return 405, "application/json", {"error": "资料目录只读，浏览不会执行研究。"}
+        try:
+            service = ResearchAssetWorkspace(ResearchAssetCatalog.packaged())
+            if library:
+                kind = clean.rsplit("/", 1)[-1]
+                content = asset_workspace_page(service, kind, query or {})
+                return 200, "text/html; charset=utf-8", self.render_shell(clean, KINDS[kind], content,
+                    inspector=self._inspector("资料上下文", {"来源": "包内校验资源", "执行": "尚未加载到研究", "下一步": "检查输入后带入问题"}))
+            if clean != "/api/research/assets":
+                return 200, "application/json", service.detail(clean.removeprefix("/api/research/assets/"))
+            values = query or {}
+            payload = service.list(kind=values.get("kind", ["methods"])[0], tags=tuple(values.get("tag", ())),
+                query=values.get("q", [""])[0], limit=int(values.get("limit", ["20"])[0]), offset=int(values.get("offset", ["0"])[0]))
+            return 200, "application/json", payload
+        except AssetLoadError as exc:
+            if library:
+                return 503, "text/html; charset=utf-8", self.render_error_page("资料目录暂不可用",
+                    "资料校验没有通过，尚未加载到研究。", "请重新读取；如果仍失败，检查安装包或诊断记录。",
+                    links=((clean, "重新读取资料"), ("/diagnostics", "检查诊断")))
+            return 503, "application/json", {"error": "资料校验失败，请重新读取或检查安装包。", "code": exc.code}
+        except KeyError:
+            return 404, "application/json", {"error": "未找到这项资料，请返回目录选择。"}
+        except (ValueError, TypeError):
+            return 422, "application/json", {"error": "资料检索参数无效，请核对类别、分页与资料身份。"}
+
+    def _factor_detail_route(self, method, clean, body, query):
+        from .research.factor_detail_page import factor_detail, factor_detail_page
+
+        public = clean.startswith("/research/factors/")
+        api = clean.startswith("/api/research/factors/")
+        if not public and not api:
+            return None
+        parts = clean.removeprefix("/research/factors/" if public else "/api/research/factors/").split("/")
+        if public and method != "GET":
+            return 405, "application/json", {"error": "因子详情只读，决定请通过显式审核。"}
+        if method == "POST":
+            denied = self._data_write_guard(body)
+            if denied is not None:
+                return denied
+        try:
+            if api and method == "POST" and len(parts) == 2:
+                values = {key: value for key, value in (body or {}).items() if key != "_csrf"}
+                if parts[1] == "decisions":
+                    return 201, "application/json", self.research_service.review_factor_use(parts[0], values)
+                if parts[1] == "monitor":
+                    return 200, "application/json", self.research_service.refresh_factor_monitoring(parts[0], values)
+            if method != "GET" or len(parts) != 1:
+                return 405, "application/json", {"error": "不支持此因子操作。"}
+            values = query or {}
+            data = factor_detail(self.research_service, parts[0], version=values.get("version", [None])[0],
+                window=int(values["window"][0]) if values.get("window") else None, run_ref=values.get("run_ref", [None])[0])
+            if api:
+                return 200, "application/json", data
+            return 200, "text/html; charset=utf-8", self.render_shell("/research/experiments", "因子证据", factor_detail_page(data, self.csrf_token),
+                inspector=self._inspector("因子上下文", {"身份": data["factor_id"], "定义": data["version"], "边界": "来源、计算、用途分别判断"}))
+        except KeyError:
+            return 404, "application/json", {"error": "没有匹配的因子、版本或报告；不会回退到另一版本。"}
+        except (ValueError, TypeError):
+            return 422, "application/json", {"error": "因子输入或证据绑定无效，请重新读取定义和范围。"}
 
     def _research_jobs_route(self, method, clean, body, query):
         if not (clean in {"/api/research/jobs", "/api/research/experiments", "/api/research/learning"} or clean.startswith(("/api/research/jobs/", "/api/research/snapshots", "/api/research/experiments/", "/api/research/learning/"))):
@@ -1438,6 +1342,28 @@ class LocalApplication:
         values = {key: value for key, value in (body or {}).items() if key != "_csrf"} if isinstance(body, Mapping) else {}
         try:
             service = self.research_service
+            if clean.startswith("/api/research/jobs/"):
+                parts = clean.removeprefix("/api/research/jobs/").split("/")
+                if len(parts) >= 2 and parts[1] == "methods":
+                    if len(parts) == 2 and method == "POST":
+                        from .research.asset_contracts import MethodRouteRequest
+
+                        return 200, content_type, service.export_method_handoff(parts[0], MethodRouteRequest(**values))
+                    if len(parts) == 3 and method == "GET":
+                        return 200, content_type, service.get_method_handoff(parts[0], unquote(parts[2]))
+                    if len(parts) == 4 and parts[3] == "result" and method == "POST":
+                        if set(values) != {"response"}:
+                            raise ValueError("交接回传只接受绑定的结果对象")
+                        return 200, content_type, service.accept_method_handoff(parts[0], unquote(parts[2]), values["response"])
+                if len(parts) == 2 and parts[1] == "research-fields" and method == "POST":
+                    if set(values) != {"attachment"}:
+                        raise ValueError("字段保存只接受不可变附件")
+                    return 201, content_type, service.attach_research_fields(parts[0], values["attachment"])
+                if len(parts) == 2 and parts[1] == "method-studies" and method == "POST":
+                    if set(values) - {"handoff_ref", "artifact_ref", "attachment_ref", "idempotency_key"}:
+                        raise ValueError("受控研究提交字段无效")
+                    return 201, content_type, service.create_method_factor_study(parts[0], values.get("handoff_ref"),
+                        values.get("artifact_ref"), attachment_ref=values.get("attachment_ref"), idempotency_key=values.get("idempotency_key"))
             if clean == "/api/research/learning":
                 return (201, content_type, service.learning.settle(values)) if method == "POST" else (200, content_type, {"reviews": service.learning.list_reviews()})
             if clean == "/api/research/learning/policies":
@@ -1524,7 +1450,10 @@ class LocalApplication:
         except (OSError, sqlite3.Error):
             return 503, content_type, {"error": "本地研究存储暂不可用，请检查磁盘空间和文件权限后重试。"}
 
-    def _research_jobs_page_body(self):
+    def _research_jobs_page_body(self, *, query=None):
+        supplied = (query or {}).get("question", [""])[0].strip()
+        question = supplied[:1000] or "检验这个快照上的动量基线，并检查费用与历史回撤。"
+        notice = '<p data-question-truncated role="status">问题过长，已保留前 1000 字。请核对后再提交研究。</p>' if len(supplied) > 1000 else ''
         return (
             '<section data-run-workspace data-job-status="EMPTY">'
             '<div class="status-row"><span class="status status--offline">LOCAL WORKSPACE</span><span class="status status--ready">PAPER-ONLY</span></div>'
@@ -1552,7 +1481,7 @@ class LocalApplication:
             '<p class="field-help" data-snapshot-description>尚未选择数据，不会自动使用演示数据。</p>'
             '<label>研究标的<input name="instrument" required maxlength="128" value="AAA"></label><label>研究截止日（UTC 当日结束）<input type="date" name="as_of" required></label>'
             '<label>研究模板<select data-run-template><option value="">保留自己填写的问题</option><option value="baseline">基础复核：动量、费用与历史回撤</option><option value="risk">风险复核：成本、容量与损失情景</option><option value="materials">材料研究：基本面、新闻与情绪证据</option></select></label><p class="field-help">模板只填入研究问题，不改变基线算法。材料分析另需模型配置与明确授权。</p>'
-            '<label>研究问题<textarea name="question" required maxlength="2000" rows="3">检验这个快照上的动量基线，并检查费用与历史回撤。</textarea></label>'
+            f'<label>研究问题<textarea name="question" required maxlength="2000" rows="3">{html.escape(question)}</textarea></label>{notice}'
             '<label>执行配置<select name="model_config_ref"><option value="offline">本地确定性流程 / 不调用模型</option></select></label>'
             '<p><a href="/settings/providers">配置用户自己的模型接口</a></p>'
             '<details><summary>补充基本面、新闻、情绪或学习材料</summary><p class="field-help">可选 JSON 数组，每条包含 role、instrument、summary、source_label、observed_at、available_at、authorized:true。时间需带时区；最多 16 条，每条摘要最多 2000 字。没有对应材料的角色会显示资料不足。</p><label>已授权材料摘要（JSON）<textarea name="materials" rows="5" maxlength="40000" placeholder="[]"></textarea></label></details>'
@@ -1563,6 +1492,12 @@ class LocalApplication:
             '<p data-run-empty>还没有研究任务。先选择快照并提交研究。</p><p data-run-state></p><p data-run-budget></p><p data-run-identity class="snapshot-fingerprint"></p><ol class="research-stage-list" data-run-stages></ol>'
             '<p class="field-help" data-run-data-note></p><p data-run-model-summary></p><ul class="overview-list" data-run-call-records></ul><ul class="overview-list" data-run-model-roles></ul><div data-run-synthesis></div><dl data-run-metrics></dl><p data-run-failure></p><div class="action-row"><button type="button" data-run-cancel disabled>取消任务</button><a data-run-report hidden>打开完整 HTML 报告</a><a data-run-detail hidden>查看研究档案</a></div></section>'
             '<section class="panel section"><h2>最近的后台任务</h2><p>刷新页面或重启服务后，可从这里继续查看；相同提交标识不会重复排队。</p><ul class="overview-list" data-run-history></ul><div class="action-row"><button type="button" class="button-secondary" data-run-history-prev disabled>上一页任务</button><span data-run-history-page role="status"></span><button type="button" class="button-secondary" data-run-history-next disabled>下一页任务</button></div><a href="/research/compare">比较已发布的研究</a></section>'
+            '<section class="panel section" data-method-handoff><h2>方法交接与受控因子研究</h2><p>为当前任务按需加载方法并导出交接包。外部工具负责推理，回传只接受有绑定的 JSON；这里不会自动调用 Codex 或执行模型代码。</p>'
+            '<p role="status" aria-live="polite" data-method-status>先选择一个已保存的研究任务。</p><button type="button" data-method-export disabled>导出因子研究交接包</button>'
+            '<details><summary>查看交接包与方法指纹</summary><label>可复制给外部研究工具的 JSON<textarea data-method-package rows="8" readonly></textarea></label></details>'
+            '<form data-method-result-form><label>外部结果 JSON<textarea name="response" rows="6" maxlength="131072" required></textarea></label><button type="submit" data-method-accept disabled>校验并保存回传</button></form>'
+            '<details><summary>绑定可选研究字段附件</summary><p>使用已声明单位和可用时间的 ResearchFieldAttachment JSON，快照指纹必须与当前任务一致；不接供应商 SDK。</p><form data-method-fields-form><label>字段附件文件<input type="file" name="attachment" accept="application/json,.json" required></label><button type="submit" data-method-fields-save disabled>明确保存字段附件</button></form></details>'
+            '<form data-method-study-form><label>已验证并保存的提案<select name="artifact_ref" required><option value="">尚无回传提案</option></select></label><button type="submit" data-method-study-create disabled>固定章程并执行受控验证</button></form><a data-method-study-link hidden>进入此因子实验</a></section>'
             '<noscript><p>任务提交和跟踪需要 JavaScript。已发布的 HTML 报告可离线阅读。</p></noscript></section>'
         )
 
@@ -1642,6 +1577,12 @@ class LocalApplication:
         clean = parsed.path.rstrip("/") or "/"
         if clean == "/research/jobs" and method == "GET":
             return 200, "text/html; charset=utf-8", self.render_page(clean, query=query)
+        asset_response = self._asset_workspace_route(method, clean, query)
+        if asset_response is not None:
+            return asset_response
+        factor_response = self._factor_detail_route(method, clean, body, query)
+        if factor_response is not None:
+            return factor_response
         job_response = self._research_jobs_route(method, clean, body, query)
         if job_response is not None:
             return job_response
@@ -2138,6 +2079,27 @@ class LocalApplication:
         return self.render_shell("/knowledge", title_text, body, inspector=self._inspector("Knowledge provenance", {"Concept": title_text, "Catalog": DEFAULT_CATALOG.fingerprint, "Mastery": mastery.state, "Boundary": "Sample curriculum; verify sources"}, status="CURATED"), eyebrow="Knowledge / progressive depth")
 
     def _page_inspector(self, page: str) -> str:
+        if page == "/":
+            steps = ("界定问题与数据范围", "形成可检验的假设", "查看计算与反例", "解释结果，记录下一步")
+            path = ''.join(f'<li><span class="context-step">{index}</span><span>{label}</span></li>' for index, label in enumerate(steps, 1))
+            return (
+                '<aside class="inspector" id="inspector" aria-label="研究上下文">'
+                f'<section class="inspector-inner context-card"><div class="context-heading">{nav_icon("codex")}<h2>Codex 与研究任务</h2></div>'
+                '<p class="context-note">显式交接，计算由研究引擎完成。</p>'
+                f'<ol class="research-path" aria-label="研究路径，非运行进度">{path}</ol>'
+                '<a class="button-secondary full-width" href="/research/jobs">打开研究工作台</a>'
+                '<p class="context-note">提交前选择数据、范围与模型配置；这里不自动调用 Codex。</p></section>'
+                '<section class="inspector-inner context-card"><h2>数据与证据</h2>'
+                '<div class="context-source"><span class="context-symbol">API</span><div><strong>用户自己的数据接口</strong><p>显式读取 · 保存快照与指纹</p></div></div>'
+                '<div class="context-source"><span class="context-symbol">DB</span><div><strong>本地研究记录</strong><p>任务、产物与版本可追溯</p></div></div>'
+                '<p class="context-note">记录数不是收益指标；事件样例与实际研究分开标记。</p>'
+                '<a href="/settings/data-connections">管理数据接口</a> · <a href="/settings/providers">模型配置</a></section>'
+                '<section class="inspector-inner context-card"><h2>让研究更进一步</h2>'
+                '<ul class="context-learning"><li><a href="/knowledge/volatility"><span aria-hidden="true">σ</span>波动率与窗口选择</a></li>'
+                '<li><a href="/knowledge/beta"><span aria-hidden="true">β</span>Beta 与不确定性</a></li>'
+                '<li><a href="/research/learning"><span aria-hidden="true">∑</span>复盘、审核与版本复跑</a></li></ul>'
+                '</section></aside>'
+            )
         if page == "/research/jobs":
             return self._inspector("研究运行边界", {"数据": "显式选定并校验的快照", "执行": "独立 supervisor / spawn", "模型": "按所选配置；在线调用需授权", "产物": "有指纹的 HTML 报告"}, status="PAPER-ONLY")
         if page == "/events":
@@ -2369,35 +2331,35 @@ class LocalApplication:
         payload = self.overview()
         metrics = payload["metrics"]
         metric_cards = "".join(
-            f'<article class="metric-card"><span class="metric-value">{html.escape(str(metrics.get(key, 0)))}</span><span class="metric-label">{html.escape(label)}</span></article>'
-            for key, label in (("sample_events", "Events"), ("saved_items", "Saved items"), ("learning_items", "Learning evidence"), ("research_runs", "Research runs"))
+            f'<article class="metric-card"><span class="metric-label">{label}</span><span class="metric-value" data-overview-metric="{key}">{metrics[key]}</span><span class="metric-note">{note}</span></article>'
+            for key, label, note in (("sample_events", "事件样例", "明确标记的学习资料"), ("saved_items", "已保存条目", "来自本地个人工作区"), ("learning_items", "学习证据", "实际保存的自查记录"), ("research_runs", "研究运行", "来自持久化研究索引"))
         )
         activity = payload.get("activity") or []
         activity_html = "".join(
             f'<li><span>{html.escape(str(item.get("timestamp", "—")))} · {html.escape(str(item.get("label", "Activity")))}</span><strong>{html.escape(str(item.get("status", "RECORDED")))}</strong></li>'
             for item in activity if isinstance(item, Mapping)
-        ) or '<li class="empty-state"><span>No saved research activity yet</span><strong>EMPTY</strong></li>'
+        ) or '<li class="empty-state"><span>还没有保存的研究活动</span><strong>暂无记录</strong></li>'
         topics = payload.get("topics") or []
         topic_html = "".join(
             f'<li><span>{html.escape(str(item.get("label", item.get("topic", "Topic"))))}</span><strong>{html.escape(str(item.get("count", 0)))}</strong></li>'
             for item in topics if isinstance(item, Mapping)
-        ) or '<li class="empty-state"><span>No topics are recorded yet</span><strong>EMPTY</strong></li>'
+        ) or '<li class="empty-state"><span>还没有记录的研究主题</span><strong>暂无记录</strong></li>'
         learning = payload.get("learning_activity") or []
         heatmap_html = "".join(
-            f'<li><span>{html.escape(str(item.get("date", "—")))}</span><strong>{html.escape(str(item.get("count", 0)))} checks</strong></li>'
+            f'<li><span>{html.escape(str(item.get("date", "—")))}</span><strong>{html.escape(str(item.get("count", 0)))} 次自查</strong></li>'
             for item in learning if isinstance(item, Mapping)
-        ) or '<li class="empty-state"><span>No learning checks yet</span><strong>EMPTY</strong></li>'
+        ) or '<li class="empty-state"><span>还没有学习自查记录</span><strong>暂无记录</strong></li>'
         activity_series = payload.get("activity_series") or []
         max_count = max((int(item.get("count", 0)) for item in activity_series if isinstance(item, Mapping)), default=0)
-        bars = '<p class="empty-state">No activity is plotted until a local research or learning record is saved.</p>' if not activity_series else ''.join(
+        bars = '<p class="empty-state">保存研究或学习记录后，这里会显示实际活动；不填入演示曲线。</p>' if not activity_series else ''.join(
             f'<i style="height:{max(12, round((int(item.get("count", 0)) / max_count) * 100))}%" aria-hidden="true"></i>'
             for item in activity_series if isinstance(item, Mapping)
         )
         daily_rows = ''.join(
-            f'<tr><th scope="row"><button type="button" class="overview-day" data-overview-day data-date="{html.escape(str(item["date"]))}" data-tooltip="{html.escape(str(item["date"]))}: {item["count"]} recorded · {item["learning"]} learning · {item["research"]} research" aria-describedby="overview-tooltip">{html.escape(str(item["date"]))}</button></th><td>{item["count"]}</td><td>{item["learning"]}</td><td>{item["research"]}</td></tr>'
+            f'<tr><th scope="row"><button type="button" class="overview-day" data-overview-day data-date="{html.escape(str(item["date"]))}" data-tooltip="{html.escape(str(item["date"]))}：{item["count"]} 条记录 · {item["learning"]} 条学习 · {item["research"]} 条研究" aria-describedby="overview-tooltip">{html.escape(str(item["date"]))}</button></th><td>{item["count"]}</td><td>{item["learning"]}</td><td>{item["research"]}</td></tr>'
             for item in activity_series if isinstance(item, Mapping)
-        ) or '<tr><td colspan="4">No dated activity recorded. Save research or complete a learning check to begin.</td></tr>'
-        daily_table = '<div class="table-wrap overview-daily-table"><table aria-label="Daily activity data"><thead><tr><th scope="col">Date</th><th scope="col">Recorded</th><th scope="col">Learning</th><th scope="col">Research</th></tr></thead><tbody data-overview-daily-rows>' + daily_rows + '</tbody></table></div>'
+        ) or '<tr><td colspan="4">还没有带日期的活动记录。可先保存研究，或完成一次学习自查。</td></tr>'
+        daily_table = '<div class="table-wrap overview-daily-table"><table aria-label="每日活动数据"><thead><tr><th scope="col">日期</th><th scope="col">记录</th><th scope="col">学习</th><th scope="col">研究</th></tr></thead><tbody data-overview-daily-rows>' + daily_rows + '</tbody></table></div>'
         topic_max = max((int(item.get("count", 0)) for item in topics if isinstance(item, Mapping)), default=0)
         topic_cells = ''.join(
             f'<span class="overview-topic-cell" data-intensity="{max(1, round((int(item.get("count", 0)) / topic_max) * 5)) if topic_max else 0}" data-tooltip="{html.escape(str(item.get("topic", "Topic")))}: {html.escape(str(item.get("count", 0)))} recorded" title="{html.escape(str(item.get("topic", "Topic")))}: {html.escape(str(item.get("count", 0)))} recorded" tabindex="0">{html.escape(str(item.get("topic", "Topic")))}</span>'
@@ -2406,21 +2368,26 @@ class LocalApplication:
         comparison_rows = ''.join(
             f'<tr><th scope="row">{html.escape(str(item.get("run_id", "—")))}</th><td>{html.escape(str(item.get("state", "UNKNOWN")))}</td><td>{html.escape(str(item.get("evidence_count", 0)))}</td><td>{html.escape(str(item.get("report_count", 0)))}</td></tr>'
             for item in payload.get("research_comparison", ()) if isinstance(item, Mapping)
-        ) or '<tr><td colspan="4" class="empty-state">No registered research runs to compare.</td></tr>'
+        ) or '<tr><td colspan="4" class="empty-state">还没有可对比的研究运行。先完成一轮有明确数据和范围的研究。</td></tr>'
         history_open = ' open' if not activity else ''
         return (
             f'<section class="overview" data-finathink-overview data-overview-payload-url="/api/overview" aria-busy="false">'
-            '<p class="loading-state" data-overview-loading aria-live="polite" hidden>Loading overview…</p><p class="error-state" data-overview-error role="alert" aria-live="assertive" hidden></p>'
-            f'<header class="overview-header"><div class="overview-header-copy"><div class="status-row">{self._status("OFFLINE", "offline")}{self._status("PAPER-ONLY", "limitation")}</div><h1>Overview</h1><p class="lede">What can I understand today? A calm, evidence-bound view of local research activity.</p></div><div class="overview-meta"><span>As of {html.escape(str(payload.get("as_of", "not attached")))}</span><span>Source: {html.escape(str(payload["provenance"].get("data_mode", "UNKNOWN")))}</span></div></header>'
-            f'<section class="metric-grid" aria-label="Overview metrics">{metric_cards}</section>'
+            '<p class="loading-state" data-overview-loading aria-live="polite" hidden>正在读取研究概况…</p><p class="error-state" data-overview-error role="alert" aria-live="assertive" hidden></p><a class="button-secondary" data-overview-retry href="/" hidden>重新载入总览</a>'
+            '<section class="research-intro" aria-labelledby="research-intro-title"><h2 id="research-intro-title">从一个好问题，<span>走向可验证的结论。</span></h2><p>连接数据、数学、代码与实验，保留验证和反例。</p>'
+            '<form class="question-composer" action="/research/jobs" method="get"><label for="overview-question">你想验证什么？</label><textarea id="overview-question" name="question" required maxlength="1000" rows="2" placeholder="例如：动量窗口改变后，换手、费用和历史回撤会怎样变化？"></textarea>'
+            '<div class="composer-footer"><span>先配置数据与边界，提交后才运行。</span><button type="submit">建立研究 '
+            f'{nav_icon("arrow")}</button></div></form><div class="question-suggestions" aria-label="研究问题建议">'
+            f'<a href="/research/jobs?{urlencode({"question": "检验动量基线，并核对换手、费用与历史回撤。"})}">动量与换手</a>'
+            f'<a href="/research/jobs?{urlencode({"question": "检查所选快照中的成本、容量与损失情景。"})}">成本与风险</a>'
+            '<a href="/research/experiments">因子与样本外实验</a></div></section>'
+            f'<section class="metric-grid" aria-label="工作区概况">{metric_cards}</section>'
             '<section class="overview-grid">'
-            f'<article class="panel overview-region" data-overview-chart tabindex="0"><h2>Activity <span>Daily recorded items</span></h2><div class="overview-chart"><div class="overview-chart-canvas" data-overview-canvas aria-hidden="true" hidden></div><div class="overview-chart-bars" data-overview-activity-series>{bars}</div></div><p class="overview-tooltip" id="overview-tooltip" data-overview-tooltip role="status" aria-live="polite">Focus a date or topic to inspect recorded values.</p>{daily_table}<details class="overview-history"{history_open}><summary>Activity records</summary><ul class="overview-list" aria-label="Activity text summary">{activity_html}</ul></details></article>'
-            f'<article class="panel overview-region" data-overview-topics><h2>Topics <span>Recorded intensity</span></h2><div class="overview-topic-heatmap" aria-label="Recorded topic intensity heatmap">{topic_cells}</div><ul class="overview-list" aria-label="Recorded topics">{topic_html}</ul><p class="meta"><a href="/knowledge">Continue learning</a> from the curated local catalog.</p></article>'
-            f'<article class="panel overview-region" data-overview-heatmap><h2>Learning signal <span>Private checks</span></h2><ul class="overview-heatmap" aria-label="Learning activity summary">{heatmap_html}</ul><p class="meta">Learning evidence stays local and is never inferred from browsing.</p></article>'
+            f'<article class="panel overview-region" data-overview-chart tabindex="0"><h2>研究活动 <span>按日统计的实际记录，非投资绩效</span></h2><div class="overview-chart"><div class="overview-chart-canvas" data-overview-canvas aria-hidden="true" hidden></div><div class="overview-chart-bars" data-overview-activity-series>{bars}</div></div><p class="overview-tooltip" id="overview-tooltip" data-overview-tooltip role="status" aria-live="polite">聚焦日期或主题，查看对应的记录数量。</p>{daily_table}<details class="overview-history"{history_open}><summary>查看活动记录</summary><ul class="overview-list" data-overview-activity aria-label="活动文字记录">{activity_html}</ul></details></article>'
+            f'<article class="panel overview-region" data-overview-topics><h2>研究主题 <span>实际记录的分布</span></h2><div class="overview-topic-heatmap" aria-label="研究主题分布">{topic_cells}</div><ul class="overview-list" aria-label="已记录的研究主题">{topic_html}</ul><p class="meta"><a href="/knowledge">继续学习</a>，把概念连接到推导和代码。</p></article>'
+            f'<article class="panel overview-region" data-overview-heatmap><h2>学习记录 <span>来自已保存的自查</span></h2><ul class="overview-heatmap" aria-label="学习活动摘要">{heatmap_html}</ul><p class="meta">学习证据保存在本地，不根据浏览行为推断。</p></article>'
             '</section>'
-            '<section class="section"><div class="section-heading"><h2>Continue where you stopped</h2><span class="meta">Private local continuity</span></div><div class="overview-links"><article class="panel"><h3>Current research</h3><p class="meta">Run a bounded question with uncertainty and provenance.</p><a href="/research/jobs">打开研究任务</a></article><article class="panel"><h3>Paper simulation</h3><p class="meta">Inspect validity without live orders.</p><a href="/strategy">Open Strategy Lab</a></article><article class="panel"><h3>Evidence event</h3><p class="meta">Follow the captured source chain.</p><a href="/events">Open Events</a></article></div></section>'
-            f'<section class="panel overview-comparison" data-overview-comparison><div class="section-heading"><h2>Research comparison <span>Descriptive only</span></h2><a class="button-secondary" href="/research/compare">Open workspace</a></div><div class="table-wrap"><table aria-label="Research comparison summary"><thead><tr><th scope="col">Run</th><th scope="col">State</th><th scope="col">Evidence</th><th scope="col">Reports</th></tr></thead><tbody>{comparison_rows}</tbody></table></div><p class="meta">No composite quality score or winner is computed.</p></section>'
-            f'<section class="panel"><h2>Boundaries</h2><ul>{"".join(f"<li>{html.escape(str(item))}</li>" for item in payload.get("limitations", ()))}</ul></section>'
+            f'<section class="panel overview-comparison" data-overview-comparison><div class="section-heading"><h2>研究记录与对比 <span>先核对数据、范围和口径，再解释差异</span></h2><a class="button-secondary" href="/research/compare">打开对比工作区</a></div><div class="table-wrap"><table aria-label="研究对比摘要"><thead><tr><th scope="col">运行</th><th scope="col">状态</th><th scope="col">证据</th><th scope="col">报告</th></tr></thead><tbody>{comparison_rows}</tbody></table></div><p class="meta">不计算综合优劣分数，不把来源指标混入本地结果。</p></section>'
+            '<details class="overview-notes"><summary>研究口径与边界</summary><p>总览只读取本地记录，不触发数据获取、模型调用或交易。事件样例明确标记；每份真实研究保留自己的数据、费用、样本外范围和局限。</p></details>'
             '<template id="legacy-launch-frames" aria-hidden="true"><img src="/assets/finathink-splash-map.jpg" width="1536" height="1024" alt=""><img src="/assets/finathink-research-splash.jpg" width="900" height="900" alt=""></template>'
             '</section>'
         )
@@ -2435,7 +2402,7 @@ class LocalApplication:
 
             return factor_workspace_page(self.csrf_token)
         if page == "/research/jobs":
-            return self._research_jobs_page_body()
+            return self._research_jobs_page_body(query=query)
         if page == "/research/compare":
             return self._research_comparison_page_body()
         if page in {"/research", "/workbench", "/ml", "/parameter", "/settings/engines", "/settings/providers", "/settings/data-sources"}:
@@ -2572,7 +2539,12 @@ class _Handler(BaseHTTPRequestHandler):
         if length < 0:
             self._send(400, "application/json", {"error": "invalid content length"})
             return
-        if length > 1_000_000:
+        body_limit = 1_000_000
+        if re.fullmatch(r"/api/research/jobs/[A-Za-z0-9_-]{1,128}/research-fields", urlsplit(self.path).path):
+            from .data.research_fields import MAX_FIELD_BYTES
+
+            body_limit = MAX_FIELD_BYTES + 64 * 1024  # JSON envelope and CSRF overhead, still bounded.
+        if length > body_limit:
             self._send(413, "application/json", {"error": "request body too large"})
             return
         raw = self.rfile.read(length)

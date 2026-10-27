@@ -20,6 +20,44 @@ def prepare(tmp_path):
     return db, ref
 
 
+def test_method_package_fields_validation_and_report_survive_backup_restart(tmp_path):
+    from finahinking.data.research_fields import ResearchFieldStore
+    from finahinking.research.method_context import LoadedMethods
+    from tests.research.test_factor_study_application import wait_study
+    from tests.research.test_method_factor_journey import prepared
+
+    db = tmp_path / 'source' / 'factor.sqlite'
+    app = LocalApplication(LocalAppConfig(db_path=str(db), offline=True))
+    service = app.research_service
+    try:
+        job, handoff, artifact, package, attachment = prepared(service)
+        service.attach_research_fields(job['job_id'], attachment)
+        service.start()
+        created = service.create_method_factor_study(job['job_id'], handoff, artifact['artifact_ref'],
+            attachment_ref=attachment.fingerprint, idempotency_key='backup-factor-study')
+        record = wait_study(service, created['study_id'], 'validation')
+        job_report = service.get_job(record['validation_job']['job_id'])
+        report = app.route('GET', job_report['report_url'])[2]
+        assert record['validation']['validation_run']['fingerprint'] in (report.decode() if isinstance(report, bytes) else report)
+    finally:
+        app.close()
+    archive = tmp_path / 'factor.zip'
+    backup_state(db, archive)
+    restored = restore_state(archive, tmp_path / 'restored')
+    for _ in range(2):
+        reopened = LocalApplication(LocalAppConfig(db_path=str(restored), offline=True))
+        try:
+            restored_record = reopened.research_service.factor_study(created['study_id'])
+            assert restored_record['validation']['validation_run']['fingerprint'] == record['validation']['validation_run']['fingerprint']
+            restored_package = reopened.research_service.get_method_handoff(job['job_id'], handoff)['package']
+            loaded = LoadedMethods.from_dict(restored_package['context']['method_context'])
+            assert loaded.fingerprint == package.to_dict()['manifest']['methods_digest']
+            assert ResearchFieldStore(reopened.research_service.snapshots).load(attachment.fingerprint).fingerprint == attachment.fingerprint
+            assert reopened.route('GET', job_report['report_url'])[2] == report
+        finally:
+            reopened.close()
+
+
 def test_backup_restore_preserves_snapshot_and_old_schema_upgrade_is_idempotent(tmp_path, monkeypatch):
     db, ref = prepare(tmp_path)
     with sqlite3.connect(db) as connection:
