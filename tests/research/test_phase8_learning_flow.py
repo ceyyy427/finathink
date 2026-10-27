@@ -317,6 +317,47 @@ def test_genuinely_new_observations_complete_second_learning_cycle_and_preserve_
         service.close()
 
 
+@pytest.mark.parametrize("kind", ["future_timestamp", "future_availability", "available_today", "available_now"])
+def test_realized_learning_caps_today_by_actual_current_instant(tmp_path, monkeypatch, kind):
+    from datetime import UTC, datetime
+
+    from finahinking.research import learning_review
+
+    now = datetime(2026, 1, 18, 1, tzinfo=UTC)
+
+    class ReviewClock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return now.astimezone(tz) if tz else now.replace(tzinfo=None)
+
+    monkeypatch.setattr(learning_review, "datetime", ReviewClock)
+    service = ResearchApplicationService(tmp_path)
+    try:
+        source, _, evidence_ref = inputs(service)
+        evidence = service.snapshots.load(evidence_ref)
+        last = evidence.observations[-1]
+        if kind == "future_timestamp":
+            last = replace(last, timestamp="2026-01-18T18:00:00+00:00")
+        elif kind == "future_availability":
+            last = replace(last, available_at="2026-01-18T18:00:00+00:00")
+        elif kind == "available_now":
+            last = replace(last, available_at=now)
+        evidence = replace(evidence, observations=(*evidence.observations[:-1], last), as_of=max(last.timestamp, last.available_at))
+        reference = service.snapshots.save(evidence)
+        if kind.startswith("future"):
+            with pytest.raises(ValueError):
+                settle(service, source, reference)
+            assert service.learning.list_reviews() == []
+            assert len(service.learning.policies()) == 1
+        else:
+            review = settle(service, source, reference)
+            assert review["status"] == "PENDING_REVIEW"
+            assert pd.Timestamp(review["observation"]["available_at"]) <= pd.Timestamp(now)
+            assert review["observed_at"] == now.isoformat()
+    finally:
+        service.close()
+
+
 def test_future_policy_and_stale_preview_are_blocked_and_old_policy_can_be_selected(tmp_path):
     service = ResearchApplicationService(tmp_path)
     try:

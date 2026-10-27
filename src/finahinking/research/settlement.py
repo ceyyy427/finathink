@@ -179,7 +179,7 @@ class SettlementEvent:
         }
 
 
-def observe_paper_outcome(*, run_id, source, evidence, source_as_of, as_of, allocation, execution_policy, factor_id, factor_weights, risk_rules):
+def observe_paper_outcome(*, run_id, source, evidence, source_as_of, as_of, allocation, execution_policy, factor_id, factor_weights, risk_rules, known_at=None):
     """Observe a frozen next-bar paper intent at a fixed five-interval mark.
 
     Research cutoff, rather than a stale last quote, is the earliest decision
@@ -196,8 +196,13 @@ def observe_paper_outcome(*, run_id, source, evidence, source_as_of, as_of, allo
     from .portfolio_runtime import PaperPortfolioProposal
 
     cutoff = pd.Timestamp(_as_date(as_of), tz="UTC") + pd.Timedelta(days=1) - pd.Timedelta(nanoseconds=1)
+    if known_at is not None:
+        known = pd.Timestamp(known_at)
+        if pd.isna(known) or known.tzinfo is None:
+            raise ValueError("复盘计算时刻必须明确时区")
+        cutoff = min(cutoff, known)
     decision = pd.Timestamp(_as_date(source_as_of), tz="UTC") + pd.Timedelta(days=1) - pd.Timedelta(nanoseconds=1)
-    if not source.pit_available(decision) or not evidence.pit_available(cutoff):
+    if not source.pit_available(min(decision, cutoff)) or not evidence.pit_available(cutoff):
         raise ValueError("复盘数据包含未知或未来可用时间")
     proposal = PaperPortfolioProposal(**{key: value for key, value in allocation.items() if key != "fingerprint"})
     if proposal.fingerprint != allocation.get("fingerprint") or not proposal.passed or len(proposal.weights) != 1:

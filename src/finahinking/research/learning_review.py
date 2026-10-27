@@ -207,7 +207,8 @@ class LearningReviewService:
 
         _object(values, ("run_id", "evidence_snapshot_ref", "as_of"))
         job, entry, request = self._source(values.get("run_id"))
-        if date.fromisoformat(values.get("as_of")) > datetime.now(UTC).date():
+        observed_at = datetime.now(UTC)
+        if date.fromisoformat(values.get("as_of")) > observed_at.date():
             raise ValueError("未来复盘截止日不能作为已实现纸面学习证据")
         parent = self.store.policy(request.previous_policy_fingerprint)
         source = self.app.snapshots.load(request.snapshot_ref)
@@ -218,9 +219,10 @@ class LearningReviewService:
             raise ValueError("回溯比较不能作为该配置生效后的新学习证据")
         evidence = self.app.snapshots.load(values.get("evidence_snapshot_ref"))
         risk = entry["manifest"]["source_snapshot"].get("risk_portfolio") or {}
-        event, observation, derived = observe_paper_outcome(run_id=request.run_id, source=source, evidence=evidence, source_as_of=request.as_of, as_of=values.get("as_of"), allocation=risk["allocation"], execution_policy=risk["paper_ledger"]["execution_policy"], factor_id=parent["effective"]["factor_id"], factor_weights=parent["factor_weights"], risk_rules=parent["risk_rules"])
+        event, observation, derived = observe_paper_outcome(run_id=request.run_id, source=source, evidence=evidence, source_as_of=request.as_of, as_of=values.get("as_of"), allocation=risk["allocation"], execution_policy=risk["paper_ledger"]["execution_policy"], factor_id=parent["effective"]["factor_id"], factor_weights=parent["factor_weights"], risk_rules=parent["risk_rules"], known_at=observed_at)
         derived_ref = self.app.snapshots.save(derived)
         record = {"review_id": "learning-" + stable_digest([self.app.scope_id, request.run_id])[:32], "run_id": request.run_id, "job_id": job["job_id"], "input_digest": stable_digest(values), "semantic_key": stable_digest([request.instrument, request.as_of, parent["policy_ref"], risk["paper_ledger"]["execution_policy"]["signal_at"]]), "source_snapshot_ref": source.fingerprint, "evidence_snapshot_ref": evidence.fingerprint, "observed_snapshot_ref": derived_ref, "data_modes": {"source": source.mode, "evidence": evidence.mode, "observed": derived.mode}, "as_of": values["as_of"], "parent_policy_ref": parent["policy_ref"], "hypotheses": list(request.research_plan.hypotheses), "source_report_url": job["report_url"], "observation": observation, "paper_only": True}
+        record["observed_at"] = observed_at.isoformat()
         return self.store.save(record, event)
 
     @staticmethod

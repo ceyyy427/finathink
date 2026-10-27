@@ -112,6 +112,7 @@ export function mountLearningReview(root, { fetcher = globalThis.fetch, interval
         const result = await request(`/api/research/jobs/${encodeURIComponent(job.job_id)}`, { signal: controller.signal });
         if (expected !== generation || disposed) return;
         if (result.job_id !== job.job_id || result.run_id !== job.run_id || result.paper_only !== true) throw new Error('复跑任务身份失配。');
+        if (rerunKey?.jobId === result.job_id) rerunKey.status = result.status;
         activeJob = result; root.dataset.learningJobState = result.status;
         text('[data-learning-job]', `${result.run_id} · ${result.status} · v${result.policy_lineage?.version ?? '未知'}${result.policy_lineage?.retrospective ? ' · 回溯比较，不计入新学习' : ''}${result.failure_kind ? ` · ${result.failure_kind}` : ''}`);
         reportLink(q('[data-learning-report]'), result.report_status === 'AVAILABLE' ? result.report_url : null);
@@ -145,8 +146,11 @@ export function mountLearningReview(root, { fetcher = globalThis.fetch, interval
   rerunForm.addEventListener('submit', (event) => {
     event.preventDefault(); action(async () => {
       const values = Object.fromEntries(new FormData(rerunForm)); const signature = JSON.stringify(values);
-      if (rerunKey?.signature !== signature) rerunKey = { signature, key: crypto.randomUUID() };
-      const job = await post('/api/research/learning/rerun', { ...values, idempotency_key: rerunKey.key }); await watchJob(job); await refresh();
+      if (rerunKey?.signature !== signature || ['cancelled', 'failed'].includes(rerunKey?.status)) rerunKey = { signature, key: crypto.randomUUID() };
+      const submission = rerunKey;
+      const job = await post('/api/research/learning/rerun', { ...values, idempotency_key: submission.key });
+      submission.jobId = job.job_id;
+      await watchJob(job); await refresh();
     });
   });
   form.elements.evidence_snapshot_ref.addEventListener('change', () => { const selected = snapshots.find((item) => item.snapshot_ref === form.elements.evidence_snapshot_ref.value); if (selected) form.elements.as_of.value = selected.as_of.slice(0, 10); });

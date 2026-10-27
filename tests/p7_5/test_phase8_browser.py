@@ -1,5 +1,8 @@
 import json
 import threading
+from dataclasses import replace
+
+import pytest
 
 from finahinking.local_app import LocalAppConfig, LocalApplication, create_server
 from tests.p7_5.test_phase4_browser import browser, observed_page
@@ -149,6 +152,80 @@ def test_switching_reruns_disables_old_cancel_until_new_job_is_bound(observed_pa
     finally:
         for route in pending:
             route.fulfill(status=200, content_type="application/json", body=json.dumps(service.get_job(two["job_id"])))
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=3)
+        app.close()
+
+
+@pytest.mark.parametrize("terminal", ["cancelled", "failed"])
+def test_rerun_retry_preserves_ambiguous_active_key_but_rotates_after_terminal(observed_page, tmp_path, terminal):
+    page, _, diagnostics = observed_page
+    app = LocalApplication(LocalAppConfig(db_path=str(tmp_path / "app.sqlite"), offline=True))
+    service = app.research_service
+    source, source_ref, _ = inputs(service)
+    snapshot = service.snapshots.load(source_ref)
+    invalid_ref = service.snapshots.save(replace(snapshot, observations=snapshot.observations[:3]))
+    service.close()
+    server = create_server(app, host="127.0.0.1", port=0)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    base = f"http://127.0.0.1:{server.server_address[1]}"
+    keys, accepted, created = [], [], []
+
+    def lose_reply(route):
+        response = route.fetch()
+        accepted.append(response.json())
+        route.fulfill(status=200, content_type="application/json", body="{")
+
+    page.on("request", lambda request: keys.append(request.post_data_json["idempotency_key"]) if request.method == "POST" and request.url.endswith("/api/research/learning/rerun") else None)
+    try:
+        page.goto(base + "/research/learning")
+        root = page.locator('[data-learning-workspace]')
+        form = root.locator('[data-learning-rerun-form]')
+        form.locator('[name="run_id"]').select_option(source["run_id"])
+        form.locator('[name="snapshot_ref"]').select_option(invalid_ref)
+        page.route("**/api/research/learning/rerun", lose_reply)
+        form.locator('button[type="submit"]').click()
+        root.locator('[data-learning-status][role="alert"]').wait_for()
+        assert len(accepted) == 1
+        created.append(accepted[0]["job_id"])
+        page.unroute("**/api/research/learning/rerun")
+
+        def submit():
+            with page.expect_response(lambda response: response.request.method == "POST" and response.url.endswith("/api/research/learning/rerun")) as received:
+                form.locator('button[type="submit"]').click()
+            return received.value.json()
+
+        retried = submit()
+        assert retried["job_id"] == accepted[0]["job_id"]
+        page.locator('[data-learning-job-state="queued"]').wait_for()
+        active_retry = submit()
+        assert active_retry["job_id"] == retried["job_id"]
+        if terminal == "cancelled":
+            root.locator('[data-learning-cancel]').click()
+        else:
+            service.start()
+        page.locator(f'[data-learning-job-state="{terminal}"]').wait_for(timeout=30000)
+        restarted = submit()
+        created.append(restarted["job_id"])
+        assert restarted["job_id"] != retried["job_id"]
+        assert keys[0] == keys[1] == keys[2] and keys[3] != keys[2]
+        if terminal == "cancelled":
+            page.locator('[data-learning-job-state="queued"]').wait_for()
+            root.locator('[data-learning-cancel]').click()
+        page.locator(f'[data-learning-job-state="{terminal}"]').wait_for(timeout=30000)
+        page.locator('[data-learning-workspace][aria-busy="false"]').wait_for()
+        assert service.get_job(retried["job_id"])["status"] == terminal
+        assert service.get_job(restarted["job_id"])["status"] == terminal
+        assert not diagnostics["errors"]
+        page.evaluate("window.scrollTo(0, 0)")
+    finally:
+        for job_id in set(created):
+            service.cancel(job_id)
+        page.locator('[data-learning-workspace][aria-busy="false"]').wait_for(timeout=5000)
+        if root.get_attribute("data-learning-job-state") in {"queued", "running", "retryable", "loading"}:
+            page.wait_for_function("() => ['cancelled','failed','completed'].includes(document.querySelector('[data-learning-workspace]').dataset.learningJobState)", timeout=5000)
         server.shutdown()
         server.server_close()
         thread.join(timeout=3)
