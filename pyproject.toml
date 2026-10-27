@@ -23,7 +23,7 @@ math = ["sympy>=1.13,<2"]
 where = ["src"]
 
 [tool.setuptools.package-data]
-finahinking = ["_package_data/migrations/*.sql", "_package_data/fixtures/**/*", "_package_data/assets/*.jpg", "_package_data/assets/*.js", "_package_data/assets/katex/*.css", "_package_data/assets/katex/fonts/*.woff2", "_package_data/assets/katex/fonts/*.woff", "_package_data/assets/katex/fonts/*.ttf"]
+finahinking = ["_package_data/migrations/*.sql", "_package_data/fixtures/**/*", "_package_data/research_assets/**/*", "_package_data/assets/*.jpg", "_package_data/assets/*.js", "_package_data/assets/katex/*.css", "_package_data/assets/katex/fonts/*.woff2", "_package_data/assets/katex/fonts/*.woff", "_package_data/assets/katex/fonts/*.ttf"]
 "finahinking.p8_2b" = ["content/*.json"]
 
 [tool.pytest.ini_options]
