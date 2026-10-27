@@ -1,5 +1,38 @@
 # Finathink 自主研究运行时发布清单
 
+## Phase 9 中文交付门禁（2026-10-27）
+
+本轮结果见[发布审查记录](reviews/2026-10-27-finathink-user-trial-release-review.md)。以下检查适用于当前的 Task 9，后续章节保留此前运行时验收的历史范围。
+
+- 中文异常提示覆盖解析、响应结构、网络、HTTP 与安全的服务端校验；不显示 JavaScript 原始诊断或私密错误内容。
+- 原有输入、取消、幂等和结果不确定时的重试语义保持；损坏报告不开放无效链接，研究历史仍保留。
+- 中文导航、首次使用步骤、问题模板、数据/模型状态、服务器耗时与预算、20 项历史分页进入浏览器回归。
+- 全新 wheel 在独立虚拟环境中完成真实 HTTP/spawn 到离线报告，再进行备份恢复与重复启动；源码不能代替安装包。
+- 仅初始理解库的旧 SQLite 安装可迁移，原记录保留；同名输出、链接、未完成任务、损坏包和不匹配指纹被拒绝。
+- 1440×900、1920×1080、375×812 截图和布局测量；键盘、可见焦点与 ARIA 树；25 项列表的 4 倍 CPU 限速日志。实际屏幕阅读器及弱设备不在模拟证据内。
+- Python、Node、构建产物一致性、治理、依赖、敏感信息、clean-install 与 CI 必跑浏览器门禁均须验证。
+- 最终独立审查后修复 Critical/Important，保留 Minor 跟踪；通过 PR 合并发布，真实人类试用另记 `NOT_RUN`。
+
+手动复现主要门禁：
+
+```bash
+python3 -m pytest -q
+python3 -m ruff check src tests scripts
+npm --prefix frontend test
+npm --prefix frontend run build
+npm --prefix frontend run perf
+FINATHINK_REQUIRE_BROWSER=1 python3 -m pytest tests/p7_5/test_phase9_browser.py -q
+python3 scripts/clean_install.py
+python3 scripts/validate_governance.py .
+python3 scripts/prepare_release.py --check
+python3 scripts/secret_scan.py
+python3 -m pip check
+```
+
+必跑浏览器 job 缺少 Playwright/Chromium 时应失败，不用 skip 冒充通过。维护 CLI 只在关闭应用后使用，备份为私密数据；不要向公开 issue 上传备份。
+
+## 既有运行时验收记录
+
 这份清单记录自主研究运行时的本地发布门禁。所有验收使用确定性 fixture、注入 transport 或 mock provider，可离线重放。
 
 ## 组合验收

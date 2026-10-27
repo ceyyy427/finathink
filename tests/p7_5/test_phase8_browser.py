@@ -98,6 +98,8 @@ def test_learning_loading_error_recovery_and_empty_states(observed_page, tmp_pat
         root.locator('[data-learning-status][role="alert"]').wait_for()
         assert root.get_attribute("aria-busy") == "false"
         assert "重试" in root.locator('[data-learning-status]').inner_text()
+        assert "响应的数据格式异常" in root.locator('[data-learning-status]').inner_text()
+        assert "reading" not in root.locator('[data-learning-status]').inner_text()
         page.screenshot(path=str(artifacts / "learning-error.png"), full_page=True)
         page.unroute("**/api/research/learning")
         root.locator('[data-learning-refresh]').click()
@@ -166,8 +168,11 @@ def test_rerun_retry_preserves_ambiguous_active_key_but_rotates_after_terminal(o
     source, source_ref, _ = inputs(service)
     snapshot = service.snapshots.load(source_ref)
     invalid_ref = service.snapshots.save(replace(snapshot, observations=snapshot.observations[:3]))
-    service.close()
     server = create_server(app, host="127.0.0.1", port=0)
+    # Server bootstrap starts its independent owner. Stop it afterwards so
+    # queued/cancelled cases do not race an unintended real worker.
+    service.close()
+    assert service.runtime._supervisor._process is None, 'queued-case fixture must stop the server-started owner'
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     base = f"http://127.0.0.1:{server.server_address[1]}"

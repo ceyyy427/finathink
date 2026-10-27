@@ -501,6 +501,8 @@ class ResearchApplicationService:
             failed_stage = "REPORT_PUBLISHED"
         metrics = {}
         report_status = entry["report_status"] if entry is not None else "UNAVAILABLE"
+        if record.status is JobStatus.COMPLETED and report_status != "AVAILABLE":
+            publication_error = "PUBLICATION_INVALID"
         source = entry["manifest"].get("source_snapshot", {}) if entry is not None else {}
         if report_status == "AVAILABLE":
             metrics = entry["manifest"].get("source_snapshot", {}).get("quant_analytics", {}).get("metrics", {})
@@ -530,6 +532,7 @@ class ResearchApplicationService:
             "budget": request.research_plan.validation_spec["budget"], "attempts": record.attempts,
             "cancel_requested": record.cancel_requested,
             "created_at": _utc(record.created_at), "updated_at": _utc(record.updated_at),
+            "elapsed_seconds": round(max(0, (record.updated_at if record.status in {JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED} else self.queue._clock()) - record.created_at), 3),
             "state": state.current_state.value if state is not None else "RECEIVED", "state_history": history,
             "stages": [{"name": stage, "status": "FAILED" if stage == failed_stage else "RUNNING" if record.status is JobStatus.RUNNING and state is not None and stage == state.current_state.value else "COMPLETE" if stage in history else "PENDING"} for stage in _STAGES],
             "failure_kind": failure or publication_error, "failure_stage": failed_stage,
@@ -547,6 +550,11 @@ class ResearchApplicationService:
             total = db.execute(f"SELECT COUNT(*) FROM jobs j JOIN request_snapshots r ON r.task_ref=j.task_ref WHERE {where}", args).fetchone()[0]
             rows = db.execute(f"SELECT j.job_id FROM jobs j JOIN request_snapshots r ON r.task_ref=j.task_ref WHERE {where} ORDER BY j.created_at DESC,j.job_id LIMIT ? OFFSET ?", (*args, limit, offset)).fetchall()
         return {"schema_version": 1, "paper_only": True, "total": total, "limit": limit, "offset": offset, "jobs": [self.get_job(row["job_id"]) for row in rows]}
+
+    def diagnostic_summary(self):
+        """Bounded, scoped projection; never include questions or data rows."""
+        latest = self.list_jobs(limit=1)
+        return {"status": "AVAILABLE", "total_jobs": latest["total"], "latest_report_status": latest["jobs"][0]["report_status"] if latest["jobs"] else "NO_REPORT", "paper_only": True}
 
     def cancel(self, job_id):
         self._request(self.queue.get(job_id))

@@ -308,6 +308,7 @@ th { color: var(--text-muted); font-size: .78rem; letter-spacing: .06em; text-tr
 # reference for older embedded pages; the shell opts into this dark system
 # explicitly so every new surface shares the same tokens.
 _RESEARCH_JOBS_CSS = """
+[data-run-onboarding] { font-size: 16px; }
 .snapshot-fingerprint { overflow-wrap: anywhere; font-family: var(--font-mono, monospace); font-size: .85rem; color: var(--text-secondary); }
 [data-run-workspace] .grid > *, [data-run-workspace] label, [data-run-workspace] select { min-width: 0; max-width: 100%; }
 [data-run-workspace] .form-grid { min-width: 0; grid-template-columns: minmax(0, 1fr); }
@@ -575,8 +576,16 @@ class LocalApplication:
     def __init__(self, config: LocalAppConfig | None = None, *, connection: sqlite3.Connection | None = None, data_transport: Any | None = None, data_credential_store: DataCredentialStore | None = None) -> None:
         self.config = config or LocalAppConfig.from_env()
         if self.config.db_path != ":memory:":
-            Path(self.config.db_path).expanduser().parent.mkdir(parents=True, exist_ok=True)
-        self.connection = connection or sqlite3.connect(self.config.db_path, check_same_thread=False)
+            path = Path(self.config.db_path).expanduser()
+            path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+            if connection is None:
+                try:
+                    descriptor = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+                except FileExistsError:
+                    pass
+                else:
+                    os.close(descriptor)
+        self.connection = connection or sqlite3.connect(str(Path(self.config.db_path).expanduser()), check_same_thread=False)
         apply_p7_migration(self.connection)
         self.repository = SQLiteP7Repository(self.connection)
         self._bootstrap_identity()
@@ -683,7 +692,7 @@ class LocalApplication:
             return 200, "text/html; charset=utf-8", self.render_shell("/research", f"Research {run_id}", body, inspector=self._inspector("Research run", {"Run": run_id, "Mode": view_model["mode"], "Boundary": "PAPER-ONLY / READ-ONLY"}, status=view_model["mode"]), scripts=("/assets/finathink-research.js",))
         if len(parts) == 3 and parts[1] == "report":
             if entry["report_status"] != "AVAILABLE":
-                return 409, "application/json", {"error": "report bundle is missing or failed integrity verification", "report_status": entry["report_status"]}
+                return 409, "application/json", {"error": "报告文件缺失或完整性校验未通过。请恢复原始报告包，或返回研究任务新建研究；原始历史已保留。", "report_status": entry["report_status"]}
             section = parts[2]
             allowed = {"complete": "complete_report.html", "2_evidence": "2_evidence/index.html", "3_research": "3_research/index.html", "4_quant": "4_quant/index.html", "5_risk": "5_risk/index.html", "6_paper_decision": "6_paper_decision/index.html", "experiments": "experiments/index.html", "risk_attribution": "risk_attribution/index.html", "learning_history": "learning_history/index.html"}
             if section not in allowed:
@@ -956,14 +965,14 @@ class LocalApplication:
             "backend": "stdlib-http.server",
             "database": "sqlite",
             "database_path": "redacted; user-local app data",
-            "database_filename": Path(self.config.db_path).name,
+            "database_filename": "omitted",
             "sample_mode": self.config.sample_mode,
             "offline": self.config.offline,
             "network": "disabled by default; no provider call is made by sample journeys",
-            "secrets": "no API key configured; credentials are never logged",
+            "secrets": "凭证值不进入诊断；诊断不读取 Keychain 或环境变量内容。",
             "quant_runtime": "numpy/pandas OLS and P6.6 paper-only engines available",
             "knowledge_state": {"catalog_fingerprint": DEFAULT_CATALOG.fingerprint, "concept_count": len(DEFAULT_CATALOG.concepts)},
-            "source_connectivity": "offline fixture only; no provider call attempted",
+            "source_connectivity": "NOT_TESTED",
             "action": "If a run fails, inspect the structured error and verify the local database is writable; no credentials are required for sample mode.",
             "tables": tables,
             "real_money_execution": False,
@@ -973,10 +982,17 @@ class LocalApplication:
     def diagnostics_bundle(self) -> dict[str, Any]:
         """Return a shareable, path-redacted diagnostic bundle."""
 
+        try:
+            research = self.research_service.diagnostic_summary()
+        except (AttributeError, KeyError, ValueError, TypeError, RuntimeError, OSError, sqlite3.Error):
+            # Recovery diagnostics must not depend on reconstructing a healthy
+            # research request. Unknown counts are not zero, nor successful.
+            research = {"status": "UNAVAILABLE", "total_jobs": None, "latest_report_status": "UNKNOWN", "paper_only": True, "error_code": "RESEARCH_METADATA_UNAVAILABLE"}
         return {
-            "bundle_version": 1,
+            "bundle_version": 2,
             "service": "finahinking-local",
             "diagnostics": self.diagnostics(),
+            "research": research,
             "schema": {"tables": self.diagnostics()["tables"], "migration": "001-003 additive"},
             "privacy": {"database_path": "redacted", "secrets": "omitted", "personal_payloads": "omitted"},
             "next_action": "Attach this bundle to a local issue only after checking that no private text was added by a future extension.",
@@ -1227,26 +1243,27 @@ class LocalApplication:
     @staticmethod
     def _page_names() -> dict[str, str]:
         return {
-            "/": "Home",
-            "/events": "Events",
-            "/explore": "Explore",
-            "/knowledge": "Knowledge",
-            "/quant": "Quant",
-            "/strategy": "Strategy Lab",
-            "/research": "Research Workspace",
+            "/": "研究总览",
+            "/events": "市场事件",
+            "/explore": "探索研究",
+            "/knowledge": "知识学习",
+            "/quant": "量化分析",
+            "/strategy": "策略实验室",
+            "/research": "研究工作区",
             "/research/jobs": "研究任务",
             "/research/experiments": "因子实验",
             "/research/learning": "复盘与学习",
-            "/research/compare": "Research Comparison",
-            "/workbench": "Factor Strategy Workbench",
-            "/ml": "ML Lab",
-            "/parameter": "Parameter Lab",
-            "/workspace": "Workspace",
-            "/community": "Community",
-            "/settings/engines": "Engine Settings",
-            "/settings/providers": "Provider Access",
-            "/settings/data-sources": "Data Sources",
-            "/diagnostics": "Diagnostics",
+            "/research/compare": "研究对比",
+            "/workbench": "因子策略工作台",
+            "/ml": "机器学习实验",
+            "/parameter": "参数实验",
+            "/workspace": "个人工作区",
+            "/community": "社区研究",
+            "/settings/engines": "引擎设置",
+            "/settings/providers": "模型接口",
+            "/settings/data-sources": "数据来源",
+            "/settings/data-connections": "数据接口",
+            "/diagnostics": "诊断与恢复",
         }
 
     @staticmethod
@@ -1325,9 +1342,9 @@ class LocalApplication:
     def _nav(self, page: str) -> str:
         names = self._page_names()
         groups = (
-            ("Workspace", "nav-workspace", ("/", "/events", "/explore", "/research/jobs", "/research/experiments", "/research/learning", "/research", "/research/compare", "/workbench", "/workspace")),
-            ("Learn", "nav-learn", ("/knowledge", "/quant", "/strategy", "/ml", "/parameter")),
-            ("System", "nav-system", ("/community", "/settings/engines", "/settings/providers", "/settings/data-sources", "/diagnostics")),
+            ("研究", "nav-workspace", ("/", "/events", "/explore", "/research/jobs", "/research/experiments", "/research/learning", "/research", "/research/compare", "/workbench", "/workspace")),
+            ("学习", "nav-learn", ("/knowledge", "/quant", "/strategy", "/ml", "/parameter")),
+            ("系统", "nav-system", ("/community", "/settings/engines", "/settings/providers", "/settings/data-connections", "/settings/data-sources", "/diagnostics")),
         )
 
         # Keep the conditional attribute construction explicit so the rendered
@@ -1344,7 +1361,7 @@ class LocalApplication:
             '<a class="brand" href="/" aria-label="Finathink home">'
             '<span class="brand-mark" aria-hidden="true">F</span><span class="brand-name">Finathink</span></a>'
             + "".join(sections)
-            + '<p class="sidebar-note">Local-first research. Evidence before confidence. Paper-only strategy simulation.</p>'
+            + '<p class="sidebar-note">本地研究 · 可追溯证据 · 纸面策略验证</p>'
         )
 
     @staticmethod
@@ -1383,15 +1400,15 @@ class LocalApplication:
         from .research.learning_workspace_page import LEARNING_CSS
 
         return (
-            '<!doctype html><html lang="en"><head><meta charset="utf-8">'
+            '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">'
             '<meta name="viewport" content="width=device-width,initial-scale=1">'
             f"<title>{html.escape(title)} · Finathink</title>"
             '<meta name="theme-color" content="#050B18">'
             '<meta http-equiv="Content-Security-Policy" content="default-src \'self\'; img-src \'self\'; style-src \'self\' \'unsafe-inline\'; script-src \'self\'; connect-src \'self\'; form-action \'self\'">'
             f"<style>{_DARK_APP_CSS}{_RESEARCH_JOBS_CSS if page == '/research/jobs' else ''}{_FACTOR_STUDY_CSS if page == '/research/experiments' else ''}{LEARNING_CSS if page == '/research/learning' else ''}</style>{style_tags}{script_tags}</head><body>"
-            '<a class="skip-link" href="#main">Skip to content</a>'
+            '<a class="skip-link" href="#main">跳到主要内容</a>'
             '<div class="app-shell">'
-            f'<nav class="sidebar" aria-label="Primary">{self._nav(clean_page)}</nav>'
+            f'<nav class="sidebar" aria-label="主导航">{self._nav(clean_page)}</nav>'
             f'<main class="workspace" id="main" tabindex="-1"><header class="topbar" aria-label="Workspace context"><div class="topbar-context"><strong>Finathink</strong><span>/</span><span>{html.escape(title)}</span></div><div class="topbar-actions"><span class="local-status">Local Workspace</span><span class="status status--offline">PAPER-ONLY</span></div></header><div class="workspace-inner">'
             f'<p class="eyebrow">{html.escape(eyebrow)}</p>{body}'
             '<p class="footer-note">Finathink is a local-first research and education tool. Results are descriptive, bounded, and not trading instructions.</p>'
@@ -1512,6 +1529,13 @@ class LocalApplication:
             '<section data-run-workspace data-job-status="EMPTY">'
             '<div class="status-row"><span class="status status--offline">LOCAL WORKSPACE</span><span class="status status--ready">PAPER-ONLY</span></div>'
             '<h1>研究任务</h1><p class="lede">选定数据，运行有边界的研究，保留可以复核的结果。</p>'
+            '<section class="panel section" data-run-onboarding aria-labelledby="first-use-title"><h2 id="first-use-title">第一次使用：生成一份离线报告</h2>'
+            '<ol><li>准备数据：展开下方“使用明确标记的演示数据”，点击“生成 SAMPLE 快照”。此步骤无需 API Key，也不联网。</li>'
+            '<li>选择研究模板，核对已选快照、标的和截止日。保留“本地确定性流程”，点击“提交研究任务”。</li>'
+            '<li>在“运行与结果”查看阶段、耗时和预算，完成后打开完整 HTML 报告。报告可保存为文件，离线阅读。</li></ol>'
+            '<p>接入自己的数据时：<a href="/settings/data-connections">保存数据接口与字段映射</a> → 在本页显式获取快照 → 提交研究。'
+            '需要材料分析时再<a href="/settings/providers">配置模型接口</a>并逐次授权。</p>'
+            '<div data-run-readiness role="status" aria-live="polite"><p data-run-data-state>正在读取数据准备状态…</p><p data-run-model-state>正在读取模型配置状态…</p></div></section>'
             '<p>服务器运行两观察期动量基线、含费用回测和同信号纸面风控。至少四条低频 OHLCV，每个 UTC 日期最多一条；历史信号所用数据必须在下一根观测执行前可用。周期按观测条数计算，未验证交易日历时不展示年化收益、波动率或夏普。可选择离线流程，或明确授权所选模型分析材料；模型观察不修改数值策略。</p>'
             f'<input data-run-csrf type="hidden" value="{self.csrf_token}">'
             '<p data-run-loading role="status">正在读取快照与任务记录…</p>'
@@ -1527,6 +1551,7 @@ class LocalApplication:
             '<label>已保存的快照<select name="snapshot_ref" required><option value="">请选择数据快照</option></select></label>'
             '<p class="field-help" data-snapshot-description>尚未选择数据，不会自动使用演示数据。</p>'
             '<label>研究标的<input name="instrument" required maxlength="128" value="AAA"></label><label>研究截止日（UTC 当日结束）<input type="date" name="as_of" required></label>'
+            '<label>研究模板<select data-run-template><option value="">保留自己填写的问题</option><option value="baseline">基础复核：动量、费用与历史回撤</option><option value="risk">风险复核：成本、容量与损失情景</option><option value="materials">材料研究：基本面、新闻与情绪证据</option></select></label><p class="field-help">模板只填入研究问题，不改变基线算法。材料分析另需模型配置与明确授权。</p>'
             '<label>研究问题<textarea name="question" required maxlength="2000" rows="3">检验这个快照上的动量基线，并检查费用与历史回撤。</textarea></label>'
             '<label>执行配置<select name="model_config_ref"><option value="offline">本地确定性流程 / 不调用模型</option></select></label>'
             '<p><a href="/settings/providers">配置用户自己的模型接口</a></p>'
@@ -1535,9 +1560,9 @@ class LocalApplication:
             '<label>墙钟上限（秒，最多 300）<input name="max_wall_seconds" type="number" min="5" max="300" value="120" required></label>'
             '<button type="submit">提交研究任务</button></form><button type="button" class="button-secondary" data-run-new>新建另一项研究</button></section></div>'
             '<section class="panel section" data-run-progress aria-live="polite" aria-atomic="false"><h2>03 / 运行与结果</h2>'
-            '<p data-run-empty>还没有研究任务。先选择快照并提交研究。</p><p data-run-state></p><p data-run-identity class="snapshot-fingerprint"></p><ol class="research-stage-list" data-run-stages></ol>'
+            '<p data-run-empty>还没有研究任务。先选择快照并提交研究。</p><p data-run-state></p><p data-run-budget></p><p data-run-identity class="snapshot-fingerprint"></p><ol class="research-stage-list" data-run-stages></ol>'
             '<p class="field-help" data-run-data-note></p><p data-run-model-summary></p><ul class="overview-list" data-run-call-records></ul><ul class="overview-list" data-run-model-roles></ul><div data-run-synthesis></div><dl data-run-metrics></dl><p data-run-failure></p><div class="action-row"><button type="button" data-run-cancel disabled>取消任务</button><a data-run-report hidden>打开完整 HTML 报告</a><a data-run-detail hidden>查看研究档案</a></div></section>'
-            '<section class="panel section"><h2>最近的后台任务</h2><p>刷新页面或重启服务后，可从这里继续查看；相同提交标识不会重复排队。</p><ul class="overview-list" data-run-history></ul><a href="/research/compare">比较已发布的研究</a></section>'
+            '<section class="panel section"><h2>最近的后台任务</h2><p>刷新页面或重启服务后，可从这里继续查看；相同提交标识不会重复排队。</p><ul class="overview-list" data-run-history></ul><div class="action-row"><button type="button" class="button-secondary" data-run-history-prev disabled>上一页任务</button><span data-run-history-page role="status"></span><button type="button" class="button-secondary" data-run-history-next disabled>下一页任务</button></div><a href="/research/compare">比较已发布的研究</a></section>'
             '<noscript><p>任务提交和跟踪需要 JavaScript。已发布的 HTML 报告可离线阅读。</p></noscript></section>'
         )
 
@@ -1588,26 +1613,26 @@ class LocalApplication:
     def _data_connections_page(self) -> str:
         rows = self._data_connections.list()
         cards = "".join(
-            f'<article class="card"><h2>{html.escape(str(item["display_name"]))}</h2><p><code>{html.escape(str(item["connection_id"]))}</code> · {html.escape(str(item["auth_mode"]))}</p><p class="meta">Credential: {"configured" if item["credential_configured"] else "not configured"} · Endpoint is kept out of this view.</p></article>'
+            f'<article class="card"><h2>{html.escape(str(item["display_name"]))}</h2><p><code>{html.escape(str(item["connection_id"]))}</code> · {html.escape(str(item["auth_mode"]))}</p><p class="meta">凭证：{"已配置" if item["credential_configured"] else "未配置"} · 配置保存不代表连接已验证，地址不在此视图中展示。</p></article>'
             for item in rows
-        ) or '<div class="empty-state"><p>No user data connections have been configured.</p></div>'
+        ) or '<div class="empty-state"><p>尚无数据接口。填写下方配置，保存后返回研究任务页显式获取快照；也可先使用演示数据完成第一份报告。</p></div>'
         body = (
-            '<h1>User data connections</h1>'
-            '<p class="lede">Connect a data API selected and authorized by you. Finathink stores only the connection contract and a local credential reference.</p>'
+            '<h1>数据接口</h1>'
+            '<p class="lede">接入你选择并有权使用的数据 API。Finathink 保存连接配置和本地凭证引用，读取数据由你明确发起。</p>'
             '<section class="card"><form class="form-grid" method="post" action="/api/data/connections">'
             f'<input type="hidden" name="_csrf" value="{html.escape(self.csrf_token)}">'
-            '<label>Connection ID<input name="connection_id" required maxlength="64"></label>'
-            '<label>Display name<input name="display_name" required maxlength="160"></label>'
-            '<label>API address<input name="base_url" type="url" required></label>'
-            '<label>Authentication<select name="auth_mode"><option value="no_auth">No authentication</option><option value="bearer">Bearer</option><option value="api_key_header">API key header</option></select></label>'
-            '<label>API key (never displayed)<input name="api_key" type="password" autocomplete="new-password"></label>'
-            '<label>API key header (for header mode)<input name="auth_header" value="X-API-Key" maxlength="64"></label>'
-            '<label>Records path<input name="records_path" placeholder="data" maxlength="128"></label>'
-            '<label>Field mapping (JSON)<textarea name="field_mapping">{"instrument":"ticker","timestamp":"time","close":"price"}</textarea></label>'
-            '<button type="submit">Save connection</button></form><p class="field-help">Saving does not download data. A connection test is a separate, explicit action.</p></section>'
-            f'<section class="section"><h2>Saved connections</h2><div class="grid">{cards}</div></section>'
+            '<label>连接标识（英文、数字或连字符）<input name="connection_id" required maxlength="64" placeholder="my-prices"></label>'
+            '<label>显示名称<input name="display_name" required maxlength="160" placeholder="我的日频行情"></label>'
+            '<label>API 地址（HTTPS）<input name="base_url" type="url" required></label>'
+            '<label>认证方式<select name="auth_mode"><option value="no_auth">无需认证</option><option value="bearer">Bearer 凭证</option><option value="api_key_header">API Key 请求头</option></select></label>'
+            '<label>API Key（保存后不回显）<input name="api_key" type="password" autocomplete="new-password"></label>'
+            '<label>API Key 请求头名称（请求头认证时填写）<input name="auth_header" value="X-API-Key" maxlength="64"></label>'
+            '<label>记录所在路径<input name="records_path" placeholder="data" maxlength="128"></label>'
+            '<label>字段映射（左侧为平台字段，右侧改为你的 API 字段）<textarea name="field_mapping" rows="7">{"instrument":"ticker","timestamp":"time","open":"open","high":"high","low":"low","close":"price","volume":"volume","available_at":"available_at"}</textarea></label>'
+            '<button type="submit">保存数据接口</button></form><p class="field-help">保存不会下载数据。日频研究需要标的、观测时间、开高低收、成交量与数据可用时间；日期建议使用带时区的时间戳。映射不补造缺失的数据。</p><p><a href="/research/jobs">返回研究任务，获取数据快照</a></p></section>'
+            f'<section class="section"><h2>已保存的接口</h2><div class="grid">{cards}</div></section>'
         )
-        return self.render_shell("/settings/data-connections", "User data connections", body, inspector=self._inspector("Data boundary", {"Mode": "USER-OWNED API", "Secrets": "REFERENCE ONLY", "Download": "EXPLICIT TEST ONLY"}, status="OFFLINE"))
+        return self.render_shell("/settings/data-connections", "数据接口", body, inspector=self._inspector("数据边界", {"模式": "用户自己的 API", "凭证": "仅保存引用", "读取": "用户明确发起"}, status="USER-OWNED"))
 
     def route(self, method: str, path: str, *, query: Mapping[str, list[str]] | None = None, body: Any = None) -> tuple[int, str, Any]:
         """Return ``(status, content_type, payload)`` without requiring a socket."""
@@ -1970,19 +1995,26 @@ class LocalApplication:
 
         is_error = isinstance(payload, Mapping) and "error" in payload
         escaped = html.escape(json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False))
-        heading = "Research needs attention" if is_error else "Research result saved"
+        heading = "请求需要处理" if is_error else "本地结果已保存"
         message = (
-            "The request was not accepted. Read the recovery action below and retry."
+            "请求尚未被接受。请核对字段、认证方式和本地应用状态，再重新操作。"
             if is_error
-            else "The result and provenance are preserved locally. Continue in Workspace to reopen it."
+            else "配置或研究结果已保存在本地，可返回对应工作区继续。"
         )
-        action = html.escape(str(payload.get("action", "Review the fields and retry."))) if is_error else "Continue from the saved artifact."
+        action = "请检查输入后重试；保存配置不会自动获取数据或调用模型。" if is_error else "从已保存的记录继续。"
         if is_error or not isinstance(payload, Mapping):
             body = (
                 f'<h1>{html.escape(heading)}</h1><p class="lede">{message}</p>'
                 f'<section class="card {"error-state" if is_error else "result"}" role="{"alert" if is_error else "status"}" aria-live="polite">'
                 f'<h2>{html.escape(title)}</h2><p>{action}</p><details><summary>Inspect structured payload</summary><pre>{escaped}</pre></details>'
                 '</section><div class="action-row"><a class="button-secondary" href="/workspace">Open Workspace</a><a class="button-secondary" href="/diagnostics">View Diagnostics</a></div>'
+            )
+        elif payload.get("connection_id"):
+            body = (
+                '<h1>数据接口已保存</h1><p class="lede">本次只保存配置，尚未读取数据。</p>'
+                f'<p>接口：{html.escape(str(payload.get("display_name", payload["connection_id"])))}</p>'
+                '<p>接下来返回研究任务页，选择这个接口、标的与日期，点击“获取并保存快照”。凭证值不会在页面中回显。</p>'
+                '<div class="action-row"><a class="button" href="/research/jobs">获取数据并开始研究</a><a href="/settings/data-connections">查看已保存的接口</a></div>'
             )
         elif payload.get("strategy_spec"):
             spec = payload.get("strategy_spec") or {}
@@ -2469,7 +2501,7 @@ class LocalApplication:
             event_id = html.escape(str(self.event().get("id", "")))
             return f'<h1>Community</h1><p class="lede">Calm evidence discussion: claims, questions, and counter-evidence remain private until explicit projection consent and an allow-listed field set exist.</p><div class="status-row">{self._status("PRIVATE BY DEFAULT", "limitation")}{self._status("NO LEADERBOARDS", "ready")}</div><section class="card"><form class="form-grid" method="post" action="/api/community"><input type="hidden" name="_csrf" value="{self.csrf_token}"><label for="claim">Claim or question<textarea id="claim" name="claim" required maxlength="2000" aria-describedby="claim-help"></textarea></label><p class="field-help" id="claim-help">State what you are unsure about; do not paste credentials or private identifiers.</p><button type="submit">Save private question</button></form></section><section class="card"><h2>Explicit projection</h2><form class="form-grid" method="post" action="/api/community/project"><input type="hidden" name="_csrf" value="{self.csrf_token}"><input type="hidden" name="source_id" value="{event_id}"><input type="hidden" name="fields" value="event_type,reference_period,published_at,revision_status,limitations"><label><span><input type="checkbox" name="consent" value="true" required> I consent to this descriptive projection</span></label><button type="submit">Project selected event fields</button></form></section><section class="section"><h2>Questions</h2>{empty}<div class="grid">{post_html}</div></section>'
         diagnostics = html.escape(json.dumps(self.diagnostics(), indent=2, sort_keys=True))
-        return f'<h1>Diagnostics</h1><p class="lede">A redacted local health view with clear recovery actions. Personal payloads and secrets are omitted.</p><div class="action-row"><a class="button-secondary" href="/api/diagnostics/bundle">Download redacted bundle</a><a class="button-secondary" href="/api/personal/backup">Back up private data</a></div><section class="card"><pre>{diagnostics}</pre></section>'
+        return f'<h1>诊断与恢复</h1><p class="lede">查看本地健康状态，下载脱敏诊断，保留可以排查的问题线索。</p><p>连接失败时先检查应用是否正在运行、磁盘空间与数据字段映射。返回<a href="/research/jobs">研究任务</a>重新读取记录；结果不确定时先查找原任务，避免重复新建。</p><div class="action-row"><a class="button-secondary" href="/api/diagnostics/bundle" download="finathink-diagnostics.json">下载脱敏诊断</a><a class="button-secondary" href="/api/personal/backup">单独备份个人笔记</a></div><p>完整研究状态备份与恢复：先关闭应用，再按快速开始中的维护命令操作。恢复到新目录，保留原始文件。诊断不包含个人内容、数据行、完整问题、接口地址或凭证值；分享前仍请自行检查。</p><section class="card"><h2>本地状态</h2><pre>{diagnostics}</pre></section>'
 
     def close(self) -> None:
         if self._research_application is not None:
@@ -2489,14 +2521,16 @@ class _Handler(BaseHTTPRequestHandler):
         elif isinstance(payload, str):
             raw = payload.encode("utf-8")
         else:
-            raw = json.dumps(payload, sort_keys=True).encode("utf-8")
+            raw = json.dumps(payload, sort_keys=True, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(raw)))
         self.send_header("Cache-Control", "no-store")
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("X-Frame-Options", "DENY")
-        self.send_header("Referrer-Policy", "no-referrer")
+        # no-referrer turns Chromium's native POST Origin into "null".
+        # Keep the origin guard strict and omit referrers to external sites.
+        self.send_header("Referrer-Policy", "same-origin")
         self.send_header("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()")
         self.send_header("Content-Security-Policy", "default-src 'self'; img-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'")
         self.send_header("Set-Cookie", "finahinking_session=local; HttpOnly; SameSite=Strict; Path=/")
@@ -2523,8 +2557,8 @@ class _Handler(BaseHTTPRequestHandler):
         try:
             status, content_type, payload = self._application().route("GET", parsed.path, query=parse_qs(parsed.query))
             self._send(status, content_type, payload)
-        except (AttributeError, KeyError, ValueError, TypeError, RuntimeError) as exc:
-            self._send(503, "application/json", {"error": str(exc), "action": "inspect /diagnostics and retry"})
+        except (AttributeError, KeyError, ValueError, TypeError, RuntimeError, OSError, sqlite3.Error):
+            self._send(503, "application/json", {"error": "本地服务暂时无法完成请求，请检查应用状态与磁盘空间。", "action": "打开诊断与恢复页面，重新读取记录后重试。"})
 
     def do_POST(self) -> None:
         if not self._safe_origin():
@@ -2558,13 +2592,17 @@ class _Handler(BaseHTTPRequestHandler):
                 return
         parsed = urlsplit(self.path)
         try:
+            if content_type == "application/x-www-form-urlencoded" and parsed.path == "/api/data/connections" and body.get("auth_mode") != "api_key_header":
+                # Native forms include this header-mode-only control even
+                # when Bearer/no-auth was selected. Keep JSON API validation strict.
+                body.pop("auth_header", None)
             status, response_type, payload = self._application().route("POST", parsed.path, body=body)
             if content_type == "application/x-www-form-urlencoded" and response_type == "application/json":
                 self._send(status, "text/html; charset=utf-8", self._application().render_result_page("Research result", payload))
             else:
                 self._send(status, response_type, payload)
-        except (AttributeError, KeyError, ValueError, TypeError, RuntimeError, PermissionError) as exc:
-            self._send(400, "application/json", {"error": str(exc), "action": "inspect /diagnostics and retry"})
+        except (AttributeError, KeyError, ValueError, TypeError, RuntimeError, OSError, sqlite3.Error):
+            self._send(400, "application/json", {"error": "请求未完成，请检查输入、认证方式和应用状态。", "action": "先在研究任务页读取原记录，避免重复新建；必要时下载脱敏诊断。"})
 
     def log_message(self, fmt: str, *args: Any) -> None:
         return

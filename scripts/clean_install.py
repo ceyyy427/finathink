@@ -70,6 +70,7 @@ assert get_knowledge_unit('sharpe').unit_id == 'sharpe'
 app.close()
 """
         _run([str(python), "-c", probe], cwd=work)
+        _run([str(python), str(ROOT / 'scripts' / 'check_installed_journey.py'), '--state-root', str(work / 'first-use')], cwd=work)
         print(f"clean wheel install smoke passed: {wheel.name}")
     return 0
 

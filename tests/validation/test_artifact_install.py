@@ -72,3 +72,4 @@ assert app.route('GET', '/api/p8_2b/knowledge/ols')[2]['unit']['unit_id'] == 'ol
 app.close()
 """
     _run_checked([str(python), "-c", probe], cwd=tmp_path)
+    _run_checked([str(python), str(ROOT / 'scripts' / 'check_installed_journey.py'), '--state-root', str(tmp_path / 'first-use')], cwd=tmp_path)

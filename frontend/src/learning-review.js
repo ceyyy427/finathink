@@ -1,4 +1,5 @@
 // Render approved, server-owned evidence. Never derive outcomes or policy rules.
+import { readLocalJSON, userErrorMessage } from './local-request.js';
 const mounted = new WeakMap();
 const DIGEST = /^[0-9a-f]{64}$/;
 const STATES = new Set(['PENDING_REVIEW', 'APPROVED', 'REJECTED', 'KEEP_POLICY']);
@@ -23,12 +24,7 @@ export function mountLearningReview(root, { fetcher = globalThis.fetch, interval
   const form = q('[data-learning-form]'); const reviewForm = q('[data-learning-review-form]'); const rerunForm = q('[data-learning-rerun-form]');
   const csrf = q('[data-learning-csrf]').value;
   let current; let snapshots = []; let policies = []; let busy = false; let disposed = false; let generation = 0; let timer; let controller; let activeJob; let rerunKey;
-  const request = async (url, options = {}) => {
-    const response = await fetcher(url, { credentials: 'same-origin', ...options });
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.error ?? '本地请求未完成，请重新读取记录后重试。');
-    return result;
-  };
+  const request = (url, options) => readLocalJSON(fetcher, url, options);
   const post = (url, values) => request(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...values, _csrf: csrf }) });
   const reportLink = (target, url) => {
     const safe = /^\/research\/[A-Za-z0-9_-]+\/report\/complete$/.test(url ?? ''); target.hidden = !safe;
@@ -43,7 +39,7 @@ export function mountLearningReview(root, { fetcher = globalThis.fetch, interval
   }
   function error(reason) {
     q('[data-learning-status]').setAttribute('role', 'alert');
-    text('[data-learning-status]', `需要处理：${reason.message} 输入已保留；可重新读取记录后重试。`);
+    text('[data-learning-status]', `需要处理：${userErrorMessage(reason)} 输入已保留；可重新读取记录后重试。`);
   }
   function options(select, items, placeholder) {
     const old = select.value;

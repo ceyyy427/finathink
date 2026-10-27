@@ -273,14 +273,14 @@ def test_http_runtime_journey_has_no_js_navigation_redacted_settings_and_read_on
             document.feed(page)
             assert document.has("a", href="#main")
             assert document.has("main", id="main", tabindex="-1")
-            assert document.has("nav", **{"aria-label": "Primary"})
+            assert document.has("nav", **{"aria-label": "主导航"})
             assert document.has("a", **{"aria-label": "Finathink home"})
             pages[path] = document
 
         settings = pages["/settings/data-connections"]
         assert settings.has("input", name="api_key", type="password", autocomplete="new-password")
-        assert "API key (never displayed)" in settings.visible_text
-        assert "Saving does not download data" in settings.visible_text
+        assert "API Key（保存后不回显）" in settings.visible_text
+        assert "保存不会下载数据" in settings.visible_text
         assert pages["/settings/providers"].has("input", name="credential_env")
         assert not pages["/settings/providers"].has("input", name="api_key")
 

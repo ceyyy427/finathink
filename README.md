@@ -79,6 +79,8 @@ Finathink 将用户提供的数据、证据、因子、量化检验、风险检�
 - 报告包含分析师、证据、研究、量化、风险、纸面决策和学习状态。
 - 状态墙提供阶段、角色、重试、checkpoint、工具摘要和 manifest 指纹。
 - 可比较多次实验的输入、指标和限制，并保留离线无 JavaScript 阅读能力。
+- 中文导航与首次使用引导，提供研究问题模板、数据/模型准备状态、中文异常恢复提示和服务器耗时预算。
+- 历史任务分页查询；完整研究状态可在关闭应用后私密备份、校验并恢复到新目录，另有可分享的脱敏诊断。
 
 ## 快速开始
 
@@ -87,10 +89,8 @@ Finathink 将用户提供的数据、证据、因子、量化检验、风险检�
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-python3 -m pip install --upgrade pip
-python3 -m pip install -e '.[dev]'
-PYTHONPATH=src python3 -m pytest -q
-python3 scripts/run_local_app.py --sample --port 8765
+python3 -m pip install .
+finathink --offline --db .local-state/app.sqlite3 --port 8765
 ```
 
 打开：
@@ -103,7 +103,9 @@ python3 scripts/run_local_app.py --sample --port 8765
 - 因子策略工作台：<http://127.0.0.1:8765/workbench>
 - Provider 设置：<http://127.0.0.1:8765/settings/providers>
 
-低频数据准备、任务接口与验收说明见[本地研究闭环指南](docs/PHASE5_LOCAL_RESEARCH_GUIDE.md)。
+首次体验：打开“后台研究任务”，显式生成 SAMPLE 快照，选择研究问题模板，保留离线执行配置并提交。完成后打开 HTML 报告，即可保存后离线阅读。
+
+Windows 安装、自有 API 配置、异常处理与备份恢复见[中文快速开始](docs/QUICKSTART.md)。低频数据准备、任务接口与验收说明见[本地研究闭环指南](docs/PHASE5_LOCAL_RESEARCH_GUIDE.md)。
 
 研究配方、滚动验证、可比条件和风险执行口径见[量化实验与稳健性验证指南](docs/PHASE7_QUANT_RESEARCH_GUIDE.md)。
 
