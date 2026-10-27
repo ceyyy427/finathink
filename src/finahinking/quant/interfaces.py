@@ -90,6 +90,7 @@ class BacktestConfig:
     allow_negative_cash: bool = False
     annualization: int = 252
     max_abs_weight: float = 1.0
+    max_volume_participation: float | None = None
 
     def __post_init__(self) -> None:
         starting_cash = _finite(self.starting_cash, "starting cash")
@@ -116,6 +117,13 @@ class BacktestConfig:
         object.__setattr__(self, "fee_bps", fee_bps)
         object.__setattr__(self, "slippage_bps", slippage_bps)
         object.__setattr__(self, "max_abs_weight", max_abs_weight)
+        if self.max_volume_participation is not None:
+            if isinstance(self.max_volume_participation, bool):
+                raise TypeError("volume participation must be numeric")
+            participation = _finite(self.max_volume_participation, "volume participation")
+            if not 0 < participation <= 1:
+                raise ValueError("volume participation must be in (0, 1]")
+            object.__setattr__(self, "max_volume_participation", participation)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -127,6 +135,7 @@ class BacktestConfig:
             "allow_negative_cash": self.allow_negative_cash,
             "annualization": self.annualization,
             "max_abs_weight": self.max_abs_weight,
+            **({"max_volume_participation": self.max_volume_participation} if self.max_volume_participation is not None else {}),
         }
 
     @classmethod

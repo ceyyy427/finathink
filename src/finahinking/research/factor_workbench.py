@@ -9,6 +9,7 @@ from itertools import pairwise
 
 import pandas as pd
 
+from finahinking.factors.dsl import evaluate_expression
 from finahinking.factors.evaluation import evaluate_factor_candidate
 
 from .contracts import stable_digest
@@ -123,8 +124,11 @@ def compute_study(snapshot, study, *, phase, validation=None):
         if budget is not None:
             budget.charge_experiments(1)
         evaluation = evaluate_factor_candidate(candidate, frame, forward, {"phase": "test", "oos": True, "shift_periods": 1, "label_horizon": spec["label_horizon"], "cost_per_turnover": cost, "min_samples": 8, "scoring_index": frame.index[temporal["test"]], "evaluation_start": frame.index[temporal["test"][0]], "evaluation_end": frame.index[temporal["test"][-1]], "as_of": frame.index[-1]})
+        factor = evaluate_expression(candidate.expression, frame).shift(1)
+        pairs = pd.concat([factor.rename("factor"), forward.rename("forward")], axis=1).loc[frame.index[temporal["test"]]].replace([float("inf"), float("-inf")], float("nan")).dropna()
+        samples = [[timestamp.isoformat() for timestamp in pairs.index]]
         result = json.loads(json.dumps(validation))
-        result.update(phase="TEST", state="TEST_EVALUATED", selected_candidate=study["candidate_id"], test_evaluation=evaluation.to_dict(), test_summary=_summary({**record, "failure_reason": None if evaluation.status.value == "VALID" else evaluation.status.value, "sample_ids": [[frame.index[i].isoformat() for i in temporal["test"]]]}, spec, study["spec_ref"], phase="TEST", evaluation=evaluation.to_dict()))
+        result.update(phase="TEST", state="TEST_EVALUATED", selected_candidate=study["candidate_id"], test_evaluation=evaluation.to_dict(), test_summary=_summary({**record, "failure_reason": None if evaluation.status.value == "VALID" else evaluation.status.value, "sample_ids": samples}, spec, study["spec_ref"], phase="TEST", evaluation=evaluation.to_dict()))
     else:
         raise ValueError("unknown study phase")
     result.update(paper_only=True, requires_human_admission=True, production_write=False)

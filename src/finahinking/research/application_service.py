@@ -502,6 +502,7 @@ class ResearchApplicationService:
             "question": request.research_plan.hypotheses[0], "model_config_ref": request.research_plan.validation_spec.get("model_config_ref", "offline"),
             "model_research": model_research,
             "factor_study": source.get("factor_study"),
+            "risk_portfolio": source.get("risk_portfolio"),
             "budget": request.research_plan.validation_spec["budget"], "attempts": record.attempts,
             "cancel_requested": record.cancel_requested,
             "created_at": _utc(record.created_at), "updated_at": _utc(record.updated_at),

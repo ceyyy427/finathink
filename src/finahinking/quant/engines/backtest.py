@@ -23,10 +23,14 @@ from ..interfaces import (
 class BacktestEngine:
     """Execute target weights at the next bar with explicit costs."""
 
-    engine_version = "p5.inhouse.0.1"
+    engine_version = "p5.inhouse.0.2"
 
     def run(self, dataset: Dataset, strategy: Strategy, config: BacktestConfig) -> BacktestResult:
         frame = validate_price_dataset(dataset.frame, "close")
+        if "suspended" in frame and any(not isinstance(value, bool) for value in frame["suspended"].tolist()):
+            raise ValueError("suspended must contain explicit booleans")
+        if config.max_volume_participation is not None and ("volume" not in frame or any(not math.isfinite(float(value)) or float(value) < 0 for value in frame["volume"])):
+            raise ValueError("volume participation requires finite non-negative volumes")
         if not hasattr(strategy, "strategy_id") or not hasattr(strategy, "version"):
             raise ValueError("strategy must define strategy_id and version")
         strategy_id = validate_identifier(strategy.strategy_id, "strategy identifier")
@@ -67,6 +71,13 @@ class BacktestEngine:
             target_weight = 0.0 if index == 0 else float(numeric.iloc[index - 1])
             target_position = target_weight * equity_before_trade / price
             delta = target_position - position
+            # Actual execution-bar availability can prevent or partially fill
+            # yesterday's intent; it never changes yesterday's signal.
+            if "suspended" in frame and bool(frame["suspended"].iloc[index]):
+                delta = 0.0
+            elif config.max_volume_participation is not None:
+                capacity = float(frame["volume"].iloc[index]) * config.max_volume_participation
+                delta = math.copysign(min(abs(delta), capacity), delta)
             if abs(delta) > 1e-12:
                 side = "buy" if delta > 0 else "sell"
                 quantity = abs(delta)

@@ -310,6 +310,7 @@ class ReportBundleWriter:
             status_model["source_metadata"] = analytics_payload.get("source_metadata", {})
             status_model["model_research"] = analytics_payload.get("model_research")
             status_model["factor_study"] = analytics_payload.get("factor_study")
+            status_model["risk_portfolio"] = analytics_payload.get("risk_portfolio")
         complete_path = bundle / "complete_report.html"
         complete_path.write_text(
             render_status_wall_html(status_model, title="Finathink research report"),
@@ -338,6 +339,7 @@ class ReportBundleWriter:
                 **({"data_mode": analytics_payload.get("data_mode", "UNKNOWN"), "data_limitations": analytics_payload.get("limitations", []), "source_metadata": analytics_payload.get("source_metadata", {})} if analytics_payload else {}),
                 **({"model_research": analytics_payload["model_research"]} if analytics_payload and analytics_payload.get("model_research") else {}),
                 **({"factor_study": analytics_payload["factor_study"]} if analytics_payload and analytics_payload.get("factor_study") else {}),
+                **({"risk_portfolio": analytics_payload["risk_portfolio"]} if analytics_payload and analytics_payload.get("risk_portfolio") else {}),
                 **{section: payload for section, payload in runtime_payloads.items()},
                 **({"quant_analytics": {"fingerprint": analytics_payload.get("fingerprint"), "policy_fingerprint": analytics_payload.get("policy_fingerprint"), "metrics": analytics_payload.get("metrics", {}), "comparison_conditions": analytics_payload.get("comparison_conditions", {}), "limitations": analytics_payload.get("limitations", ())}} if analytics_payload else {}),
             },

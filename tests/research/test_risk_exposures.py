@@ -121,6 +121,18 @@ def test_review_carries_exposure_and_stress_evidence_and_limits() -> None:
     assert reviewed.to_dict()["evidence_refs"] == list(reviewed.evidence_refs)
 
 
+def test_review_checks_cvar_limit_and_rejects_a_valid_report_from_another_snapshot():
+    base = snapshot(proposed_weights=portfolio()["weights"])
+    exposure = RiskManager().exposure(base, portfolio(), factors()).to_dict()
+    stress = RiskManager().stress(base, portfolio(), {"market": {"return_shock": -0.1, "max_loss": 0.2}}).to_dict()
+    constraints = {"max_drawdown": 0.2, "max_cvar": 0.05, "stress_scenarios": {"market": {}}}
+    reviewed = RiskManager().review(dict(base, exposure_report=exposure, stress_report=stress), {"status": "READY", "metrics": {"drawdown": 0}}, constraints)
+    assert not reviewed.passed and any("CVaR" in item for item in reviewed.blocking_reasons)
+    changed = dict(base, snapshot_id="another-snapshot")
+    reviewed = RiskManager().review(dict(changed, exposure_report=exposure, stress_report=stress), {"status": "READY", "metrics": {"drawdown": 0}}, dict(constraints, max_cvar=0.2))
+    assert not reviewed.passed and any("binding" in item for item in reviewed.blocking_reasons)
+
+
 def test_empty_scenario_and_incomplete_factor_shock_metrics_block() -> None:
     empty = RiskManager().stress(snapshot(), portfolio(), {"empty": {}})
     assert empty.status == "BLOCKED"
