@@ -16,6 +16,24 @@ from typing import Any
 
 from .contracts import ReportManifest, ResearchRunResult, RunEvent, stable_digest, to_jsonable
 
+
+def method_handoff_activity(package, status):
+    """Digest/count-only facts; external response acceptance is not a backtest."""
+    payload = package.context.to_dict()
+    methods = payload["method_context"]["manifest"]
+    return {
+        "schema_version": "method-activity.v1", "status": status,
+        "task_id": package.envelope.task_id, "package_digest": package.package_digest,
+        "context_digest": package.context.fingerprint,
+        "context_bytes": len(package.context._json.encode("utf-8")),
+        "methods": [{"skill_id": row["skill_id"], "version": row["version"], "reason": row["reason"]}
+                    for row in methods["methods"]],
+        "resource_count": len(methods["loaded"]), "input_gaps": methods["input_gaps"],
+        "external_response": "WAITING" if status == "EXTERNAL_HANDOFF_REQUIRED" else "RECEIVED",
+        "deterministic_execution": "NOT_RUN", "automatic_codex_driver": "NOT_VERIFIED",
+        "paper_only": True,
+    }
+
 _SECRET_TEXT = re.compile(r"(?i)(?:api[_-]?key|token|secret|password|endpoint)\s*[=:]\s*[^\s<]+")
 _ABSOLUTE_PATH = re.compile(r"(?:/(?:Users|home|tmp|var|private|etc|opt|root|Volumes|Applications|Library)(?:/[^\s<]+)+|[A-Za-z]:[\\/][^\s<]+)")
 _HTML_HANDLER = re.compile(r"(?i)\bon[a-z]+\s*=")

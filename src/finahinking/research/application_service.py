@@ -447,6 +447,73 @@ class ResearchApplicationService:
         record = self.runtime.submit(request, idempotency_key=f"application:{stable_digest({'scope': self.scope_id, 'key': key})[:40]}", limits=limits)
         return self.get_job(record.job_id)
 
+    def _method_store(self):
+        from .method_handoff import MethodHandoffStore
+
+        return MethodHandoffStore(self.root / "method-workspace" / stable_digest(self.scope_id), self.queue)
+
+    def export_method_handoff(self, job_id, route_request):
+        """Explicit local export; it performs no provider call or market fetch."""
+        from .asset_catalog import ResearchAssetCatalog
+        from .context_bundle import build_context_bundle
+        from .contracts import AgentTask
+        from .method_context import MethodContextError, load_methods
+        from .method_handoff import build_method_handoff
+        from .method_router import select_methods
+
+        request = self._request(self.queue.get(job_id))
+        snapshot = self.snapshots.load(request.snapshot_ref)
+        catalog = ResearchAssetCatalog.packaged()
+        selected = select_methods(route_request, catalog)
+        loaded = load_methods(selected, catalog)
+        if loaded.status != "READY":
+            raise MethodContextError()
+        materials = ()
+        source = request.research_plan.validation_spec.get("context_input_ref")
+        if source is not None:
+            if not isinstance(source, str) or not re.fullmatch(r"[0-9a-f]{64}", source):
+                raise ValueError("model context reference is invalid")
+            stored = _read_json(self.root / "model-inputs" / f"{source}.json")
+            if _model_input_digest(stored) != source:
+                raise ValueError("model context integrity mismatch")
+            materials = stored["materials"]
+        context = build_context_bundle(request, snapshot, "research", materials=materials)
+        digest = stable_digest({"request": to_jsonable(request), "context": context.fingerprint,
+                                "methods": loaded.fingerprint})
+        task = AgentTask("research", f"method-{digest[:32]}", digest,
+                         capabilities=("paper_only", "structured_output", "evidence_refs", "reasoning"))
+        package = build_method_handoff(task, context, loaded)
+        reference = self._method_store().export(package)
+        return self.get_method_handoff(job_id, reference)
+
+    def _bound_method_handoff(self, job_id, reference):
+        request = self._request(self.queue.get(job_id))
+        store = self._method_store()
+        package = store.load(reference)
+        if (package.context.to_dict()["run_id"] != request.run_id
+                or package.context.to_dict()["dataset_fingerprint"] != request.snapshot_ref):
+            raise KeyError(reference)
+        return store, package
+
+    def get_method_handoff(self, job_id, reference):
+        from .reports import method_handoff_activity
+
+        store, package = self._bound_method_handoff(job_id, reference)
+        state = store.status(reference)
+        return {"handoff_ref": reference, **state, "package": package.to_dict(),
+                "summary": method_handoff_activity(package, state["status"])}
+
+    def accept_method_handoff(self, job_id, reference, response):
+        store, _ = self._bound_method_handoff(job_id, reference)
+        outcome = store.accept(reference, response)
+        return {"outcome": to_jsonable(outcome),
+                "summary": self.get_method_handoff(job_id, reference)["summary"],
+                "artifacts": list(store.artifacts(reference))}
+
+    def method_handoff_artifacts(self, job_id, reference):
+        store, _ = self._bound_method_handoff(job_id, reference)
+        return store.artifacts(reference)
+
     def _request(self, record):
         request = self.queue.load_request_snapshot(record.task_ref, expected_digest=self.queue.task_input_digest(record.task_ref))
         if request.workflow_version != WORKFLOW_VERSION or not isinstance(request.research_plan, ResearchPlan) or request.research_plan.validation_spec.get("scope_id") != self.scope_id:
