@@ -168,8 +168,11 @@ def test_rerun_retry_preserves_ambiguous_active_key_but_rotates_after_terminal(o
     source, source_ref, _ = inputs(service)
     snapshot = service.snapshots.load(source_ref)
     invalid_ref = service.snapshots.save(replace(snapshot, observations=snapshot.observations[:3]))
-    service.close()
     server = create_server(app, host="127.0.0.1", port=0)
+    # Server bootstrap starts its independent owner. Stop it afterwards so
+    # queued/cancelled cases do not race an unintended real worker.
+    service.close()
+    assert service.runtime._supervisor._process is None, 'queued-case fixture must stop the server-started owner'
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     base = f"http://127.0.0.1:{server.server_address[1]}"
