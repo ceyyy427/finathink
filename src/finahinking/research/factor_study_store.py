@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import re
+from contextlib import nullcontext
 
 import pandas as pd
 
@@ -140,14 +141,15 @@ class FactorStudyStore:
                 db.execute("UPDATE factor_studies SET test_key=?,state='TEST_RESERVED' WHERE scope_id=? AND study_id=?", (key, self.scope_id, study_id))
         return self.get(study_id)
 
-    def review(self, study_id, decision, reviewer_id):
+    def review(self, study_id, decision, reviewer_id, *, connection=None):
         if decision not in {"APPROVE_FOR_RESEARCH", "REJECT"}:
             raise ValueError("explicit research review decision is required")
         _ref(reviewer_id, "reviewer_id")
-        with self.queue._connect() as db:
-            db.execute("BEGIN IMMEDIATE")
+        with (nullcontext(connection) if connection is not None else self.queue._connect()) as db:
+            if connection is None:
+                db.execute("BEGIN IMMEDIATE")
             row = self._decode(self._row(db, study_id))
             if row["state"] not in {"TEST_EVALUATED", "REVIEWED"} or row["review_decision"] not in {None, decision} or row["reviewer_id"] not in {None, reviewer_id}:
                 raise ValueError("review requires a completed test and is immutable")
             db.execute("UPDATE factor_studies SET state='REVIEWED',review_decision=?,reviewer_id=? WHERE scope_id=? AND study_id=?", (decision, reviewer_id, self.scope_id, study_id))
-        return self.get(study_id)
+            return self._decode(self._row(db, study_id))

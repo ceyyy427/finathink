@@ -336,6 +336,9 @@ class ResearchApplicationService:
             os.close(descriptor)
         self.queue = JobQueue(queue_path, max_attempts=3, backoff_base_seconds=0.1, backoff_max_seconds=1)
         self.factor_studies = FactorStudyStore(self.queue, scope_id=self.scope_id)
+        from .factor_lifecycle import FactorUseStore
+
+        self.factor_uses = FactorUseStore(self.queue, scope_id=self.scope_id)
         from .learning_review import LearningReviewService
 
         self.learning = LearningReviewService(self)
@@ -721,6 +724,41 @@ class ResearchApplicationService:
             results["validation" if phase == "validation" else "test_result"] = payload
         return {**self.factor_studies.get(study_id), **jobs, **results}
 
+    def factor_evidence(self, factor_ref):
+        from .asset_catalog import ResearchAssetCatalog
+        from .factor_lifecycle import project_factor_lifecycle
+        from .factor_provenance import load_factor_evidence
+
+        evidence = load_factor_evidence(factor_ref, catalog=ResearchAssetCatalog.packaged(), run_repository=self.runs)
+        events = self.factor_uses.list()
+        return {**evidence.to_dict(), "lifecycle": project_factor_lifecycle(evidence, events).to_dict()}
+
+    def review_factor_use(self, factor_ref, values):
+        from .asset_catalog import ResearchAssetCatalog
+        from .factor_lifecycle import FactorUseDecision
+        from .factor_provenance import load_factor_evidence
+
+        if not isinstance(values, dict):
+            raise TypeError("factor use review requires an object")
+        try:
+            decision = FactorUseDecision(**values)
+        except TypeError as exc:
+            raise ValueError("factor use review fields are invalid") from exc
+        evidence = load_factor_evidence(factor_ref, catalog=ResearchAssetCatalog.packaged(), run_repository=self.runs)
+        with self.queue._connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            if decision.decision in {"APPROVE_FOR_RESEARCH", "REJECT"}:
+                entry = self.runs.get_run(decision.run_ref)
+                study_id = entry["manifest"]["source_snapshot"]["factor_study"]["study_id"]
+                study = self.factor_studies._decode(self.factor_studies._row(db, study_id))
+                if self._request(self.queue.get(study["test_job_id"])).run_id != decision.run_ref:
+                    raise ValueError("factor use review is not bound to the final-test job")
+                if study["review_decision"] not in {None, decision.decision}:
+                    raise ValueError("factor test already has a different immutable review")
+                if study["review_decision"] is None:
+                    self.factor_studies.review(study_id, decision.decision, decision.reviewer, connection=db)
+            return self.factor_uses.record(decision, evidence=evidence, connection=db)
+
     def freeze_factor_study(self, study_id, candidate_id):
         study = self.factor_study(study_id)
         result = study.get("validation")
@@ -751,5 +789,26 @@ class ResearchApplicationService:
             if (validation_run["status"] != "COMPLETE" or any(row["status"] != "COMPLETE" for row in validation_run["steps"])
                     or archived["metrics"].get("decision") != "PENDING_HUMAN_RESEARCH_REVIEW"):
                 raise ValueError("blocked or observation-only evidence cannot be approved")
-        self.factor_studies.review(study_id, decision, reviewer_id)
+        scoped = None
+        if validation_run is not None:
+            from .asset_catalog import ResearchAssetCatalog
+            from .factor_lifecycle import FactorUseDecision
+            from .factor_provenance import load_factor_evidence
+
+            evidence = load_factor_evidence(validation_run["bindings"]["factor_id"],
+                catalog=ResearchAssetCatalog.packaged(), run_repository=self.runs)
+            run_ref = self._request(self.queue.get(study["test_job_id"])).run_id
+            record = next(row for row in evidence.to_dict()["local_runs"] if row["run_ref"] == run_ref
+                          and row["evaluation_fingerprint"] == validation_run["fingerprint"])
+            universe = record["scope"]["universe"]
+            scoped = FactorUseDecision(factor_ref=record["factor_ref"], market=universe["market"],
+                universe_ref=stable_digest(universe), purpose="FORMULA_RESEARCH" if record["reproduction_scope"] == "FORMULA_FIXTURE" else "PAPER_RESEARCH",
+                policy_fingerprint=record["policy_fingerprint"], evaluation_fingerprint=record["evaluation_fingerprint"],
+                reviewer=reviewer_id, decision=decision, idempotency_key="study-review-" + stable_digest([study_id, decision, reviewer_id])[:32],
+                run_ref=run_ref)
+        with self.queue._connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            self.factor_studies.review(study_id, decision, reviewer_id, connection=db)
+            if scoped is not None:
+                self.factor_uses.record(scoped, evidence=evidence, connection=db)
         return self.factor_study(study_id)
