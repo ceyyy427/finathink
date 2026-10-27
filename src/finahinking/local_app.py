@@ -323,6 +323,19 @@ _RESEARCH_JOBS_CSS = """
 .research-stage-list [data-stage-status="FAILED"] { color: var(--error); }
 """
 
+_FACTOR_STUDY_CSS = """
+[data-experiment-workspace] { min-width: 0; }
+[data-experiment-workspace] .panel { min-width: 0; }
+[data-experiment-workspace] .study-form { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: var(--space-4); }
+[data-experiment-workspace] .study-form label { display: grid; gap: var(--space-2); min-width: 0; }
+[data-experiment-workspace] input,[data-experiment-workspace] select,[data-experiment-workspace] textarea { box-sizing: border-box; max-width: 100%; min-width: 0; }
+[data-experiment-workspace] input[type=checkbox] { width: 1rem; height: 1rem; display: inline-block; }
+[data-experiment-workspace] .study-freeze-ack { display: flex; gap: var(--space-2); align-items: baseline; }
+[data-experiment-workspace] button:disabled { opacity: .45; cursor: not-allowed; }
+[data-experiment-workspace] [data-study-binding],[data-experiment-workspace] .field-help,[data-experiment-workspace] .overview-list { overflow-wrap: anywhere; }
+@media(max-width: 760px) { [data-experiment-workspace] .study-form { grid-template-columns: minmax(0,1fr); } }
+"""
+
 _DARK_APP_CSS = """
 :root {
   --background: #050B18;
@@ -1005,9 +1018,20 @@ class LocalApplication:
         """
 
         runs: list[dict[str, Any]] = []
+        quantitative = []
         for entry in self._run_repository.list_runs(limit=limit, offset=offset, state=state, sort_by=sort_by, order=order):
             run_id = entry["run_id"]
             view_model, _ = self._research_model(entry)
+            if entry["report_status"] == "AVAILABLE":
+                source = entry["manifest"].get("source_snapshot", {})
+                analytics = source.get("quant_analytics", {})
+                if analytics:
+                    quantitative.append({"run_id": run_id + ":baseline", "inputs": {"owner_run_id": run_id}, "metrics": analytics.get("metrics", {}), "conditions": analytics.get("comparison_conditions", {}), "limitations": analytics.get("limitations", [])})
+                study = source.get("factor_study")
+                if study:
+                    summaries = [study["test_summary"]] if study.get("phase") == "TEST" and study.get("test_summary") else study.get("summaries", [])
+                    for summary in summaries:
+                        quantitative.append({"run_id": run_id + ":" + summary["experiment_id"], "inputs": {"owner_run_id": run_id, "parameters": summary["parameters"]}, "metrics": summary["metrics"], "conditions": summary["conditions"], "limitations": study.get("limitations", [])})
             stage_status = view_model.get("stage_status", {})
             completed_statuses = {"COMPLETE", "COMPLETED", "READY", "SUCCEEDED", "DONE"}
             evidence_count = sum(int(item.get("evidence_count", 0)) for item in view_model.get("analysts", ()) if isinstance(item, Mapping))
@@ -1025,11 +1049,14 @@ class LocalApplication:
                     **{key: entry[key] for key in ("created_at", "started_at", "finished_at", "dataset_fingerprint", "strategy_version", "policy_fingerprint", "report_status")},
                 }
             )
+        from .research.reports import compare_experiments
+
         return {
             "schema_version": 1,
             "mode": "OFFLINE" if self.config.offline else "LOCAL",
             "paper_only": True,
             "runs": runs,
+            "quantitative": compare_experiments(quantitative),
             "total": self._run_repository.count_runs(state=state), "limit": limit, "offset": offset,
             "basis": ["state", "as_of", "stage completion", "analyst evidence count", "report coverage", "decision eligibility"],
             "limitations": ["Descriptive run metadata only; no run is ranked or called a winner.", "Reports are verified from the persistent local inventory; unavailable bundles remain listed."],
@@ -1208,6 +1235,7 @@ class LocalApplication:
             "/strategy": "Strategy Lab",
             "/research": "Research Workspace",
             "/research/jobs": "研究任务",
+            "/research/experiments": "因子实验",
             "/research/compare": "Research Comparison",
             "/workbench": "Factor Strategy Workbench",
             "/ml": "ML Lab",
@@ -1296,7 +1324,7 @@ class LocalApplication:
     def _nav(self, page: str) -> str:
         names = self._page_names()
         groups = (
-            ("Workspace", "nav-workspace", ("/", "/events", "/explore", "/research/jobs", "/research", "/research/compare", "/workbench", "/workspace")),
+            ("Workspace", "nav-workspace", ("/", "/events", "/explore", "/research/jobs", "/research/experiments", "/research", "/research/compare", "/workbench", "/workspace")),
             ("Learn", "nav-learn", ("/knowledge", "/quant", "/strategy", "/ml", "/parameter")),
             ("System", "nav-system", ("/community", "/settings/engines", "/settings/providers", "/settings/data-sources", "/diagnostics")),
         )
@@ -1357,7 +1385,7 @@ class LocalApplication:
             f"<title>{html.escape(title)} · Finathink</title>"
             '<meta name="theme-color" content="#050B18">'
             '<meta http-equiv="Content-Security-Policy" content="default-src \'self\'; img-src \'self\'; style-src \'self\' \'unsafe-inline\'; script-src \'self\'; connect-src \'self\'; form-action \'self\'">'
-            f"<style>{_DARK_APP_CSS}{_RESEARCH_JOBS_CSS if page == '/research/jobs' else ''}</style>{style_tags}{script_tags}</head><body>"
+            f"<style>{_DARK_APP_CSS}{_RESEARCH_JOBS_CSS if page == '/research/jobs' else ''}{_FACTOR_STUDY_CSS if page == '/research/experiments' else ''}</style>{style_tags}{script_tags}</head><body>"
             '<a class="skip-link" href="#main">Skip to content</a>'
             '<div class="app-shell">'
             f'<nav class="sidebar" aria-label="Primary">{self._nav(clean_page)}</nav>'
@@ -1378,7 +1406,7 @@ class LocalApplication:
         return {"snapshot_ref": snapshot.fingerprint, "instruments": list(snapshot.instruments), "record_count": len(snapshot.observations), "mode": snapshot.mode, "as_of": snapshot.as_of.isoformat(), "pit_status": "AVAILABLE" if snapshot.pit_available() else "UNKNOWN"}
 
     def _research_jobs_route(self, method, clean, body, query):
-        if not (clean == "/api/research/jobs" or clean.startswith(("/api/research/jobs/", "/api/research/snapshots"))):
+        if not (clean in {"/api/research/jobs", "/api/research/experiments"} or clean.startswith(("/api/research/jobs/", "/api/research/snapshots", "/api/research/experiments/"))):
             return None
         content_type = "application/json"
         if method not in {"GET", "POST"}:
@@ -1390,6 +1418,34 @@ class LocalApplication:
         values = {key: value for key, value in (body or {}).items() if key != "_csrf"} if isinstance(body, Mapping) else {}
         try:
             service = self.research_service
+            if clean == "/api/research/experiments/catalog" and method == "GET":
+                from finahinking.research.factor_catalog_loader import load_research_recipes
+
+                return 200, content_type, {"recipes": [recipe.to_dict() for recipe in load_research_recipes()], "paper_only": True}
+            if clean == "/api/research/experiments/sample" and method == "POST":
+                from finahinking.p8_2.data_sources import FixtureMarketDataSource
+
+                if set(values) - {"instrument"}:
+                    raise ValueError("unsupported sample inputs")
+                snapshot = FixtureMarketDataSource(points=240).snapshot(values.get("instrument", "AAA"))
+                service.snapshots.save(snapshot)
+                return 201, content_type, self._snapshot_summary(snapshot)
+            if clean == "/api/research/experiments":
+                if method == "POST":
+                    return 202, content_type, service.create_factor_study(values)
+                return 200, content_type, {"studies": [{"study_id": row["study_id"], "state": row["state"], "question": row["spec"]["question"], "snapshot_ref": row["spec"]["snapshot_ref"]} for row in service.factor_studies.list()]}
+            if clean.startswith("/api/research/experiments/"):
+                parts = clean.removeprefix("/api/research/experiments/").split("/")
+                if len(parts) == 1 and method == "GET":
+                    return 200, content_type, service.factor_study(parts[0])
+                if len(parts) == 2 and method == "POST":
+                    if parts[1] == "freeze" and set(values) == {"candidate_id"}:
+                        return 200, content_type, service.freeze_factor_study(parts[0], values["candidate_id"])
+                    if parts[1] == "test" and set(values) == {"idempotency_key"}:
+                        return 202, content_type, service.test_factor_study(parts[0], values["idempotency_key"])
+                    if parts[1] == "review" and set(values) == {"decision", "reviewer_id"}:
+                        return 200, content_type, service.review_factor_study(parts[0], values["decision"], values["reviewer_id"])
+                return 405, content_type, {"error": "use explicit study actions with supported fields"}
             if clean == "/api/research/jobs":
                 if method == "POST":
                     return 202, content_type, service.submit(values)
@@ -1644,6 +1700,8 @@ class LocalApplication:
             if method != "GET":
                 return 405, "application/json", {"error": "research comparison is read-only"}
             return 200, "text/html; charset=utf-8", self.render_page(clean, query=query)
+        if clean == "/research/experiments" and method == "GET":
+            return 200, "text/html; charset=utf-8", self.render_page(clean, query=query)
         if clean.startswith("/research/"):
             if method != "GET":
                 return 405, "application/json", {"error": "research routes are read-only"}
@@ -1883,7 +1941,7 @@ class LocalApplication:
         title = names.get(page, "Finathink")
         body = self._page_body(page, query=query)
         inspector = self._page_inspector(page)
-        scripts = ("/assets/finathink-research.js",) if page in {"/", "/research", "/research/jobs", "/research/compare", "/workbench", "/settings/providers"} else ()
+        scripts = ("/assets/finathink-research.js",) if page in {"/", "/research", "/research/jobs", "/research/experiments", "/research/compare", "/workbench", "/settings/providers"} else ()
         return self.render_shell(active_page, title, body, inspector=inspector, scripts=scripts)
 
     def render_result_page(self, title: str, payload: Any) -> str:
@@ -2224,6 +2282,8 @@ class LocalApplication:
         return ""
 
     def _research_comparison_page_body(self) -> str:
+        from .research.factor_workspace_page import quantitative_comparison_section
+
         payload = self.research_comparison()
         rows = "".join(
             "<tr>"
@@ -2249,6 +2309,7 @@ class LocalApplication:
             f'{rows}</tbody></table></div>'
             '<p class="meta">Comparison basis: state, as-of, stage completion, analyst evidence count, report coverage, and decision eligibility. No composite score is computed.</p>'
             '<p class="error-state" data-comparison-error hidden></p></section>'
+            f'{quantitative_comparison_section(payload["quantitative"])}'
         )
 
     def _overview_page_body(self) -> str:
@@ -2312,6 +2373,10 @@ class LocalApplication:
         )
 
     def _page_body(self, page: str, *, query: Mapping[str, list[str]] | None = None) -> str:
+        if page == "/research/experiments":
+            from .research.factor_workspace_page import factor_workspace_page
+
+            return factor_workspace_page(self.csrf_token)
         if page == "/research/jobs":
             return self._research_jobs_page_body()
         if page == "/research/compare":

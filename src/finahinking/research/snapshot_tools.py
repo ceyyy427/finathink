@@ -147,6 +147,7 @@ class SnapshotResearchTools(ResearchToolGateway):
             "factor": factor, "metrics": metrics, "proposed_target_weight": target_weight,
             "metric_basis": policy["metric_basis"], "data_mode": source["data_mode"],
             "source_metadata": source["source_metadata"],
+            "comparison_conditions": {"dataset_fingerprint": self.snapshot.fingerprint, "sample_period": [frame.index[0].isoformat(), frame.index[-1].isoformat()], "scoring_index": stable_digest([timestamp.isoformat() for timestamp in frame.index]), "split": {"kind": "fixed in-sample baseline", "oos": False}, "cost": {"fee_bps": policy["fee_bps"], "slippage_bps": policy["slippage_bps"]}, "version": policy["strategy_version"] + ":" + policy["engine_version"], "metric_basis": policy["metric_basis"], "policy_fingerprint": stable_digest(policy)},
             "backtest": backtest.to_dict(), "config": asdict(config),
             "limitations": sorted(set(evaluation.limitations) | set(source["source_limitations"]) | {"Observation-period metrics; calendar not verified, so annualized return, volatility, Sharpe and Sortino are withheld.", "Historical signal availability is checked against each next-bar execution boundary; delayed feeds are rejected.", "Paper fills use archived marks, not live market execution."}), "paper_only": True,
         }

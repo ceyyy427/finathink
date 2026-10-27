@@ -119,10 +119,26 @@ DEFAULT_FACTOR_CATALOG = BUILTIN_AUDITED_CATALOG
 _DEFAULT_REGISTRY = FactorRegistry()
 
 
+def load_research_recipes():
+    """The current research menu; legacy fixture admission metadata stays separate."""
+    from .factor_recipes import research_recipes
+
+    return research_recipes()
+
+
+def get_research_recipe(recipe_id):
+    for recipe in load_research_recipes():
+        if recipe.recipe_id == recipe_id:
+            return recipe
+    raise KeyError(recipe_id)
+
+
 __all__ = [
     "BUILTIN_AUDITED_CATALOG",
     "DEFAULT_FACTOR_CATALOG",
     "CatalogAdmissionProposal",
     "admit_catalog_entry",
+    "get_research_recipe",
     "load_audited_catalog",
+    "load_research_recipes",
 ]

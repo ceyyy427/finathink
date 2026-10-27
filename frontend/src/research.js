@@ -13,6 +13,7 @@ import { CanvasRenderer } from 'echarts/renderers';
 import './knowledge.js';
 import { mountOverview } from './overview.js';
 import { mountProviderSettings, mountRunWorkspace } from './run-workspace.js';
+import { mountExperimentWorkspace } from './experiment-workspace.js';
 
 echarts.use([LineChart, GridComponent, TooltipComponent, CanvasRenderer]);
 
@@ -577,6 +578,7 @@ export function mountResearch(root, { payload, payloadUrl } = {}) {
 }
 
 if (typeof document !== 'undefined') {
+  document.querySelectorAll('[data-experiment-workspace]').forEach((root) => { mountExperimentWorkspace(root); });
   document.querySelectorAll('[data-provider-form]').forEach((form) => { mountProviderSettings(form); });
   document.querySelectorAll('[data-run-workspace]').forEach((root) => { mountRunWorkspace(root); });
   document.querySelectorAll('[data-finathink-overview]').forEach((root) => { mountOverview(root).catch(() => {}); });
