@@ -92,3 +92,54 @@ class AssetInventory:
     financial_falsification_count: int
     source_factor_count: int = 0
     unresolved_definition_count: int = 0
+
+
+def _route_values(value, name, maximum):
+    from .contracts import _unsafe_public_text
+
+    if not isinstance(value, (tuple, list)) or len(value) > maximum or any(
+        not isinstance(item, str) or not item.strip() or len(item) > 128
+        or _unsafe_public_text(item) for item in value
+    ):
+        raise ValueError(f"{name} requires bounded, non-sensitive text labels")
+    return tuple(sorted({item.strip().casefold() for item in value}))
+
+
+@dataclass(frozen=True, slots=True)
+class MethodRouteRequest:
+    purposes: tuple[str, ...] = ()
+    factor_families: tuple[str, ...] = ()
+    market: str = "UNSPECIFIED"
+    available_fields: tuple[str, ...] = ()
+    public_profiles: tuple[str, ...] = ()
+
+    def __post_init__(self):
+        from .contracts import _unsafe_public_text
+
+        for name, maximum in (("purposes", 16), ("factor_families", 16),
+                              ("available_fields", 128), ("public_profiles", 6)):
+            object.__setattr__(self, name, _route_values(getattr(self, name), name, maximum))
+        if (not isinstance(self.market, str) or not self.market.strip()
+                or len(self.market) > 64 or _unsafe_public_text(self.market)):
+            raise ValueError("market requires a bounded, non-sensitive label")
+        object.__setattr__(self, "market", self.market.strip().upper())
+
+
+@dataclass(frozen=True, slots=True)
+class MethodSelection:
+    request_digest: str
+    status: str
+    skill_ids: tuple[str, ...]
+    reasons: tuple[tuple[str, str], ...]
+    required_resources: tuple[ResourceRef, ...]
+    optional_resources: tuple[ResourceRef, ...]
+    missing_inputs: tuple[str, ...] = ()
+    unsupported: tuple[str, ...] = ()
+
+    @property
+    def fingerprint(self):
+        from dataclasses import asdict
+
+        from .contracts import stable_digest
+
+        return stable_digest({"schema_version": "method-selection.v1", **asdict(self)})
