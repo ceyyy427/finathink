@@ -10,6 +10,16 @@
 
 **Spec:** `docs/superpowers/specs/2026-10-27-finathink-blue-white-workbench-design.md`；产品事实见 `PRODUCT.md`，后续阶段见同目录 `2026-10-27-finathink-skills-factors-roadmap.md`。
 
+## 给审阅者的阶段说明
+
+**完成后的体验：** 打开应用即进入用户参考 HTML 的默认蓝白工作台。左侧导航、顶栏、问题输入、实际活动与上下文保持同一视觉；研究、数据接口、实验、对比和复盘仍走已有真实流程。
+
+**当前进度：** Task 1 已提交；Task 2 已恢复验证，18 项 Python、44 项前端通过，进入提交收尾。定向证据不代表全量或浏览器已经通过。Task 3 待执行，本阶段未发布。
+
+**接下来做：** 用户已确认总计划；提交 Task 2 后继续浏览器截图、键盘/移动交互、必要旧主题断言更新、CI 与完整审查。
+
+**本阶段边界：** 不借机引入技能库、改变因子算法、增加付费模型调用或重写历史报告。营销官网只在后续有明确需要时与实际交付状态同步，不单独扩成新的建站项目。
+
 ## Global Constraints
 
 - 主目录用户未提交文件与两个输入原件保持不动；在现有隔离 worktree 的 `codex/blue-white-workbench` 实施。
@@ -43,10 +53,10 @@
 
 **Interfaces:** GET `/research/jobs?question=...` 只预填 1000 字以内问题，不提交。Overview schema 和已有 data 属性不变；图表继续显示实际活动而非合成收益。
 
-- [ ] 添加空库/已有记录/恶意文本/超长问题测试，先看新行为失败。
-- [ ] 迁移 HTML 的问题输入区、四项真实指标、活动/主题/对比区和上下文；保留每日表格与加载/错误/空态。
-- [ ] 问题模板只预填，数据和模型状态不凭空标绿。上下文链接对应现有任务、数据、模型与知识页面。
-- [ ] 运行 `python3 -m pytest tests/research/test_phase10_workbench.py tests/research/test_phase9_delivery.py -q` 和 Node。Expected: 转义、长度、无隐式任务、真实记录与旧合同通过；构建并提交。
+- [x] 添加空库/已有记录/恶意文本/超长问题测试，先看新行为失败。
+- [x] 迁移 HTML 的问题输入区、四项真实指标、活动/主题/对比区和上下文；保留每日表格与加载/错误/空态。
+- [x] 问题模板只预填，数据和模型状态不凭空标绿。上下文链接对应现有任务、数据、模型与知识页面。
+- [x] 运行 `python3 -m pytest tests/research/test_phase10_workbench.py tests/research/test_phase9_delivery.py -q` 和 Node。Expected: 转义、长度、无隐式任务、真实记录与旧合同通过；构建并提交。
 
 ### Task 3：浏览器、CI、审查与设计记录
 

@@ -2,6 +2,7 @@ import * as echarts from 'echarts/core';
 import { BarChart } from 'echarts/charts';
 import { GridComponent, TooltipComponent } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
+import { readLocalJSON, userErrorMessage } from './local-request.js';
 
 echarts.use([BarChart, GridComponent, TooltipComponent, CanvasRenderer]);
 
@@ -118,9 +119,14 @@ export function renderOverview(root, payload) {
   }
   setHidden(root?.querySelector?.('[data-overview-loading]'), true);
   setHidden(root?.querySelector?.('[data-overview-error]'), true);
+  setHidden(root?.querySelector?.('[data-overview-retry]'), true);
+  root?.querySelectorAll?.('[data-overview-metric]')?.forEach((target) => {
+    const key = target.dataset.overviewMetric;
+    target.textContent = Object.hasOwn(normalized.metrics, key) ? String(normalized.metrics[key]) : '—';
+  });
   const tooltip = root?.querySelector?.('[data-overview-tooltip]');
-  if (tooltip) tooltip.textContent = 'Focus a date or topic to inspect recorded values.';
-  const history = root?.querySelector?.('[aria-label="Activity text summary"]');
+  if (tooltip) tooltip.textContent = '聚焦日期或主题，查看对应的记录数量。';
+  const history = root?.querySelector?.('[data-overview-activity]');
   if (history && typeof document !== 'undefined') {
     const records = normalized.activity.length ? normalized.activity : [null];
     history.replaceChildren(...records.map((item) => {
@@ -128,12 +134,12 @@ export function renderOverview(root, payload) {
       const description = document.createElement('span');
       const status = document.createElement('strong');
       if (item) {
-        description.textContent = `${item.timestamp ?? '—'} · ${item.label ?? 'Activity'}`;
+        description.textContent = `${item.timestamp ?? '—'} · ${item.label ?? '研究活动'}`;
         status.textContent = item.status ?? 'RECORDED';
       } else {
         row.className = 'empty-state';
-        description.textContent = 'No saved research activity yet';
-        status.textContent = 'EMPTY';
+        description.textContent = '还没有保存的研究活动';
+        status.textContent = '暂无记录';
       }
       row.append(description, status);
       return row;
@@ -143,7 +149,7 @@ export function renderOverview(root, payload) {
   if (chart?.dataset) {
     chart.dataset.chartReady = normalized.activity.length ? 'ready' : 'empty';
     chart.setAttribute?.('tabindex', '0');
-    chart.setAttribute?.('aria-label', normalized.activity.length ? `${normalized.activity.length} recorded activity item(s); use the text summary below` : 'No recorded activity; use the text summary below');
+    chart.setAttribute?.('aria-label', normalized.activity.length ? `${normalized.activity.length} 条活动；可查看下方文字记录` : '暂无活动；可查看下方文字记录');
   }
   const topics = root?.querySelector?.('[data-overview-topics]');
   if (topics?.dataset) topics.dataset.topicCount = String(normalized.topics.length);
@@ -158,7 +164,7 @@ export function renderOverview(root, payload) {
       button.className = 'overview-day';
       button.dataset.overviewDay = '';
       button.dataset.date = item.date;
-      button.dataset.tooltip = `${item.date}: ${item.count} recorded · ${item.learning} learning · ${item.research} research`;
+      button.dataset.tooltip = `${item.date}：${item.count} 条记录 · ${item.learning} 条学习 · ${item.research} 条研究`;
       button.setAttribute('aria-describedby', 'overview-tooltip');
       button.textContent = item.date;
       heading.appendChild(button);
@@ -174,7 +180,7 @@ export function renderOverview(root, payload) {
       const row = document.createElement('tr');
       const cell = document.createElement('td');
       cell.colSpan = 4;
-      cell.textContent = 'No dated activity recorded. Save research or complete a learning check to begin.';
+      cell.textContent = '还没有带日期的活动记录。可先保存研究，或完成一次学习自查。';
       row.appendChild(cell);
       rows.push(row);
     }
@@ -200,7 +206,7 @@ export function renderOverviewVisuals(root, normalized) {
   if (!normalized.activity_series.length) {
     setHidden(chartCanvas, true);
     setHidden(bars, false);
-    if (bars) bars.textContent = 'No dated activity recorded.';
+    if (bars) bars.textContent = '还没有带日期的活动记录。';
   }
   if (chartCanvas && normalized.activity_series.length) {
     chartCanvas.hidden = false;
@@ -209,9 +215,9 @@ export function renderOverviewVisuals(root, normalized) {
       animation: !reducedMotion(),
       grid: { top: 20, right: 16, bottom: 32, left: 42 },
       tooltip: { trigger: 'axis', confine: true },
-      xAxis: { type: 'category', data: normalized.activity_series.map((item) => item.date ?? '—'), axisLabel: { color: '#71819A' } },
-      yAxis: { type: 'value', minInterval: 1, axisLabel: { color: '#71819A' }, splitLine: { lineStyle: { color: 'rgba(167, 139, 250, .16)' } } },
-      series: [{ type: 'bar', name: 'Recorded activity', data: normalized.activity_series.map((item) => item.count ?? 0), itemStyle: { color: '#38BDF8', borderRadius: [4, 4, 0, 0] } }],
+      xAxis: { type: 'category', data: normalized.activity_series.map((item) => item.date ?? '—'), axisLabel: { color: '#62728a' } },
+      yAxis: { type: 'value', minInterval: 1, axisLabel: { color: '#62728a' }, splitLine: { lineStyle: { color: '#e6ecf4' } } },
+      series: [{ type: 'bar', name: '记录数量', data: normalized.activity_series.map((item) => item.count ?? 0), itemStyle: { color: '#2563eb', borderRadius: [4, 4, 0, 0] } }],
     });
     setHidden(chart.querySelector?.('[data-overview-activity-series]'), true);
     root._finathinkOverviewChart = instance;
@@ -240,7 +246,7 @@ export function renderOverviewVisuals(root, normalized) {
   }
   if (bars && normalized.activity_series.length) {
     bars.setAttribute('data-point-count', String(normalized.activity_series.length));
-    bars.setAttribute('aria-label', normalized.activity_series.map((item) => `${item.date ?? 'unknown'}: ${item.count ?? 0} recorded`).join('; '));
+    bars.setAttribute('aria-label', normalized.activity_series.map((item) => `${item.date ?? '未知日期'}：${item.count ?? 0} 条记录`).join('；'));
   }
   return normalized;
 }
@@ -252,17 +258,16 @@ export function mountOverview(root, { payload, payloadUrl } = {}) {
   root.setAttribute?.('aria-busy', 'true');
   setHidden(root.querySelector?.('[data-overview-loading]'), false);
   setHidden(root.querySelector?.('[data-overview-error]'), true);
-  const load = payload ? Promise.resolve(payload) : fetch(payloadUrl || root.dataset.overviewPayloadUrl || root.dataset.payloadUrl).then((response) => {
-    if (!response.ok) throw new Error(`overview request failed (${response.status})`);
-    return response.json();
-  });
+  setHidden(root.querySelector?.('[data-overview-retry]'), true);
+  const load = payload ? Promise.resolve(payload) : readLocalJSON((url, options) => fetch(url, options), payloadUrl || root.dataset.overviewPayloadUrl || root.dataset.payloadUrl);
   root._finathinkOverviewMount = load.then((raw) => renderOverview(root, raw)).catch((error) => {
     root._finathinkOverviewMount = null;
     root.dataset.overviewStatus = 'ERROR';
     root.setAttribute?.('aria-busy', 'false');
     setHidden(root.querySelector?.('[data-overview-loading]'), true);
     const target = root.querySelector?.('[data-overview-error]');
-    if (target) { target.textContent = `Overview unavailable: ${error.message}. Check the local service and retry.`; target.hidden = false; }
+    if (target) { target.textContent = `总览暂时无法更新。${userErrorMessage(error)}`; target.hidden = false; }
+    setHidden(root.querySelector?.('[data-overview-retry]'), false);
     throw error;
   });
   return root._finathinkOverviewMount;

@@ -1536,7 +1536,10 @@ class LocalApplication:
         except (OSError, sqlite3.Error):
             return 503, content_type, {"error": "本地研究存储暂不可用，请检查磁盘空间和文件权限后重试。"}
 
-    def _research_jobs_page_body(self):
+    def _research_jobs_page_body(self, *, query=None):
+        supplied = (query or {}).get("question", [""])[0].strip()
+        question = supplied[:1000] or "检验这个快照上的动量基线，并检查费用与历史回撤。"
+        notice = '<p data-question-truncated role="status">问题过长，已保留前 1000 字。请核对后再提交研究。</p>' if len(supplied) > 1000 else ''
         return (
             '<section data-run-workspace data-job-status="EMPTY">'
             '<div class="status-row"><span class="status status--offline">LOCAL WORKSPACE</span><span class="status status--ready">PAPER-ONLY</span></div>'
@@ -1564,7 +1567,7 @@ class LocalApplication:
             '<p class="field-help" data-snapshot-description>尚未选择数据，不会自动使用演示数据。</p>'
             '<label>研究标的<input name="instrument" required maxlength="128" value="AAA"></label><label>研究截止日（UTC 当日结束）<input type="date" name="as_of" required></label>'
             '<label>研究模板<select data-run-template><option value="">保留自己填写的问题</option><option value="baseline">基础复核：动量、费用与历史回撤</option><option value="risk">风险复核：成本、容量与损失情景</option><option value="materials">材料研究：基本面、新闻与情绪证据</option></select></label><p class="field-help">模板只填入研究问题，不改变基线算法。材料分析另需模型配置与明确授权。</p>'
-            '<label>研究问题<textarea name="question" required maxlength="2000" rows="3">检验这个快照上的动量基线，并检查费用与历史回撤。</textarea></label>'
+            f'<label>研究问题<textarea name="question" required maxlength="2000" rows="3">{html.escape(question)}</textarea></label>{notice}'
             '<label>执行配置<select name="model_config_ref"><option value="offline">本地确定性流程 / 不调用模型</option></select></label>'
             '<p><a href="/settings/providers">配置用户自己的模型接口</a></p>'
             '<details><summary>补充基本面、新闻、情绪或学习材料</summary><p class="field-help">可选 JSON 数组，每条包含 role、instrument、summary、source_label、observed_at、available_at、authorized:true。时间需带时区；最多 16 条，每条摘要最多 2000 字。没有对应材料的角色会显示资料不足。</p><label>已授权材料摘要（JSON）<textarea name="materials" rows="5" maxlength="40000" placeholder="[]"></textarea></label></details>'
@@ -2150,6 +2153,27 @@ class LocalApplication:
         return self.render_shell("/knowledge", title_text, body, inspector=self._inspector("Knowledge provenance", {"Concept": title_text, "Catalog": DEFAULT_CATALOG.fingerprint, "Mastery": mastery.state, "Boundary": "Sample curriculum; verify sources"}, status="CURATED"), eyebrow="Knowledge / progressive depth")
 
     def _page_inspector(self, page: str) -> str:
+        if page == "/":
+            steps = ("界定问题与数据范围", "形成可检验的假设", "查看计算与反例", "解释结果，记录下一步")
+            path = ''.join(f'<li><span class="context-step">{index}</span><span>{label}</span></li>' for index, label in enumerate(steps, 1))
+            return (
+                '<aside class="inspector" id="inspector" aria-label="研究上下文">'
+                f'<section class="inspector-inner context-card"><div class="context-heading">{nav_icon("codex")}<h2>Codex 与研究任务</h2></div>'
+                '<p class="context-note">显式交接，计算由研究引擎完成。</p>'
+                f'<ol class="research-path" aria-label="研究路径，非运行进度">{path}</ol>'
+                '<a class="button-secondary full-width" href="/research/jobs">打开研究工作台</a>'
+                '<p class="context-note">提交前选择数据、范围与模型配置；这里不自动调用 Codex。</p></section>'
+                '<section class="inspector-inner context-card"><h2>数据与证据</h2>'
+                '<div class="context-source"><span class="context-symbol">API</span><div><strong>用户自己的数据接口</strong><p>显式读取 · 保存快照与指纹</p></div></div>'
+                '<div class="context-source"><span class="context-symbol">DB</span><div><strong>本地研究记录</strong><p>任务、产物与版本可追溯</p></div></div>'
+                '<p class="context-note">记录数不是收益指标；事件样例与实际研究分开标记。</p>'
+                '<a href="/settings/data-connections">管理数据接口</a> · <a href="/settings/providers">模型配置</a></section>'
+                '<section class="inspector-inner context-card"><h2>让研究更进一步</h2>'
+                '<ul class="context-learning"><li><a href="/knowledge/volatility"><span aria-hidden="true">σ</span>波动率与窗口选择</a></li>'
+                '<li><a href="/knowledge/beta"><span aria-hidden="true">β</span>Beta 与不确定性</a></li>'
+                '<li><a href="/research/learning"><span aria-hidden="true">∑</span>复盘、审核与版本复跑</a></li></ul>'
+                '</section></aside>'
+            )
         if page == "/research/jobs":
             return self._inspector("研究运行边界", {"数据": "显式选定并校验的快照", "执行": "独立 supervisor / spawn", "模型": "按所选配置；在线调用需授权", "产物": "有指纹的 HTML 报告"}, status="PAPER-ONLY")
         if page == "/events":
@@ -2381,35 +2405,35 @@ class LocalApplication:
         payload = self.overview()
         metrics = payload["metrics"]
         metric_cards = "".join(
-            f'<article class="metric-card"><span class="metric-value">{html.escape(str(metrics.get(key, 0)))}</span><span class="metric-label">{html.escape(label)}</span></article>'
-            for key, label in (("sample_events", "Events"), ("saved_items", "Saved items"), ("learning_items", "Learning evidence"), ("research_runs", "Research runs"))
+            f'<article class="metric-card"><span class="metric-label">{label}</span><span class="metric-value" data-overview-metric="{key}">{metrics[key]}</span><span class="metric-note">{note}</span></article>'
+            for key, label, note in (("sample_events", "事件样例", "明确标记的学习资料"), ("saved_items", "已保存条目", "来自本地个人工作区"), ("learning_items", "学习证据", "实际保存的自查记录"), ("research_runs", "研究运行", "来自持久化研究索引"))
         )
         activity = payload.get("activity") or []
         activity_html = "".join(
             f'<li><span>{html.escape(str(item.get("timestamp", "—")))} · {html.escape(str(item.get("label", "Activity")))}</span><strong>{html.escape(str(item.get("status", "RECORDED")))}</strong></li>'
             for item in activity if isinstance(item, Mapping)
-        ) or '<li class="empty-state"><span>No saved research activity yet</span><strong>EMPTY</strong></li>'
+        ) or '<li class="empty-state"><span>还没有保存的研究活动</span><strong>暂无记录</strong></li>'
         topics = payload.get("topics") or []
         topic_html = "".join(
             f'<li><span>{html.escape(str(item.get("label", item.get("topic", "Topic"))))}</span><strong>{html.escape(str(item.get("count", 0)))}</strong></li>'
             for item in topics if isinstance(item, Mapping)
-        ) or '<li class="empty-state"><span>No topics are recorded yet</span><strong>EMPTY</strong></li>'
+        ) or '<li class="empty-state"><span>还没有记录的研究主题</span><strong>暂无记录</strong></li>'
         learning = payload.get("learning_activity") or []
         heatmap_html = "".join(
-            f'<li><span>{html.escape(str(item.get("date", "—")))}</span><strong>{html.escape(str(item.get("count", 0)))} checks</strong></li>'
+            f'<li><span>{html.escape(str(item.get("date", "—")))}</span><strong>{html.escape(str(item.get("count", 0)))} 次自查</strong></li>'
             for item in learning if isinstance(item, Mapping)
-        ) or '<li class="empty-state"><span>No learning checks yet</span><strong>EMPTY</strong></li>'
+        ) or '<li class="empty-state"><span>还没有学习自查记录</span><strong>暂无记录</strong></li>'
         activity_series = payload.get("activity_series") or []
         max_count = max((int(item.get("count", 0)) for item in activity_series if isinstance(item, Mapping)), default=0)
-        bars = '<p class="empty-state">No activity is plotted until a local research or learning record is saved.</p>' if not activity_series else ''.join(
+        bars = '<p class="empty-state">保存研究或学习记录后，这里会显示实际活动；不填入演示曲线。</p>' if not activity_series else ''.join(
             f'<i style="height:{max(12, round((int(item.get("count", 0)) / max_count) * 100))}%" aria-hidden="true"></i>'
             for item in activity_series if isinstance(item, Mapping)
         )
         daily_rows = ''.join(
-            f'<tr><th scope="row"><button type="button" class="overview-day" data-overview-day data-date="{html.escape(str(item["date"]))}" data-tooltip="{html.escape(str(item["date"]))}: {item["count"]} recorded · {item["learning"]} learning · {item["research"]} research" aria-describedby="overview-tooltip">{html.escape(str(item["date"]))}</button></th><td>{item["count"]}</td><td>{item["learning"]}</td><td>{item["research"]}</td></tr>'
+            f'<tr><th scope="row"><button type="button" class="overview-day" data-overview-day data-date="{html.escape(str(item["date"]))}" data-tooltip="{html.escape(str(item["date"]))}：{item["count"]} 条记录 · {item["learning"]} 条学习 · {item["research"]} 条研究" aria-describedby="overview-tooltip">{html.escape(str(item["date"]))}</button></th><td>{item["count"]}</td><td>{item["learning"]}</td><td>{item["research"]}</td></tr>'
             for item in activity_series if isinstance(item, Mapping)
-        ) or '<tr><td colspan="4">No dated activity recorded. Save research or complete a learning check to begin.</td></tr>'
-        daily_table = '<div class="table-wrap overview-daily-table"><table aria-label="Daily activity data"><thead><tr><th scope="col">Date</th><th scope="col">Recorded</th><th scope="col">Learning</th><th scope="col">Research</th></tr></thead><tbody data-overview-daily-rows>' + daily_rows + '</tbody></table></div>'
+        ) or '<tr><td colspan="4">还没有带日期的活动记录。可先保存研究，或完成一次学习自查。</td></tr>'
+        daily_table = '<div class="table-wrap overview-daily-table"><table aria-label="每日活动数据"><thead><tr><th scope="col">日期</th><th scope="col">记录</th><th scope="col">学习</th><th scope="col">研究</th></tr></thead><tbody data-overview-daily-rows>' + daily_rows + '</tbody></table></div>'
         topic_max = max((int(item.get("count", 0)) for item in topics if isinstance(item, Mapping)), default=0)
         topic_cells = ''.join(
             f'<span class="overview-topic-cell" data-intensity="{max(1, round((int(item.get("count", 0)) / topic_max) * 5)) if topic_max else 0}" data-tooltip="{html.escape(str(item.get("topic", "Topic")))}: {html.escape(str(item.get("count", 0)))} recorded" title="{html.escape(str(item.get("topic", "Topic")))}: {html.escape(str(item.get("count", 0)))} recorded" tabindex="0">{html.escape(str(item.get("topic", "Topic")))}</span>'
@@ -2418,21 +2442,27 @@ class LocalApplication:
         comparison_rows = ''.join(
             f'<tr><th scope="row">{html.escape(str(item.get("run_id", "—")))}</th><td>{html.escape(str(item.get("state", "UNKNOWN")))}</td><td>{html.escape(str(item.get("evidence_count", 0)))}</td><td>{html.escape(str(item.get("report_count", 0)))}</td></tr>'
             for item in payload.get("research_comparison", ()) if isinstance(item, Mapping)
-        ) or '<tr><td colspan="4" class="empty-state">No registered research runs to compare.</td></tr>'
+        ) or '<tr><td colspan="4" class="empty-state">还没有可对比的研究运行。先完成一轮有明确数据和范围的研究。</td></tr>'
         history_open = ' open' if not activity else ''
         return (
             f'<section class="overview" data-finathink-overview data-overview-payload-url="/api/overview" aria-busy="false">'
-            '<p class="loading-state" data-overview-loading aria-live="polite" hidden>Loading overview…</p><p class="error-state" data-overview-error role="alert" aria-live="assertive" hidden></p>'
-            f'<header class="overview-header"><div class="overview-header-copy"><div class="status-row">{self._status("OFFLINE", "offline")}{self._status("PAPER-ONLY", "limitation")}</div><h1>Overview</h1><p class="lede">What can I understand today? A calm, evidence-bound view of local research activity.</p></div><div class="overview-meta"><span>As of {html.escape(str(payload.get("as_of", "not attached")))}</span><span>Source: {html.escape(str(payload["provenance"].get("data_mode", "UNKNOWN")))}</span></div></header>'
-            f'<section class="metric-grid" aria-label="Overview metrics">{metric_cards}</section>'
+            '<p class="loading-state" data-overview-loading aria-live="polite" hidden>正在读取研究概况…</p><p class="error-state" data-overview-error role="alert" aria-live="assertive" hidden></p><a class="button-secondary" data-overview-retry href="/" hidden>重新载入总览</a>'
+            '<header class="overview-header"><div class="overview-header-copy"><h1>你的研究，从这里继续。</h1><p class="lede">把问题变成假设，让每一步都有证据。</p></div><div class="overview-meta"><span>本地研究工作空间</span><span>PAPER-ONLY</span></div></header>'
+            '<section class="research-intro" aria-labelledby="research-intro-title"><h2 id="research-intro-title">从一个好问题，<span>走向可验证的结论。</span></h2><p>连接数据、数学、代码与实验，保留验证和反例。</p>'
+            '<form class="question-composer" action="/research/jobs" method="get"><label for="overview-question">你想验证什么？</label><textarea id="overview-question" name="question" required maxlength="1000" rows="2" placeholder="例如：动量窗口改变后，换手、费用和历史回撤会怎样变化？"></textarea>'
+            '<div class="composer-footer"><span>先配置数据与边界，提交后才运行。</span><button type="submit">建立研究 '
+            f'{nav_icon("arrow")}</button></div></form><div class="question-suggestions" aria-label="研究问题建议">'
+            f'<a href="/research/jobs?{urlencode({"question": "检验动量基线，并核对换手、费用与历史回撤。"})}">动量与换手</a>'
+            f'<a href="/research/jobs?{urlencode({"question": "检查所选快照中的成本、容量与损失情景。"})}">成本与风险</a>'
+            '<a href="/research/experiments">因子与样本外实验</a></div></section>'
+            f'<section class="metric-grid" aria-label="工作区概况">{metric_cards}</section>'
             '<section class="overview-grid">'
-            f'<article class="panel overview-region" data-overview-chart tabindex="0"><h2>Activity <span>Daily recorded items</span></h2><div class="overview-chart"><div class="overview-chart-canvas" data-overview-canvas aria-hidden="true" hidden></div><div class="overview-chart-bars" data-overview-activity-series>{bars}</div></div><p class="overview-tooltip" id="overview-tooltip" data-overview-tooltip role="status" aria-live="polite">Focus a date or topic to inspect recorded values.</p>{daily_table}<details class="overview-history"{history_open}><summary>Activity records</summary><ul class="overview-list" aria-label="Activity text summary">{activity_html}</ul></details></article>'
-            f'<article class="panel overview-region" data-overview-topics><h2>Topics <span>Recorded intensity</span></h2><div class="overview-topic-heatmap" aria-label="Recorded topic intensity heatmap">{topic_cells}</div><ul class="overview-list" aria-label="Recorded topics">{topic_html}</ul><p class="meta"><a href="/knowledge">Continue learning</a> from the curated local catalog.</p></article>'
-            f'<article class="panel overview-region" data-overview-heatmap><h2>Learning signal <span>Private checks</span></h2><ul class="overview-heatmap" aria-label="Learning activity summary">{heatmap_html}</ul><p class="meta">Learning evidence stays local and is never inferred from browsing.</p></article>'
+            f'<article class="panel overview-region" data-overview-chart tabindex="0"><h2>研究活动 <span>按日统计的实际记录，非投资绩效</span></h2><div class="overview-chart"><div class="overview-chart-canvas" data-overview-canvas aria-hidden="true" hidden></div><div class="overview-chart-bars" data-overview-activity-series>{bars}</div></div><p class="overview-tooltip" id="overview-tooltip" data-overview-tooltip role="status" aria-live="polite">聚焦日期或主题，查看对应的记录数量。</p>{daily_table}<details class="overview-history"{history_open}><summary>查看活动记录</summary><ul class="overview-list" data-overview-activity aria-label="活动文字记录">{activity_html}</ul></details></article>'
+            f'<article class="panel overview-region" data-overview-topics><h2>研究主题 <span>实际记录的分布</span></h2><div class="overview-topic-heatmap" aria-label="研究主题分布">{topic_cells}</div><ul class="overview-list" aria-label="已记录的研究主题">{topic_html}</ul><p class="meta"><a href="/knowledge">继续学习</a>，把概念连接到推导和代码。</p></article>'
+            f'<article class="panel overview-region" data-overview-heatmap><h2>学习记录 <span>来自已保存的自查</span></h2><ul class="overview-heatmap" aria-label="学习活动摘要">{heatmap_html}</ul><p class="meta">学习证据保存在本地，不根据浏览行为推断。</p></article>'
             '</section>'
-            '<section class="section"><div class="section-heading"><h2>Continue where you stopped</h2><span class="meta">Private local continuity</span></div><div class="overview-links"><article class="panel"><h3>Current research</h3><p class="meta">Run a bounded question with uncertainty and provenance.</p><a href="/research/jobs">打开研究任务</a></article><article class="panel"><h3>Paper simulation</h3><p class="meta">Inspect validity without live orders.</p><a href="/strategy">Open Strategy Lab</a></article><article class="panel"><h3>Evidence event</h3><p class="meta">Follow the captured source chain.</p><a href="/events">Open Events</a></article></div></section>'
-            f'<section class="panel overview-comparison" data-overview-comparison><div class="section-heading"><h2>Research comparison <span>Descriptive only</span></h2><a class="button-secondary" href="/research/compare">Open workspace</a></div><div class="table-wrap"><table aria-label="Research comparison summary"><thead><tr><th scope="col">Run</th><th scope="col">State</th><th scope="col">Evidence</th><th scope="col">Reports</th></tr></thead><tbody>{comparison_rows}</tbody></table></div><p class="meta">No composite quality score or winner is computed.</p></section>'
-            f'<section class="panel"><h2>Boundaries</h2><ul>{"".join(f"<li>{html.escape(str(item))}</li>" for item in payload.get("limitations", ()))}</ul></section>'
+            f'<section class="panel overview-comparison" data-overview-comparison><div class="section-heading"><h2>研究记录与对比 <span>先核对数据、范围和口径，再解释差异</span></h2><a class="button-secondary" href="/research/compare">打开对比工作区</a></div><div class="table-wrap"><table aria-label="研究对比摘要"><thead><tr><th scope="col">运行</th><th scope="col">状态</th><th scope="col">证据</th><th scope="col">报告</th></tr></thead><tbody>{comparison_rows}</tbody></table></div><p class="meta">不计算综合优劣分数，不把来源指标混入本地结果。</p></section>'
+            '<details class="overview-notes"><summary>研究口径与边界</summary><p>总览只读取本地记录，不触发数据获取、模型调用或交易。事件样例明确标记；每份真实研究保留自己的数据、费用、样本外范围和局限。</p></details>'
             '<template id="legacy-launch-frames" aria-hidden="true"><img src="/assets/finathink-splash-map.jpg" width="1536" height="1024" alt=""><img src="/assets/finathink-research-splash.jpg" width="900" height="900" alt=""></template>'
             '</section>'
         )
@@ -2447,7 +2477,7 @@ class LocalApplication:
 
             return factor_workspace_page(self.csrf_token)
         if page == "/research/jobs":
-            return self._research_jobs_page_body()
+            return self._research_jobs_page_body(query=query)
         if page == "/research/compare":
             return self._research_comparison_page_body()
         if page in {"/research", "/workbench", "/ml", "/parameter", "/settings/engines", "/settings/providers", "/settings/data-sources"}:
