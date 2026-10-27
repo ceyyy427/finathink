@@ -90,3 +90,5 @@ class AssetInventory:
     lesson_count: int
     locally_reproduced_claim_count: int
     financial_falsification_count: int
+    source_factor_count: int = 0
+    unresolved_definition_count: int = 0

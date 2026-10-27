@@ -104,6 +104,30 @@
           "license_id": "MIT",
           "license_scope": "Repository declaration; third-party citations are not independently relicensed",
           "review": "HASH_LOCATED_NOT_EXECUTED"
+        },
+        {
+          "path": "assets/skills/alpha-gpt-factor-mining/references/trial-findings.md",
+          "sha256": "7a72cab845615a0845e39096ddf47c6c041164dd576c3d02db6c6a987130d0f8",
+          "author": "DeepSeek HARNESS Quant (DSHQuant) contributors",
+          "license_id": "MIT",
+          "license_scope": "Repository declaration; no data or third-party rights inferred",
+          "review": "TEXT_INSPECTED_NOT_EXECUTED"
+        },
+        {
+          "path": "factors/fscore.py",
+          "sha256": "eae2e652d64af5486c61c47f77fc3afec7562766eabbd8960b31955bb509bcf3",
+          "author": "DeepSeek HARNESS Quant (DSHQuant) contributors",
+          "license_id": "MIT",
+          "license_scope": "Repository declaration; no data or third-party rights inferred",
+          "review": "TEXT_INSPECTED_NOT_EXECUTED"
+        },
+        {
+          "path": "factors/fundamental.py",
+          "sha256": "d43ecc2a960ed3a3560a11875c98124cdd3e6947eddfc126dcc967ea2edab43b",
+          "author": "DeepSeek HARNESS Quant (DSHQuant) contributors",
+          "license_id": "MIT",
+          "license_scope": "Repository declaration; no data or third-party rights inferred",
+          "review": "TEXT_INSPECTED_NOT_EXECUTED"
         }
       ],
       "excluded_skills": [
@@ -779,6 +803,145 @@
       "license_ref": null,
       "version": "unknown",
       "source_path": "因子池/output/combo_reports/反人性因子证伪知识库_20260815.md"
+    },
+    {
+      "resource_id": "source-trial-findings",
+      "path": null,
+      "sha256": "7a72cab845615a0845e39096ddf47c6c041164dd576c3d02db6c6a987130d0f8",
+      "byte_size": null,
+      "availability": "UPSTREAM_ONLY",
+      "kind": "source-summary",
+      "author": "DeepSeek HARNESS Quant (DSHQuant) contributors",
+      "license_id": "MIT",
+      "license_ref": "upstream-license",
+      "version": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+      "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/alpha-gpt-factor-mining/references/trial-findings.md",
+      "source_path": "assets/skills/alpha-gpt-factor-mining/references/trial-findings.md",
+      "source_sha256": "7a72cab845615a0845e39096ddf47c6c041164dd576c3d02db6c6a987130d0f8",
+      "derivation": "SOURCE_NOT_DISTRIBUTED"
+    },
+    {
+      "resource_id": "source-fscore-partial",
+      "path": null,
+      "sha256": "eae2e652d64af5486c61c47f77fc3afec7562766eabbd8960b31955bb509bcf3",
+      "byte_size": null,
+      "availability": "UPSTREAM_ONLY",
+      "kind": "source-code",
+      "author": "DeepSeek HARNESS Quant (DSHQuant) contributors",
+      "license_id": "MIT",
+      "license_ref": "upstream-license",
+      "version": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+      "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/factors/fscore.py",
+      "source_path": "factors/fscore.py",
+      "source_sha256": "eae2e652d64af5486c61c47f77fc3afec7562766eabbd8960b31955bb509bcf3",
+      "derivation": "SOURCE_NOT_DISTRIBUTED"
+    },
+    {
+      "resource_id": "source-sue-simplified",
+      "path": null,
+      "sha256": "d43ecc2a960ed3a3560a11875c98124cdd3e6947eddfc126dcc967ea2edab43b",
+      "byte_size": null,
+      "availability": "UPSTREAM_ONLY",
+      "kind": "source-code",
+      "author": "DeepSeek HARNESS Quant (DSHQuant) contributors",
+      "license_id": "MIT",
+      "license_ref": "upstream-license",
+      "version": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+      "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/factors/fundamental.py",
+      "source_path": "factors/fundamental.py",
+      "source_sha256": "d43ecc2a960ed3a3560a11875c98124cdd3e6947eddfc126dcc967ea2edab43b",
+      "derivation": "SOURCE_NOT_DISTRIBUTED"
+    },
+    {
+      "resource_id": "upstream-trial-full-report",
+      "path": null,
+      "sha256": null,
+      "byte_size": null,
+      "availability": "MISSING",
+      "kind": "source-report",
+      "author": "Upstream data/report not obtained",
+      "license_id": null,
+      "license_ref": null,
+      "version": "unknown",
+      "source_path": "_trial_alphagpt/实施核查报告_20260815.md"
+    },
+    {
+      "resource_id": "upstream-bars-dataset",
+      "path": null,
+      "sha256": null,
+      "byte_size": null,
+      "availability": "MISSING",
+      "kind": "source-dataset",
+      "author": "Upstream data/report not obtained",
+      "license_id": null,
+      "license_ref": null,
+      "version": "unknown",
+      "source_path": "Original trial bars.db / universe and adjustments"
+    },
+    {
+      "resource_id": "upstream-finance-quality-dataset",
+      "path": null,
+      "sha256": null,
+      "byte_size": null,
+      "availability": "MISSING",
+      "kind": "source-dataset",
+      "author": "Upstream data/report not obtained",
+      "license_id": null,
+      "license_ref": null,
+      "version": "unknown",
+      "source_path": "Original finance_quality.db"
+    },
+    {
+      "resource_id": "upstream-finance-dataset",
+      "path": null,
+      "sha256": null,
+      "byte_size": null,
+      "availability": "MISSING",
+      "kind": "source-dataset",
+      "author": "Upstream financial dataset not obtained",
+      "license_id": null,
+      "license_ref": null,
+      "version": "unknown",
+      "source_path": "Original finance.db"
+    },
+    {
+      "resource_id": "source-definitions",
+      "path": "factors/source-definitions.json",
+      "sha256": "1390243719d0f04ba49bf683ae2486c8be9007c3dbf34f3b0f38be7d03f3d0c5",
+      "byte_size": 6505,
+      "availability": "PACKAGED",
+      "kind": "reference-data",
+      "author": "Finahinking contributors; source attribution in individual records",
+      "license_id": "MIT",
+      "license_ref": "finathink-license",
+      "version": "1.0.0",
+      "derivation": "FINATHINK_ADAPTATION"
+    },
+    {
+      "resource_id": "source-claims",
+      "path": "evidence/source-claims.jsonl",
+      "sha256": "fc0d7a6e2aa60b2ba7eb605074849239074fe52020eabcdbc0fdb411671e1b55",
+      "byte_size": 6133,
+      "availability": "PACKAGED",
+      "kind": "reference-data",
+      "author": "Finahinking contributors; source attribution in individual records",
+      "license_id": "MIT",
+      "license_ref": "finathink-license",
+      "version": "1.0.0",
+      "derivation": "FINATHINK_ADAPTATION"
+    },
+    {
+      "resource_id": "lessons",
+      "path": "lessons/falsifications.jsonl",
+      "sha256": "8fa3927892fc0b3005451025fb41e59009a6aea79e815996dd67cb2baf71f72e",
+      "byte_size": 3724,
+      "availability": "PACKAGED",
+      "kind": "reference-data",
+      "author": "Finahinking contributors; source attribution in individual records",
+      "license_id": "MIT",
+      "license_ref": "finathink-license",
+      "version": "1.0.0",
+      "derivation": "FINATHINK_ADAPTATION"
     }
   ]
 }

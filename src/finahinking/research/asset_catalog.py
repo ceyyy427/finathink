@@ -4,11 +4,19 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import re
 from importlib.resources import files
 from pathlib import Path, PurePosixPath
 
-from .asset_contracts import AssetLoadError, ResourceRef, SkillDescriptor
+from .asset_contracts import (
+    AssetInventory,
+    AssetLoadError,
+    EvidenceClaim,
+    LessonRecord,
+    ResourceRef,
+    SkillDescriptor,
+)
 
 _HASH = re.compile(r"[0-9a-f]{64}")
 _SKILL_ID = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
@@ -156,3 +164,118 @@ class ResearchAssetCatalog:
         ids = dict.fromkeys((skill.main_resource, skill.policy_ref,
                              *skill.required_resources, *skill.optional_resources))
         return tuple(self.get_resource(resource_id) for resource_id in ids)
+
+    def _records(self, resource_id, record_type, tuple_fields):
+        result = []
+        seen = set()
+        try:
+            for line in self.read_text(resource_id).splitlines():
+                if not line.strip():
+                    continue
+                item = self._json(line, resource_id)
+                for name in tuple_fields:
+                    if not isinstance(item[name], list) or not all(
+                        isinstance(value, str) and value for value in item[name]
+                    ):
+                        raise AssetLoadError("INVALID_EVIDENCE", resource_id)
+                    item[name] = tuple(item[name])
+                record = record_type(**item)
+                identity = record.claim_id if record_type is EvidenceClaim else record.lesson_id
+                if not isinstance(identity, str) or not identity or identity in seen:
+                    raise AssetLoadError("INVALID_EVIDENCE", resource_id)
+                seen.add(identity)
+                if record.evidence_status not in {
+                    "SOURCE_REPORTED", "IMPLEMENTATION_LOCATED", "DEPENDENCY_MISSING",
+                    "CONFLICTING_EVIDENCE",
+                } or not record.source_resource_ids:
+                    raise AssetLoadError("INVALID_EVIDENCE", resource_id)
+                for source_id in record.source_resource_ids:
+                    self.get_resource(source_id)
+                if record_type is EvidenceClaim:
+                    # Packaged source text cannot mint a local execution receipt.
+                    if record.local_run_ref is not None or record.reproduction_scope is not None:
+                        raise AssetLoadError("INVALID_EVIDENCE", resource_id)
+                    if any(not isinstance(value, str) or not value for value in (
+                        record.subject_id, record.metric_name, record.metric_units,
+                        record.definition, record.scope,
+                    )):
+                        raise AssetLoadError("INVALID_EVIDENCE", resource_id)
+                    value = record.metric_value
+                    if isinstance(value, bool) or (
+                        isinstance(value, (float, int)) and not math.isfinite(value)
+                    ) or not isinstance(value, (float, int, str, type(None))):
+                        raise AssetLoadError("INVALID_EVIDENCE", resource_id)
+                elif record.is_financial_falsification is not False:
+                    # Local hypothesis rejection is joined from audited runs later,
+                    # not inferred from a summary or an unavailable original report.
+                    raise AssetLoadError("INVALID_EVIDENCE", resource_id)
+                result.append(record)
+        except (KeyError, OverflowError, TypeError) as exc:
+            raise AssetLoadError("INVALID_EVIDENCE", resource_id) from exc
+        return tuple(result)
+
+    def claims_for(self, subject_id: str) -> tuple[EvidenceClaim, ...]:
+        claims = self._records("source-claims", EvidenceClaim, ("source_resource_ids",))
+        return tuple(sorted((claim for claim in claims if claim.subject_id == subject_id),
+                            key=lambda claim: claim.claim_id))
+
+    def lessons_for(self, tags: tuple[str, ...]) -> tuple[LessonRecord, ...]:
+        lessons = self._records("lessons", LessonRecord, ("source_resource_ids", "tags"))
+        wanted = set(tags)
+        return tuple(sorted((lesson for lesson in lessons if not wanted or wanted & set(lesson.tags)),
+                            key=lambda lesson: lesson.lesson_id))
+
+    def _definitions(self):
+        document = self._json(self.read_text("source-definitions"), "source-definitions")
+        if document.get("schema_version") != "source-definitions.v1":
+            raise AssetLoadError("INVALID_DEFINITION", "source-definitions")
+        try:
+            definitions = document["definitions"]
+            aliases = document["aliases"]
+            if not isinstance(definitions, list) or not isinstance(aliases, list):
+                raise AssetLoadError("INVALID_DEFINITION", "source-definitions")
+            identities = set()
+            for item in definitions:
+                identity = item["definition_id"]
+                if not isinstance(identity, str) or not identity or identity in identities:
+                    raise AssetLoadError("INVALID_DEFINITION", "source-definitions")
+                identities.add(identity)
+                if not item["name"] or not item["source_id"] or not item["source_resource_ids"]:
+                    raise AssetLoadError("INVALID_DEFINITION", identity)
+                for resource_id in item["source_resource_ids"]:
+                    self.get_resource(resource_id)
+                state = item["definition_status"]
+                if state not in {"FORMULA_LOCATED", "UNRESOLVED"} or (
+                    state == "FORMULA_LOCATED" and not item.get("formula")
+                ) or (state == "UNRESOLVED" and item.get("formula") is not None):
+                    raise AssetLoadError("INVALID_DEFINITION", identity)
+            alias_ids = set()
+            for item in aliases:
+                identity = item["alias_id"]
+                if (not isinstance(identity, str) or not identity or identity in alias_ids
+                        or identity in identities or item["canonical_id"] not in identities):
+                    raise AssetLoadError("INVALID_DEFINITION", "source-definitions")
+                alias_ids.add(identity)
+        except (KeyError, TypeError) as exc:
+            raise AssetLoadError("INVALID_DEFINITION", "source-definitions") from exc
+        return definitions, aliases
+
+    def inventory(self) -> AssetInventory:
+        claims = self._records("source-claims", EvidenceClaim, ("source_resource_ids",))
+        lessons = self.lessons_for(())
+        definitions, aliases = self._definitions()
+        counts = {state: sum(r.availability == state for r in self._resources.values())
+                  for state in _AVAILABILITY}
+        return AssetInventory(
+            skill_count=len(self._skills), packaged_resource_count=counts["PACKAGED"],
+            missing_resource_count=counts["MISSING"],
+            upstream_only_resource_count=counts["UPSTREAM_ONLY"],
+            unlicensed_resource_count=counts["UNLICENSED"],
+            unique_definition_count=sum(d["definition_status"] == "FORMULA_LOCATED"
+                                        for d in definitions),
+            alias_count=len(aliases), claim_count=len(claims), lesson_count=len(lessons),
+            locally_reproduced_claim_count=0, financial_falsification_count=0,
+            source_factor_count=len(definitions),
+            unresolved_definition_count=sum(d["definition_status"] == "UNRESOLVED"
+                                            for d in definitions),
+        )

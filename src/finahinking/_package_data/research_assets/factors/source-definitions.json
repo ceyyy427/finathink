@@ -1,0 +1,174 @@
+{
+  "schema_version": "source-definitions.v1",
+  "definitions": [
+    {
+      "definition_id": "dshq-limup-ex-5",
+      "name": "limup_ex_5",
+      "source_id": "dshq-method-summary",
+      "version": "source-2026-08-16",
+      "definition_status": "UNRESOLVED",
+      "formula": null,
+      "source_resource_ids": [
+        "source-github-maintainer"
+      ],
+      "implementation_ref": null,
+      "definition_gap": "摘要指标未绑定可核验的完整公式、原始数据与实验版本。",
+      "execution_status": "NOT_RUN",
+      "metric_binding": "SOURCE_ONLY_NOT_LOCAL"
+    },
+    {
+      "definition_id": "dshq-limup-ex-ret-20",
+      "name": "limup_ex_ret_20",
+      "source_id": "dshq-method-summary",
+      "version": "source-2026-08-16",
+      "definition_status": "UNRESOLVED",
+      "formula": null,
+      "source_resource_ids": [
+        "source-github-maintainer"
+      ],
+      "implementation_ref": null,
+      "definition_gap": "摘要指标未绑定可核验的完整公式、原始数据与实验版本。",
+      "execution_status": "NOT_RUN",
+      "metric_binding": "SOURCE_ONLY_NOT_LOCAL"
+    },
+    {
+      "definition_id": "dshq-open-prem-20",
+      "name": "open_prem_20",
+      "source_id": "dshq-method-summary",
+      "version": "source-2026-08-16",
+      "definition_status": "UNRESOLVED",
+      "formula": null,
+      "source_resource_ids": [
+        "source-github-maintainer"
+      ],
+      "implementation_ref": null,
+      "definition_gap": "摘要指标未绑定可核验的完整公式、原始数据与实验版本。",
+      "execution_status": "NOT_RUN",
+      "metric_binding": "SOURCE_ONLY_NOT_LOCAL"
+    },
+    {
+      "definition_id": "dshq-lhb-jg-cnt-20",
+      "name": "lhb_jg_cnt_20",
+      "source_id": "dshq-method-summary",
+      "version": "source-2026-08-16",
+      "definition_status": "UNRESOLVED",
+      "formula": null,
+      "source_resource_ids": [
+        "source-github-maintainer"
+      ],
+      "implementation_ref": null,
+      "definition_gap": "摘要指标未绑定可核验的完整公式、原始数据与实验版本。",
+      "execution_status": "NOT_RUN",
+      "metric_binding": "SOURCE_ONLY_NOT_LOCAL"
+    },
+    {
+      "definition_id": "dshq-turn-mid-prox",
+      "name": "turn_mid_prox",
+      "source_id": "dshq-method-summary",
+      "version": "source-2026-08-16",
+      "definition_status": "UNRESOLVED",
+      "formula": null,
+      "source_resource_ids": [
+        "source-github-maintainer"
+      ],
+      "implementation_ref": null,
+      "definition_gap": "同名实现、指标绑定或定义存在歧义，禁止使用近似公式冒名替代。",
+      "execution_status": "NOT_RUN",
+      "metric_binding": "SOURCE_ONLY_NOT_LOCAL"
+    },
+    {
+      "definition_id": "dshq-bp",
+      "name": "bp",
+      "source_id": "dshq-method-summary",
+      "version": "source-2026-08-16",
+      "definition_status": "UNRESOLVED",
+      "formula": null,
+      "source_resource_ids": [
+        "source-github-maintainer"
+      ],
+      "implementation_ref": null,
+      "definition_gap": "摘要指标未绑定可核验的完整公式、原始数据与实验版本。",
+      "execution_status": "NOT_RUN",
+      "metric_binding": "SOURCE_ONLY_NOT_LOCAL"
+    },
+    {
+      "definition_id": "dshq-f-score",
+      "name": "f_score",
+      "source_id": "dshq-method-summary",
+      "version": "source-2026-08-16",
+      "definition_status": "UNRESOLVED",
+      "formula": null,
+      "source_resource_ids": [
+        "source-github-maintainer"
+      ],
+      "implementation_ref": null,
+      "definition_gap": "同名实现、指标绑定或定义存在歧义，禁止使用近似公式冒名替代。",
+      "execution_status": "NOT_RUN",
+      "metric_binding": "SOURCE_ONLY_NOT_LOCAL"
+    },
+    {
+      "definition_id": "dshq-sue",
+      "name": "sue",
+      "source_id": "dshq-method-summary",
+      "version": "source-2026-08-16",
+      "definition_status": "UNRESOLVED",
+      "formula": null,
+      "source_resource_ids": [
+        "source-github-maintainer"
+      ],
+      "implementation_ref": null,
+      "definition_gap": "同名实现、指标绑定或定义存在歧义，禁止使用近似公式冒名替代。",
+      "execution_status": "NOT_RUN",
+      "metric_binding": "SOURCE_ONLY_NOT_LOCAL"
+    },
+    {
+      "definition_id": "dshq-fscore-available-items",
+      "name": "fscore partial available-item sum",
+      "source_id": "dshq-fscore.py",
+      "version": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+      "definition_status": "FORMULA_LOCATED",
+      "formula": {
+        "aggregation": "sum non-null signal values; return n_available separately",
+        "signals": {
+          "P1": "coalesce(roe,0)>0",
+          "P2": "coalesce(cfo_or,0)>0 OR (cfo_np IS NOT NULL AND cfo_np!=0)",
+          "P3": "year_on_year(roe)>0; null if missing",
+          "P4": "cfo_np>1; null if missing",
+          "P5": "year_on_year(liability_to_asset)<0; null if missing",
+          "P6": "year_on_year(current_ratio)>0; null if missing",
+          "P7": null,
+          "P8": "year_on_year(gross_margin)>0; null if missing",
+          "P9": null
+        },
+        "empty_history": "score=None; n_available=0"
+      },
+      "source_resource_ids": [
+        "source-fscore-partial",
+        "upstream-finance-quality-dataset"
+      ],
+      "implementation_ref": "factors/fscore.py#fscore",
+      "execution_status": "NOT_RUN",
+      "metric_binding": "NOT_MAPPED_TO_GENERIC_F_SCORE",
+      "pit_status": "LATEST_PERIOD_SELECTION_NOT_ASOF",
+      "units": "count of available passing items, not complete 9-point score"
+    },
+    {
+      "definition_id": "dshq-sue-profit-yoy-v2",
+      "name": "sue_factor_at simplified profit YoY",
+      "source_id": "dshq-fundamental.py",
+      "version": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+      "definition_status": "FORMULA_LOCATED",
+      "formula": "(current_quarter_net_profit - same_quarter_previous_year_net_profit) / abs(same_quarter_previous_year_net_profit); undefined if abs(denominator) < 1e-9 or inputs missing",
+      "source_resource_ids": [
+        "source-sue-simplified",
+        "upstream-finance-dataset"
+      ],
+      "implementation_ref": "factors/fundamental.py#sue_factor_at",
+      "execution_status": "NOT_RUN",
+      "metric_binding": "NOT_MAPPED_TO_GENERIC_SUE_ICIR",
+      "pit_status": "REPORT_PERIOD_PLUS_STANDARD_DELAY_APPROXIMATION",
+      "units": "ratio; not standardized earnings surprise"
+    }
+  ],
+  "aliases": []
+}
