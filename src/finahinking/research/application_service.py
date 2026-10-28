@@ -606,7 +606,7 @@ class ResearchApplicationService:
                 journal = ModelCallJournal(journal_path, job_id=record.job_id, run_id=request.run_id, request_digest=stable_digest(request), attempt=max(1, record.attempts), scope_id=self.scope_id)
                 calls = journal.records(terminal=record.status in {JobStatus.COMPLETED, JobStatus.CANCELLED, JobStatus.FAILED})
             model_research = {**(model_research or {}), "calls": calls, "usage_status": "UNKNOWN" if any(item["dispatched"] and item["usage"] is None for item in calls) else "RECORDED" if calls else "NOT_STARTED", "aggregate_counts": runtime_metrics}
-        return redact_public_payload({
+        payload = redact_public_payload({
             "schema_version": 1, "paper_only": True, "execution_mode": request.research_plan.validation_spec.get("execution_mode", "local-deterministic"),
             "data_mode": source.get("data_mode", request.research_plan.validation_spec.get("data_mode", "UNKNOWN")),
             "data_limitations": source.get("data_limitations", []), "metric_basis": "OBSERVATION",
@@ -628,7 +628,14 @@ class ResearchApplicationService:
             "report_status": report_status, "report_url": f"/research/{request.run_id}/report/complete" if report_status == "AVAILABLE" else None,
             "run_url": f"/research/{request.run_id}", "metrics": metrics,
             "runtime_metrics": runtime_metrics,
+            "retry_at": _utc(record.available_at) if record.status is JobStatus.RETRYABLE else None,
+            "checkpoint_available": state is not None,
         })
+
+        from .explanations import research_explanation
+
+        payload["explanation"] = research_explanation(payload)
+        return payload
 
     def list_jobs(self, *, limit=50, offset=0):
         if type(limit) is not int or not 1 <= limit <= 200 or type(offset) is not int or offset < 0:
