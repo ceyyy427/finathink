@@ -41,6 +41,7 @@ def test_page_configures_an_inert_provider_then_authorizes_a_grounded_spawn_job(
         page.locator('[data-run-workspace][data-job-status="completed"], [data-run-workspace][data-job-status="failed"]').wait_for(timeout=30000)
         error_log = app.artifact_root / "peer-error.log"
         assert page.locator('[data-run-workspace]').get_attribute("data-job-status") == "completed", error_log.read_text() if error_log.exists() else page.locator('[data-run-failure]').inner_text()
+        page.get_by_text('技术指标、模型记录与完整限制', exact=True).click()
         assert "3 次调用" in page.locator('[data-run-model-summary]').inner_text()
         assert "INSUFFICIENT_DATA" in page.locator('[data-run-model-roles]').inner_text()
         assert "Test the interpretation out of sample." in page.locator('[data-run-synthesis]').inner_text()

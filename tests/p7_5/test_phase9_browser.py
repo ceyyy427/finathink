@@ -196,6 +196,8 @@ def test_large_task_history_is_paginated_under_cpu_throttle(tmp_path, observed_p
         assert diagnostics['metrics']['cpu_throttled_history_journey_ms'] < 20_000
         page.screenshot(path=str(artifacts / 'paged-history-throttle-375.png'), full_page=True)
         session.detach()
+        # End the queued-job poller while its HTTP server is still available.
+        page.goto('about:blank')
     assert not diagnostics['errors']
 
 

@@ -8,10 +8,21 @@ from typing import Protocol
 from .contracts import DatasetSnapshot, MarketObservation
 
 
-def snapshot_from_batch(batch, *, as_of=None, adjustment: str = "UNKNOWN", calendar: str = "UNKNOWN") -> DatasetSnapshot:
+class MissingPriceFields(ValueError):
+    """Only canonical required names may appear in public repair diagnostics."""
+
+    def __init__(self, fields):
+        self.fields = tuple(sorted(fields))
+        super().__init__("missing required fields: " + ", ".join(self.fields))
+
+
+def snapshot_from_batch(batch, *, as_of=None, adjustment: str = "UNKNOWN", calendar: str = "UNKNOWN", units=None) -> DatasetSnapshot:
     """Capture normalized user prices without inventing missing OHLCV or PIT."""
 
+    from finahinking.data.units import snapshot_units
     from finahinking.data.user_api_contracts import DataBatch, fingerprint_records
+
+    units = snapshot_units(units)
 
     if not isinstance(batch, DataBatch):
         raise TypeError("batch must be a DataBatch")
@@ -20,11 +31,11 @@ def snapshot_from_batch(batch, *, as_of=None, adjustment: str = "UNKNOWN", calen
     if not batch.records:
         raise ValueError("snapshot has no price records")
     required = {"instrument", "timestamp", "open", "high", "low", "close", "volume"}
+    missing = {key for record in batch.records for key in required if record.get(key) is None}
+    if missing:
+        raise MissingPriceFields(missing)
     observations = []
-    for index, record in enumerate(batch.records):
-        missing = sorted(required - record.keys())
-        if missing:
-            raise ValueError(f"record {index}: missing required fields: {', '.join(missing)}")
+    for record in batch.records:
         observations.append(MarketObservation(
             **{key: record[key] for key in required},
             amount=record.get("amount"), available_at=record.get("available_at"),
@@ -43,6 +54,7 @@ def snapshot_from_batch(batch, *, as_of=None, adjustment: str = "UNKNOWN", calen
             "retrieved_at": batch.retrieved_at.isoformat(),
             "quality_issues": list(batch.quality_issues), "pit_status": batch.pit_available,
             "timezone": "UTC", "adjustment": adjustment, "calendar": calendar,
+            **({"units": units} if units else {}),
         },
         limitations=("User-declared source and market conventions; paper-only research.",),
     )

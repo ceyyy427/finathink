@@ -66,6 +66,7 @@ def test_two_real_inputs_generate_distinct_reports_and_survive_page_reload(http_
     assert app.research_service.get_job(first)["metrics"]["total_return"] > 0
     assert app.research_service.get_job(second)["metrics"]["total_return"] == 0
     assert "SAMPLE DATA" in page.locator('[data-run-identity]').inner_text()
+    page.get_by_text('技术指标、模型记录与完整限制', exact=True).click()
     assert "not evidence of market performance" in page.locator('[data-run-data-note]').inner_text()
     for link, reference in zip((link_a, link_b), references, strict=True):
         response = page.request.get(base + link)

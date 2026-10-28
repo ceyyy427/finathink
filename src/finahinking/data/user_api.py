@@ -279,11 +279,13 @@ class JsonApiConnector:
             as_of=request.as_of,
         )
 
-    def capture(self, request: DataRequest, store) -> str:
+    def capture(self, request: DataRequest, store, *, units=None) -> str:
         """Explicitly fetch once and retain an immutable replay reference."""
+        from finahinking.data.units import snapshot_units
         from finahinking.p8_2.data_sources import snapshot_from_batch
 
-        return store.save(snapshot_from_batch(self.fetch(request)))
+        declaration = snapshot_units(units)
+        return store.save(snapshot_from_batch(self.fetch(request), units=declaration))
 
 
 __all__ = [

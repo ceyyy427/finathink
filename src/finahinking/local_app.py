@@ -328,6 +328,22 @@ _RESEARCH_JOBS_CSS = """
 .research-stage-list [data-stage-status="COMPLETE"] { color: var(--success); }
 .research-stage-list [data-stage-status="RUNNING"] { color: var(--evidence); }
 .research-stage-list [data-stage-status="FAILED"] { color: var(--error); }
+.first-research-steps { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; list-style:none; padding:0; }
+.first-research-steps li { border-top:2px solid var(--border-strong); padding-top:10px; font-size:.82rem; }
+.readiness-checks { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px 24px; list-style:none; padding:0; }
+.readiness-checks li { min-width:0; border-left:3px solid var(--border); padding-left:12px; }
+.readiness-checks p { margin:5px 0; }
+.readiness-checks [data-check-status="BLOCKED"] { border-color:var(--error); }
+.readiness-checks [data-check-status="REVIEW"] { border-color:var(--warning); }
+.readiness-checks [data-check-status="PASS"] { border-color:var(--success); }
+.research-explanation { border-top:1px solid var(--border); margin-top:16px; }
+.research-explanation:empty { display:none; }
+.research-explanation h3 { margin:18px 0 6px; font-size:1rem; }
+.research-explanation ul { padding-left:20px; }
+.research-timeline li { padding-bottom:8px; }
+[data-run-workspace] fieldset { min-width:0; border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px; }
+@media(max-width:800px) { .first-research-steps { grid-template-columns:repeat(2,minmax(0,1fr)); } .readiness-checks { grid-template-columns:1fr; } }
+
 """
 
 _FACTOR_STUDY_CSS = """
@@ -1330,7 +1346,7 @@ class LocalApplication:
             return 422, "application/json", {"error": "因子输入或证据绑定无效，请重新读取定义和范围。"}
 
     def _research_jobs_route(self, method, clean, body, query):
-        if not (clean in {"/api/research/jobs", "/api/research/experiments", "/api/research/learning"} or clean.startswith(("/api/research/jobs/", "/api/research/snapshots", "/api/research/experiments/", "/api/research/learning/"))):
+        if not (clean in {"/api/research/readiness", "/api/research/jobs", "/api/research/experiments", "/api/research/learning"} or clean.startswith(("/api/research/jobs/", "/api/research/snapshots", "/api/research/experiments/", "/api/research/learning/"))):
             return None
         content_type = "application/json"
         if method not in {"GET", "POST"}:
@@ -1342,6 +1358,8 @@ class LocalApplication:
         values = {key: value for key, value in (body or {}).items() if key != "_csrf"} if isinstance(body, Mapping) else {}
         try:
             service = self.research_service
+            if clean == "/api/research/readiness":
+                return (200, content_type, service.readiness(values)) if method == "POST" else (405, content_type, {"error": "请显式提交输入检查。"})
             if clean.startswith("/api/research/jobs/"):
                 parts = clean.removeprefix("/api/research/jobs/").split("/")
                 if len(parts) >= 2 and parts[1] == "methods":
@@ -1427,11 +1445,12 @@ class LocalApplication:
                 service.snapshots.save(snapshot)
                 return 201, content_type, self._snapshot_summary(snapshot)
             if clean == "/api/research/snapshots/capture" and method == "POST":
-                if set(values) - {"connection_id", "instrument", "start", "end", "as_of"}:
+                if set(values) - {"connection_id", "instrument", "start", "end", "as_of", "price_currency", "volume_unit"}:
                     raise ValueError("unsupported capture fields")
                 config = self._data_connections.get(values["connection_id"])
                 request = DataRequest(dataset_kind="prices", instruments=(values["instrument"],), start=values.get("start"), end=values.get("end"), as_of=values.get("as_of"))
-                reference = JsonApiConnector(config, self._data_connections.credentials, self._data_transport).capture(request, service.snapshots)
+                units = {key: values.get(key, "UNKNOWN") or "UNKNOWN" for key in ("price_currency", "volume_unit")}
+                reference = JsonApiConnector(config, self._data_connections.credentials, self._data_transport).capture(request, service.snapshots, units=units)
                 return 201, content_type, self._snapshot_summary(service.snapshots.load(reference))
             return 405, content_type, {"error": "use an explicit snapshot preparation endpoint"}
         except FileNotFoundError:
@@ -1441,6 +1460,10 @@ class LocalApplication:
         except DataConnectorError as exc:
             return 502, content_type, {"error": "数据获取失败，请检查连接、字段映射及数据权限。", "code": exc.code}
         except (ValueError, TypeError) as exc:
+            from .p8_2.data_sources import MissingPriceFields
+
+            if clean == "/api/research/snapshots/capture" and isinstance(exc, MissingPriceFields):
+                return 422, content_type, {"error": "数据缺少必要字段：" + "、".join(exc.fields) + "。请在数据接口中补齐字段映射，再获取快照。", "code": "MISSING_PRICE_FIELDS", "missing_fields": list(exc.fields)}
             if clean.startswith("/api/research/learning"):
                 from .research.contracts import _unsafe_public_text
 
@@ -1458,39 +1481,39 @@ class LocalApplication:
             '<section data-run-workspace data-job-status="EMPTY">'
             '<div class="status-row"><span class="status status--offline">LOCAL WORKSPACE</span><span class="status status--ready">PAPER-ONLY</span></div>'
             '<h1>研究任务</h1><p class="lede">选定数据，运行有边界的研究，保留可以复核的结果。</p>'
-            '<section class="panel section" data-run-onboarding aria-labelledby="first-use-title"><h2 id="first-use-title">第一次使用：生成一份离线报告</h2>'
-            '<ol><li>准备数据：展开下方“使用明确标记的演示数据”，点击“生成 SAMPLE 快照”。此步骤无需 API Key，也不联网。</li>'
-            '<li>选择研究模板，核对已选快照、标的和截止日。保留“本地确定性流程”，点击“提交研究任务”。</li>'
-            '<li>在“运行与结果”查看阶段、耗时和预算，完成后打开完整 HTML 报告。报告可保存为文件，离线阅读。</li></ol>'
-            '<p>接入自己的数据时：<a href="/settings/data-connections">保存数据接口与字段映射</a> → 在本页显式获取快照 → 提交研究。'
-            '需要材料分析时再<a href="/settings/providers">配置模型接口</a>并逐次授权。</p>'
+            '<section class="panel section" data-run-onboarding aria-labelledby="first-use-title"><h2 id="first-use-title">从数据到第一份研究报告</h2>'
+            '<p>先接入自己的数据并检查，再明确开始研究。也可展开演示数据，走完一遍离线流程。</p>'
+            '<ol class="first-research-steps" data-first-research-steps><li data-guide-step="data">01 准备数据 · 待准备</li><li data-guide-step="check">02 核对输入 · 待检查</li><li data-guide-step="run">03 运行研究 · 待开始</li><li data-guide-step="report">04 阅读报告 · 待生成</li></ol>'
+            '<p><a href="/settings/data-connections">配置数据接口与字段映射</a> → 显式获取快照 → 检查输入 → 提交研究。报告可保存为 HTML 离线阅读。</p>'
             '<div data-run-readiness role="status" aria-live="polite"><p data-run-data-state>正在读取数据准备状态…</p><p data-run-model-state>正在读取模型配置状态…</p></div></section>'
             '<p>服务器运行两观察期动量基线、含费用回测和同信号纸面风控。至少四条低频 OHLCV，每个 UTC 日期最多一条；历史信号所用数据必须在下一根观测执行前可用。周期按观测条数计算，未验证交易日历时不展示年化收益、波动率或夏普。可选择离线流程，或明确授权所选模型分析材料；模型观察不修改数值策略。</p>'
             f'<input data-run-csrf type="hidden" value="{self.csrf_token}">'
             '<p data-run-loading role="status">正在读取快照与任务记录…</p>'
             '<p class="error-state" data-run-error role="alert" hidden></p>'
             '<button class="button-secondary" type="button" data-run-refresh>重新读取记录</button>'
-            '<div class="grid section"><section class="card"><h2>01 / 准备数据</h2>'
+            '<div class="grid section"><section class="card"><h2 id="prepare-data" tabindex="-1">01 / 准备数据</h2>'
             '<p>保存连接不会获取数据。这里的操作会显式读取用户配置的 API，并冻结一份有指纹的 OHLCV 快照。</p>'
             '<form class="form-grid" data-snapshot-capture><label>数据连接<select name="connection_id" required><option value="">请选择已保存的连接</option></select></label>'
             '<label>标的<input name="instrument" required maxlength="128" value="AAA"></label><label>开始日期<input type="date" name="start" required></label><label>结束日期<input type="date" name="end" required></label><label>数据截止日<input type="date" name="as_of" required></label>'
+            '<fieldset id="data-units" tabindex="-1"><legend>数据单位（用户声明）</legend><label>价格币种<select name="price_currency"><option value="UNKNOWN">尚未确认</option><option>CNY</option><option>USD</option><option>HKD</option><option>EUR</option><option>GBP</option><option>JPY</option></select></label><label>成交量单位<select name="volume_unit"><option value="UNKNOWN">尚未确认</option><option value="shares">股（已换算）</option><option value="units">份（已换算）</option></select></label><p class="field-help">价格与现金使用同一币种；手数或合约乘数需由数据端换算。此处记录声明，不转换数值。</p></fieldset>'
             '<button type="submit">获取并保存快照</button></form><p><a href="/settings/data-connections">配置自己的数据接口</a></p>'
             '<details><summary>使用明确标记的演示数据</summary><form class="form-grid" data-snapshot-sample><label>演示标的<input name="instrument" required maxlength="128" value="AAA"></label><button type="submit">生成 SAMPLE 快照</button></form></details></section>'
             '<section class="card"><h2>02 / 提交研究</h2><form class="form-grid" data-run-submit>'
             '<label>已保存的快照<select name="snapshot_ref" required><option value="">请选择数据快照</option></select></label>'
             '<p class="field-help" data-snapshot-description>尚未选择数据，不会自动使用演示数据。</p>'
-            '<label>研究标的<input name="instrument" required maxlength="128" value="AAA"></label><label>研究截止日（UTC 当日结束）<input type="date" name="as_of" required></label>'
+            '<label>研究标的<input id="research-instrument" name="instrument" required maxlength="128" value="AAA"></label><label>研究截止日（UTC 当日结束）<input id="research-cutoff" type="date" name="as_of" required></label>'
             '<label>研究模板<select data-run-template><option value="">保留自己填写的问题</option><option value="baseline">基础复核：动量、费用与历史回撤</option><option value="risk">风险复核：成本、容量与损失情景</option><option value="materials">材料研究：基本面、新闻与情绪证据</option></select></label><p class="field-help">模板只填入研究问题，不改变基线算法。材料分析另需模型配置与明确授权。</p>'
-            f'<label>研究问题<textarea name="question" required maxlength="2000" rows="3">{html.escape(question)}</textarea></label>{notice}'
-            '<label>执行配置<select name="model_config_ref"><option value="offline">本地确定性流程 / 不调用模型</option></select></label>'
+            f'<label>研究问题<textarea id="research-question" name="question" required maxlength="2000" rows="3">{html.escape(question)}</textarea></label>{notice}'
+            '<label>执行配置<select id="research-model" name="model_config_ref"><option value="offline">本地确定性流程 / 不调用模型</option></select></label>'
             '<p><a href="/settings/providers">配置用户自己的模型接口</a></p>'
-            '<details><summary>补充基本面、新闻、情绪或学习材料</summary><p class="field-help">可选 JSON 数组，每条包含 role、instrument、summary、source_label、observed_at、available_at、authorized:true。时间需带时区；最多 16 条，每条摘要最多 2000 字。没有对应材料的角色会显示资料不足。</p><label>已授权材料摘要（JSON）<textarea name="materials" rows="5" maxlength="40000" placeholder="[]"></textarea></label></details>'
+            '<details><summary>补充基本面、新闻、情绪或学习材料</summary><p class="field-help">可选 JSON 数组，每条包含 role、instrument、summary、source_label、observed_at、available_at、authorized:true。时间需带时区；最多 16 条，每条摘要最多 2000 字。没有对应材料的角色会显示资料不足。</p><label>已授权材料摘要（JSON）<textarea id="research-materials" name="materials" rows="5" maxlength="40000" placeholder="[]"></textarea></label></details>'
             '<label class="model-consent"><input type="checkbox" name="allow_model_calls" value="true">我授权向所选模型发送研究问题、标的、最近最多 16 条行情及上述材料摘要，并承担调用费用。在线任务不自动重试。</label>'
-            '<label>墙钟上限（秒，最多 300）<input name="max_wall_seconds" type="number" min="5" max="300" value="120" required></label>'
+            '<label>墙钟上限（秒，最多 300）<input id="research-budget" name="max_wall_seconds" type="number" min="5" max="300" value="120" required></label>'
             '<button type="submit">提交研究任务</button></form><button type="button" class="button-secondary" data-run-new>新建另一项研究</button></section></div>'
-            '<section class="panel section" data-run-progress aria-live="polite" aria-atomic="false"><h2>03 / 运行与结果</h2>'
-            '<p data-run-empty>还没有研究任务。先选择快照并提交研究。</p><p data-run-state></p><p data-run-budget></p><p data-run-identity class="snapshot-fingerprint"></p><ol class="research-stage-list" data-run-stages></ol>'
-            '<p class="field-help" data-run-data-note></p><p data-run-model-summary></p><ul class="overview-list" data-run-call-records></ul><ul class="overview-list" data-run-model-roles></ul><div data-run-synthesis></div><dl data-run-metrics></dl><p data-run-failure></p><div class="action-row"><button type="button" data-run-cancel disabled>取消任务</button><a data-run-report hidden>打开完整 HTML 报告</a><a data-run-detail hidden>查看研究档案</a></div></section>'
+            '<section class="panel section" data-readiness-panel data-readiness-state="STALE" aria-labelledby="readiness-title"><div class="section-heading"><h2 id="readiness-title">提交前的数据就绪检查</h2><button type="button" class="button-secondary" data-readiness-check>检查当前输入</button></div><p data-readiness-summary tabindex="-1" role="status" aria-live="polite">选择快照后检查；提交时也会核对当前输入。</p><ul class="readiness-checks" data-readiness-results></ul><details data-readiness-passed-details hidden><summary data-readiness-passed-count>查看已核对项</summary><ul class="readiness-checks" data-readiness-passed></ul></details><details><summary>查看所选数据的完整指纹</summary><p class="snapshot-fingerprint" data-snapshot-reference>尚未选择快照</p></details></section>'
+            '<section class="panel section" data-run-progress aria-live="polite" aria-atomic="false"><h2 data-run-progress-title tabindex="-1">03 / 运行与结果</h2>'
+            '<p data-run-empty>还没有研究任务。先选择快照并提交研究。</p><p data-run-state></p><div data-run-explanation class="research-explanation"></div><p data-run-budget></p><p data-run-identity class="snapshot-fingerprint"></p><details><summary>技术阶段与状态码</summary><ol class="research-stage-list" data-run-stages></ol></details>'
+            '<details><summary>技术指标、模型记录与完整限制</summary><p class="field-help" data-run-data-note></p><p data-run-model-summary></p><ul class="overview-list" data-run-call-records></ul><ul class="overview-list" data-run-model-roles></ul><div data-run-synthesis></div><dl data-run-metrics></dl></details><p data-run-failure></p><div class="action-row"><button type="button" data-run-cancel disabled>取消任务</button><button type="button" class="button-secondary" data-run-restore disabled>沿用基础输入</button><a data-run-report hidden>打开完整 HTML 报告</a><a data-run-detail hidden>查看研究档案</a></div><p data-run-restore-note role="status"></p></section>'
             '<section class="panel section"><h2>最近的后台任务</h2><p>刷新页面或重启服务后，可从这里继续查看；相同提交标识不会重复排队。</p><ul class="overview-list" data-run-history></ul><div class="action-row"><button type="button" class="button-secondary" data-run-history-prev disabled>上一页任务</button><span data-run-history-page role="status"></span><button type="button" class="button-secondary" data-run-history-next disabled>下一页任务</button></div><a href="/research/compare">比较已发布的研究</a></section>'
             '<section class="panel section" data-method-handoff><h2>方法交接与受控因子研究</h2><p>为当前任务按需加载方法并导出交接包。外部工具负责推理，回传只接受有绑定的 JSON；这里不会自动调用 Codex 或执行模型代码。</p>'
             '<p role="status" aria-live="polite" data-method-status>先选择一个已保存的研究任务。</p><button type="button" data-method-export disabled>导出因子研究交接包</button>'
