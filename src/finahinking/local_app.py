@@ -1330,7 +1330,7 @@ class LocalApplication:
             return 422, "application/json", {"error": "因子输入或证据绑定无效，请重新读取定义和范围。"}
 
     def _research_jobs_route(self, method, clean, body, query):
-        if not (clean in {"/api/research/jobs", "/api/research/experiments", "/api/research/learning"} or clean.startswith(("/api/research/jobs/", "/api/research/snapshots", "/api/research/experiments/", "/api/research/learning/"))):
+        if not (clean in {"/api/research/readiness", "/api/research/jobs", "/api/research/experiments", "/api/research/learning"} or clean.startswith(("/api/research/jobs/", "/api/research/snapshots", "/api/research/experiments/", "/api/research/learning/"))):
             return None
         content_type = "application/json"
         if method not in {"GET", "POST"}:
@@ -1342,6 +1342,8 @@ class LocalApplication:
         values = {key: value for key, value in (body or {}).items() if key != "_csrf"} if isinstance(body, Mapping) else {}
         try:
             service = self.research_service
+            if clean == "/api/research/readiness":
+                return (200, content_type, service.readiness(values)) if method == "POST" else (405, content_type, {"error": "请显式提交输入检查。"})
             if clean.startswith("/api/research/jobs/"):
                 parts = clean.removeprefix("/api/research/jobs/").split("/")
                 if len(parts) >= 2 and parts[1] == "methods":
@@ -1427,11 +1429,12 @@ class LocalApplication:
                 service.snapshots.save(snapshot)
                 return 201, content_type, self._snapshot_summary(snapshot)
             if clean == "/api/research/snapshots/capture" and method == "POST":
-                if set(values) - {"connection_id", "instrument", "start", "end", "as_of"}:
+                if set(values) - {"connection_id", "instrument", "start", "end", "as_of", "price_currency", "volume_unit"}:
                     raise ValueError("unsupported capture fields")
                 config = self._data_connections.get(values["connection_id"])
                 request = DataRequest(dataset_kind="prices", instruments=(values["instrument"],), start=values.get("start"), end=values.get("end"), as_of=values.get("as_of"))
-                reference = JsonApiConnector(config, self._data_connections.credentials, self._data_transport).capture(request, service.snapshots)
+                units = {key: values.get(key, "UNKNOWN") or "UNKNOWN" for key in ("price_currency", "volume_unit")}
+                reference = JsonApiConnector(config, self._data_connections.credentials, self._data_transport).capture(request, service.snapshots, units=units)
                 return 201, content_type, self._snapshot_summary(service.snapshots.load(reference))
             return 405, content_type, {"error": "use an explicit snapshot preparation endpoint"}
         except FileNotFoundError:

@@ -377,6 +377,11 @@ class ResearchApplicationService:
             raise ValueError("budget exceeds local resource limits")
         return limits
 
+    def readiness(self, values):
+        from .readiness import research_readiness
+
+        return research_readiness(self, values)
+
     def submit(self, values, *, factor_study=None, rerun_of=None):
         if not isinstance(values, dict):
             raise TypeError("research submission must be an object")
