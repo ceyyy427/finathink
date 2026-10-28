@@ -116,3 +116,17 @@ def test_started_analyst_checkpoint_is_not_a_claim_of_finished_analysis():
     summary = explain(job(status="cancelled", stages=[{"name": "ANALYSTS_RUNNING", "status": "COMPLETE"}]))
     assert "完成" not in summary["timeline"][0]["fact"]
     assert "标记" in summary["timeline"][0]["fact"]
+
+
+@pytest.mark.parametrize('selection, expected', [({'instrument': 'ZZZ'}, 'ZZZ'), ({}, '未记录')])
+def test_offline_summary_uses_recorded_selected_instrument_not_a_snapshot_guess(tmp_path, selection, expected):
+    result = result_with_claim()
+    manifest = ReportBundleWriter().write(result, tmp_path, quant_analytics={
+        **selection, 'metrics': {'total_return': 0}, 'data_mode': 'SAMPLE',
+        'source_metadata': {'instruments': ['AAA', 'ZZZ']},
+    })
+    document = (tmp_path / result.state.run_id / 'complete_report.html').read_text()
+    summary = document.split('data-research-explanation', 1)[1].split('</section>', 1)[0]
+    assert f'标的 {expected}' in summary
+    assert '标的 AAA' not in summary
+    assert manifest.source_snapshot.get('instrument') == selection.get('instrument')

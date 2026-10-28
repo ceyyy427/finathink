@@ -187,6 +187,8 @@ export function mountRunWorkspace(root, { fetcher = globalThis.fetch, location =
         fillOptions(captureForm?.elements.namedItem('connection_id'), connections.connections, (item) => item.display_name, (item) => item.connection_id, '请选择已保存的连接');
         fillOptions(form?.elements.namedItem('model_config_ref'), [{ provider_id: 'offline', model: '本地确定性流程 / 不调用模型' }, ...(configured.outbound_enabled === false ? [] : (configured.providers ?? []).filter((item) => item.enabled && item.adapter_kind !== 'offline' && item.endpoint_configured && item.credential_ref))], (item) => `${item.provider_id} · ${item.model}`, (item) => item.provider_id, '请选择执行配置');
         snapshotDescription();
+        // Catalog/config refresh can change values without input/change events.
+        readiness.invalidate();
       }
       const list = query('[data-run-history]');
       if (list) list.replaceChildren(...recent.jobs.map(normalizeJob).map((job) => {

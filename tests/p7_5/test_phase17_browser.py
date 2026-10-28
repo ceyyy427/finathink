@@ -70,6 +70,7 @@ def test_own_connection_capture_check_spawn_and_read_report(http_app, observed_p
         report_page = offline.new_page()
         report_page.goto(base + page.locator('[data-run-report]').get_attribute('href'))
         assert report_page.locator('[data-research-explanation]').is_visible()
+        assert '标的 AAA' in report_page.locator('[data-research-explanation]').inner_text()
         assert report_page.locator('[data-research-explanation]').get_by_text('下一步', exact=True).is_visible()
         report_page.screenshot(path=str(artifacts / 'offline-summary.png'), full_page=True)
     finally:
@@ -190,3 +191,32 @@ def test_stage_explanation_preserves_expansion_and_focus_during_polling(http_app
     page.wait_for_selector('[data-job-status="cancelled"]')
     assert summary.evaluate('el => el === document.activeElement')
     assert page.locator('[data-run-explanation] details').get_attribute('open') is not None
+
+
+@pytest.mark.parametrize('pending', [False, True])
+def test_refresh_invalidates_checks_when_it_changes_the_form(http_app, observed_page, pending):
+    app, base = http_app
+    page, _, _ = observed_page
+    ref = app.research_service.snapshots.save(FixtureMarketDataSource(points=20).snapshot('AAA'))
+    form = select_input(page, base, ref)
+    form.locator('[name=instrument]').fill('BBB')
+    held = []
+    if pending:
+        page.route('**/api/research/readiness', lambda route: held.append(route))
+    button = page.locator('[data-readiness-check]')
+    button.click()
+    state = 'CHECKING' if pending else 'BLOCKED'
+    page.wait_for_selector(f'[data-readiness-state="{state}"]')
+    page.locator('[data-run-refresh]').click()
+    expect(form.locator('[name=instrument]')).to_have_value('AAA')
+    assert page.locator('[data-readiness-panel]').get_attribute('data-readiness-state') == 'STALE'
+    if pending:
+        assert held
+        held.pop().continue_()
+        expect(button).to_be_enabled()
+        page.unroute('**/api/research/readiness')
+        assert page.locator('[data-readiness-panel]').get_attribute('data-readiness-state') == 'STALE'
+    assert app.research_service.list_jobs()['total'] == 0
+    button.click()
+    page.wait_for_selector('[data-readiness-state="NEEDS_REVIEW"]')
+    assert app.research_service.list_jobs()['total'] == 0

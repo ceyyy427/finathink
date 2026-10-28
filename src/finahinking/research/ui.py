@@ -88,6 +88,7 @@ def research_view_model(run_state: ResearchRunState, manifest: ReportManifest | 
             "state": run_state.current_state.value,
             "state_history": [item.value for item in run_state.state_history],
             "as_of": as_of,
+            "instrument": snapshot.get("instrument") or "未记录",
             "dataset_fingerprint": snapshot.get("dataset_fingerprint"),
             "data_mode": snapshot.get("data_mode", "UNKNOWN"),
             "data_limitations": snapshot.get("data_limitations", []),
@@ -387,7 +388,7 @@ def render_status_wall_html(model: Mapping[str, Any], *, title: str = "Finathink
     explanation = research_explanation({
         "run_id": safe.get("run_id"), "status": "completed" if safe.get("state") == "LEARNING_RECORDED" else "running",
         "report_status": "AVAILABLE", "snapshot_ref": safe.get("dataset_fingerprint"),
-        "data_mode": safe.get("data_mode", "UNKNOWN"), "instrument": (safe.get("risk_portfolio") or {}).get("instrument", "见本轮数据"),
+        "data_mode": safe.get("data_mode", "UNKNOWN"), "instrument": safe.get("instrument") or "未记录",
         "as_of": safe.get("as_of"), "metrics": metrics, "model_research": model_research,
         "risk_portfolio": risk_portfolio, "factor_study": factor_study, "failure_kind": safe.get("failure_kind"),
     })

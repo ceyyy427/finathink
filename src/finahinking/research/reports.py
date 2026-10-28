@@ -382,6 +382,8 @@ class ReportBundleWriter:
         from .ui import render_status_wall_html, research_view_model
 
         status_snapshot = _status_snapshot(result)
+        if analytics_payload and isinstance(analytics_payload.get("instrument"), str):
+            status_snapshot["instrument"] = analytics_payload["instrument"]
         status_manifest = {
             "run_id": result.state.run_id,
             "schema_version": "research-report.v1",
