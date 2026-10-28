@@ -42,8 +42,12 @@
 - Consumes: 现有 `BLUE_WHITE_CSS`、`mountAppShell(doc)`、`http_app/observed_page` 测试 fixture。
 - Produces: 相同外壳 HTML/API 合同；只调整共享 CSS 的容器宽度、反馈和 motion media query。
 
-- [ ] **Step 1: 写真实浏览器回归。** 验证宽屏内容有界居中、顶栏对齐、无横向溢出；验证搜索动画中输入可用、快速关闭及焦点；验证减少动态效果可动态切换，无 JS/打印仍可读。
-- [ ] **Step 2: 运行新测试，确认因当前缺少布局约束和入场反馈而失败。** Run: `FINATHINK_REQUIRE_BROWSER=1 python3 -m pytest tests/p7_5/test_phase16_browser.py -q --tb=short`。Expected: 相关行为断言 FAIL，不是 fixture/import 错误。
-- [ ] **Step 3: 修改共用 CSS。** 按 Spec 添加语义宽度、留白、时长令牌；限定交互反馈选择器；原生 dialog/details 有界反馈；打印与减少动态效果路径；将新浏览器文件纳入现有 CI 命令。
-- [ ] **Step 4: 验证并记录。** 同一新测试全部 PASS；Node 全量、构建、性能、既有浏览器及 Python 全量通过；审阅所有指定宽度截图与机械检测证据。Run: `python3 -m pytest -q -ra --tb=short`。Expected: 全部可运行项通过，条件跳过单独说明。
-- [ ] **Step 5: 写后续路线及审查记录，提交。** 依据当前代码区分已有能力、增强建议和需真实用户验收的项目；明确优先级、产物和验收。Run: `git diff --check`。Expected: 无空白错误。提交后独立审查，修正重要问题并复核相应行为。
+- [x] **Step 1: 写真实浏览器回归。** 验证宽屏内容有界居中、顶栏对齐、无横向溢出；验证搜索动画中输入可用、快速关闭及焦点；验证减少动态效果可动态切换，无 JS/打印仍可读。
+- [x] **Step 2: 运行新测试，确认因当前缺少布局约束和入场反馈而失败。** Run: `FINATHINK_REQUIRE_BROWSER=1 python3 -m pytest tests/p7_5/test_phase16_browser.py -q --tb=short`。Expected: 相关行为断言 FAIL，不是 fixture/import 错误。
+- [x] **Step 3: 修改共用 CSS。** 按 Spec 添加语义宽度、留白、时长令牌；限定交互反馈选择器；原生 dialog/details 有界反馈；打印与减少动态效果路径；将新浏览器文件纳入现有 CI 命令。
+- [x] **Step 4: 验证并记录。** 同一新测试全部 PASS；Node 全量、构建、性能、既有浏览器及 Python 全量通过；审阅所有指定宽度截图与机械检测证据。Run: `python3 -m pytest -q -ra --tb=short`。Expected: 全部可运行项通过，条件跳过单独说明。
+- [x] **Step 5: 写后续路线及审查记录，提交。** 依据当前代码区分已有能力、增强建议和需真实用户验收的项目；明确优先级、产物和验收。Run: `git diff --check`。Expected: 无空白错误。提交后独立审查，修正重要问题并复核相应行为。
+
+## 本轮执行证据
+
+2026-10-27：共用布局/动效已实现；Python 全量 1632 通过、1 条件跳过；Node 50 通过；新增真实浏览器 9 通过。六宽度截图、键盘/减少动态效果/无 JS/打印、CI 纳入、设计记录同步均完成。独立视觉审查的唯一文档同步修正已评分解决；最终代码审查与交付状态见 `docs/reviews/2026-10-27-finathink-phase16-review.md`。后续 Phase 17–20 保持建议状态。
