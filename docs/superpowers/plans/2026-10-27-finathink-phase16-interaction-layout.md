@@ -36,6 +36,7 @@
 - Create: `tests/p7_5/test_phase16_browser.py`
 - Create: `docs/FINATHINK_NEXT_IMPROVEMENTS_2026-10-27.md`
 - Create: `docs/reviews/2026-10-27-finathink-phase16-review.md`
+- Modify: `DESIGN.md`、`.impeccable/design.json`、`.impeccable/surfaces/src-finahinking-local-app-py.md`（只同步本轮共用布局与动效规则）
 
 **Interfaces:**
 - Consumes: 现有 `BLUE_WHITE_CSS`、`mountAppShell(doc)`、`http_app/observed_page` 测试 fixture。

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-27T16:17:06.247Z",
+  "generatedAt": "2026-10-28T05:17:28.837Z",
   "title": "Design System: Finathink",
   "extensions": {
     "colorMeta": {
@@ -407,8 +407,75 @@
     "motion": [
       {
         "name": "button-state",
-        "value": "background-color .16s ease,border-color .16s ease,color .16s ease,box-shadow .16s ease",
-        "purpose": "公共按钮的颜色、边线与投影状态过渡。"
+        "value": "color 120ms ease-out, background-color 120ms ease-out, border-color 120ms ease-out",
+        "sourceCustomProperty": "--motion-feedback",
+        "purpose": "应用外壳与搜索中的按钮、按钮链接、导航、建议、搜索结果、summary 和表单控件；问题输入容器仅过渡边线。"
+      },
+      {
+        "name": "ease-entry",
+        "value": "cubic-bezier(.16, 1, .3, 1)",
+        "sourceCustomProperty": "--motion-ease",
+        "purpose": "工作区、搜索对话框与 details 内容的入场。"
+      },
+      {
+        "name": "workspace-arrival",
+        "value": "180ms",
+        "sourceCustomProperty": "--motion-arrive",
+        "from": {
+          "opacity": ".72"
+        },
+        "to": {
+          "opacity": "1"
+        },
+        "query": "(prefers-reduced-motion: no-preference)",
+        "purpose": "工作区一次淡入，无位移、延迟或滚动触发；轮询不重播整页动画。"
+      },
+      {
+        "name": "dialog-entry",
+        "value": "200ms",
+        "sourceCustomProperty": "--motion-dialog",
+        "from": {
+          "opacity": ".72",
+          "transform": "translateY(6px)"
+        },
+        "to": {
+          "opacity": "1",
+          "transform": "none"
+        },
+        "query": "(prefers-reduced-motion: no-preference)",
+        "purpose": "原生搜索对话框打开；关闭即时。"
+      },
+      {
+        "name": "backdrop-entry",
+        "value": "150ms ease-out",
+        "sourceCustomProperty": "--motion-backdrop",
+        "from": {
+          "opacity": "0"
+        },
+        "to": {
+          "opacity": "1"
+        },
+        "query": "(prefers-reduced-motion: no-preference)",
+        "purpose": "搜索对话框背景遮罩淡入。"
+      },
+      {
+        "name": "details-reveal",
+        "value": "140ms",
+        "sourceCustomProperty": "--motion-reveal",
+        "from": {
+          "opacity": ".72"
+        },
+        "to": {
+          "opacity": "1"
+        },
+        "query": "(prefers-reduced-motion: no-preference)",
+        "purpose": "工作区原生 details 展开时 summary 之外的直接内容。"
+      },
+      {
+        "name": "enabled-control-press",
+        "value": "scale(.98)",
+        "query": "(prefers-reduced-motion: no-preference)",
+        "purpose": "应用外壳和搜索内启用的按钮及按钮链接按下反馈；排除 :disabled、aria-disabled=true 与导航遮罩；transform 使用 120ms 反馈过渡。"
       },
       {
         "name": "navigation-drawer",
@@ -419,7 +486,14 @@
         "name": "reduced-motion",
         "value": "animation: none !important; transition: none !important; scroll-behavior: auto !important;",
         "query": "(prefers-reduced-motion: reduce)",
-        "purpose": "关闭非必要动画与过渡；活动图表同时将 animation 设为 false。"
+        "feedbackOverride": "color 100ms ease-out, background-color 100ms ease-out, border-color 100ms ease-out",
+        "purpose": "停用入场、展开与空间变化；应用外壳和搜索的上述交互控件及问题输入容器仅保留颜色反馈。活动图表同时将 animation 设为 false。"
+      },
+      {
+        "name": "print-entry",
+        "value": "animation: none !important;",
+        "query": "print",
+        "purpose": "工作区、搜索对话框及 details 展开直接内容停用入场动画。"
       }
     ],
     "breakpoints": [
@@ -470,8 +544,72 @@
       "状态标签和普通卡片没有额外的 hover、active 或点击行为；片段保持这一事实。",
       "移动导航焦点约束、Escape、关闭后的焦点恢复与原生搜索对话框由应用脚本提供；导航片段只展示真实条目。",
       "片段保留已公开的源 CSS 自定义属性，并附实际色值与尺寸回退，以便独立注入 shadow DOM。",
-      "输入使用原生键盘与验证行为；问题表单是 GET 预填入口，保持已有任务提交边界。"
-    ]
+      "输入使用原生键盘与验证行为；问题表单是 GET 预填入口，保持已有任务提交边界。",
+      "应用外壳的共享布局与动态值以 extensions.layout 和 extensions.motion 为准；既有独立组件片段保留原样，不承担外壳入场编排。"
+    ],
+    "layout": {
+      "workspaceMaxWidth": {
+        "value": "1480px",
+        "sourceCustomProperty": "--workspace-max-width"
+      },
+      "workspaceGutter": {
+        "value": "32px",
+        "sourceCustomProperty": "--workspace-gutter",
+        "overrides": [
+          {
+            "query": "(min-width: 1600px)",
+            "value": "40px"
+          },
+          {
+            "query": "(max-width: 1250px)",
+            "value": "24px"
+          },
+          {
+            "query": "(max-width: 800px)",
+            "value": "18px"
+          }
+        ]
+      },
+      "workspaceColumnGap": {
+        "value": "24px",
+        "overrides": [
+          {
+            "query": "(max-width: 1250px)",
+            "value": "18px"
+          },
+          {
+            "query": "(max-width: 800px)",
+            "value": "20px"
+          }
+        ]
+      },
+      "workspacePaddingBlock": {
+        "value": "31px 24px",
+        "overrides": [
+          {
+            "query": "(min-width: 1600px)",
+            "value": "35px 24px"
+          },
+          {
+            "query": "(max-width: 1250px)",
+            "value": "25px"
+          },
+          {
+            "query": "(max-width: 800px)",
+            "value": "22px"
+          }
+        ]
+      },
+      "alignment": "工作区与页脚居中共享最大宽度和水平留白；顶栏内容以同一边缘对齐，背景跨满主框架。",
+      "headingWrap": {
+        "value": "balance",
+        "elements": [
+          "h1",
+          "h2",
+          "h3"
+        ]
+      }
+    }
   },
   "components": [
     {
