@@ -1,6 +1,7 @@
 // Reference-only submission and bounded observation; no financial computation.
 import { readLocalJSON, userErrorMessage } from './local-request.js';
 import { mountMethodHandoff } from './method-handoff.js';
+import { createReadinessCheck, renderReadiness, renderExplanation } from './research-guidance.js';
 const TERMINAL = new Set(['completed', 'failed', 'cancelled']);
 const STATUSES = new Set(['queued', 'running', 'retryable', ...TERMINAL]);
 const REF = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/;
@@ -70,7 +71,7 @@ export function mountRunWorkspace(root, { fetcher = globalThis.fetch, location =
   const csrf = query('[data-run-csrf]')?.value;
   const methodRoot = query('[data-method-handoff]');
   const methodWorkspace = methodRoot ? mountMethodHandoff(methodRoot, { fetcher, csrf }) : null;
-  let selectedId; let snapshots = []; let requestKey; let lastIntent; let stopped = false; let historyOffset = 0; let loadingHistory = false; let loadGeneration = 0;
+  let lastJob; let selectedId; let snapshots = []; let requestKey; let lastIntent; let stopped = false; let historyOffset = 0; let loadingHistory = false; let loadGeneration = 0;
   const text = (selector, value) => { const target = query(selector); if (target) target.textContent = value ?? ''; };
   function showError(error) {
     if (stopped) return;
@@ -80,8 +81,33 @@ export function mountRunWorkspace(root, { fetcher = globalThis.fetch, location =
   function clearError() { if (errorBox) errorBox.hidden = true; }
   const post = (url, value) => readJSON(fetcher, url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...value, _csrf: csrf }) });
   function element(tag, value) { const node = root.ownerDocument.createElement(tag); if (value !== undefined) node.textContent = value; return node; }
+  const readiness = createReadinessCheck({ request: values => post('/api/research/readiness', values), onChange: (status, result) => { if (!stopped) renderReadiness(root, status, result); } });
+  function currentValues() {
+    const fields = Object.fromEntries(new FormData(form));
+    let materials;
+    try { materials = fields.materials?.trim() ? JSON.parse(fields.materials) : []; }
+    catch { throw new Error('材料必须为 JSON 数组，不要粘贴凭证。'); }
+    if (!Array.isArray(materials)) throw new Error('材料必须为 JSON 数组。');
+    return { snapshot_ref: fields.snapshot_ref, question: fields.question, instrument: fields.instrument, as_of: fields.as_of, model_config_ref: fields.model_config_ref, budget: { max_wall_seconds: Number(fields.max_wall_seconds) }, allow_model_calls: fields.allow_model_calls === 'true', materials };
+  }
+  form?.addEventListener('input', () => readiness.invalidate());
+  form?.addEventListener('change', () => readiness.invalidate());
+  query('[data-readiness-check]')?.addEventListener('click', async () => {
+    const button = query('[data-readiness-check]'); button.disabled = true; clearError();
+    try { await readiness.check(currentValues()); } catch (error) { showError(error); }
+    finally { button.disabled = false; }
+  });
+  const historyLabel = (job) => `${job.instrument} · ${LABELS[job.status]} · ${job.created_at} · ${job.job_id}`;
   function render(job) {
     if (stopped) return;
+    lastJob = job;
+    for (const button of root.querySelectorAll('[data-history-job]')) {
+      if (button.dataset.historyJob === job.job_id) button.textContent = historyLabel(job);
+    }
+    renderExplanation(root, job);
+    const restore = query('[data-run-restore]'); if (restore) restore.disabled = false;
+    text('[data-guide-step="run"]', `03 运行研究 · ${LABELS[job.status]}`);
+    text('[data-guide-step="report"]', `04 阅读报告 · ${job.report_status === 'AVAILABLE' ? '可阅读' : '待生成'}`);
     root.dataset.jobStatus = job.status;
     methodWorkspace?.setJob(job);
     root.dataset.workspaceState = 'READY';
@@ -110,7 +136,10 @@ export function mountRunWorkspace(root, { fetcher = globalThis.fetch, location =
   }
   async function selectJob(id) {
     if (stopped) return;
-    selectedId = id; clearError();
+    selectedId = id; lastJob = null; clearError();
+    query('[data-run-restore]')?.setAttribute('disabled', '');
+    for (const selector of ['[data-run-explanation]', '[data-run-call-records]', '[data-run-model-roles]', '[data-run-synthesis]', '[data-run-stages]']) query(selector)?.replaceChildren();
+    for (const selector of ['[data-run-identity]', '[data-run-failure]', '[data-run-data-note]', '[data-run-model-summary]']) text(selector, '');
     query('[data-run-cancel]')?.setAttribute('disabled', '');
     for (const selector of ['[data-run-report]', '[data-run-detail]']) { const link = query(selector); if (link) link.hidden = true; }
     root.dataset.jobStatus = 'loading';
@@ -122,7 +151,9 @@ export function mountRunWorkspace(root, { fetcher = globalThis.fetch, location =
   function snapshotDescription() {
     if (!form) return;
     const selected = snapshots.find((item) => item.snapshot_ref === form.elements.namedItem('snapshot_ref').value);
-    text('[data-snapshot-description]', selected ? `${selected.mode} · ${selected.record_count} 行 · PIT ${selected.pit_status} · ${selected.snapshot_ref}` : '尚未选择数据，不会自动使用演示数据。');
+    text('[data-snapshot-description]', selected ? `${selected.mode} · ${selected.instruments.join('、')} · ${selected.record_count} 条 · 截止 ${selected.as_of.slice(0, 10)}；请检查本轮可用性。` : '尚未选择数据，不会自动使用演示数据。');
+    text('[data-snapshot-reference]', selected?.snapshot_ref ?? '尚未选择快照');
+    text('[data-guide-step="data"]', `01 准备数据 · ${selected ? '已选择' : '待准备'}`);
     if (selected) {
       const instrument = form.elements.namedItem('instrument');
       if (!selected.instruments.includes(instrument.value)) instrument.value = selected.instruments[0] ?? '';
@@ -138,7 +169,7 @@ export function mountRunWorkspace(root, { fetcher = globalThis.fetch, location =
   }
   async function load({ observe = true, historyOnly = false } = {}) {
     if (stopped) return;
-    const generation = ++loadGeneration;
+    const generation = ++loadGeneration; const observedAtStart = lastJob;
     clearError(); root.dataset.workspaceState = 'LOADING'; loadingHistory = true;
     for (const selector of ['[data-run-history-prev]', '[data-run-history-next]']) { const button = query(selector); if (button) button.disabled = true; }
     const loading = query('[data-run-loading]'); if (loading) loading.hidden = false;
@@ -159,7 +190,9 @@ export function mountRunWorkspace(root, { fetcher = globalThis.fetch, location =
       }
       const list = query('[data-run-history]');
       if (list) list.replaceChildren(...recent.jobs.map(normalizeJob).map((job) => {
-        const li = element('li'); const button = element('button', `${job.instrument} · ${LABELS[job.status]} · ${job.created_at} · ${job.job_id}`);
+        const current = lastJob !== observedAtStart && lastJob?.job_id === job.job_id ? lastJob : job;
+        const li = element('li'); const button = element('button', historyLabel(current));
+        button.dataset.historyJob = job.job_id;
         button.type = 'button'; button.className = 'button-secondary'; button.addEventListener('click', () => selectJob(job.job_id)); li.append(button); return li;
       }));
       if (list && !recent.jobs.length) list.append(element('li', '尚无后台任务。准备快照后，提交第一项离线研究。'));
@@ -173,25 +206,24 @@ export function mountRunWorkspace(root, { fetcher = globalThis.fetch, location =
     finally { if (generation === loadGeneration) { loadingHistory = false; if (loading) loading.hidden = true; } }
   }
   const templates = { baseline: '检验这个快照上的动量基线，并检查费用与历史回撤。', risk: '复核所选快照的费用、滑点、成交容量和历史损失情景，列出纸面风险与不确定性。', materials: '结合已授权的基本面、新闻和情绪材料，区分事实、假设与分歧，并核对对应证据。' };
-  query('[data-run-template]')?.addEventListener('change', (event) => { if (templates[event.target.value]) form.elements.namedItem('question').value = templates[event.target.value]; });
+  query('[data-run-template]')?.addEventListener('change', (event) => { if (templates[event.target.value]) { form.elements.namedItem('question').value = templates[event.target.value]; readiness.invalidate(); } });
   for (const [selector, direction] of [['[data-run-history-prev]', -1], ['[data-run-history-next]', 1]]) query(selector)?.addEventListener('click', () => {
     if (!loadingHistory) { historyOffset = Math.max(0, historyOffset + direction * 20); load({ observe: false, historyOnly: true }); }
   });
-  form?.elements.namedItem('snapshot_ref').addEventListener('change', snapshotDescription);
+  form?.elements.namedItem('snapshot_ref').addEventListener('change', () => { snapshotDescription(); readiness.invalidate(); });
   form?.addEventListener('submit', async (event) => {
     event.preventDefault(); clearError();
     const button = form.querySelector('button[type="submit"]'); button.disabled = true;
     try {
-      const fields = Object.fromEntries(new FormData(form));
-      const values = { snapshot_ref: fields.snapshot_ref, question: fields.question, instrument: fields.instrument, as_of: fields.as_of, model_config_ref: fields.model_config_ref, budget: { max_wall_seconds: Number(fields.max_wall_seconds) } };
-      values.allow_model_calls = fields.allow_model_calls === 'true';
-      try { values.materials = fields.materials?.trim() ? JSON.parse(fields.materials) : []; }
-      catch { throw new Error('材料必须为 JSON 数组，不要粘贴凭证。'); }
-      if (!Array.isArray(values.materials)) throw new Error('材料必须为 JSON 数组。');
+      const values = currentValues();
+      const checked = await readiness.check(values);
+      if (!checked || JSON.stringify(values) !== JSON.stringify(currentValues())) return;
+      if (!checked.can_submit) { query('[data-readiness-summary]')?.focus(); return; }
       const intent = JSON.stringify(values);
       if (lastIntent !== intent || !requestKey) { requestKey = globalThis.crypto.randomUUID(); lastIntent = intent; }
       const job = normalizeJob(await post('/api/research/jobs', { ...values, idempotency_key: requestKey }));
       render(job); await selectJob(job.job_id); await load({ observe: false });
+      query('[data-run-progress-title]')?.focus();
     } catch (error) { showError(error); }
     finally { button.disabled = false; }
   });
@@ -201,7 +233,7 @@ export function mountRunWorkspace(root, { fetcher = globalThis.fetch, location =
       const button = sourceForm.querySelector('button[type="submit"]'); button.disabled = true;
       try {
         const snapshot = await post(url, Object.fromEntries(new FormData(sourceForm)));
-        await load({ observe: false }); form.elements.namedItem('snapshot_ref').value = snapshot.snapshot_ref; snapshotDescription();
+        await load({ observe: false }); form.elements.namedItem('snapshot_ref').value = snapshot.snapshot_ref; snapshotDescription(); readiness.invalidate();
       } catch (error) { showError(error); }
       finally { button.disabled = false; }
     });
@@ -212,9 +244,20 @@ export function mountRunWorkspace(root, { fetcher = globalThis.fetch, location =
     try { const job = normalizeJob(await post(`/api/research/jobs/${id}/cancel`, {})); if (selectedId === id) { render(job); await selectJob(id); } }
     catch (error) { showError(error); button.disabled = false; }
   });
+  query('[data-run-restore]')?.addEventListener('click', () => {
+    if (!lastJob || !form) return;
+    for (const name of ['snapshot_ref', 'instrument', 'as_of', 'question']) form.elements.namedItem(name).value = lastJob[name] ?? '';
+    form.elements.namedItem('max_wall_seconds').value = lastJob.budget?.max_wall_seconds ?? 120;
+    form.elements.namedItem('model_config_ref').value = lastJob.model_config_ref ?? 'offline';
+    form.elements.namedItem('allow_model_calls').checked = false;
+    form.elements.namedItem('materials').value = '';
+    requestKey = undefined; lastIntent = undefined; readiness.invalidate(); snapshotDescription();
+    text('[data-run-restore-note]', '已填回基础输入，原任务未改变。材料需重新补充并核对；模型授权已取消，检查后再明确提交新任务。');
+    form.elements.namedItem('question').focus();
+  });
   query('[data-run-new]')?.addEventListener('click', () => { requestKey = undefined; lastIntent = undefined; form?.elements.namedItem('question').focus(); text('[data-snapshot-description]', '已准备新的提交标识；原研究记录会保留。'); });
   query('[data-run-refresh]')?.addEventListener('click', () => load());
-  const instance = { stop() { stopped = true; loadGeneration++; observer.stop(); }, ready: null };
+  const instance = { stop() { stopped = true; loadGeneration++; readiness.invalidate(); observer.stop(); }, ready: null };
   mounted.set(root, instance);
   globalThis.window?.addEventListener('pagehide', instance.stop);
   globalThis.window?.addEventListener('pageshow', (event) => { if (event.persisted) { stopped = false; load(); } });

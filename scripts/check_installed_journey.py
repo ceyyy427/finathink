@@ -39,7 +39,8 @@ def main():
             return json.loads(response.read())
 
     try:
-        assert '第一次使用' in get('/research/jobs').decode()
+        first_use = get('/research/jobs').decode()
+        assert '从数据到第一份研究报告' in first_use and 'data-first-research-steps' in first_use
         from finahinking.research.asset_catalog import ResearchAssetCatalog
 
         catalog = ResearchAssetCatalog.packaged()
@@ -53,16 +54,22 @@ def main():
         assert '来源声明与本地证据' in get('/research/factors/finathink-turnover-freefloat-mean').decode()
         assert not json.loads(get('/api/research/snapshots'))['snapshots']
         snapshot = post('/api/research/snapshots/sample', {'instrument': 'AAA'})
-        job = post('/api/research/jobs', {'idempotency_key': 'installed-first-use', 'snapshot_ref': snapshot['snapshot_ref'], 'instrument': 'AAA', 'as_of': snapshot['as_of'][:10], 'question': '检验所选数据的动量、费用与历史回撤', 'model_config_ref': 'offline'})
+        inputs = {'snapshot_ref': snapshot['snapshot_ref'], 'instrument': 'AAA', 'as_of': snapshot['as_of'][:10], 'question': '检验所选数据的动量、费用与历史回撤', 'model_config_ref': 'offline'}
+        readiness = post('/api/research/readiness', inputs)
+        assert readiness['can_submit'] and readiness['status'] == 'NEEDS_REVIEW'
+        assert json.loads(get('/api/research/jobs'))['total'] == 0
+        job = post('/api/research/jobs', {**inputs, 'idempotency_key': 'installed-first-use'})
         deadline = time.monotonic() + 30
         while job['status'] not in {'completed', 'failed', 'cancelled'} and time.monotonic() < deadline:
             time.sleep(0.05)
             job = json.loads(get('/api/research/jobs/' + job['job_id']))
         assert job['status'] == 'completed', job['failure_kind']
         assert job['report_status'] == 'AVAILABLE'
+        assert job['explanation']['outcome'] == 'AVAILABLE' and job['explanation']['evidence']
         report = get(job['report_url'])
         assert snapshot['snapshot_ref'].encode() in report and b'SAMPLE' in report
         assert b'#f5f8fd' in report and b'Content-Security-Policy' in report
+        assert b'data-research-explanation' in report
         assert job['elapsed_seconds'] >= 0
     finally:
         server.shutdown()

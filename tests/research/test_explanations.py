@@ -110,3 +110,9 @@ def test_reopen_preserves_explanation_evidence_and_cancellation(service):
 def test_factor_evidence_uses_the_actual_report_template_anchor(study, anchor):
     summary = explain(job(status="completed", report_status="AVAILABLE", factor_study=study))
     assert summary["evidence"] == [{"label": "冻结章程与因子验证报告", "href": f"/research/research-one/report/complete#{anchor}"}]
+
+
+def test_started_analyst_checkpoint_is_not_a_claim_of_finished_analysis():
+    summary = explain(job(status="cancelled", stages=[{"name": "ANALYSTS_RUNNING", "status": "COMPLETE"}]))
+    assert "完成" not in summary["timeline"][0]["fact"]
+    assert "标记" in summary["timeline"][0]["fact"]

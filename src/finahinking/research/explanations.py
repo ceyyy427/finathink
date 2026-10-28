@@ -96,7 +96,7 @@ def research_explanation(job):
             continue
         title, inputs, purpose = _STAGE_INFO[item["name"]]
         stage_status = item.get("status", "PENDING")
-        fact = "已记录本阶段完成。" if stage_status == "COMPLETE" else "本阶段正在处理，尚无完成记录。" if stage_status == "RUNNING" else "本阶段未通过；请先处理阻塞原因。" if stage_status == "FAILED" else "尚未记录本阶段结果。"
+        fact = "已记录此阶段标记；具体结果需核对对应证据。" if stage_status == "COMPLETE" else "本阶段正在处理，尚无完成记录。" if stage_status == "RUNNING" else "本阶段未通过；请先处理阻塞原因。" if stage_status == "FAILED" else "尚未记录本阶段结果。"
         timeline.append({"name": item["name"], "title": title, "status": stage_status, "inputs": inputs,
                          "purpose": purpose, "fact": fact, "blocker": headline if stage_status == "FAILED" else None})
     return redact_public_payload({

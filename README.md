@@ -135,6 +135,7 @@ site/                   静态产品入口与前端构建资源
 
 ## 研究文档
 
+- [从自己的数据到第一份研究报告](docs/RESEARCH_FIRST_RUN_GUIDE.md)
 - [方法、因子与离线报告指南](docs/PHASE15_RESEARCH_WORKSPACE_GUIDE.md)
 - [当前研究能力与验收](docs/FINATHINK_CAPABILITY_ASSESSMENT_2026-10-27.md)
 - [快速开始](docs/QUICKSTART.md)

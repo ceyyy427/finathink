@@ -130,3 +130,29 @@ def test_readiness_route_checks_csrf_and_never_queues(tmp_path):
         assert app.route("GET", "/api/research/readiness")[0] == 405
     finally:
         app.close()
+
+
+def test_authorized_model_context_is_checked_against_the_selected_snapshot(service):
+    from tests.research.test_context_bundle import material
+    from tests.research.test_provider_config import _config
+    service.provider_configs.save(_config())
+    result = inspect(service, model_config_ref="user-compatible", allow_model_calls=True, materials=[material()])
+    assert result["can_submit"], result["checks"]
+    assert not (service.root / "model-inputs").exists()
+    assert service.list_jobs()["total"] == 0
+
+
+def test_capture_returns_missing_fields_instead_of_an_opaque_error(tmp_path):
+    from tests.data.test_user_api import FakeTransport, response
+    app = LocalApplication(LocalAppConfig(db_path=str(tmp_path / "capture.sqlite"), offline=True))
+    try:
+        mapping = {"instrument": "ticker", "timestamp": "time", "close": "price"}
+        config = {"connection_id": "partial", "display_name": "partial", "base_url": "https://93.184.216.34/api", "auth_mode": "no_auth", "field_mapping": mapping, "records_path": "data", "_csrf": app.csrf_token}
+        assert app.route("POST", "/api/data/connections", body=config)[0] == 201
+        app._data_transport = FakeTransport([response({"data": [{"ticker": "AAA", "time": "2026-01-02", "price": 10}]}, url="https://93.184.216.34/api")])
+        code, _, body = app.route("POST", "/api/research/snapshots/capture", body={"connection_id": "partial", "instrument": "AAA", "_csrf": app.csrf_token})
+        assert code == 422 and body.get("missing_fields") == ["high", "low", "open", "volume"]
+        assert "字段映射" in body["error"]
+        assert app.research_service.snapshots.list_snapshots() == ()
+    finally:
+        app.close()

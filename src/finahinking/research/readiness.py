@@ -81,7 +81,7 @@ def research_readiness(service, values):
     question_ok = isinstance(question, str) and 1 <= len(question.strip()) <= 2000 and not _unsafe_public_text(question)
     items.append(check("question", "研究问题", "PASS" if question_ok else "BLOCKED", "问题已填写。" if question_ok else "请输入 1–2000 字的研究问题，不要粘贴凭证或私密地址。", "research-question"))
     try:
-        request = ResearchRequest("readiness", values.get("instrument"), values.get("as_of"), ResearchPlan(), (), "EQUITY_OR_ETF", "readiness.v1", "readiness")
+        request = ResearchRequest("readiness", values.get("instrument"), values.get("as_of"), ResearchPlan(hypotheses=(question,) if question_ok else ()), (), "EQUITY_OR_ETF", "readiness.v1", "readiness", snapshot_ref=snapshot.fingerprint if snapshot else None)
     except (ValueError, TypeError):
         if not any(item["status"] == "BLOCKED" and item["code"] in {"cutoff", "instrument"} for item in items):
             items.append(check("cutoff", "标的与日期", "BLOCKED", "请填写有效标的和研究截止日。", "research-cutoff"))

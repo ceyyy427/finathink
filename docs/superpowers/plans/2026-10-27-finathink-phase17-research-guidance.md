@@ -31,11 +31,11 @@
 
 **Interfaces:** Produces `ResearchApplicationService.readiness(values) -> dict` and `inspect_snapshot(snapshot, instrument, as_of) -> list[dict]`; `snapshot_from_batch(..., units=None)` stores validated declaration. API `POST /api/research/readiness` uses existing write guard.
 
-- [ ] Step 1: Add tests: missing/corrupt ref gives BLOCKED without jobs; four rows and current PIT pass; insufficient rows, duplicate UTC dates, future/unknown/global PIT, historical delay block; units/industry/tradability unknown remain REVIEW; material/provider/budget checks; CSRF and inert capture unit validation.
-- [ ] Step 2: Run `python3 -m pytest tests/research/test_readiness.py -q`; Expected: FAIL missing readiness behavior.
-- [ ] Step 3: Implement bounded redacted projection, fixed repair links, shared existing validators, explicit units before data capture.
-- [ ] Step 4: Run `python3 -m pytest tests/research/test_readiness.py tests/research/test_application_service.py tests/data -q`; Expected: PASS.
-- [ ] Step 5: Commit `feat: add local research readiness checks`.
+- [x] Step 1: Add tests: missing/corrupt ref gives BLOCKED without jobs; four rows and current PIT pass; insufficient rows, duplicate UTC dates, future/unknown/global PIT, historical delay block; units/industry/tradability unknown remain REVIEW; material/provider/budget checks; CSRF and inert capture unit validation.
+- [x] Step 2: Run `python3 -m pytest tests/research/test_readiness.py -q`; Expected: FAIL missing readiness behavior.
+- [x] Step 3: Implement bounded redacted projection, fixed repair links, shared existing validators, explicit units before data capture.
+- [x] Step 4: Run `python3 -m pytest tests/research/test_readiness.py tests/research/test_application_service.py tests/data -q`; Expected: PASS.
+- [x] Step 5: Commit `feat: add local research readiness checks`.
 
 ### Task 2: 研究解释、阶段与离线摘要
 
@@ -43,11 +43,11 @@
 
 **Interfaces:** Consumes existing get_job payload and typed state/verified report. Produces `research_explanation(job) -> dict`, `render_explanation_html(explanation, offline=False) -> str`; get_job exposes `explanation`, `retry_at` and checkpoint presence, with no private path.
 
-- [ ] Step 1: Add tests for queued/running/retryable/cancelled/TIMEOUT/publication invalid/completed, unrecorded vs zero metrics, retained model disagreements and current-run evidence links, escaped output, read-only restart and old-report integrity.
-- [ ] Step 2: Run `python3 -m pytest tests/research/test_explanations.py -q`; Expected: FAIL missing explanation contract.
-- [ ] Step 3: Implement concise factual summary, evidence/conditions/next-step projection, ordered causal stages, new offline report summary, keep old saved bytes immutable.
-- [ ] Step 4: Run `python3 -m pytest tests/research/test_explanations.py tests/research/test_reports.py tests/research/test_application_service.py -q`; Expected: PASS.
-- [ ] Step 5: Commit `feat: explain research progress and evidence`.
+- [x] Step 1: Add tests for queued/running/retryable/cancelled/TIMEOUT/publication invalid/completed, unrecorded vs zero metrics, retained model disagreements and current-run evidence links, escaped output, read-only restart and old-report integrity.
+- [x] Step 2: Run `python3 -m pytest tests/research/test_explanations.py -q`; Expected: FAIL missing explanation contract.
+- [x] Step 3: Implement concise factual summary, evidence/conditions/next-step projection, ordered causal stages, new offline report summary, keep old saved bytes immutable.
+- [x] Step 4: Run `python3 -m pytest tests/research/test_explanations.py tests/research/test_reports.py tests/research/test_application_service.py -q`; Expected: PASS.
+- [x] Step 5: Commit `feat: explain research progress and evidence`.
 
 ### Task 3: 首次研究旅程与交互验收
 
@@ -55,11 +55,11 @@
 
 **Interfaces:** Consumes Task 1 readiness and Task 2 explanation; expose check button, four-step guide, linked repair actions, stale-input invalidation, summary and native technical details. Existing submit and observer retain idempotency/authorization boundaries.
 
-- [ ] Step 1: Write Node tests for readiness identity/status validation and late-response rejection. Browser tests: controlled connection→capture→check→spawn→report→reload; blocked repair and no queue; fast edits; restore/cancel/paid authorization reset; responsive and keyboard screenshots.
-- [ ] Step 2: Run new Node/browser tests; Expected: FAIL missing controls/projection behavior.
-- [ ] Step 3: Implement current-input preflight on submit and explicit check, step states, evidence/timeline display, safe input reuse; add bounded unit fields and field hints.
-- [ ] Step 4: Build and run new/existing browser, Node and full Python tests plus Ruff/governance/release/secret/dependency/workflow checks. Expected: PASS, any conditional skip identified. Inspect 1440/1920/375 screenshots.
-- [ ] Step 5: Update plan/guide/review/capability snapshot and CI browser list; commit `feat: guide the first research journey`.
+- [x] Step 1: Write Node tests for readiness identity/status validation and late-response rejection. Browser tests: controlled connection→capture→check→spawn→report→reload; blocked repair and no queue; fast edits; restore/cancel/paid authorization reset; responsive and keyboard screenshots.
+- [x] Step 2: Run new Node/browser tests; Expected: FAIL missing controls/projection behavior.
+- [x] Step 3: Implement current-input preflight on submit and explicit check, step states, evidence/timeline display, safe input reuse; add bounded unit fields and field hints.
+- [x] Step 4: Build and run new/existing browser, Node and full Python tests plus Ruff/governance/release/secret/dependency/workflow checks. Expected: PASS, any conditional skip identified. Inspect 1440/1920/375 screenshots.
+- [x] Step 5: Update plan/guide/review/capability snapshot and CI browser list; commit `feat: guide the first research journey`.
 
 ## Final gate
 
