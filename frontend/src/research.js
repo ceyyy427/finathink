@@ -1,3 +1,5 @@
+import { mountLearningReliability } from './learning-reliability.js';
+import { mountTaskMaintenance } from './task-maintenance.js';
 import { mountResearchReproduction } from './research-reproduction.js';
 import {
   CandlestickSeries,
@@ -585,6 +587,8 @@ export function mountResearch(root, { payload, payloadUrl } = {}) {
 
 if (typeof document !== 'undefined') {
   mountAppShell(document);
+  document.querySelectorAll('[data-learning-reliability]').forEach(root => { mountLearningReliability(root); });
+  document.querySelectorAll('[data-task-maintenance]').forEach(root => { mountTaskMaintenance(root); });
   document.querySelectorAll('[data-reproduction-workspace]').forEach(root => { mountResearchReproduction(root); });
   document.querySelectorAll('[data-interface-workspace]').forEach((root) => { mountInterfaceDiagnostics(root); });
   document.querySelectorAll('[data-asset-workspace]').forEach((root) => { mountAssetWorkspace(root); });

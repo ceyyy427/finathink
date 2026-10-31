@@ -126,7 +126,7 @@ class LearningReviewStore:
         preview = self._preview(record, stored.proposal)
         policy = self._recover_policy(db, record, stored)
         decision = stored.admission.decision.value if stored.admission else "PENDING_REVIEW" if record["observation"]["has_updates"] else "KEEP_POLICY"
-        return {**record, "status": decision, "baseline": _baseline(self.policy(record["parent_policy_ref"])), "proposal": to_jsonable(stored.proposal), "preview": to_jsonable(preview), "preview_fingerprint": preview.fingerprint, "admission": to_jsonable(stored.admission), "policy_ref": policy["policy_ref"] if policy else None, "available_as_of": policy["available_as_of"] if policy else None}
+        return {**record, "evidence_level": "COHORT" if record.get("source_kind") == "LEARNING_COHORT" else "MONITORING" if record.get("source_kind") == "FACTOR_VALIDATION_MONITORING" else "EXPLORATORY", "status": decision, "baseline": _baseline(self.policy(record["parent_policy_ref"])), "proposal": to_jsonable(stored.proposal), "preview": to_jsonable(preview), "preview_fingerprint": preview.fingerprint, "admission": to_jsonable(stored.admission), "policy_ref": policy["policy_ref"] if policy else None, "available_as_of": policy["available_as_of"] if policy else None}
 
     def save(self, record, event):
         manager = LearningManager()
@@ -165,7 +165,7 @@ class LearningReviewStore:
         return [self.initial(), *(self.policy(row["policy_ref"]) for row in reversed(rows))]
 
     def decide(self, review_id, values):
-        _object(values, ("decision", "expected_preview_fingerprint", "rationale"))
+        _object(values, ("decision", "expected_preview_fingerprint", "rationale", "allow_exploratory"))
         if not isinstance(values.get("rationale"), str) or not 1 <= len(values["rationale"].strip()) <= 500:
             raise ValueError("请填写1至500字审核依据")
         rationale = values["rationale"].strip()
@@ -183,7 +183,10 @@ class LearningReviewStore:
                 if stored.admission.decision is not decision or stored.admission.rationale != rationale:
                     raise ValueError("提案已完成不可变审核")
                 return self._view(db, record)
-            admission = LearningAdmissionRecord(admission_id="review-" + stable_digest([review_id, decision.value])[:32], proposal_digest=stored.proposal.proposal_digest, admitted_by="local-user", decision=decision, as_of=max(datetime.now(UTC).date(), stored.proposal.as_of), rationale=rationale)
+            exploratory = record.get("source_kind") not in {"LEARNING_COHORT", "FACTOR_VALIDATION_MONITORING"}
+            if decision is AdmissionDecision.APPROVED and exploratory and values.get("allow_exploratory") is not True:
+                raise ValueError("单次复盘仅是探索性试验，请明确确认探索属性后批准")
+            admission = LearningAdmissionRecord(admission_id="review-" + stable_digest([review_id, decision.value])[:32], proposal_digest=stored.proposal.proposal_digest, admitted_by="local-user-exploratory" if exploratory else "local-user", decision=decision, as_of=max(datetime.now(UTC).date(), stored.proposal.as_of), rationale=rationale)
             self.proposals.save(stored.proposal, admission=admission, preview=preview if decision is AdmissionDecision.APPROVED else None)
             return self._view(db, record)
 

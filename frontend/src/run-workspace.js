@@ -17,6 +17,11 @@ export function modelCallSummary(job) {
   return `材料研究 · ${job.model_config_ref} · 已登记 ${calls.length} 次调用尝试，出站记录 ${dispatched} 条；${usage}模型观察待复核。`;
 }
 
+export function normalizeJobSummary(value) {
+  if (!value || value.paper_only !== true || !REF.test(value.job_id ?? '') || !REF.test(value.run_id ?? '') || !STATUSES.has(value.status) || value.report_status !== 'NOT_CHECKED' || value.report_url !== null || value.run_url !== `/research/${value.run_id}`) throw new TypeError('任务元数据无效，请重新读取。');
+  return value;
+}
+
 export function normalizeJob(payload) {
   if (!payload || payload.schema_version !== 1 || payload.paper_only !== true || !['local-deterministic', 'provider-grounded'].includes(payload.execution_mode)) throw new TypeError('Invalid job boundary');
   if (!REF.test(payload.job_id ?? '') || !REF.test(payload.run_id ?? '') || !/^[0-9a-f]{64}$/.test(payload.snapshot_ref ?? '') || !STATUSES.has(payload.status)) throw new TypeError('Invalid job identity');
@@ -71,7 +76,7 @@ export function mountRunWorkspace(root, { fetcher = globalThis.fetch, location =
   const csrf = query('[data-run-csrf]')?.value;
   const methodRoot = query('[data-method-handoff]');
   const methodWorkspace = methodRoot ? mountMethodHandoff(methodRoot, { fetcher, csrf }) : null;
-  let lastJob; let selectedId; let snapshots = []; let requestKey; let lastIntent; let stopped = false; let historyOffset = 0; let loadingHistory = false; let loadGeneration = 0;
+  let lastJob; let selectedId; let snapshots = []; let requestKey; let lastIntent; let stopped = false; let historyOffset = 0; let historyCursors = [null]; let historyNext = null; let loadingHistory = false; let loadGeneration = 0;
   const text = (selector, value) => { const target = query(selector); if (target) target.textContent = value ?? ''; };
   function showError(error) {
     if (stopped) return;
@@ -169,13 +174,14 @@ export function mountRunWorkspace(root, { fetcher = globalThis.fetch, location =
   }
   async function load({ observe = true, historyOnly = false } = {}) {
     if (stopped) return;
+    if (!historyOnly) { historyOffset = 0; historyCursors = [null]; }
     const generation = ++loadGeneration; const observedAtStart = lastJob;
     clearError(); root.dataset.workspaceState = 'LOADING'; loadingHistory = true;
     for (const selector of ['[data-run-history-prev]', '[data-run-history-next]']) { const button = query(selector); if (button) button.disabled = true; }
     const loading = query('[data-run-loading]'); if (loading) loading.hidden = false;
     try {
       const [catalog, recent, connections, configured] = await Promise.all([
-        historyOnly ? null : readJSON(fetcher, '/api/research/snapshots'), readJSON(fetcher, `/api/research/jobs?limit=20${historyOffset ? `&offset=${historyOffset}` : ''}`), historyOnly ? null : readJSON(fetcher, '/api/data/connections'),
+        historyOnly ? null : readJSON(fetcher, '/api/research/snapshots'), readJSON(fetcher, `/api/research/jobs/summaries?limit=20${historyCursors[historyOffset / 20] ? `&cursor=${encodeURIComponent(historyCursors[historyOffset / 20])}` : ''}`), historyOnly ? null : readJSON(fetcher, '/api/data/connections'),
         historyOnly ? null : readJSON(fetcher, '/api/research/providers/config'),
       ]);
       if (stopped || generation !== loadGeneration) return;
@@ -191,7 +197,7 @@ export function mountRunWorkspace(root, { fetcher = globalThis.fetch, location =
         readiness.invalidate();
       }
       const list = query('[data-run-history]');
-      if (list) list.replaceChildren(...recent.jobs.map(normalizeJob).map((job) => {
+      if (list) list.replaceChildren(...recent.jobs.map(normalizeJobSummary).map((job) => {
         const current = lastJob !== observedAtStart && lastJob?.job_id === job.job_id ? lastJob : job;
         const li = element('li'); const button = element('button', historyLabel(current));
         button.dataset.historyJob = job.job_id;
@@ -199,8 +205,9 @@ export function mountRunWorkspace(root, { fetcher = globalThis.fetch, location =
       }));
       if (list && !recent.jobs.length) list.append(element('li', '尚无后台任务。准备快照后，提交第一项离线研究。'));
       text('[data-run-history-page]', `${recent.total ?? recent.jobs.length} 项任务 · 当前 ${recent.jobs.length ? historyOffset + 1 : 0}–${historyOffset + recent.jobs.length}`);
+      historyNext = recent.next_cursor;
       const previous = query('[data-run-history-prev]'); if (previous) previous.disabled = historyOffset === 0;
-      const next = query('[data-run-history-next]'); if (next) next.disabled = historyOffset + recent.jobs.length >= (recent.total ?? recent.jobs.length);
+      const next = query('[data-run-history-next]'); if (next) next.disabled = !historyNext;
       root.dataset.workspaceState = recent.jobs.length ? 'READY' : 'EMPTY';
       const requested = location?.href ? new URL(location.href).searchParams.get('job_id') : null;
       if (observe && (requested || selectedId || recent.jobs[0])) await selectJob(requested || selectedId || recent.jobs[0].job_id);
@@ -210,7 +217,7 @@ export function mountRunWorkspace(root, { fetcher = globalThis.fetch, location =
   const templates = { baseline: '检验这个快照上的动量基线，并检查费用与历史回撤。', risk: '复核所选快照的费用、滑点、成交容量和历史损失情景，列出纸面风险与不确定性。', materials: '结合已授权的基本面、新闻和情绪材料，区分事实、假设与分歧，并核对对应证据。' };
   query('[data-run-template]')?.addEventListener('change', (event) => { if (templates[event.target.value]) { form.elements.namedItem('question').value = templates[event.target.value]; readiness.invalidate(); } });
   for (const [selector, direction] of [['[data-run-history-prev]', -1], ['[data-run-history-next]', 1]]) query(selector)?.addEventListener('click', () => {
-    if (!loadingHistory) { historyOffset = Math.max(0, historyOffset + direction * 20); load({ observe: false, historyOnly: true }); }
+    if (!loadingHistory) { if (direction > 0) { if (!historyNext) return; historyCursors[historyOffset / 20 + 1] = historyNext; } historyOffset = Math.max(0, historyOffset + direction * 20); load({ observe: false, historyOnly: true }); }
   });
   form?.elements.namedItem('snapshot_ref').addEventListener('change', () => { snapshotDescription(); readiness.invalidate(); });
   form?.addEventListener('submit', async (event) => {

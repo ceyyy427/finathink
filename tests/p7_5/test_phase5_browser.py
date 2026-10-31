@@ -172,11 +172,11 @@ def test_workspace_keyboard_empty_state_and_responsive_layout(http_app, observed
 def test_workspace_error_has_a_visible_recovery_action(http_app, observed_page):
     _, base = http_app
     page, _, diagnostics = observed_page
-    page.route("**/api/research/jobs?limit=20", lambda route: route.fulfill(status=503, content_type="application/json", body='{"error":"unavailable"}'))
+    page.route("**/api/research/jobs/summaries?limit=20", lambda route: route.fulfill(status=503, content_type="application/json", body='{"error":"unavailable"}'))
     page.goto(base + "/research/jobs")
     page.wait_for_selector('[data-run-error]:visible')
     assert page.locator('[data-run-refresh]').is_visible()
-    page.unroute("**/api/research/jobs?limit=20")
+    page.unroute("**/api/research/jobs/summaries?limit=20")
     diagnostics["errors"].clear()  # The intentionally injected HTTP 503 is expected.
     page.locator('[data-run-refresh]').click()
     page.wait_for_selector('[data-workspace-state="EMPTY"]')

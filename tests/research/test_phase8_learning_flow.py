@@ -35,7 +35,7 @@ def settle(service, source, evidence_ref):
 
 
 def decide(service, review, decision="APPROVED"):
-    return service.learning.decide(review["review_id"], {"decision": decision, "expected_preview_fingerprint": review["preview"]["policy_fingerprint"], "rationale": "Inspect fixed-horizon paper outcome"})
+    return service.learning.decide(review["review_id"], {"decision": decision, "allow_exploratory": True, "expected_preview_fingerprint": review["preview"]["policy_fingerprint"], "rationale": "Inspect fixed-horizon paper outcome"})
 
 
 def test_settlement_preview_approval_drives_new_policy_and_preserves_original_report(tmp_path):
@@ -239,7 +239,7 @@ def test_same_approval_with_whitespace_retries_idempotently_and_keeps_sample_lab
     try:
         source, _, evidence_ref = inputs(service)
         review = settle(service, source, evidence_ref)
-        body = {"decision": "APPROVED", "expected_preview_fingerprint": review["preview_fingerprint"], "rationale": "  same decision  "}
+        body = {"decision": "APPROVED", "allow_exploratory": True, "expected_preview_fingerprint": review["preview_fingerprint"], "rationale": "  same decision  "}
         one = service.learning.decide(review["review_id"], body)
         two = service.learning.decide(review["review_id"], body)
         assert one["policy_ref"] == two["policy_ref"] and len(service.learning.policies()) == 2

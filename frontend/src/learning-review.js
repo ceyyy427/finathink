@@ -1,5 +1,6 @@
+import { normalizeAssessment, readLearningCatalogue } from './learning-reliability.js';
 // Render approved, server-owned evidence. Never derive outcomes or policy rules.
-import { readLocalJSON, userErrorMessage } from './local-request.js';
+import { userErrorMessage } from './local-request.js';
 const mounted = new WeakMap();
 const DIGEST = /^[0-9a-f]{64}$/;
 const STATES = new Set(['PENDING_REVIEW', 'APPROVED', 'REJECTED', 'KEEP_POLICY']);
@@ -9,11 +10,15 @@ const labels = { PENDING_REVIEW: '待审核', APPROVED: '已批准', REJECTED: '
 export function normalizeLearningReview(value) {
   if (!value || !/^learning-[0-9a-f]{32}$/.test(value.review_id ?? '') || !/^[A-Za-z0-9_-]+$/.test(value.run_id ?? '') || value.paper_only !== true || !STATES.has(value.status)) throw new TypeError('复盘身份或状态无效。');
   const monitoring = value.source_kind === 'FACTOR_VALIDATION_MONITORING';
-  for (const key of ['parent_policy_ref', 'proposal_digest', 'preview_fingerprint', ...(monitoring ? [] : ['source_snapshot_ref', 'evidence_snapshot_ref', 'observed_snapshot_ref'])]) if (!DIGEST.test(value[key] ?? '')) throw new TypeError('复盘缺少完整证据引用。');
+  const cohort = value.source_kind === 'LEARNING_COHORT';
+  for (const key of ['parent_policy_ref', 'proposal_digest', 'preview_fingerprint', ...(monitoring ? [] : cohort ? ['source_snapshot_ref'] : ['source_snapshot_ref', 'evidence_snapshot_ref', 'observed_snapshot_ref'])]) if (!DIGEST.test(value[key] ?? '')) throw new TypeError('复盘缺少完整证据引用。');
   if (value.preview?.proposal_digest !== value.proposal_digest || value.preview?.policy_fingerprint !== value.preview_fingerprint || (value.status === 'APPROVED' && !DIGEST.test(value.policy_ref ?? ''))) throw new TypeError('复盘结果与审核预览不一致。');
   if (monitoring) {
     const observation = value.observation?.monitoring;
     if (value.settlement !== null || value.proposal?.settlement_digest !== null || Object.keys(value.proposal?.factor_weight_updates ?? {}).length || Object.keys(value.proposal?.risk_rule_updates ?? {}).length || observation?.schema_version !== 'factor-monitoring.v1' || observation.status !== 'REVIEW_RECOMMENDED' || !DIGEST.test(observation.fingerprint ?? '') || !Array.isArray(observation.evidence_refs) || observation.evidence_refs.length < 3 || observation.evidence_refs.some((row) => !DIGEST.test(row.evaluation_fingerprint ?? ''))) throw new TypeError('因子观察不能冒充纸面结算或直接调权。');
+  } else if (cohort) {
+    const assessment = normalizeAssessment(value.observation?.assessment);
+    if (value.settlement !== null || assessment.status !== 'RECOMMENDED' || assessment.assessment_id !== value.assessment_id || assessment.scope.parent_policy_ref !== value.parent_policy_ref || !DIGEST.test(value.proposal?.settlement_digest ?? '')) throw new TypeError('样本建议与冻结评估不一致。');
   } else if (value.observation?.horizon_observations !== 5 || !Number.isFinite(value.observation?.equity) || !Number.isFinite(value.observation?.net_return)) throw new TypeError('复盘结果与审核预览不一致。');
   return value;
 }
@@ -30,7 +35,7 @@ export function mountLearningReview(root, { fetcher = globalThis.fetch, interval
   const originalLabels = Object.fromEntries(['[data-learning-outcome-heading]', '[data-learning-outcome] caption', '[data-learning-decay-heading]', '[data-learning-decay-description]', '[data-learning-decay] th'].map((selector) => [selector, q(selector).textContent]));
   const csrf = q('[data-learning-csrf]').value;
   let current; let snapshots = []; let policies = []; let busy = false; let disposed = false; let generation = 0; let timer; let controller; let activeJob; let rerunKey;
-  const request = (url, options) => readLocalJSON(fetcher, url, options);
+  const request = (url, options) => readLearningCatalogue(fetcher, url, options);
   const post = (url, values) => request(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...values, _csrf: csrf }) });
   const reportLink = (target, url) => {
     const safe = /^\/research\/[A-Za-z0-9_-]+\/report\/complete$/.test(url ?? ''); target.hidden = !safe;
@@ -63,23 +68,37 @@ export function mountLearningReview(root, { fetcher = globalThis.fetch, interval
     q('[data-learning-hypotheses]').replaceChildren(...current.hypotheses.map((hypothesis) => node('li', hypothesis)));
     const observed = current.observation;
     const monitoring = current.source_kind === 'FACTOR_VALIDATION_MONITORING';
+    const cohort = current.source_kind === 'LEARNING_COHORT';
     const monitoringLabels = ['假设与验证观察', '独立最终测试的描述性变化，非成交估值；没有已实现纸面收益。', '独立窗口变化', '仅比较同定义、同范围且互不重叠的已完成最终测试；描述性变化不等于统计显著衰减。', '独立最终测试窗口'];
+    if (cohort) {
+      const assessment = observed.assessment, stats = assessment.statistics;
+      text('[data-learning-outcome-heading]', '分离窗口的样本证据');
+      text('[data-learning-outcome] caption', '冻结的纸面结算集合；不冒充一次成交结算。');
+      text('[data-learning-binding]', `${assessment.sample_count} 个窗口 · ${assessment.start} 至 ${assessment.as_of} · ${assessment.assessment_id}`);
+      rows('[data-learning-outcome]', [['合格窗口 / 固定门槛', `${assessment.sample_count} / 20`], ['亏损 / 非亏损 / 零收益', `${stats.losses} / ${stats.non_losses} / ${stats.zero}`], ['平均净收益 / 中位数', `${percent(stats.mean)} / ${percent(stats.median)}`], ['亏损比例95%区间', stats.loss_interval_95.map(percent).join(' 至 ')]]);
+      text('[data-learning-decay-heading]', '非亏损反例');text('[data-learning-decay-description]', assessment.limits.join(' '));
+      text('[data-learning-decay] th', '复盘引用');text('[data-learning-decay] th:nth-child(2)', '净收益');
+      rows('[data-learning-decay]', assessment.counterexamples.length ? assessment.counterexamples.map(row => [row.review_id, percent(row.net_return)]) : [['合格样本中尚无非亏损反例', '不代表未来表现']]);
+    } else {
+      text('[data-learning-decay] th:nth-child(2)', 'IC');
     Object.keys(originalLabels).forEach((selector, index) => text(selector, monitoring ? monitoringLabels[index] : originalLabels[selector]));
     text('[data-learning-binding]', monitoring ? `${current.run_id} · 因子最终测试观察，非纸面成交结算 · 截止 ${current.as_of} · ${observed.monitoring.evidence_refs.length} 个独立窗口 · 观察指纹 ${observed.monitoring.fingerprint}` : `${current.run_id} · 原数据 ${current.data_modes?.source ?? 'UNKNOWN'} / 后续数据 ${current.data_modes?.evidence ?? 'UNKNOWN'} / 估值数据 ${current.data_modes?.observed ?? 'UNKNOWN'} · 观察到 ${observed.mark_timestamp} · 证据可用 ${observed.available_at} · 原数据指纹 ${current.source_snapshot_ref} · 估值数据指纹 ${current.observed_snapshot_ref}`);
     rows('[data-learning-outcome]', monitoring ? [['证据类型', '独立最终测试，不代表已实现收益'], ['早期 / 最近描述性 IC', `${number(observed.monitoring.baseline_ic)} / ${number(observed.monitoring.recent_ic)}`], ['适用范围', observed.monitoring.reproduction_scope.join(' / ')], ['动作', '登记研究复核建议，不修改权重或风险规则']] : [['计划目标仓位', percent(observed.planned_weight)], ['实际纸面成交仓位', percent(observed.filled_weight)], ['成交参考价 / 观察末价', `${number(observed.reference_price)} / ${number(observed.mark_price)}`], ['观察末净值 / 纸面净收益', `${number(observed.equity)} / ${percent(observed.net_return)}`], ['费用 / 滑点成本', `${number(observed.fees)} / ${number(observed.slippage)}`], ['现金 / 持有数量', `${number(observed.cash)} / ${number(observed.quantity)}`]]);
     rows('[data-learning-decay]', monitoring ? observed.monitoring.evidence_refs.map((row) => [row.window?.join(' → ') ?? row.run_ref, number(row.ic)]) : observed.factor_decay.horizons.map((horizon, index) => [String(horizon), number(observed.factor_decay.information_coefficients[index])]));
+    }
     text('[data-learning-basis]', observed.recommendation_basis);
     rows('[data-learning-preview]', [['动量信号预算乘数', number(current.baseline.factor_weights.momentum_2obs), number(current.preview.factor_weights.momentum_2obs)], ['经验 CVaR 上限', percent(current.baseline.risk_rules.max_cvar), percent(current.preview.risk_rules.max_cvar)]]);
     text('[data-learning-preview-binding]', `原版本 v${current.baseline.version} · ${current.status === 'KEEP_POLICY' ? '本次不创建新版本' : `建议 v${current.preview.next_version}`} · 原配置 ${current.parent_policy_ref} · 预览 ${current.preview_fingerprint}`);
     text('[data-learning-admission]', current.admission ? `${labels[current.status]} · ${current.admission.rationale} · ${current.admission.as_of}${current.policy_ref ? ` · 新配置 ${current.policy_ref}` : ' · 未创建配置版本'}` : current.status === 'KEEP_POLICY' ? '本次没有数值修改，不创建空版本。' : '等待显式审核；尚未改变任何配置。');
     reportLink(q('[data-learning-original-report]'), current.source_report_url);
-    rerunForm.hidden = monitoring;
-    if (!monitoring) {
+    rerunForm.hidden = monitoring || cohort;
+    if (!monitoring && !cohort) {
       form.elements.run_id.value = current.run_id; rerunForm.elements.run_id.value = current.run_id;
       rerunForm.elements.snapshot_ref.value = current.source_snapshot_ref;
       rerunForm.elements.policy_ref.value = current.policy_ref ?? current.parent_policy_ref;
     }
     reviewForm.elements.rationale.value = current.admission?.rationale ?? '';
+    q('[data-learning-ack-label]').textContent = cohort ? '我已核对样本范围、反例、排除原因和区间假设，知道批准只创建纸面配置版本。' : monitoring ? '我已核对独立测试窗口与研究复核建议。' : '我已核对观察期、费用、数据与修改预览；单次复盘仅用于探索性试验，我明确确认其探索属性，知道批准不代表策略有效或盈利。';
     q('[data-learning-ack]').checked = false;
     rerunDate(); controls();
   }
@@ -140,15 +159,15 @@ export function mountLearningReview(root, { fetcher = globalThis.fetch, interval
     finally { busy = false; if (!disposed) controls(); }
   }
   form.addEventListener('submit', (event) => {
-    event.preventDefault(); action(async () => { const value = await post('/api/research/learning', Object.fromEntries(new FormData(form))); await refresh(); render(value); });
+    event.preventDefault(); action(async () => { const value = await post('/api/research/learning', Object.fromEntries(new FormData(form))); await refresh(); render(value); doc.dispatchEvent(new CustomEvent('finathink:learning-changed')); });
   });
   reviewForm.addEventListener('submit', (event) => {
     event.preventDefault(); const decision = event.submitter?.value;
     action(async () => {
       if (!current || current.status !== 'PENDING_REVIEW') throw new Error('请先选择待审核提案。');
       if (decision === 'APPROVED' && !q('[data-learning-ack]').checked) { q('[data-learning-ack]').focus(); throw new Error('请先确认已核对修改预览。'); }
-      const value = await post(`/api/research/learning/${current.review_id}/decision`, { decision, expected_preview_fingerprint: current.preview_fingerprint, rationale: reviewForm.elements.rationale.value });
-      await refresh(); render(value);
+      const value = await post(`/api/research/learning/${current.review_id}/decision`, { decision, allow_exploratory: q('[data-learning-ack]').checked, expected_preview_fingerprint: current.preview_fingerprint, rationale: reviewForm.elements.rationale.value });
+      await refresh(); render(value); doc.dispatchEvent(new CustomEvent('finathink:learning-changed'));
     });
   });
   rerunForm.addEventListener('submit', (event) => {
@@ -165,8 +184,10 @@ export function mountLearningReview(root, { fetcher = globalThis.fetch, interval
   for (const target of [rerunForm.elements.policy_ref, rerunForm.elements.snapshot_ref]) target.addEventListener('change', rerunDate);
   q('[data-learning-cancel]').addEventListener('click', () => action(async () => { if (activeJob && ACTIVE.has(activeJob.status)) { const job = await post(`/api/research/jobs/${activeJob.job_id}/cancel`, {}); await watchJob(job); } }));
   q('[data-learning-refresh]').addEventListener('click', () => action(async () => { await refresh(); if (current) await select(current.review_id); else text('[data-learning-status]', '本地记录已就绪。请选择原研究与后续观察。'); }));
+  const incoming = event => action(async () => { await refresh(); await select(event.detail); if (!disposed) { q('[data-learning-detail]').scrollIntoView({ block: 'start' }); q('[data-learning-status]').tabIndex = -1; q('[data-learning-status]').focus({ preventScroll: true }); } });
+  doc.addEventListener('finathink:learning-review', incoming);
   busy = true; controls();
   const ready = refresh().then(() => { if (!disposed) text('[data-learning-status]', '本地记录已就绪。请选择原研究与后续观察。'); }).catch((reason) => { if (!disposed) error(reason); }).finally(() => { busy = false; if (!disposed) controls(); });
-  const api = { ready, select, dispose() { disposed = true; stop(); } }; mounted.set(root, api);
+  const api = { ready, select, dispose() { disposed = true; stop(); doc.removeEventListener('finathink:learning-review', incoming); } }; mounted.set(root, api);
   doc.defaultView?.addEventListener('pagehide', api.dispose, { once: true }); return api;
 }

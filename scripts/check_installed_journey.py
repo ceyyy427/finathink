@@ -15,6 +15,47 @@ import finahinking
 from finahinking.local_app import LocalAppConfig, LocalApplication, create_server
 
 
+def learning_journey(app, get, post, template_ref):
+    from dataclasses import replace
+    from datetime import UTC, datetime
+
+    import pandas as pd
+
+    template = app.research_service.snapshots.load(template_ref)
+    rows = []
+    for i in range(12):
+        stamp = pd.Timestamp("2026-01-01", tz="UTC") + pd.Timedelta(days=i)
+        price = 100+i
+        rows.append(replace(template.observations[0], timestamp=stamp, available_at=stamp, open=price, close=price, high=price+1, low=price-1, volume=100000, industry="technology"))
+    source = replace(template, observations=tuple(rows), as_of=rows[-1].timestamp)
+    following = []
+    for i, price in enumerate((100,98,96,94,92,90), 1):
+        stamp = rows[-1].timestamp+pd.Timedelta(days=i)
+        following.append(replace(rows[-1], timestamp=stamp, available_at=stamp, open=price, close=price, high=price+1, low=price-1))
+    evidence = replace(source, observations=(*rows,*following), as_of=following[-1].timestamp)
+    source_ref, evidence_ref = app.research_service.snapshots.save(source), app.research_service.snapshots.save(evidence)
+    def wait(job):
+        deadline=time.monotonic()+40
+        while job['status'] not in {'completed','failed','cancelled'} and time.monotonic()<deadline:
+            time.sleep(.05)
+            job=json.loads(get('/api/research/jobs/'+job['job_id']))
+        assert job['status']=='completed' and job['report_status']=='AVAILABLE'
+        return job
+    job = wait(post('/api/research/jobs', {'idempotency_key':'installed-learning', 'snapshot_ref':source_ref, 'question':'Observe paper momentum and fixed costs', 'instrument':'AAA', 'as_of':'2026-01-12'}))
+    base='/api/research/learning'
+    review=post(base, {'run_id':job['run_id'], 'evidence_snapshot_ref':evidence_ref, 'as_of':'2026-01-18'})
+    assessment=post(base+'/assessments', {'anchor_review_id':review['review_id'], 'start':'2026-01-01', 'as_of':datetime.now(UTC).date().isoformat()})
+    assert assessment['status']=='OBSERVE' and assessment['sample_count']==1
+    approved=post(base+'/'+review['review_id']+'/decision', {'decision':'APPROVED', 'allow_exploratory':True, 'rationale':'Explicit installed exploratory experiment', 'expected_preview_fingerprint':review['preview_fingerprint']})
+    pair=post(base+'/pairs', {'review_id':review['review_id'], 'snapshot_ref':source_ref, 'as_of':approved['available_as_of']})
+    for child in pair['children'].values():
+        wait(json.loads(get('/api/research/jobs/'+child['job_id'])))
+    assert json.loads(get(base+'/pairs/'+pair['pair_id']))['status']=='AVAILABLE'
+    assert all(row['report_status']=='NOT_CHECKED' for row in json.loads(get('/api/research/jobs/summaries'))['jobs'])
+    assert json.loads(get('/api/research/maintenance'))['resources']['worker_rss_bytes'] is None
+    return assessment['assessment_id'], pair['pair_id']
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--state-root', required=True, type=Path)
@@ -91,6 +132,7 @@ def main():
             assert portable.list_jobs()['total'] == 0
         finally:
             portable.close()
+        assessment_id, pair_id = learning_journey(app, get, post, snapshot['snapshot_ref'])
     finally:
         server.shutdown()
         server.server_close()
@@ -105,6 +147,8 @@ def main():
     for _ in range(2):
         reopened = LocalApplication(LocalAppConfig(db_path=str(restored), offline=True))
         try:
+            assert reopened.route('GET', '/api/research/learning/assessments/'+assessment_id)[2]['sample_count'] == 1
+            assert reopened.route('GET', '/api/research/learning/pairs/'+pair_id)[2]['status'] == 'AVAILABLE'
             restored_diagnostic = reopened.route('GET', '/api/diagnostics/interfaces/' + diagnostic['receipt_id'])
             assert restored_diagnostic[0] == 200 and restored_diagnostic[2] == diagnostic
             value = reopened.research_service.get_job(job['job_id'])
@@ -114,7 +158,7 @@ def main():
             assert (restored_report.encode() if isinstance(restored_report, str) else restored_report) == report
         finally:
             reopened.close()
-    print('全新 wheel 安装 → 资料与因子证据 → 真实 HTTP/独立 spawn 任务 → 蓝白报告 → 私密备份恢复 → 重复迁移检查：通过。')
+    print('全新 wheel 安装 → 资料与因子证据 → 真实 HTTP/独立 spawn 任务 → 蓝白报告 → 样本评估/成对复跑 → 私密备份恢复 → 重复迁移检查：通过。')
     return 0
 
 
