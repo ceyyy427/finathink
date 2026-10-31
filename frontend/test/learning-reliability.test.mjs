@@ -10,6 +10,11 @@ test('cohort summaries preserve absence and cannot claim readiness with too few 
   assert.throws(() => normalizeAssessment({...assessment,paper_only:false}));
   assert.throws(() => normalizeAssessment({...assessment,statistics:{mean:NaN}}));
 });
+test('unresolved candidate evidence cannot carry recommendation authority', () => {
+  const damaged={...assessment,status:'RECOMMENDED',sample_count:20,selected_review_ids:Array.from({length:20},(_,i)=>`r${i}`),exclusions:[{review_id:'winner',reason:'INVALID_PROOF'}]};
+  assert.throws(()=>normalizeAssessment(damaged));
+  assert.equal(normalizeAssessment({...damaged,status:'OBSERVE'}).status,'OBSERVE');
+});
 test('late operations lose ownership on input events and silent option changes', () => {
   let selected='first'; const guard=selectionGuard(()=>selected);
   const one=guard.begin(); selected='second'; assert.equal(one(),false);

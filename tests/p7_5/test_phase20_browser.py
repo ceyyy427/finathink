@@ -143,3 +143,63 @@ def test_maintenance_pagination_and_chinese_network_error(app_http, observed_pag
     assert diagnostics['errors'] == [expected]
     diagnostics['expected_http_failure'] = diagnostics['errors'].copy()
     diagnostics['errors'].clear()
+
+
+@pytest.mark.parametrize('target', ['assessment', 'pair'])
+def test_saved_selection_during_other_panel_load_cannot_act_on_previous_record(app_http, observed_page, target):
+    page, _, _ = observed_page
+    a, b = ['assessment-'+char*64 for char in 'ab']
+    p, q = ['pair-'+char*64 for char in 'cd']
+    def assessment(identity, count):
+        return {'assessment_id': identity, 'paper_only': True, 'status': 'RECOMMENDED' if count == 20 else 'OBSERVE', 'sample_count': count, 'minimum_samples': 20, 'selected_review_ids': [f'r{i}' for i in range(count)], 'exclusions': [], 'counterexamples': [], 'limits': [], 'statistics': {'mean': -.1, 'median': -.1, 'losses': count, 'non_losses': 0, 'zero': 0, 'loss_interval_95': [.8, 1]}, 'scope': {'instrument': 'AAA', 'data_modes': {}}, 'start': '2026-01-01', 'as_of': '2026-10-31', 'anchor_review_id': 'r'}
+    first, second = assessment(a, 20), assessment(b, 1)
+    def pair(identity):
+        return {'pair_id': identity, 'status': 'INCOMPLETE', 'paper_only': True, 'children': {}, 'metrics': [], 'binding': {}, 'limits': []}
+    values = {'research/learning': {'reviews': []}, 'research/snapshots': {'snapshots': []}, 'research/learning/assessments': {'assessments': [first, second]}, 'research/learning/assessments/'+a: first, 'research/learning/assessments/'+b: second, 'research/learning/pairs': {'pairs': [pair(p), pair(q)]}, 'research/learning/pairs/'+p: pair(p), 'research/learning/pairs/'+q: pair(q)}
+    held, posts, hold = [], [], []
+    busy_path = 'research/learning/pairs/'+p if target == 'assessment' else 'research/learning/assessments/'+b
+    def route(request):
+        path = request.request.url.split('/api/')[1]
+        if request.request.method == 'POST':
+            posts.append(path)
+            request.fulfill(json=pair(q) if path.endswith('/resume') else {'review_id': 'result'})
+        elif hold and path == busy_path:
+            held.append(request)
+        elif path in values:
+            request.fulfill(json=values[path])
+        else:
+            request.continue_()
+    page.route('**/api/**', route)
+    enter(app_http, page)
+    hold.append(True)
+    if target == 'assessment':
+        page.locator('[data-pair-refresh]').click()
+    else:
+        page.locator('[data-cohort-saved]').select_option(b)
+    page.wait_for_timeout(100)
+    assert held
+    selector = page.locator('[data-cohort-saved]' if target == 'assessment' else '[data-pair-saved]')
+    result = page.locator('[data-cohort-result]' if target == 'assessment' else '[data-pair-result]')
+    button = page.locator('[data-cohort-propose]' if target == 'assessment' else '[data-pair-resume]')
+    selector.select_option(b if target == 'assessment' else q)
+    expect(result).to_contain_text('选择已变化')
+    expect(button).to_be_disabled()
+    hold.clear()
+    held[0].fulfill(json=values[busy_path])
+    expect(result).to_contain_text('1 / 20 个合格窗口' if target == 'assessment' else q)
+    if target == 'assessment':
+        expect(button).to_be_disabled()
+        selector.select_option(a)
+        expect(button).to_be_enabled()
+        # Programmatic selection changes are also checked at mutation time.
+        selector.evaluate('(el,value)=>{el.value=value;}', b)
+    else:
+        expect(button).to_be_enabled()
+        button.click()
+        expect(button).to_be_enabled()
+        assert posts == ['research/learning/pairs/'+q+'/resume']
+        posts.clear()
+        selector.evaluate('(el,value)=>{el.value=value;}', p)
+    button.click()
+    expect(button).to_be_disabled()
+    assert posts == []

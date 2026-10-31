@@ -42,6 +42,18 @@ def test_counterexamples_zero_and_missing_are_distinct():
     assert result["exclusions"][0]["reason"] == "UNKNOWN_OUTCOME"
 
 
+@pytest.mark.parametrize("reason", ["UNVERIFIED", "INVALID_PROOF"])
+def test_unresolved_counterevidence_cannot_upgrade_twenty_losses(reason):
+    data = rows(21)
+    data[-1]["net_return"] = 1.0
+    assert assess(data)["status"] == "KEEP_POLICY"
+    data[-1].update(verified=False, exclusion_reason=reason)
+    result = assess(data)
+    assert result["sample_count"] == 20 and result["statistics"]["mean"] < 0
+    assert result["status"] == "OBSERVE"
+    assert not result["factor_weight_updates"] and not result["risk_rule_updates"]
+
+
 @pytest.mark.parametrize("change,reason", [
     ({"verified": False}, "UNVERIFIED"),
     ({"quantity": 0}, "UNFILLED"),

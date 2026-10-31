@@ -46,6 +46,9 @@ class LearningAssessmentService:
         if event.fingerprint != record["settlement_fingerprint"] or to_jsonable(event) != record["settlement"] or to_jsonable(observation) != record["observation"] or derived.fingerprint != record["observed_snapshot_ref"] or self.app.snapshots.load(record["observed_snapshot_ref"]).fingerprint != derived.fingerprint or record["semantic_key"] != semantic or to_jsonable(modes) != record["data_modes"]:
             raise ValueError("结算证据重建失配")
         scope = {"instrument": request.instrument, "parent_policy_ref": parent["policy_ref"], "data_modes": to_jsonable(modes), "execution_identity": identity, "cost_policy": {key: value for key, value in execution.items() if key not in {"signal_at", "fingerprint"}}, "horizon": 5, "factor_id": parent["effective"]["factor_id"], "factor_weight": parent["factor_weights"][parent["effective"]["factor_id"]], "max_cvar": parent["risk_rules"]["max_cvar"]}
+        # Keep the legacy record key check above, but moving the requested cutoff
+        # cannot turn the same frozen signal into another economic observation.
+        semantic = stable_digest([request.instrument, parent["policy_ref"], execution["signal_at"]])
         return {"review_id": record["review_id"], "semantic_key": semantic, "settlement_digest": event.fingerprint, "ledger_digest": event.ledger.fingerprint, "dataset_digest": event.dataset_digest, "scope": scope, "verified": True, "decision_at": observation["decision_cutoff"], "mark_at": observation["mark_timestamp"], "available_at": observation["available_at"], "observed_at": record["observed_at"], "net_return": observation["net_return"], "quantity": observation["quantity"], "record_digest": stable_digest(record), "manifest_digest": stable_digest(entry["manifest"])}
 
     def assess(self, values):
@@ -90,8 +93,8 @@ class LearningAssessmentService:
 
     def propose(self, identity):
         assessment = self.get(identity)
-        if assessment["status"] != "RECOMMENDED":
-            raise ValueError("样本不足或未达到固定建议门槛，保留原配置")
+        if assessment["status"] != "RECOMMENDED" or any(not proof.get("verified") for proof in assessment["proofs"]):
+            raise ValueError("样本不足、候选证据待修复或未达到固定建议门槛，保留原配置")
         # Recheck every frozen candidate, including excluded counterevidence. Later
         # observations form a new assessment; they never rewrite this snapshot.
         for proof in assessment["proofs"]:

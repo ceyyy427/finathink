@@ -11,12 +11,14 @@ const mounted = new WeakMap();
 const BASE = '/api/research/learning';
 const labels = { OBSERVE:'继续积累样本', RECOMMENDED:'达到固定建议门槛', KEEP_POLICY:'保留原配置', INCOMPLETE:'尚有任务未排队', RUNNING:'后台运行中', AVAILABLE:'成对结果已校验', BLOCKED:'需要检查子任务或报告' };
 const exclusionLabels = { INVALID_PROOF:'证据校验失败', UNVERIFIED:'证据未验证', SCOPE_MISMATCH:'配置或数据模式不同', UNKNOWN_IDENTITY:'身份缺失', OUTSIDE_WINDOW:'不在所选窗口', LATE_EVIDENCE:'截止时尚不可用', INVALID_WINDOW:'观察期无效', UNKNOWN_OUTCOME:'收益未知', UNFILLED:'未成交', DUPLICATE:'重复经济信号或结算', OVERLAPPING_WINDOW:'观察期重叠' };
+const unresolvedEvidence = value => value.exclusions.some(row=>['INVALID_PROOF','UNVERIFIED'].includes(row.reason));
 export function selectionGuard(read) {
   let revision = 0;
   return { invalidate() { revision++; }, begin() { const current = ++revision; const key = read(); return () => current === revision && key === read(); } };
 }
 export function normalizeAssessment(value) {
   if (!/^assessment-[a-f0-9]{64}$/.test(value?.assessment_id ?? '') || value.paper_only !== true || !['OBSERVE','RECOMMENDED','KEEP_POLICY'].includes(value.status) || !Number.isInteger(value.sample_count) || value.sample_count < 0 || value.sample_count > 200 || value.minimum_samples !== 20 || value.selected_review_ids?.length !== value.sample_count || !Array.isArray(value.exclusions) || !Array.isArray(value.counterexamples) || !Array.isArray(value.limits) || !value.statistics || Object.values(value.statistics).flat().some(item => item !== null && (typeof item !== 'number' || !Number.isFinite(item))) || (value.status === 'RECOMMENDED' && value.sample_count < 20)) throw new TypeError('样本评估的证据结构不完整，请重新读取。');
+  if (value.status === 'RECOMMENDED' && unresolvedEvidence(value)) throw new TypeError('候选证据尚未完整校验，请修复后重新评估。');
   return value;
 }
 export function normalizePair(value) {
@@ -32,7 +34,7 @@ export function mountLearningReliability(root, {fetcher=globalThis.fetch}={}) {
   const csrf=q('[data-cohort-csrf]').value;
   const request=url=>readLearningCatalogue(fetcher,url);
   const post=(url,body)=>readLocalJSON(fetcher,url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...body,_csrf:csrf})});
-  let assessment=null, pair=null, busy=false, disposed=false, reviews=[];
+  let assessment=null, pair=null, busy=false, disposed=false, reviews=[], pendingAssessment=false, pendingPair=false;
   const assessGuard=selectionGuard(()=>JSON.stringify([fields(form),saved.value]));
   const pairGuard=selectionGuard(()=>JSON.stringify([fields(pairForm),savedPairs.value]));
   const number=value=>Number.isFinite(value)?new Intl.NumberFormat('zh-CN',{maximumFractionDigits:6}).format(value):'未知';
@@ -42,10 +44,10 @@ export function mountLearningReliability(root, {fetcher=globalThis.fetch}={}) {
     root.setAttribute('aria-busy',String(busy));
     root.querySelectorAll('button').forEach(button=>{button.disabled=busy;});
     q('[data-cohort-assess]').disabled=busy||!form.elements.anchor_review_id.value;
-    q('[data-cohort-propose]').disabled=busy||assessment?.status!=='RECOMMENDED';
+    q('[data-cohort-propose]').disabled=busy||assessment?.status!=='RECOMMENDED'||assessment.assessment_id!==saved.value;
     q('[data-pair-create]').disabled=busy||!pairForm.elements.review_id.value||!pairForm.elements.snapshot_ref.value;
     q('[data-pair-refresh]').disabled=busy||!savedPairs.value;
-    q('[data-pair-resume]').disabled=busy||pair?.status!=='INCOMPLETE';
+    q('[data-pair-resume]').disabled=busy||pair?.status!=='INCOMPLETE'||pair.pair_id!==savedPairs.value;
   }
   function table(caption,headers,rows) {
     const wrap=node('div');wrap.className='table-wrap';wrap.tabIndex=0;wrap.setAttribute('role','region');wrap.setAttribute('aria-label',caption+'，可横向滚动');
@@ -56,7 +58,8 @@ export function mountLearningReliability(root, {fetcher=globalThis.fetch}={}) {
   function renderAssessment(value) {
     assessment=normalizeAssessment(value);
     const stats=value.statistics;
-    const target=q('[data-cohort-result]');target.replaceChildren(node('h4',`${labels[value.status]} · ${value.sample_count} / 20 个合格窗口`),node('p',`${value.start} 至 ${value.as_of} · ${value.scope.instrument} · ${Object.values(value.scope.data_modes).join(' / ')}`));
+    const target=q('[data-cohort-result]');target.replaceChildren(node('h4',`${unresolvedEvidence(value)?'候选证据待修复':labels[value.status]} · ${value.sample_count} / 20 个合格窗口`),node('p',`${value.start} 至 ${value.as_of} · ${value.scope.instrument} · ${Object.values(value.scope.data_modes).join(' / ')}`));
+    if(unresolvedEvidence(value)) target.append(node('p','候选证据校验失败或尚未验证，已暂停生成建议。下方统计只描述仍可验证的样本；请修复证据后重新评估。'));
     target.append(table('历史纸面收益描述',['样本数','亏损 / 非亏损 / 零收益','均值','中位数','亏损比例95%区间'],[[value.sample_count,`${stats.losses} / ${stats.non_losses} / ${stats.zero}`,percent(stats.mean),percent(stats.median),stats.loss_interval_95?.map(percent).join(' 至 ')??'未知']]));
     target.append(node('h4','反例与排除记录'),node('p',value.counterexamples.length?`${stats.non_losses} 个非亏损反例，最多展示20个。`:'合格样本中尚无非亏损反例；这不证明未来仍会亏损。'));
     if(value.counterexamples.length) target.append(table('非亏损反例',['复盘引用','净收益'],value.counterexamples.map(row=>[row.review_id,percent(row.net_return)])));
@@ -100,15 +103,22 @@ export function mountLearningReliability(root, {fetcher=globalThis.fetch}={}) {
     if(!restore&&beforePair!==JSON.stringify([fields(pairForm),savedPairs.value]))invalidatePair();
     root.dataset.cohortReady='true';status('本地记录已就绪；提交前可继续核对样本范围与版本。');controls();
   }
-  async function action(callback) {if(busy||disposed)return;busy=true;controls();try{await callback();}catch(error){if(!disposed)status(`需要处理：${userErrorMessage(error)} 输入已保留，请重新读取后重试。`,true);}finally{busy=false;if(!disposed)controls();}}
+  async function readPendingSelections() {
+    while(!disposed&&(pendingAssessment||pendingPair)) {
+      if(pendingAssessment){pendingAssessment=false;await readAssessment();}
+      if(pendingPair){pendingPair=false;await readPair();}
+    }
+  }
+  async function action(callback) {if(busy||disposed)return;busy=true;controls();try{await callback();}catch(error){if(!disposed)status(`需要处理：${userErrorMessage(error)} 输入已保留，请重新读取后重试。`,true);}finally{busy=false;if(!disposed){controls();if(pendingAssessment||pendingPair)await action(readPendingSelections);}}}
   form.addEventListener('input',invalidateAssessment);form.addEventListener('change',invalidateAssessment);pairForm.addEventListener('input',invalidatePair);pairForm.addEventListener('change',invalidatePair);
   form.elements.anchor_review_id.addEventListener('change',()=>{const row=reviews.find(row=>row.review_id===form.elements.anchor_review_id.value);if(row)form.elements.start.value=row.observation.decision_cutoff.slice(0,10);assessGuard.invalidate();});
   form.addEventListener('submit',event=>{event.preventDefault();action(async()=>{const current=assessGuard.begin();const value=await post(`${BASE}/assessments`,fields(form));if(disposed||!current())return;await reload();if(disposed||!current())return;saved.value=value.assessment_id;renderAssessment(value);status('评估已保存；请检查反例、排除原因和固定规则。');});});
-  saved.addEventListener('change',()=>action(readAssessment));savedPairs.addEventListener('change',()=>action(readPair));
-  q('[data-cohort-propose]').addEventListener('click',()=>action(async()=>{if(!assessment)return;const current=assessGuard.begin();const value=await post(`${BASE}/assessments/${assessment.assessment_id}/propose`,{});if(disposed||!current())return;doc.dispatchEvent(new CustomEvent('finathink:learning-review',{detail:value.review_id}));status('建议已生成并打开上方审核；批准前配置不变。');}));
+  saved.addEventListener('change',()=>{invalidateAssessment();pendingAssessment=true;action(readPendingSelections);});
+  savedPairs.addEventListener('change',()=>{invalidatePair();pendingPair=true;action(readPendingSelections);});
+  q('[data-cohort-propose]').addEventListener('click',()=>action(async()=>{if(!assessment||assessment.assessment_id!==saved.value){invalidateAssessment();return;}const current=assessGuard.begin();const value=await post(`${BASE}/assessments/${assessment.assessment_id}/propose`,{});if(disposed||!current())return;doc.dispatchEvent(new CustomEvent('finathink:learning-review',{detail:value.review_id}));status('建议已生成并打开上方审核；批准前配置不变。');}));
   pairForm.addEventListener('submit',event=>{event.preventDefault();action(async()=>{const current=pairGuard.begin();const value=await post(`${BASE}/pairs`,fields(pairForm));if(disposed||!current())return;await reload();if(disposed||!current())return;savedPairs.value=value.pair_id;renderPair(value);status('成对任务已保存，可刷新状态或从任务页查看进度。');});});
   q('[data-pair-refresh]').addEventListener('click',()=>action(readPair));
-  q('[data-pair-resume]').addEventListener('click',()=>action(async()=>{if(!pair)return;const current=pairGuard.begin();const value=await post(`${BASE}/pairs/${pair.pair_id}/resume`,{});if(!disposed&&current())renderPair(value);}));
+  q('[data-pair-resume]').addEventListener('click',()=>action(async()=>{if(!pair||pair.pair_id!==savedPairs.value){invalidatePair();return;}const current=pairGuard.begin();const value=await post(`${BASE}/pairs/${pair.pair_id}/resume`,{});if(!disposed&&current())renderPair(value);}));
   q('[data-cohort-refresh]').addEventListener('click',()=>action(()=>reload({restore:true})));
   const changed=()=>action(()=>reload());doc.addEventListener('finathink:learning-changed',changed);
   const ready=action(()=>reload({restore:true}));

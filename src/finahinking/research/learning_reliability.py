@@ -102,8 +102,11 @@ def assess_outcomes(records, *, scope, start, as_of):
         lo = int(index)
         return returns[lo] + (returns[min(lo+1, n-1)]-returns[lo]) * (index-lo)
     weights, rules = {}, {}
-    status = "OBSERVE" if n < MIN_SAMPLES else "KEEP_POLICY"
-    if n >= MIN_SAMPLES and mean < 0 and interval[0] > 0.5:
+    # Missing counterevidence can bias retained rows. Show their statistics, but
+    # never grant stronger authority because a candidate's proof is damaged.
+    unresolved = any(not row.get("verified") for row in records)
+    status = "OBSERVE" if n < MIN_SAMPLES or unresolved else "KEEP_POLICY"
+    if not unresolved and n >= MIN_SAMPLES and mean < 0 and interval[0] > 0.5:
         old_weight, old_risk = scope["factor_weight"], scope["max_cvar"]
         weight, risk = max(0.1, old_weight*0.9), max(0.01, old_risk*0.9)
         if weight < old_weight:
