@@ -147,7 +147,7 @@ export function mountLearningReview(root, { fetcher = globalThis.fetch, interval
     action(async () => {
       if (!current || current.status !== 'PENDING_REVIEW') throw new Error('请先选择待审核提案。');
       if (decision === 'APPROVED' && !q('[data-learning-ack]').checked) { q('[data-learning-ack]').focus(); throw new Error('请先确认已核对修改预览。'); }
-      const value = await post(`/api/research/learning/${current.review_id}/decision`, { decision, expected_preview_fingerprint: current.preview_fingerprint, rationale: reviewForm.elements.rationale.value });
+      const value = await post(`/api/research/learning/${current.review_id}/decision`, { decision, allow_exploratory: q('[data-learning-ack]').checked, expected_preview_fingerprint: current.preview_fingerprint, rationale: reviewForm.elements.rationale.value });
       await refresh(); render(value);
     });
   });

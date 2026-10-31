@@ -43,7 +43,7 @@ def learning_workspace_page(csrf_token):
 <div class="table-wrap" tabindex="0" role="region" aria-label="配置修改预览，可横向滚动"><table data-learning-preview><caption>只展示服务器计算的原值与提议值；审批前不应用</caption><thead><tr><th scope="col">配置</th><th scope="col">原版本</th><th scope="col">建议新版本</th></tr></thead><tbody></tbody></table></div>
 <p class="learning-evidence" data-learning-preview-binding></p>
 <form data-learning-review-form><label>审核依据<textarea name="rationale" rows="2" maxlength="500" required></textarea></label>
-<p><label class="learning-ack"><input type="checkbox" data-learning-ack>我已核对观察期、费用、数据与修改预览，知道批准不代表策略有效或盈利。</label></p>
+<p><label class="learning-ack"><input type="checkbox" data-learning-ack>我已核对观察期、费用、数据与修改预览；单次复盘仅用于探索性试验，我明确确认其探索属性，知道批准不代表策略有效或盈利。</label></p>
 <div class="learning-actions"><button type="submit" name="decision" value="APPROVED" data-learning-approve disabled>批准为新配置</button><button type="submit" name="decision" value="REJECTED" data-learning-reject disabled>拒绝此提案</button><a data-learning-original-report>打开原始报告</a></div></form>
 <p data-learning-admission></p></section>
 <section class="panel section"><h2>按版本复跑</h2><p>选择批准后的配置，或回到旧版本。复跑在新运行中执行；相同提交标识不重复排队，原报告不被覆盖。旧数据使用新配置时明确标记为回溯比较，不能再作为该配置生效后的学习证据。</p>
