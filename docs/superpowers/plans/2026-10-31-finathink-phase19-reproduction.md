@@ -56,4 +56,4 @@
 - [x] Implement existing-shell workspace with accessible native controls; update build/CI and installed journey.
 - [x] Run frontend tests/build/perf, required Phase19 browsers at 1440x900/1920x1080/375x812, governance/ruff/release/secrets/dependencies and `python3 -m pytest -q -ra --tb=short` (expected PASS), commit.
 - [x] Dispatch one final independent reviewer, address Critical/Important findings with RED→GREEN and full suite.
-- [ ] Push PR; verify exact-head CI; merge; verify main SHA and all CI; archive evidence and remove only this plan scratch.
+- Release gate: push PR; verify exact-head CI; merge; verify main SHA and all CI; archive evidence and remove only this plan scratch. The authoritative release state is the corresponding GitHub PR merge status and Actions results.
