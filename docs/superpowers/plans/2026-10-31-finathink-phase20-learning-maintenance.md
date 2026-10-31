@@ -25,40 +25,40 @@
 ### Task 1: Typed cohort assessment and explanatory evidence
 **Files:** Create `src/finahinking/research/learning_reliability.py`, `tests/research/test_learning_reliability.py`.
 **Interfaces:** `assess_outcomes(records, *, scope, start, as_of)->dict` consumes verified normalized settled rows, returns bounded coverage/exclusions/statistics/counterexamples/recommendation and fingerprint; `loss_interval(losses,total)->list|None`.
-- [ ] Write failures for hand-computed Wilson/mean, 19 vs20 windows, mixed winners, zero/unknown, overlap/duplicates, future known-at, mixed mode/code/policy/costs, exhausted floors and >200 inputs.
-- [ ] Run `python3 -m pytest tests/research/test_learning_reliability.py -q` (Expected FAIL for missing behavior).
-- [ ] Implement stable chronological selection, fixed rule and explicit descriptive limits.
-- [ ] Run same command (Expected PASS), commit and native task gate.
+- [x] Write failures for hand-computed Wilson/mean, 19 vs20 windows, mixed winners, zero/unknown, overlap/duplicates, future known-at, mixed mode/code/policy/costs, exhausted floors and >200 inputs.
+- [x] Run `python3 -m pytest tests/research/test_learning_reliability.py -q` (Expected FAIL for missing behavior).
+- [x] Implement stable chronological selection, fixed rule and explicit descriptive limits.
+- [x] Run same command (Expected PASS), commit and native task gate.
 
 ### Task 2: Verified durable assessment and governed proposal
 **Files:** Create `src/finahinking/research/learning_assessments.py`, `tests/research/test_learning_assessments.py`; modify `learning_review.py`, affected learning API/flow fixtures and frontend approval payload/copy.
 **Interfaces:** `LearningAssessmentService(app).assess({anchor_review_id,start,as_of})`, `.get(id)`, `.list()`, `.propose(id)`; consumes Task1. Integrates original scoped settlement reconstruction, proposal preview/admission, `allow_exploratory` validation and audit mode.
-- [ ] Write failures for actual settled reports→assessment→proposal→approval, no mutation before approval, repeat/restart/cross-scope, stale/corrupt proof, rejected/insufficient samples and explicit exploratory approval with old admitted-policy compatibility.
-- [ ] Run `python3 -m pytest tests/research/test_learning_assessments.py -q` (Expected FAIL).
-- [ ] Add content-addressed persistence and bounded automatic selection; revalidate proof before proposal; adapt existing tests to explicit exploratory semantics.
-- [ ] Run `python3 -m pytest tests/research/test_learning_assessments.py tests/research/test_phase8_learning_flow.py tests/research/test_phase8_learning_api.py tests/research/test_learning_manager.py -q` (Expected PASS), commit and native gate.
+- [x] Write failures for actual settled reports→assessment→proposal→approval, no mutation before approval, repeat/restart/cross-scope, stale/corrupt proof, rejected/insufficient samples and explicit exploratory approval with old admitted-policy compatibility.
+- [x] Run `python3 -m pytest tests/research/test_learning_assessments.py -q` (Expected FAIL).
+- [x] Add content-addressed persistence and bounded automatic selection; revalidate proof before proposal; adapt existing tests to explicit exploratory semantics.
+- [x] Run `python3 -m pytest tests/research/test_learning_assessments.py tests/research/test_phase8_learning_flow.py tests/research/test_phase8_learning_api.py tests/research/test_learning_manager.py -q` (Expected PASS), commit and native gate.
 
 ### Task 3: Durable frozen paired policy replay
 **Files:** Create `src/finahinking/research/learning_replays.py`, `tests/research/test_learning_replays.py`.
 **Interfaces:** `LearningReplayService(app).create({review_id,snapshot_ref,as_of})`, `.get(id)`, `.resume(id)`, `.list()`; consumes approved Task2/legacy reviews, existing submit/worker/report manifests. Pair reservation is persisted before deterministic child enqueue; GET never queues.
-- [ ] Write failures for actual two-child spawn, policy/input binding, metric deltas, retrospective labeling, half-enqueue recovery, repeat/restart, foreign scope, failure/missing report/code mismatch and no implicit paid calls.
-- [ ] Run `python3 -m pytest tests/research/test_learning_replays.py -q` (Expected FAIL).
-- [ ] Implement explicit paired scheduling/recovery and conservative comparison eligibility.
-- [ ] Run `python3 -m pytest tests/research/test_learning_replays.py tests/research/test_phase8_learning_flow.py -q` (Expected PASS), commit and native gate.
+- [x] Write failures for actual two-child spawn, policy/input binding, metric deltas, retrospective labeling, half-enqueue recovery, repeat/restart, foreign scope, failure/missing report/code mismatch and no implicit paid calls.
+- [x] Run `python3 -m pytest tests/research/test_learning_replays.py -q` (Expected FAIL).
+- [x] Implement explicit paired scheduling/recovery and conservative comparison eligibility.
+- [x] Run `python3 -m pytest tests/research/test_learning_replays.py tests/research/test_phase8_learning_flow.py -q` (Expected PASS), commit and native gate.
 
 ### Task 4: Measured pagination, verification cache and maintenance
 **Files:** Create `research/job_maintenance.py`, `research/report_verification_cache.py`, `tests/research/test_job_maintenance.py`, `tests/research/test_report_verification_cache.py`, `scripts/benchmark_phase20.py`; modify `application_service.py`, `run_repository.py`, `job_queue.py` only where measured.
 **Interfaces:** `JobMaintenance(service).summaries(limit=20,cursor=None)`, `.status()`; content-stamp cache for RunRepository successful report checks; standalone JSON benchmark.
-- [ ] Capture original list/verification baseline before optimization; write failures for stable scoped cursor, concurrent inserts/equal time, partial metrics, TTL/size/symlink/content mutation and thread safety.
-- [ ] Run new tests (Expected FAIL for missing APIs/extra verification work).
-- [ ] Implement bounded summaries/cache/status, justified indexes and benchmark; no report AVAILABLE claim from unverified summaries.
-- [ ] Run `python3 -m pytest tests/research/test_job_maintenance.py tests/research/test_report_verification_cache.py tests/research/test_run_repository.py tests/research/test_job_queue.py tests/research/test_supervisor.py -q` plus `python3 scripts/benchmark_phase20.py --jobs 1000 --repetitions 20 --output <own-scratch>/benchmark.json` (Expected PASS and measured baseline/optimized/recovery results), commit and native gate.
+- [x] Capture original list/verification baseline before optimization; write failures for stable scoped cursor, concurrent inserts/equal time, partial metrics, TTL/size/symlink/content mutation and thread safety.
+- [x] Run new tests (Expected FAIL for missing APIs/extra verification work).
+- [x] Implement bounded summaries/cache/status, justified indexes and benchmark; no report AVAILABLE claim from unverified summaries.
+- [x] Run `python3 -m pytest tests/research/test_job_maintenance.py tests/research/test_report_verification_cache.py tests/research/test_run_repository.py tests/research/test_job_queue.py tests/research/test_supervisor.py -q` plus `python3 scripts/benchmark_phase20.py --jobs 1000 --repetitions 20 --output <own-scratch>/benchmark.json` (Expected PASS and measured baseline/optimized/recovery results), commit and native gate.
 
 ### Task 5: Integrated native workspace and release evidence
 **Files:** Create Phase20 route/page/JS modules, HTTP/browser/Node tests and Chinese guide/review; modify existing learning/jobs navigation, `frontend/src/research.js`, test script, bundles, CI, installed journey and roadmap/capability docs.
 **Interfaces:** Scoped GET assessment/pair/maintenance views, CSRF POST assess/propose/create/resume; Task1–4 outputs only. Existing learning review owns approval; fresh selection invalidates late responses.
-- [ ] Write real HTTP/browser failures for insufficient/ready samples, explicit exploratory vs evidence approval, paired resume/reopen, maintenance/pagination, Chinese errors, inert GET, keyboard/reduced motion and 1440x900/1920x1080/375x812.
-- [ ] Run new tests (Expected FAIL); implement within existing shell and build/CI; read UI Audit skill for bounded design audit.
-- [ ] Run Node/build, required browsers, benchmark/install/notebook/lint/governance/secrets/dependencies and `python3 -m pytest -q -ra --tb=short` (Expected PASS), commit and native gate.
+- [x] Write real HTTP/browser failures for insufficient/ready samples, explicit exploratory vs evidence approval, paired resume/reopen, maintenance/pagination, Chinese errors, inert GET, keyboard/reduced motion and 1440x900/1920x1080/375x812.
+- [x] Run new tests (Expected FAIL); implement within existing shell and build/CI; read UI Audit skill for bounded design audit.
+- [x] Run Node/build, required browsers, benchmark/install/notebook/lint/governance/secrets/dependencies and `python3 -m pytest -q -ra --tb=short` (Expected PASS), commit and native gate.
 - [ ] One independent final reviewer; regrade by impact; one Critical/Important fix pass with RED→GREEN and full suite. Record all rulings/deferred minors.
 - Release gate: PR exact-head CI, merge to main, verify merge SHA and main CI, archive evidence and remove only this plan scratch. User already authorized publication.
