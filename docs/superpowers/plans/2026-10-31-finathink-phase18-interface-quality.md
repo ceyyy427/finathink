@@ -32,11 +32,11 @@
 
 **Interfaces:** `ProviderTransportError(ValueError).code` uses controlled statuses NON_JSON, STREAM_INTERRUPTED, UNSUPPORTED_STREAM, RESPONSE_TOO_LARGE, TRANSPORT. `JsonApiConnector(..., timeout=15, max_attempts=3, max_pages=20)` adds opt-in bounded limits with unchanged defaults; typed transport codes survive normalization. Shared provider enum/journal permit new terminal outcomes.
 
-- [ ] Step 1: Tests for valid-JSON prefix with short Content-Length, IncompleteRead, broken chunk, SSE, invalid JSON, bad size/header, timeout; default security/no redirects; data one attempt and page/timeout validation; adapter/journal matching normalized types and no raw secrets.
-- [ ] Step 2: Run `python3 -m pytest tests/research/test_interface_failure_contracts.py -q`; Expected FAIL missing contracts.
-- [ ] Step 3: Implement controlled exceptions and exact body-completion checks; opt-in connector bounds; no retry for deterministic malformed/oversize/interrupted bodies.
-- [ ] Step 4: Run new tests plus `tests/research/test_provider_transport.py tests/research/test_provider_adapters.py tests/research/test_model_call_journal.py tests/data -q`; Expected PASS.
-- [ ] Step 5: Commit `feat: classify bounded interface failures`.
+- [x] Step 1: Tests for valid-JSON prefix with short Content-Length, IncompleteRead, broken chunk, SSE, invalid JSON, bad size/header, timeout; default security/no redirects; data one attempt and page/timeout validation; adapter/journal matching normalized types and no raw secrets.
+- [x] Step 2: Run `python3 -m pytest tests/research/test_interface_failure_contracts.py -q`; Expected FAIL missing contracts.
+- [x] Step 3: Implement controlled exceptions and exact body-completion checks; opt-in connector bounds; no retry for deterministic malformed/oversize/interrupted bodies.
+- [x] Step 4: Run new tests plus `tests/research/test_provider_transport.py tests/research/test_provider_adapters.py tests/research/test_model_call_journal.py tests/data -q`; Expected PASS.
+- [x] Step 5: Commit `feat: classify bounded interface failures`.
 
 ### Task 2: 持久诊断、本地兼容验收与显式探测
 

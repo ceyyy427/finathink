@@ -21,6 +21,7 @@ from .credentials import CredentialStore, EnvironmentCredentialStore
 from .observability import RuntimeLimitExceeded, current_runtime_budget
 from .provider_status import ProviderCredentialRef
 from .providers import ModelEnvelope, ModelResponse, ProviderCapabilities
+from .transport_failures import ProviderTransportError
 
 
 class ProviderFailureKind(str, Enum):
@@ -30,6 +31,9 @@ class ProviderFailureKind(str, Enum):
     HTTP_ERROR = "HTTP_ERROR"
     NON_JSON = "NON_JSON"
     SCHEMA_ERROR = "SCHEMA_ERROR"
+    STREAM_INTERRUPTED = "STREAM_INTERRUPTED"
+    UNSUPPORTED_STREAM = "UNSUPPORTED_STREAM"
+    RESPONSE_TOO_LARGE = "RESPONSE_TOO_LARGE"
     CAPABILITY_REJECTED = "CAPABILITY_REJECTED"
     RESOURCE_LIMIT = "RESOURCE_LIMIT"
 
@@ -63,7 +67,7 @@ class ProviderContractResult:
     limitations: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
-        allowed = {"READY", "UNAUTHORIZED", "FORBIDDEN", "RATE_LIMITED", "PROVIDER_ERROR", "TIMEOUT", "NON_JSON", "SCHEMA_ERROR", "RETRY_EXHAUSTED", "NOT_CONFIGURED", "RESOURCE_LIMIT"}
+        allowed = {"READY", "UNAUTHORIZED", "FORBIDDEN", "RATE_LIMITED", "PROVIDER_ERROR", "TIMEOUT", "NON_JSON", "SCHEMA_ERROR", "RETRY_EXHAUSTED", "NOT_CONFIGURED", "RESOURCE_LIMIT", "STREAM_INTERRUPTED", "UNSUPPORTED_STREAM", "RESPONSE_TOO_LARGE"}
         if self.status not in allowed:
             raise ValueError("provider contract status is invalid")
         for name in ("provider", "model"):
@@ -396,6 +400,8 @@ class _CompatibleAdapter:
                     except ValueError:
                         raise ProviderSchemaError() from None
                 return ModelResponse(provider=self.provider_name, model=self.model, content=content, finish_reason=finish_reason, usage=safe_usage)
+            except ProviderTransportError as error:
+                raise ProviderAdapterError("provider wire response failed", kind=ProviderFailureKind(error.code)) from None
             except RuntimeLimitExceeded:
                 raise ProviderAdapterError("RESOURCE_LIMIT", kind=ProviderFailureKind.RESOURCE_LIMIT) from None
             except ProviderAdapterError as error:
@@ -439,6 +445,9 @@ class _CompatibleAdapter:
                 ProviderFailureKind.NON_JSON: "NON_JSON",
                 ProviderFailureKind.SCHEMA_ERROR: "SCHEMA_ERROR",
                 ProviderFailureKind.RESOURCE_LIMIT: "RESOURCE_LIMIT",
+                ProviderFailureKind.STREAM_INTERRUPTED: "STREAM_INTERRUPTED",
+                ProviderFailureKind.UNSUPPORTED_STREAM: "UNSUPPORTED_STREAM",
+                ProviderFailureKind.RESPONSE_TOO_LARGE: "RESPONSE_TOO_LARGE",
             }.get(error.kind, "PROVIDER_ERROR")
             if "retry exhausted" in str(error):
                 status = "RETRY_EXHAUSTED"

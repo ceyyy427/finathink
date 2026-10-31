@@ -8,6 +8,7 @@ unsafe headers fail closed with secret-free error codes.
 
 from __future__ import annotations
 
+import http.client
 import re
 import socket
 from collections.abc import Mapping
@@ -162,13 +163,15 @@ class BoundedHttpTransport:
             status = int(status_value if status_value is not None else response.getcode())
             raw_headers = getattr(response, "headers", {})
             headers_out = {str(key): str(value) for key, value in raw_headers.items()}
+            content_type = next((value for key, value in headers_out.items() if key.lower() == "content-type"), "")
+            if "text/event-stream" in content_type.lower():
+                raise BoundedTransportError("unsupported_stream", "streaming data responses are not supported")
             declared = next((value for key, value in headers_out.items() if key.lower() == "content-length"), None)
             if declared is not None:
-                try:
-                    if int(declared) > self.max_response_bytes:
-                        raise BoundedTransportError("response_too_large", "data response exceeds the size limit")
-                except ValueError:
-                    raise BoundedTransportError("response", "data response headers are invalid") from None
+                if not declared.isdigit():
+                    raise BoundedTransportError("response", "data response headers are invalid")
+                if int(declared) > self.max_response_bytes:
+                    raise BoundedTransportError("response_too_large", "data response exceeds the size limit")
             body = bytearray()
             while True:
                 chunk = response.read(min(64 * 1024, self.max_response_bytes - len(body) + 1))
@@ -179,6 +182,8 @@ class BoundedHttpTransport:
                 body.extend(chunk)
                 if len(body) > self.max_response_bytes:
                     raise BoundedTransportError("response_too_large", "data response exceeds the size limit")
+            if declared is not None and len(body) != int(declared):
+                raise BoundedTransportError("stream_interrupted", "data response transfer was interrupted")
             final_url = response.geturl() if hasattr(response, "geturl") else url
             if _origin(str(final_url)) != _origin(url):
                 raise BoundedTransportError("redirect", "data source redirected to a different origin")
@@ -191,6 +196,8 @@ class BoundedHttpTransport:
             # HTTP errors are still typed responses, allowing JsonApiConnector
             # to apply its retry and status policy without exposing body text.
             return TransportResponse(status_code=int(exc.code), headers={str(k): str(v) for k, v in exc.headers.items()}, body=b"", url=str(exc.geturl() or url))
+        except (http.client.IncompleteRead, http.client.RemoteDisconnected, ConnectionResetError):
+            raise BoundedTransportError("stream_interrupted", "data response transfer was interrupted") from None
         except (URLError, OSError):
             raise BoundedTransportError("transport", "data request failed") from None
         finally:

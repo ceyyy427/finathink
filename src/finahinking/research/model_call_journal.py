@@ -13,7 +13,7 @@ from pathlib import Path
 
 _DIGEST = re.compile(r"^[0-9a-f]{64}$")
 _UNITS = frozenset({"input_units", "generated_units", "total_units"})
-_OUTCOMES = frozenset({"READY", "FAILED", "SCHEMA_ERROR", "NOT_CONFIGURED", "TIMEOUT", "NON_JSON", "HTTP_ERROR", "TRANSPORT", "CAPABILITY_REJECTED", "RESOURCE_LIMIT"})
+_OUTCOMES = frozenset({"READY", "FAILED", "SCHEMA_ERROR", "NOT_CONFIGURED", "TIMEOUT", "NON_JSON", "HTTP_ERROR", "TRANSPORT", "CAPABILITY_REJECTED", "RESOURCE_LIMIT", "STREAM_INTERRUPTED", "UNSUPPORTED_STREAM", "RESPONSE_TOO_LARGE"})
 
 
 class ModelCallJournal:
