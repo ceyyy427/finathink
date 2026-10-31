@@ -20,6 +20,7 @@ from finahinking.quant.services import QuantServiceGateway
 
 from .contracts import FailureKind, stable_digest
 from .paper_trader import PaperTrader
+from .research_identity import execution_identity
 from .portfolio_research import RiskScaledStrategy, constrained_target
 from .portfolio_runtime import PortfolioManager
 from .risk_runtime import RiskManager
@@ -174,6 +175,8 @@ class SnapshotResearchTools(ResearchToolGateway):
         }
         self.analysis = {
             "dataset_fingerprint": self.snapshot.fingerprint,
+            "reproduction": {"identity": execution_identity(policy), "policy": dict(policy),
+                "publication_before": self.publication_before.isoformat() if self.publication_before is not None else None},
             "run_id": self.run_id,
             "engine_dataset_fingerprint": backtest.dataset_fingerprint,
             "policy_fingerprint": stable_digest(policy), "strategy_version": policy["strategy_version"],

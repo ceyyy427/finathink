@@ -27,10 +27,10 @@
 ### Task 1: Frozen identity and explanatory differences
 **Files:** Create `src/finahinking/research/research_identity.py`, `research_differences.py`; modify `snapshot_tools.py`, `reports.py`, `local_app.py`; tests `tests/research/test_research_differences.py`.
 **Interfaces:** `execution_identity(policy)->dict`; `compare_research(left,right)->dict` consumes verified source snapshots, returns categories/compatibility/metric differences. New analytics carries `reproduction` frozen policy/identity.
-- [ ] Write failing tests for each changed category, equal/unknown identities, stable source hash and secret-free frozen report projection.
-- [ ] Run `python3 -m pytest tests/research/test_research_differences.py -q` (expected failing assertions).
-- [ ] Implement frozen identity at execution and six-category comparison, preserve legacy groups.
-- [ ] Run `python3 -m pytest tests/research/test_research_differences.py tests/research/test_phase7_comparison.py tests/research/test_phase7_portfolio_workflow.py -q` (expected PASS), commit.
+- [x] Write failing tests for each changed category, equal/unknown identities, stable source hash and secret-free frozen report projection.
+- [x] Run `python3 -m pytest tests/research/test_research_differences.py -q` (expected failing assertions).
+- [x] Implement frozen identity at execution and six-category comparison, preserve legacy groups.
+- [x] Run `python3 -m pytest tests/research/test_research_differences.py tests/research/test_phase7_comparison.py tests/research/test_phase7_portfolio_workflow.py -q` (expected PASS), commit.
 
 ### Task 2: Multi-asset evidence and calibration
 **Files:** Create `src/finahinking/research/quant_evidence.py`; modify `snapshot_tools.py`, `reports.py`; test `tests/research/test_quant_evidence.py`.
