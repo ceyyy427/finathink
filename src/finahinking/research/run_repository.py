@@ -18,6 +18,7 @@ from .contracts import (
     stable_digest,
     to_jsonable,
 )
+from .report_verification_cache import ReportVerificationCache
 from .reports import MAX_MANIFEST_BYTES, redact_public_payload, verify_report_bundle
 from .run_store import _decode_event, _decode_state
 
@@ -49,6 +50,7 @@ class RunRepository:
         self.report_root = Path(report_root)
         self.report_root.mkdir(parents=True, exist_ok=True, mode=0o700)
         self.scope_id = scope_id
+        self.verification_cache = ReportVerificationCache(root=self.report_root)
         try:
             descriptor = os.open(self.path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
         except FileExistsError:
@@ -99,7 +101,7 @@ class RunRepository:
                     return "CORRUPT"
                 if not child.is_file():
                     return "MISSING"
-            return "AVAILABLE" if verify_report_bundle(path).ok else "CORRUPT"
+            return self.verification_cache.check((payload["run_id"], payload["manifest_digest"]), [bundle, path, *(bundle / relative for relative in actual.get("files", {}))], lambda: "AVAILABLE" if verify_report_bundle(path).ok else "CORRUPT")
         except (OSError, ValueError, TypeError, KeyError):
             return "CORRUPT"
 
