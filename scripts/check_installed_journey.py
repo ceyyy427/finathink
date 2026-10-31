@@ -80,6 +80,17 @@ def main():
         assert b'#f5f8fd' in report and b'Content-Security-Policy' in report
         assert b'data-research-explanation' in report
         assert job['elapsed_seconds'] >= 0
+        from finahinking.research.application_service import ResearchApplicationService
+        from finahinking.research.reproduction import ReproductionService
+        package = ReproductionService(app.research_service).export(job['run_id'], include_data=True)
+        portable = ResearchApplicationService(root / 'portable', allow_model_calls=False)
+        try:
+            replay = ReproductionService(portable)
+            restored = replay.restore(package)
+            assert replay.recompute(restored['package_id'])['status'] == 'MATCHED'
+            assert portable.list_jobs()['total'] == 0
+        finally:
+            portable.close()
     finally:
         server.shutdown()
         server.server_close()

@@ -22,6 +22,7 @@ from .contracts import FailureKind, stable_digest
 from .paper_trader import PaperTrader
 from .portfolio_research import RiskScaledStrategy, constrained_target
 from .portfolio_runtime import PortfolioManager
+from .research_identity import execution_identity
 from .risk_runtime import RiskManager
 from .tools import (
     ResearchToolGateway,
@@ -174,6 +175,8 @@ class SnapshotResearchTools(ResearchToolGateway):
         }
         self.analysis = {
             "dataset_fingerprint": self.snapshot.fingerprint,
+            "reproduction": {"identity": execution_identity(policy), "policy": dict(policy),
+                "publication_before": self.publication_before.isoformat() if self.publication_before is not None else None},
             "run_id": self.run_id,
             "engine_dataset_fingerprint": backtest.dataset_fingerprint,
             "policy_fingerprint": stable_digest(policy), "strategy_version": policy["strategy_version"],
@@ -246,6 +249,9 @@ class SnapshotResearchTools(ResearchToolGateway):
             "planned_cash_weight": proposal.cash_weight, "execution_status": "PENDING_NEXT_OBSERVATION" if ledger else "BLOCKED",
             "method": policy["allocation_method"], "paper_only": True,
         }
+        from .quant_evidence import compute_quant_evidence
+
+        self.analysis["quant_evidence"] = compute_quant_evidence(self.snapshot, parameters["as_of"], self.publication_before)
         self.risk_payload["allocation_fingerprint"] = proposal.fingerprint
         self.analysis["fingerprint"] = stable_digest({key: value for key, value in self.analysis.items() if key != "fingerprint"})
         return self.risk_payload
