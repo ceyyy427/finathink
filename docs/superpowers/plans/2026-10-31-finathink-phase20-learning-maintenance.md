@@ -60,5 +60,5 @@
 - [x] Write real HTTP/browser failures for insufficient/ready samples, explicit exploratory vs evidence approval, paired resume/reopen, maintenance/pagination, Chinese errors, inert GET, keyboard/reduced motion and 1440x900/1920x1080/375x812.
 - [x] Run new tests (Expected FAIL); implement within existing shell and build/CI; read UI Audit skill for bounded design audit.
 - [x] Run Node/build, required browsers, benchmark/install/notebook/lint/governance/secrets/dependencies and `python3 -m pytest -q -ra --tb=short` (Expected PASS), commit and native gate.
-- [ ] One independent final reviewer; regrade by impact; one Critical/Important fix pass with RED→GREEN and full suite. Record all rulings/deferred minors.
+- [x] One independent final reviewer; regrade by impact; one Critical/Important fix pass with RED→GREEN and full suite. Record all rulings/deferred minors.
 - Release gate: PR exact-head CI, merge to main, verify merge SHA and main CI, archive evidence and remove only this plan scratch. User already authorized publication.
