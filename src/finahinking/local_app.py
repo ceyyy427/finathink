@@ -1115,6 +1115,7 @@ class LocalApplication:
             "/research/jobs": "研究任务",
             "/research/experiments": "因子实验",
             "/research/learning": "复盘与学习",
+            "/research/maintenance": "本地任务维护",
             "/research/compare": "研究对比",
             "/library/methods": "研究方法",
             "/library/behavior": "公开行为档案",
@@ -1210,7 +1211,7 @@ class LocalApplication:
             ("研究", "nav-workspace", ("/", "/research/jobs", "/events", "/knowledge", "/research/experiments", "/strategy", "/research/learning")),
             ("资料", "nav-library", ("/library/methods", "/library/behavior", "/library/lessons")),
             ("学习", "nav-learn", ("/explore", "/quant", "/research", "/research/compare", "/workbench", "/ml", "/parameter", "/workspace", "/community", "/settings/engines", "/settings/data-sources")),
-            ("系统", "nav-system", ("/settings/data-connections", "/settings/providers", "/diagnostics")),
+            ("系统", "nav-system", ("/settings/data-connections", "/settings/providers", "/research/maintenance", "/diagnostics")),
         )
         icons = {"/": "overview", "/research/jobs": "codex", "/events": "events", "/knowledge": "knowledge", "/research/experiments": "factor", "/strategy": "strategy", "/research/learning": "report", "/settings/data-connections": "data"}
 
@@ -1293,7 +1294,7 @@ class LocalApplication:
             f"<title>{html.escape(title)} · Finathink</title>"
             '<meta name="theme-color" content="#f5f8fd">'
             '<meta http-equiv="Content-Security-Policy" content="default-src \'self\'; img-src \'self\'; style-src \'self\' \'unsafe-inline\'; script-src \'self\'; connect-src \'self\'; form-action \'self\'">'
-            f"<style>{_APP_CSS}{BLUE_WHITE_CSS}{_RESEARCH_JOBS_CSS if page == '/research/jobs' else ''}{_FACTOR_STUDY_CSS if page == '/research/experiments' else ''}{LEARNING_CSS if page == '/research/learning' else ''}{ASSET_WORKSPACE_CSS if page.startswith('/library/') or page == '/research/experiments' else ''}{FACTOR_DETAIL_CSS if page == '/research/experiments' else ''}{DIAGNOSTIC_CSS if page == '/diagnostics' else ''}</style>{style_tags}{script_tags}</head><body>"
+            f"<style>{_APP_CSS}{BLUE_WHITE_CSS}{_RESEARCH_JOBS_CSS if page == '/research/jobs' else ''}{_FACTOR_STUDY_CSS if page == '/research/experiments' else ''}{LEARNING_CSS if page in {'/research/learning', '/research/maintenance'} else ''}{ASSET_WORKSPACE_CSS if page.startswith('/library/') or page == '/research/experiments' else ''}{FACTOR_DETAIL_CSS if page == '/research/experiments' else ''}{DIAGNOSTIC_CSS if page == '/diagnostics' else ''}</style>{style_tags}{script_tags}</head><body>"
             '<a class="skip-link" href="#main">跳到主要内容</a>'
             '<div class="app-shell" data-finathink-shell>'
             f'<nav class="sidebar" id="shell-navigation" aria-label="主导航">{self._nav(clean_page)}</nav>'
@@ -1695,7 +1696,12 @@ class LocalApplication:
         parsed = urlsplit(path)
         query = parse_qs(parsed.query) if query is None else query
         clean = parsed.path.rstrip("/") or "/"
+        from .research.learning_maintenance_routes import route as learning_maintenance_route
         from .research.reproduction_routes import route as reproduction_route
+
+        response = learning_maintenance_route(self, method, clean, query, body)
+        if response is not None:
+            return response
 
         response = reproduction_route(self, method, clean, query, body)
         if response is not None:
@@ -1815,7 +1821,7 @@ class LocalApplication:
             if method != "GET":
                 return 405, "application/json", {"error": "research comparison is read-only"}
             return 200, "text/html; charset=utf-8", self.render_page(clean, query=query)
-        if clean in {"/research/experiments", "/research/learning"} and method == "GET":
+        if clean in {"/research/experiments", "/research/learning", "/research/maintenance"} and method == "GET":
             return 200, "text/html; charset=utf-8", self.render_page(clean, query=query)
         if clean.startswith("/research/"):
             if method != "GET":
@@ -2056,7 +2062,7 @@ class LocalApplication:
         title = names.get(page, "Finathink")
         body = self._page_body(page, query=query)
         inspector = self._page_inspector(page)
-        scripts = ("/assets/finathink-research.js",) if page in {"/", "/research", "/research/jobs", "/research/experiments", "/research/learning", "/research/compare", "/workbench", "/settings/providers", "/diagnostics"} else ()
+        scripts = ("/assets/finathink-research.js",) if page in {"/", "/research", "/research/jobs", "/research/experiments", "/research/learning", "/research/maintenance", "/research/compare", "/workbench", "/settings/providers", "/diagnostics"} else ()
         return self.render_shell(active_page, title, body, inspector=inspector, scripts=scripts)
 
     def render_result_page(self, title: str, payload: Any) -> str:
@@ -2525,6 +2531,10 @@ class LocalApplication:
         )
 
     def _page_body(self, page: str, *, query: Mapping[str, list[str]] | None = None) -> str:
+        if page == "/research/maintenance":
+            from .research.learning_maintenance_page import maintenance_page
+
+            return maintenance_page()
         if page == "/research/learning":
             from .research.learning_workspace_page import learning_workspace_page
 

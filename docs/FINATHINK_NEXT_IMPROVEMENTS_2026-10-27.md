@@ -52,3 +52,9 @@
 Phase 18 已经 [PR #19](https://github.com/ceyyy427/finathink/pull/19) 合并。Phase 19 接通冻结执行身份、六类条件差异、可迁移的脱敏研究包、跨工作区本地复算与持久回执。原数据连接支持多标的及显式 EQUITY/ETF 声明，新增同区间多资产暴露、方差贡献、压力敏感度与均值区间。页面将证据和复现覆盖放在同一对比工作区。
 
 确定性数值复算与模型文字、受控因子工作流的依赖分别显示。真实市场覆盖率和来源主张保持独立；合成样例没有被称为市场校准。使用见 [研究复现指南](RESEARCH_REPRODUCTION_GUIDE.md)，完整验收与发布见 [Phase 19 记录](reviews/2026-10-31-finathink-phase19-review.md)。下一批沿既定 Phase 20 推进复盘建议与本地任务维护。
+
+## Phase 20 接续记录（2026-10-31）
+
+Phase 19 已通过 [PR #20](https://github.com/ceyyy427/finathink/pull/20) 合并。Phase 20 接通固定样本门槛、结算重建、不可变评估、显式探索确认和父/新政策成对复跑；轻量游标与短时成功缓存由本机基线验证，维护页显示实际保存的阶段耗时及未知资源。
+
+使用见[样本评估和本地维护指南](LEARNING_RELIABILITY_MAINTENANCE_GUIDE.md)，工程与发布门禁见[Phase 20验收](reviews/2026-10-31-finathink-phase20-review.md)。窗口分离与描述性区间不等于真实市场统计独立或盈利证明。

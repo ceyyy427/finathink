@@ -106,6 +106,7 @@ finathink --offline --db .local-state/app.sqlite3 --port 8765
 - 后台研究任务：<http://127.0.0.1:8765/research/jobs>
 - 因子实验：<http://127.0.0.1:8765/research/experiments>
 - 复盘与学习：<http://127.0.0.1:8765/research/learning>
+- 本地任务维护：<http://127.0.0.1:8765/research/maintenance>
 - 研究工作区：<http://127.0.0.1:8765/research>
 - 方法资料库：<http://127.0.0.1:8765/library/methods>
 - 公开行为档案：<http://127.0.0.1:8765/library/behavior>
@@ -119,7 +120,7 @@ Windows 安装、自有 API 配置、异常处理与备份恢复见[中文快速
 
 研究配方、滚动验证、可比条件和风险执行口径见[量化实验与稳健性验证指南](docs/PHASE7_QUANT_RESEARCH_GUIDE.md)。
 
-复盘观察期、提案审批、配置版本和复跑操作见[复盘与学习审核指南](docs/PHASE8_LEARNING_REVIEW_GUIDE.md)。
+复盘观察期、提案审批、配置版本和复跑操作见[复盘与学习审核指南](docs/PHASE8_LEARNING_REVIEW_GUIDE.md)。样本评估会核对分离的结算窗口、反例与不确定性；批准后可在同一份数据上成对比较父版本与新版本。队列、阶段耗时、存储与历史分页见[样本评估和本地维护指南](docs/LEARNING_RELIABILITY_MAINTENANCE_GUIDE.md)。
 
 ## 仓库结构
 

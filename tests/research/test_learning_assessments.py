@@ -42,25 +42,30 @@ def test_single_outcome_is_explicit_exploration_and_insufficient_cohort(tmp_path
         app.close()
 
 
+def cohort_reviews(app):
+    original, source_ref, evidence_ref = inputs(app)
+    reviews = [settle(app, original, evidence_ref)]
+    source, evidence = app.snapshots.load(source_ref), app.snapshots.load(evidence_ref)
+    jobs = []
+    for i in range(1, 20):
+        shift = pd.Timedelta(days=14*i)
+        def shifted(snapshot, shift=shift):
+            return replace(snapshot, observations=tuple(replace(row, timestamp=row.timestamp+shift, available_at=row.available_at+shift) for row in snapshot.observations), as_of=snapshot.as_of+shift)
+        shifted_source, shifted_evidence = shifted(source), shifted(evidence)
+        ref, evidence_id = app.snapshots.save(shifted_source), app.snapshots.save(shifted_evidence)
+        job = app.submit({"idempotency_key": f"cohort-{i}", "snapshot_ref": ref, "question": "Observe momentum with fixed risk limits", "instrument": "AAA", "as_of": shifted_source.as_of.date().isoformat()})
+        jobs.append((job, evidence_id, shifted_evidence.as_of.date().isoformat()))
+    for job, evidence_id, as_of in jobs:
+        complete = wait_for(app, job["job_id"])
+        assert complete["status"] == "completed"
+        reviews.append(app.learning.settle({"run_id": complete["run_id"], "evidence_snapshot_ref": evidence_id, "as_of": as_of}))
+    return reviews, source_ref
+
+
 def test_twenty_actual_settlements_immutable_assessment_and_governed_proposal(tmp_path):
     app = ResearchApplicationService(tmp_path)
     try:
-        original, source_ref, evidence_ref = inputs(app)
-        reviews = [settle(app, original, evidence_ref)]
-        source, evidence = app.snapshots.load(source_ref), app.snapshots.load(evidence_ref)
-        jobs = []
-        for i in range(1, 20):
-            shift = pd.Timedelta(days=14*i)
-            def shifted(snapshot, shift=shift):
-                return replace(snapshot, observations=tuple(replace(row, timestamp=row.timestamp+shift, available_at=row.available_at+shift) for row in snapshot.observations), as_of=snapshot.as_of+shift)
-            shifted_source, shifted_evidence = shifted(source), shifted(evidence)
-            ref, evidence_id = app.snapshots.save(shifted_source), app.snapshots.save(shifted_evidence)
-            job = app.submit({"idempotency_key": f"cohort-{i}", "snapshot_ref": ref, "question": "Observe momentum with fixed risk limits", "instrument": "AAA", "as_of": shifted_source.as_of.date().isoformat()})
-            jobs.append((job, evidence_id, shifted_evidence.as_of.date().isoformat()))
-        for job, evidence_id, as_of in jobs:
-            complete = wait_for(app, job["job_id"])
-            assert complete["status"] == "completed"
-            reviews.append(app.learning.settle({"run_id": complete["run_id"], "evidence_snapshot_ref": evidence_id, "as_of": as_of}))
+        reviews, _source_ref = cohort_reviews(app)
         service = LearningAssessmentService(app)
         values = {"anchor_review_id": reviews[0]["review_id"], "start": "2026-01-01", "as_of": today()}
         assessment = service.assess(values)
