@@ -43,10 +43,10 @@
 ### Task 3: Portable package and local deterministic restoration
 **Files:** Create `src/finahinking/research/reproduction.py`; tests `tests/research/test_reproduction.py`; extend `scripts/check_installed_journey.py`.
 **Interfaces:** `ReproductionService(service).export(run_id,include_data=False)`, `.restore(package)`, `.recompute(package_id)`, `.get(package_id)`; scoped, content-addressed local records. Consumes frozen identity, verified reports, snapshots and Task2 evidence.
-- [ ] Write actual spawn→export→fresh-root→restore→recompute→restart tests plus corruption, missing input/code/dependency, holdout-prefix, consent and foreign scope.
-- [ ] Run `python3 -m pytest tests/research/test_reproduction.py -q` (expected FAIL).
-- [ ] Implement allowlisted normalized data/policy/product projection, hash-bound package, bounded restores and per-product receipt; no new job/model call.
-- [ ] Run `python3 -m pytest tests/research/test_reproduction.py tests/research/test_application_service.py tests/research/test_phase7_run_comparison.py -q` (expected PASS), commit.
+- [x] Write actual spawn→export→fresh-root→restore→recompute→restart tests plus corruption, missing input/code/dependency, holdout-prefix, consent and foreign scope.
+- [x] Run `python3 -m pytest tests/research/test_reproduction.py -q` (expected FAIL).
+- [x] Implement allowlisted normalized data/policy/product projection, hash-bound package, bounded restores and per-product receipt; no new job/model call.
+- [x] Run `python3 -m pytest tests/research/test_reproduction.py tests/research/test_application_service.py tests/research/test_phase7_run_comparison.py -q` (expected PASS), commit.
 
 ### Task 4: Comparison workspace, API and release proof
 **Files:** Create `src/finahinking/research/reproduction_page.py`, `frontend/src/research-reproduction.js`, API/browser/JS tests; modify `local_app.py`, `frontend/src/research.js`, package test script, committed bundles, CI; Chinese guide and capability/roadmap/review documents.
