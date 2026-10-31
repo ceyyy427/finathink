@@ -35,10 +35,10 @@
 ### Task 2: Multi-asset evidence and calibration
 **Files:** Create `src/finahinking/research/quant_evidence.py`; modify `snapshot_tools.py`, `reports.py`; test `tests/research/test_quant_evidence.py`.
 **Interfaces:** `compute_quant_evidence(snapshot,as_of,publication_before=None)->dict` yields coverage, exposure, variance attribution, stress/sensitivity, uncertainty and limitations, immutable fingerprint.
-- [ ] Write hand-calculated stock/ETF cases, negative/zero variance, asynchronous gaps, missing units/availability, bounded input and prefix-causality tests.
-- [ ] Run `python3 -m pytest tests/research/test_quant_evidence.py -q` (expected FAIL).
-- [ ] Implement gated evidence with exact interval alignment; attach evidence during risk output and freeze in manifest.
-- [ ] Run `python3 -m pytest tests/research/test_quant_evidence.py tests/research/test_phase7_portfolio_workflow.py tests/research/test_risk_runtime.py -q` (expected PASS), commit.
+- [x] Write hand-calculated stock/ETF cases, negative/zero variance, asynchronous gaps, missing units/availability, bounded input and prefix-causality tests.
+- [x] Run `python3 -m pytest tests/research/test_quant_evidence.py -q` (expected FAIL).
+- [x] Implement gated evidence with exact interval alignment; attach evidence during risk output and freeze in manifest.
+- [x] Run `python3 -m pytest tests/research/test_quant_evidence.py tests/research/test_phase7_portfolio_workflow.py tests/research/test_risk_runtime.py -q` (expected PASS), commit.
 
 ### Task 3: Portable package and local deterministic restoration
 **Files:** Create `src/finahinking/research/reproduction.py`; tests `tests/research/test_reproduction.py`; extend `scripts/check_installed_journey.py`.

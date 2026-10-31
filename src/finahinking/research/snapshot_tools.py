@@ -249,6 +249,9 @@ class SnapshotResearchTools(ResearchToolGateway):
             "planned_cash_weight": proposal.cash_weight, "execution_status": "PENDING_NEXT_OBSERVATION" if ledger else "BLOCKED",
             "method": policy["allocation_method"], "paper_only": True,
         }
+        from .quant_evidence import compute_quant_evidence
+
+        self.analysis["quant_evidence"] = compute_quant_evidence(self.snapshot, parameters["as_of"], self.publication_before)
         self.risk_payload["allocation_fingerprint"] = proposal.fingerprint
         self.analysis["fingerprint"] = stable_digest({key: value for key, value in self.analysis.items() if key != "fingerprint"})
         return self.risk_payload
