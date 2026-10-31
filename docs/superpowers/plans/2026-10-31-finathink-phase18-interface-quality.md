@@ -44,11 +44,11 @@
 
 **Interfaces:** `DiagnosticStore(path, scope_id)` reserve(key, intent), finish(receipt_id, report), get/list public safe records; later quality bindings use same scoped database. `InterfaceDiagnostics(data_connections, provider_configs, store, *, data_transport, provider_transport, credential_store, allow_model_calls)` exposes `run_local()`, `probe(values)`; fixed `run_compatibility_suite()` returns cases and local-only provenance. Projection schema `interface-diagnostic.v1`.
 
-- [ ] Step 1: Tests real local HTTP success/auth/rate/bad JSON/missing fields/interrupted/SSE/timeout for data + both adapter kinds. No external DNS/socket/real credentials. Assert local marker and no promotion of user configs.
-- [ ] Step 2: Tests explicit authorization, offline model rejection, missing credentials, one request, no snapshot/job writes; reserve/repeat/concurrent/crash/no resend; scope/0600/retention/128KiB/corruption; safe exports exclude seeded secret/URL/raw/body/context.
-- [ ] Step 3: Run new tests; Expected FAIL missing service/store.
-- [ ] Step 4: Implement owned loopback peer, capped service and allowlisted projection, single-attempt probes with request-local credentials and idempotent reservation.
-- [ ] Step 5: Run both new modules plus Task1 suite and data tests; Expected PASS. Commit `feat: add controlled interface diagnostics`.
+- [x] Step 1: Tests real local HTTP success/auth/rate/bad JSON/missing fields/interrupted/SSE/timeout for data + both adapter kinds. No external DNS/socket/real credentials. Assert local marker and no promotion of user configs.
+- [x] Step 2: Tests explicit authorization, offline model rejection, missing credentials, one request, no snapshot/job writes; reserve/repeat/concurrent/crash/no resend; scope/0600/retention/128KiB/corruption; safe exports exclude seeded secret/URL/raw/body/context.
+- [x] Step 3: Run new tests; Expected FAIL missing service/store.
+- [x] Step 4: Implement owned loopback peer, capped service and allowlisted projection, single-attempt probes with request-local credentials and idempotent reservation.
+- [x] Step 5: Run both new modules plus Task1 suite and data tests; Expected PASS. Commit `feat: add controlled interface diagnostics`.
 
 ### Task 3: 固定质量任务、研究绑定和有依据的比较
 

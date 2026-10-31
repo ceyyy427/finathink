@@ -198,7 +198,11 @@ class BoundedHttpTransport:
             return TransportResponse(status_code=int(exc.code), headers={str(k): str(v) for k, v in exc.headers.items()}, body=b"", url=str(exc.geturl() or url))
         except (http.client.IncompleteRead, http.client.RemoteDisconnected, ConnectionResetError):
             raise BoundedTransportError("stream_interrupted", "data response transfer was interrupted") from None
-        except (URLError, OSError):
+        except URLError as error:
+            if isinstance(error.reason, TimeoutError):
+                raise BoundedTransportError("timeout", "data request timed out") from None
+            raise BoundedTransportError("transport", "data request failed") from None
+        except OSError:
             raise BoundedTransportError("transport", "data request failed") from None
         finally:
             if response is not None and hasattr(response, "close"):

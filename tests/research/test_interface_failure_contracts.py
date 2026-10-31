@@ -113,3 +113,15 @@ def test_diagnostic_page_limit_does_not_fetch_the_next_page():
     with pytest.raises(DataConnectorError) as caught:
         connector.fetch(request())
     assert caught.value.code == 'pagination' and len(wire.calls) == 1
+
+
+def test_wrapped_data_socket_timeout_keeps_timeout_identity(monkeypatch):
+    from urllib.error import URLError
+    instance = BoundedHttpTransport()
+    monkeypatch.setattr(instance, '_resolve', PUBLIC_RESOLVER)
+    def open_failed(*_):
+        raise URLError(TimeoutError('private-wire-value'))
+    monkeypatch.setattr(instance, '_open', open_failed)
+    with pytest.raises(BoundedTransportError) as caught:
+        instance.request('https://models.acme.com/data', headers={})
+    assert caught.value.code == 'timeout' and 'private-wire-value' not in str(caught.value)
