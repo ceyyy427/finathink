@@ -144,6 +144,7 @@ site/                   静态产品入口与前端构建资源
 - [研究代理指南](docs/RESEARCH_AGENT_GUIDE.md)
 - [策略研究指南](docs/STRATEGY_RESEARCH_GUIDE.md)
 - [用户数据 API 指南](docs/USER_DATA_API_GUIDE.md)
+- [接口与研究质量指南](docs/INTERFACE_QUALITY_GUIDE.md)
 - [研究运行时指南](docs/RESEARCH_RUNTIME_GUIDE.md)
 - [自主研究运行时发布清单](docs/RESEARCH_RUNTIME_RELEASE_CHECKLIST.md)
 - [研究能力最终报告](docs/RESEARCH_CAPABILITY_FINAL_REPORT.md)

@@ -18,6 +18,7 @@ import { mountLearningReview } from './learning-review.js';
 import { mountAppShell } from './app-shell.js';
 import { mountAssetWorkspace } from './asset-workspace.js';
 import { mountFactorDetail } from './factor-detail.js';
+import { mountInterfaceDiagnostics } from './interface-diagnostics.js';
 
 echarts.use([LineChart, GridComponent, TooltipComponent, CanvasRenderer]);
 
@@ -583,6 +584,7 @@ export function mountResearch(root, { payload, payloadUrl } = {}) {
 
 if (typeof document !== 'undefined') {
   mountAppShell(document);
+  document.querySelectorAll('[data-interface-workspace]').forEach((root) => { mountInterfaceDiagnostics(root); });
   document.querySelectorAll('[data-asset-workspace]').forEach((root) => { mountAssetWorkspace(root); });
   document.querySelectorAll('[data-factor-detail]').forEach((root) => { mountFactorDetail(root); });
   document.querySelectorAll('[data-experiment-workspace]').forEach((root) => { mountExperimentWorkspace(root); });

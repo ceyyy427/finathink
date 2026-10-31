@@ -14,6 +14,7 @@ import time
 from urllib.parse import urlsplit
 
 from .provider_config import _endpoint
+from .transport_failures import ProviderTransportError
 
 
 class _PinnedHttpsConnection(http.client.HTTPSConnection):
@@ -66,9 +67,14 @@ class ProviderHttpTransport:
             response = connection.getresponse()
             if not 200 <= response.status < 300:
                 return {"status_code": response.status, "json": {}}
+            content_type = response.headers.get("Content-Type", "")
+            if "text/event-stream" in content_type.lower():
+                raise ProviderTransportError("UNSUPPORTED_STREAM")
             declared = response.headers.get("Content-Length")
-            if declared is not None and (not str(declared).isdigit() or int(declared) > self.max_response_bytes):
-                raise ValueError("provider response exceeds its byte limit")
+            if declared is not None and not str(declared).isdigit():
+                raise ProviderTransportError("TRANSPORT")
+            if declared is not None and int(declared) > self.max_response_bytes:
+                raise ProviderTransportError("RESPONSE_TOO_LARGE")
             result = bytearray()
             while True:
                 remaining = float(timeout) - (time.monotonic() - started)
@@ -81,12 +87,22 @@ class ProviderHttpTransport:
                     break
                 result.extend(chunk)
                 if len(result) > self.max_response_bytes:
-                    raise ValueError("provider response exceeds its byte limit")
-            return {"status_code": response.status, "json": json_module.loads(bytes(result))}
-        except (ValueError, TimeoutError):
+                    raise ProviderTransportError("RESPONSE_TOO_LARGE")
+            if declared is not None and len(result) != int(declared):
+                raise ProviderTransportError("STREAM_INTERRUPTED")
+            try:
+                payload = json_module.loads(bytes(result))
+            except (ValueError, UnicodeError):
+                raise ProviderTransportError("NON_JSON") from None
+            return {"status_code": response.status, "json": payload}
+        except ProviderTransportError:
             raise
+        except (http.client.IncompleteRead, http.client.RemoteDisconnected, ConnectionResetError):
+            raise ProviderTransportError("STREAM_INTERRUPTED") from None
+        except TimeoutError:
+            raise TimeoutError("provider timeout") from None
         except Exception:  # noqa: BLE001 - transport details may contain credentials
-            raise ValueError("provider transport failed") from None
+            raise ProviderTransportError("TRANSPORT") from None
         finally:
             if connection is not None:
                 connection.close()

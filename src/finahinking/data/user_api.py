@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import inspect
 import json
+import math
 import socket
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -24,8 +25,9 @@ MAX_RETRIES = 2
 
 
 class DataConnectorError(RuntimeError):
-    def __init__(self, code: str, message: str) -> None:
+    def __init__(self, code: str, message: str, *, status_code=None) -> None:
         self.code = code
+        self.status_code = status_code if type(status_code) is int and 100 <= status_code <= 599 else None
         super().__init__(message)
 
 
@@ -102,7 +104,12 @@ def _path_value(payload: object, path: str | None) -> object:
 
 
 class JsonApiConnector:
-    def __init__(self, config: DataConnectionConfig, credential_store: DataCredentialStore, transport: DataTransport, *, resolver: Any | None = None) -> None:
+    def __init__(self, config: DataConnectionConfig, credential_store: DataCredentialStore, transport: DataTransport, *, resolver: Any | None = None, timeout=REQUEST_TIMEOUT_SECONDS, max_attempts=MAX_RETRIES + 1, max_pages=MAX_PAGES) -> None:
+        if type(timeout) not in (int, float) or not math.isfinite(timeout) or not 0 < timeout <= REQUEST_TIMEOUT_SECONDS:
+            raise ValueError("invalid data timeout")
+        if type(max_attempts) is not int or not 1 <= max_attempts <= MAX_RETRIES + 1 or type(max_pages) is not int or not 1 <= max_pages <= MAX_PAGES:
+            raise ValueError("invalid data request limits")
+        self.timeout, self.max_attempts, self.max_pages = float(timeout), max_attempts, max_pages
         self.config = config
         self.credential_store = credential_store
         self.transport = transport
@@ -166,40 +173,46 @@ class JsonApiConnector:
     def _transport_request(self, url: str, headers: Mapping[str, str]) -> TransportResponse:
         request = self.transport.request
         if self._transport_supports_no_redirect():
-            return request(url, headers=headers, timeout=REQUEST_TIMEOUT_SECONDS, allow_redirects=False)
-        return request(url, headers=headers, timeout=REQUEST_TIMEOUT_SECONDS)
+            return request(url, headers=headers, timeout=self.timeout, allow_redirects=False)
+        return request(url, headers=headers, timeout=self.timeout)
 
     def _request(self, url: str, headers: Mapping[str, str]) -> TransportResponse:
         self._validate_target_url(url)
-        for attempt in range(MAX_RETRIES + 1):
+        for attempt in range(self.max_attempts):
             timeout_error = False
             transport_error = False
             try:
                 response = self._transport_request(url, headers)
             except TimeoutError:
                 timeout_error = True
-            except Exception:  # noqa: BLE001 - transport failures are always normalized
-                transport_error = True
+            except Exception as error:  # noqa: BLE001 - transport failures are always normalized
+                from .http_transport import BoundedTransportError
+
+                if isinstance(error, BoundedTransportError):
+                    if error.code in {"stream_interrupted", "unsupported_stream", "response_too_large", "target", "redirect", "query", "dns", "headers", "response"}:
+                        raise DataConnectorError(error.code, "data response failed a transport boundary") from None
+                    timeout_error = error.code == "timeout"
+                transport_error = not timeout_error
             if timeout_error:
-                if attempt < MAX_RETRIES:
+                if attempt + 1 < self.max_attempts:
                     continue
                 raise DataConnectorError("timeout", "data request timed out")
             if transport_error:
-                if attempt < MAX_RETRIES:
+                if attempt + 1 < self.max_attempts:
                     continue
                 raise DataConnectorError("transport", "data request failed")
             if not isinstance(response, TransportResponse):
                 raise DataConnectorError("transport", "data transport returned an invalid response")
             if not isinstance(response.body, bytes):
                 raise DataConnectorError("transport", "data transport returned an invalid body")
-            if (response.status_code in {408, 425, 429} or 500 <= response.status_code <= 599) and attempt < MAX_RETRIES:
+            if (response.status_code in {408, 425, 429} or 500 <= response.status_code <= 599) and attempt + 1 < self.max_attempts:
                 continue
             if response.status_code in {401, 403}:
-                raise DataConnectorError("unauthorized", "data source rejected authentication")
+                raise DataConnectorError("unauthorized", "data source rejected authentication", status_code=response.status_code)
             if response.status_code == 429:
-                raise DataConnectorError("rate_limited", "data source rate limit reached")
+                raise DataConnectorError("rate_limited", "data source rate limit reached", status_code=response.status_code)
             if response.status_code < 200 or response.status_code >= 300:
-                raise DataConnectorError("http", "data source returned an error")
+                raise DataConnectorError("http", "data source returned an error", status_code=response.status_code)
             final_url = response.url or url
             final_target_allowed = True
             try:
@@ -227,7 +240,7 @@ class JsonApiConnector:
         seen_urls: set[str] = set()
         seen_next_targets: set[str] = set()
         url = self.config.base_url
-        for page in range(1, MAX_PAGES + 1):
+        for page in range(1, self.max_pages + 1):
             request_url = _append_query(url, request, page)
             if request_url in seen_urls:
                 raise DataConnectorError("pagination", "data source pagination repeated a page")

@@ -59,6 +59,7 @@ from finahinking.p8_2b.context import ContextSnapshot, no_context, resolve_conte
 from finahinking.p8_2b.export import export_bibtex, export_csl_json, export_latex, export_markdown
 from finahinking.p8_2b.math import render_latex, render_mathml
 from finahinking.p8_2b.widgets import WidgetSpec, run_widget
+from finahinking.research.diagnostic_page import DIAGNOSTIC_CSS, diagnostic_page
 from finahinking.workbench_ui import (
     BLUE_WHITE_CSS,
     OVERVIEW_HEADER_HTML,
@@ -392,7 +393,7 @@ class LocalAppConfig:
 class LocalApplication:
     """Route local product journeys through one P7-backed persistence boundary."""
 
-    def __init__(self, config: LocalAppConfig | None = None, *, connection: sqlite3.Connection | None = None, data_transport: Any | None = None, data_credential_store: DataCredentialStore | None = None) -> None:
+    def __init__(self, config: LocalAppConfig | None = None, *, connection: sqlite3.Connection | None = None, data_transport: Any | None = None, data_credential_store: DataCredentialStore | None = None, provider_transport: Any | None = None, provider_credential_store: Any | None = None) -> None:
         self.config = config or LocalAppConfig.from_env()
         if self.config.db_path != ":memory:":
             path = Path(self.config.db_path).expanduser()
@@ -410,6 +411,10 @@ class LocalApplication:
         self._bootstrap_identity()
         self._lock = threading.RLock()
         self._research_application = None
+        self._interface_diagnostics = None
+        self._quality_evaluation = None
+        self._diagnostic_provider_transport = provider_transport
+        self._diagnostic_provider_credentials = provider_credential_store
         self._event_journey: Any | None = None
         if self.config.db_path == ":memory:":
             self.artifact_root = Path(tempfile.mkdtemp(prefix="finahinking-artifacts-"))
@@ -441,6 +446,28 @@ class LocalApplication:
 
                 self._research_application = ResearchApplicationService(self.artifact_root, scope_id=self.config.session_id, provider_configs=self._provider_configs, allow_model_calls=not self.config.offline)
             return self._research_application
+
+    @property
+    def interface_diagnostics(self):
+        with self._lock:
+            if self._interface_diagnostics is None:
+                from .research.diagnostic_store import DiagnosticStore
+                from .research.interface_diagnostics import InterfaceDiagnostics
+
+                store = DiagnosticStore(self.artifact_root / 'interface-diagnostics.sqlite3', scope_id=self.config.session_id)
+                self._interface_diagnostics = InterfaceDiagnostics(self._data_connections, self._provider_configs, store,
+                    data_transport=self._data_transport, provider_transport=self._diagnostic_provider_transport,
+                    credential_store=self._diagnostic_provider_credentials, allow_model_calls=not self.config.offline)
+            return self._interface_diagnostics
+
+    @property
+    def quality_evaluation(self):
+        with self._lock:
+            if self._quality_evaluation is None:
+                from .research.quality_evaluation import QualityEvaluation
+
+                self._quality_evaluation = QualityEvaluation(self.research_service, self.interface_diagnostics.store)
+            return self._quality_evaluation
 
     def register_research_run(self, result: Any, manifest: Any) -> None:
         """Register a completed research result for read-only local inspection."""
@@ -807,11 +834,17 @@ class LocalApplication:
             # Recovery diagnostics must not depend on reconstructing a healthy
             # research request. Unknown counts are not zero, nor successful.
             research = {"status": "UNAVAILABLE", "total_jobs": None, "latest_report_status": "UNKNOWN", "paper_only": True, "error_code": "RESEARCH_METADATA_UNAVAILABLE"}
+        try:
+            rows = self.interface_diagnostics.store.list(limit=50)
+            interface_checks = {'status': 'AVAILABLE', 'stored_records': len(rows), 'pending_records': sum(row['state'] == 'PENDING' for row in rows), 'latest_status': rows[0]['status'] if rows else 'NOT_RUN'}
+        except (OSError, ValueError, TypeError, sqlite3.Error):
+            interface_checks = {'status': 'UNAVAILABLE', 'stored_records': None, 'pending_records': None, 'latest_status': 'UNKNOWN'}
         return {
             "bundle_version": 2,
             "service": "finahinking-local",
             "diagnostics": self.diagnostics(),
             "research": research,
+            "interface_checks": interface_checks,
             "schema": {"tables": self.diagnostics()["tables"], "migration": "001-003 additive"},
             "privacy": {"database_path": "redacted", "secrets": "omitted", "personal_payloads": "omitted"},
             "next_action": "Attach this bundle to a local issue only after checking that no private text was added by a future extension.",
@@ -1250,7 +1283,7 @@ class LocalApplication:
             f"<title>{html.escape(title)} · Finathink</title>"
             '<meta name="theme-color" content="#f5f8fd">'
             '<meta http-equiv="Content-Security-Policy" content="default-src \'self\'; img-src \'self\'; style-src \'self\' \'unsafe-inline\'; script-src \'self\'; connect-src \'self\'; form-action \'self\'">'
-            f"<style>{_APP_CSS}{BLUE_WHITE_CSS}{_RESEARCH_JOBS_CSS if page == '/research/jobs' else ''}{_FACTOR_STUDY_CSS if page == '/research/experiments' else ''}{LEARNING_CSS if page == '/research/learning' else ''}{ASSET_WORKSPACE_CSS if page.startswith('/library/') or page == '/research/experiments' else ''}{FACTOR_DETAIL_CSS if page == '/research/experiments' else ''}</style>{style_tags}{script_tags}</head><body>"
+            f"<style>{_APP_CSS}{BLUE_WHITE_CSS}{_RESEARCH_JOBS_CSS if page == '/research/jobs' else ''}{_FACTOR_STUDY_CSS if page == '/research/experiments' else ''}{LEARNING_CSS if page == '/research/learning' else ''}{ASSET_WORKSPACE_CSS if page.startswith('/library/') or page == '/research/experiments' else ''}{FACTOR_DETAIL_CSS if page == '/research/experiments' else ''}{DIAGNOSTIC_CSS if page == '/diagnostics' else ''}</style>{style_tags}{script_tags}</head><body>"
             '<a class="skip-link" href="#main">跳到主要内容</a>'
             '<div class="app-shell" data-finathink-shell>'
             f'<nav class="sidebar" id="shell-navigation" aria-label="主导航">{self._nav(clean_page)}</nav>'
@@ -1592,12 +1625,63 @@ class LocalApplication:
         )
         return self.render_shell("/settings/data-connections", "数据接口", body, inspector=self._inspector("数据边界", {"模式": "用户自己的 API", "凭证": "仅保存引用", "读取": "用户明确发起"}, status="USER-OWNED"))
 
+    def _interface_quality_route(self, method, clean, body):
+        interface = '/api/diagnostics/interfaces'
+        quality = '/api/research/quality'
+        if not (clean == interface or clean.startswith((interface+'/', quality+'/'))):
+            return None
+        local, probe = interface+'/local', interface+'/probe'
+        cases, jobs, compare = quality+'/cases', quality+'/jobs', quality+'/compare'
+        allowed = {'GET', 'POST'} if clean == jobs else {'POST'} if clean in {local, probe, compare} else {'GET'}
+        if method not in allowed:
+            return 405, 'application/json', {'error': '此入口不支持该请求方式，请使用页面中的对应操作。'}
+        if method == 'POST':
+            guard = self._data_write_guard(body)
+            if guard:
+                return guard
+            values = {key: value for key, value in body.items() if key != '_csrf'}
+        else:
+            values = {}
+        try:
+            if clean == interface:
+                return 200, 'application/json', {'schema_version': 'interface-diagnostic-list.v1', 'records': self.interface_diagnostics.store.list()}
+            if clean == local:
+                if values:
+                    raise ValueError('本地兼容检查不接受接口地址或额外参数。')
+                return 201, 'application/json', self.interface_diagnostics.run_local()
+            if clean == probe:
+                return 201, 'application/json', self.interface_diagnostics.probe(values)
+            if clean.startswith(interface+'/'):
+                return 200, 'application/json', self.interface_diagnostics.store.get(clean.removeprefix(interface+'/'))
+            if clean == cases:
+                from .research.quality_cases import quality_cases
+
+                return 200, 'application/json', {'schema_version': 'research-quality-cases.v1', 'cases': quality_cases()}
+            if clean == jobs:
+                return (201, 'application/json', self.quality_evaluation.submit(values)) if method == 'POST' else (200, 'application/json', {'schema_version': 'research-quality-list.v1', 'jobs': self.quality_evaluation.list()})
+            if clean == compare:
+                if set(values) != {'job_ids'}:
+                    raise ValueError('请选择2至4个已保存的质量任务。')
+                return 200, 'application/json', self.quality_evaluation.compare(values['job_ids'])
+            if clean.startswith(jobs+'/'):
+                return 200, 'application/json', self.quality_evaluation.evaluate(clean.removeprefix(jobs+'/'))
+            return 404, 'application/json', {'error': '未找到此诊断入口。'}
+        except KeyError:
+            return 404, 'application/json', {'error': '未找到当前空间中的记录，请重新读取本地历史。'}
+        except (ValueError, TypeError):
+            return 422, 'application/json', {'error': '输入或记录校验未通过，请核对配置、授权、固定任务与资源上限。原记录已保留。'}
+        except (OSError, sqlite3.Error):
+            return 503, 'application/json', {'error': '本地记录暂时无法读取，请检查磁盘空间与应用状态后重新读取。'}
+
     def route(self, method: str, path: str, *, query: Mapping[str, list[str]] | None = None, body: Any = None) -> tuple[int, str, Any]:
         """Return ``(status, content_type, payload)`` without requiring a socket."""
 
         parsed = urlsplit(path)
         query = parse_qs(parsed.query) if query is None else query
         clean = parsed.path.rstrip("/") or "/"
+        diagnostic_response = self._interface_quality_route(method, clean, body)
+        if diagnostic_response is not None:
+            return diagnostic_response
         if clean == "/research/jobs" and method == "GET":
             return 200, "text/html; charset=utf-8", self.render_page(clean, query=query)
         asset_response = self._asset_workspace_route(method, clean, query)
@@ -1951,7 +2035,7 @@ class LocalApplication:
         title = names.get(page, "Finathink")
         body = self._page_body(page, query=query)
         inspector = self._page_inspector(page)
-        scripts = ("/assets/finathink-research.js",) if page in {"/", "/research", "/research/jobs", "/research/experiments", "/research/learning", "/research/compare", "/workbench", "/settings/providers"} else ()
+        scripts = ("/assets/finathink-research.js",) if page in {"/", "/research", "/research/jobs", "/research/experiments", "/research/learning", "/research/compare", "/workbench", "/settings/providers", "/diagnostics"} else ()
         return self.render_shell(active_page, title, body, inspector=inspector, scripts=scripts)
 
     def render_result_page(self, title: str, payload: Any) -> str:
@@ -2102,6 +2186,8 @@ class LocalApplication:
         return self.render_shell("/knowledge", title_text, body, inspector=self._inspector("Knowledge provenance", {"Concept": title_text, "Catalog": DEFAULT_CATALOG.fingerprint, "Mastery": mastery.state, "Boundary": "Sample curriculum; verify sources"}, status="CURATED"), eyebrow="Knowledge / progressive depth")
 
     def _page_inspector(self, page: str) -> str:
+        if page == '/diagnostics':
+            return self._inspector('检查范围', {'本地兼容': '临时 HTTP 服务与合成样例', '用户接口': '逐次授权、单次探测', '研究评估': '固定材料与冻结条件', '结果记录': '本地保存，可下载核对'}, status='本地研究')
         if page == "/":
             steps = ("界定问题与数据范围", "形成可检验的假设", "查看计算与反例", "解释结果，记录下一步")
             path = ''.join(f'<li><span class="context-step">{index}</span><span>{label}</span></li>' for index, label in enumerate(steps, 1))
@@ -2490,8 +2576,13 @@ class LocalApplication:
             empty = '' if post_html else '<div class="empty-state"><h3>NO DISCUSSIONS YET</h3><p>Save a private question first; explicit projection is required before anything can be shared.</p></div>'
             event_id = html.escape(str(self.event().get("id", "")))
             return f'<h1>Community</h1><p class="lede">Calm evidence discussion: claims, questions, and counter-evidence remain private until explicit projection consent and an allow-listed field set exist.</p><div class="status-row">{self._status("PRIVATE BY DEFAULT", "limitation")}{self._status("NO LEADERBOARDS", "ready")}</div><section class="card"><form class="form-grid" method="post" action="/api/community"><input type="hidden" name="_csrf" value="{self.csrf_token}"><label for="claim">Claim or question<textarea id="claim" name="claim" required maxlength="2000" aria-describedby="claim-help"></textarea></label><p class="field-help" id="claim-help">State what you are unsure about; do not paste credentials or private identifiers.</p><button type="submit">Save private question</button></form></section><section class="card"><h2>Explicit projection</h2><form class="form-grid" method="post" action="/api/community/project"><input type="hidden" name="_csrf" value="{self.csrf_token}"><input type="hidden" name="source_id" value="{event_id}"><input type="hidden" name="fields" value="event_type,reference_period,published_at,revision_status,limitations"><label><span><input type="checkbox" name="consent" value="true" required> I consent to this descriptive projection</span></label><button type="submit">Project selected event fields</button></form></section><section class="section"><h2>Questions</h2>{empty}<div class="grid">{post_html}</div></section>'
-        diagnostics = html.escape(json.dumps(self.diagnostics(), indent=2, sort_keys=True))
-        return f'<h1>诊断与恢复</h1><p class="lede">查看本地健康状态，下载脱敏诊断，保留可以排查的问题线索。</p><p>连接失败时先检查应用是否正在运行、磁盘空间与数据字段映射。返回<a href="/research/jobs">研究任务</a>重新读取记录；结果不确定时先查找原任务，避免重复新建。</p><div class="action-row"><a class="button-secondary" href="/api/diagnostics/bundle" download="finathink-diagnostics.json">下载脱敏诊断</a><a class="button-secondary" href="/api/personal/backup">单独备份个人笔记</a></div><p>完整研究状态备份与恢复：先关闭应用，再按快速开始中的维护命令操作。恢复到新目录，保留原始文件。诊断不包含个人内容、数据行、完整问题、接口地址或凭证值；分享前仍请自行检查。</p><section class="card"><h2>本地状态</h2><pre>{diagnostics}</pre></section>'
+        if page == '/diagnostics':
+            try:
+                records = self.interface_diagnostics.store.list()
+            except (OSError, ValueError, sqlite3.Error):
+                records = ()
+            return diagnostic_page(self.csrf_token, self.diagnostics(), records)
+        return '<h1>未找到此页面</h1><p><a href="/">返回研究概览</a></p>'
 
     def close(self) -> None:
         if self._research_application is not None:
