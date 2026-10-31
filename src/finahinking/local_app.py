@@ -251,6 +251,16 @@ h3 { font-size: 1rem; }
 table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
 th, td { padding: 9px 10px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
 th { color: var(--text-muted); font-size: .78rem; letter-spacing: .06em; text-transform: uppercase; }
+[data-quantitative-comparison] { min-width: 0; overflow-wrap: anywhere; }
+[data-quantitative-comparison] pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+[data-reproduction-workspace] h3 { margin-top: var(--space-6); margin-bottom: var(--space-3); }
+[data-reproduction-workspace] .table-wrap { margin-block: var(--space-4); }
+[data-reproduction-workspace] .table-wrap table { min-width: 400px; }
+[data-reproduction-workspace] .repro-consent input { width: 20px; height: 20px; min-height: 20px; flex: 0 0 20px; }
+.repro-consent { display: flex; align-items: center; gap: var(--space-2); min-height: 44px; }
+[data-reproduction-workspace] { min-width: 0; overflow-wrap: anywhere; }
+[data-reproduction-workspace] pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+[data-reproduction-workspace] select, [data-reproduction-workspace] input { max-width: 100%; min-width: 0; }
 .research-workspace { display: grid; gap: var(--space-5); }
 .research-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); }
 .research-toolbar .tag-row { margin: 0; }
@@ -1478,12 +1488,17 @@ class LocalApplication:
                 service.snapshots.save(snapshot)
                 return 201, content_type, self._snapshot_summary(snapshot)
             if clean == "/api/research/snapshots/capture" and method == "POST":
-                if set(values) - {"connection_id", "instrument", "start", "end", "as_of", "price_currency", "volume_unit"}:
+                if set(values) - {"connection_id", "instrument", "start", "end", "as_of", "price_currency", "volume_unit", "asset_classes"}:
                     raise ValueError("unsupported capture fields")
                 config = self._data_connections.get(values["connection_id"])
-                request = DataRequest(dataset_kind="prices", instruments=(values["instrument"],), start=values.get("start"), end=values.get("end"), as_of=values.get("as_of"))
+                if not isinstance(values.get("instrument"), str):
+                    raise ValueError("instruments must be comma-separated text")
+                request = DataRequest(dataset_kind="prices", instruments=tuple(item.strip() for item in values["instrument"].split(",")), start=values.get("start"), end=values.get("end"), as_of=values.get("as_of"))
                 units = {key: values.get(key, "UNKNOWN") or "UNKNOWN" for key in ("price_currency", "volume_unit")}
-                reference = JsonApiConnector(config, self._data_connections.credentials, self._data_transport).capture(request, service.snapshots, units=units)
+                classes = values.get("asset_classes") or {}
+                if isinstance(classes, str):
+                    classes = json.loads(classes)
+                reference = JsonApiConnector(config, self._data_connections.credentials, self._data_transport).capture(request, service.snapshots, units=units, asset_classes=classes)
                 return 201, content_type, self._snapshot_summary(service.snapshots.load(reference))
             return 405, content_type, {"error": "use an explicit snapshot preparation endpoint"}
         except FileNotFoundError:
@@ -1527,8 +1542,9 @@ class LocalApplication:
             '<div class="grid section"><section class="card"><h2 id="prepare-data" tabindex="-1">01 / 准备数据</h2>'
             '<p>保存连接不会获取数据。这里的操作会显式读取用户配置的 API，并冻结一份有指纹的 OHLCV 快照。</p>'
             '<form class="form-grid" data-snapshot-capture><label>数据连接<select name="connection_id" required><option value="">请选择已保存的连接</option></select></label>'
-            '<label>标的<input name="instrument" required maxlength="128" value="AAA"></label><label>开始日期<input type="date" name="start" required></label><label>结束日期<input type="date" name="end" required></label><label>数据截止日<input type="date" name="as_of" required></label>'
+            '<label>标的（多个用英文逗号分隔）<input name="instrument" required maxlength="2579" value="AAA"></label><label>开始日期<input type="date" name="start" required></label><label>结束日期<input type="date" name="end" required></label><label>数据截止日<input type="date" name="as_of" required></label>'
             '<fieldset id="data-units" tabindex="-1"><legend>数据单位（用户声明）</legend><label>价格币种<select name="price_currency"><option value="UNKNOWN">尚未确认</option><option>CNY</option><option>USD</option><option>HKD</option><option>EUR</option><option>GBP</option><option>JPY</option></select></label><label>成交量单位<select name="volume_unit"><option value="UNKNOWN">尚未确认</option><option value="shares">股（已换算）</option><option value="units">份（已换算）</option></select></label><p class="field-help">价格与现金使用同一币种；手数或合约乘数需由数据端换算。此处记录声明，不转换数值。</p></fieldset>'
+            '<details><summary>多资产证据声明（可选）</summary><label>资产类别 JSON<textarea name="asset_classes" maxlength="4096" placeholder="{&quot;AAA&quot;:&quot;EQUITY&quot;,&quot;ETF&quot;:&quot;ETF&quot;}"></textarea></label><p class="field-help">为返回的每个标的填写 EQUITY 或 ETF。声明与单位随快照冻结，用于研究对比中的多资产证据。</p></details>'
             '<button type="submit">获取并保存快照</button></form><p><a href="/settings/data-connections">配置自己的数据接口</a></p>'
             '<details><summary>使用明确标记的演示数据</summary><form class="form-grid" data-snapshot-sample><label>演示标的<input name="instrument" required maxlength="128" value="AAA"></label><button type="submit">生成 SAMPLE 快照</button></form></details></section>'
             '<section class="card"><h2>02 / 提交研究</h2><form class="form-grid" data-run-submit>'
@@ -1679,6 +1695,11 @@ class LocalApplication:
         parsed = urlsplit(path)
         query = parse_qs(parsed.query) if query is None else query
         clean = parsed.path.rstrip("/") or "/"
+        from .research.reproduction_routes import route as reproduction_route
+
+        response = reproduction_route(self, method, clean, query, body)
+        if response is not None:
+            return response
         diagnostic_response = self._interface_quality_route(method, clean, body)
         if diagnostic_response is not None:
             return diagnostic_response
@@ -2407,6 +2428,7 @@ class LocalApplication:
 
     def _research_comparison_page_body(self) -> str:
         from .research.factor_workspace_page import quantitative_comparison_section
+        from .research.reproduction_page import reproduction_page
 
         payload = self.research_comparison()
         rows = "".join(
@@ -2433,6 +2455,7 @@ class LocalApplication:
             f'{rows}</tbody></table></div>'
             '<p class="meta">Comparison basis: state, as-of, stage completion, analyst evidence count, report coverage, and decision eligibility. No composite score is computed.</p>'
             '<p class="error-state" data-comparison-error hidden></p></section>'
+            f'{reproduction_page(self.csrf_token, payload["runs"])}'
             f'{quantitative_comparison_section(payload["quantitative"])}'
         )
 
@@ -2654,6 +2677,8 @@ class _Handler(BaseHTTPRequestHandler):
             self._send(400, "application/json", {"error": "invalid content length"})
             return
         body_limit = 1_000_000
+        if urlsplit(self.path).path == "/api/research/reproduction/restore":
+            body_limit = 8 * 1024 * 1024 + 64 * 1024
         if re.fullmatch(r"/api/research/jobs/[A-Za-z0-9_-]{1,128}/research-fields", urlsplit(self.path).path):
             from .data.research_fields import MAX_FIELD_BYTES
 
@@ -2673,8 +2698,8 @@ class _Handler(BaseHTTPRequestHandler):
         else:
             try:
                 body = json.loads(raw or b"{}")
-            except json.JSONDecodeError:
-                self._send(400, "application/json", {"error": "request body must be JSON or a protected form"})
+            except (json.JSONDecodeError, UnicodeError, RecursionError):
+                self._send(400, "application/json", {"error": "请求需要有效的 JSON 或受保护表单，请检查文件格式与嵌套深度。"})
                 return
         parsed = urlsplit(self.path)
         try:

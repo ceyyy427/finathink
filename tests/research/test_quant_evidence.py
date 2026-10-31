@@ -109,3 +109,33 @@ def test_exposure_requires_data_available_at_its_common_endpoint():
 def test_return_overflow_is_blocked_instead_of_nonfinite_evidence():
     out = compute(sample([1e-200, 1e200, 1e-200], [100, 101, 102]))
     assert out['status'] == 'BLOCKED' and 'NONFINITE_RETURN' in out['blocking_reasons']
+
+
+def test_existing_user_capture_units_and_declared_classes_reach_evidence():
+    from finahinking.data.field_mapping import normalize_records
+    from finahinking.p8_2.data_sources import snapshot_from_batch
+    rows = [row.to_dict() for row in sample().observations]
+    keys = ('instrument', 'timestamp', 'available_at', 'open', 'high', 'low', 'close', 'volume', 'industry', 'suspended')
+    batch = normalize_records(rows, {key:key for key in keys}, 'prices')
+    try:
+        captured = snapshot_from_batch(batch, units={'price_currency':'USD', 'volume_unit':'shares'},
+            asset_classes={'AAA':'EQUITY', 'ETF':'ETF'})
+    except TypeError:
+        pytest.fail('user capture cannot declare asset classes')
+    assert compute(captured)['status'] == 'READY'
+    assert captured.mode == 'CAPTURED'
+
+
+def test_invalid_asset_class_declaration_prevents_outbound_capture(tmp_path):
+    from finahinking.data.connection_settings import InMemoryDataCredentialStore
+    from finahinking.data.snapshot_store import SnapshotStore
+    from finahinking.data.user_api import JsonApiConnector
+    from tests.data.test_user_api import PUBLIC_RESOLVER, FakeTransport, config, request
+    transport = FakeTransport([])
+    connector = JsonApiConnector(config(), InMemoryDataCredentialStore(), transport, resolver=PUBLIC_RESOLVER)
+    try:
+        with pytest.raises(ValueError):
+            connector.capture(request(), SnapshotStore(tmp_path), asset_classes={'AAA':'FUTURE'})
+    except TypeError:
+        pytest.fail('asset declaration is not validated before capture')
+    assert transport.calls == []

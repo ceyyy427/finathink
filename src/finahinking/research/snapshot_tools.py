@@ -20,9 +20,9 @@ from finahinking.quant.services import QuantServiceGateway
 
 from .contracts import FailureKind, stable_digest
 from .paper_trader import PaperTrader
-from .research_identity import execution_identity
 from .portfolio_research import RiskScaledStrategy, constrained_target
 from .portfolio_runtime import PortfolioManager
+from .research_identity import execution_identity
 from .risk_runtime import RiskManager
 from .tools import (
     ResearchToolGateway,

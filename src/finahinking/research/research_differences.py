@@ -27,7 +27,7 @@ def _conditions(source):
                                       else reproduction.get('publication_before'),
                  'attachment': charter.get('attachment_ref', 'NONE')},
         'method': {**subset(_METHOD), 'split': conditions.get('split'),
-                   'factor_study': {key: charter.get(key) for key in ('version', 'recipe_id', 'recipe_version', 'factor_spec', 'method_binding')} if study else 'NONE',
+                   'factor_study': {key: charter.get(key, 'NONE') for key in ('version', 'recipe_id', 'recipe_version', 'factor_spec', 'method_binding')} if study else 'NONE',
                    'study_phase': study.get('phase', 'NONE')},
         'parameters': {**subset(_PARAMETERS), 'study': {key: charter[key] for key in ('windows', 'label_horizon', 'embargo', 'n_splits', 'min_abs_ic', 'max_neighbor_delta') if key in charter}},
         'costs': {**subset(_COST), 'study': charter.get('cost', 'NONE')},

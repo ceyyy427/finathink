@@ -80,3 +80,11 @@ def test_real_workflow_freezes_policy_code_dependencies_in_report(tmp_path):
     assert manifest.source_snapshot['reproduction'] == frozen
     assert len(frozen['identity']['source_digest']) == 64
     assert '/Users/' not in str(frozen) and 'endpoint' not in str(frozen)
+
+
+def test_same_controlled_recipe_is_known_without_optional_method_attachment():
+    compare, _ = modules()
+    a = source()
+    a['factor_study'] = {'phase': 'VALIDATION', 'charter': {'version': 'factor-workbench.v1',
+        'recipe_id': 'close_reversal', 'recipe_version': 'v1', 'windows': [3, 5, 8]}}
+    assert compare(a, copy.deepcopy(a))['status'] == 'COMPATIBLE'

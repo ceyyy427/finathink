@@ -141,3 +141,13 @@ def test_oversize_nested_data_unsupported_policy_and_stored_receipt_tamper(origi
         db.execute('UPDATE research_packages SET receipt=? WHERE scope_id=?', ('{}', service.scope_id))
     with pytest.raises(ValueError):
         manager.get(saved['package_id'])
+
+
+def test_browser_number_roundtrip_preserves_package_integrity_and_reproduction(original):
+    service, run_id = original
+    manager = reproduction(service)
+    package = manager.export(run_id, include_data=True)
+    # JSON.parse / JSON.stringify has one number type and writes 1.0 as 1.
+    browser_copy = json.loads(json.dumps(package), parse_float=lambda text: int(float(text)) if float(text).is_integer() else float(text))
+    restored = manager.restore(browser_copy)
+    assert manager.recompute(restored['package_id'])['status'] == 'MATCHED'

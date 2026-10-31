@@ -24,9 +24,24 @@ _IDENTITY_KEYS = {'run_id', 'fingerprint', 'dataset_fingerprint', 'engine_datase
                   'risk_digest', 'proposal_digest'}
 
 
+def _canonical_numbers(value):
+    # JSON has one number type: browser roundtrips turn 1.0 into 1.
+    if isinstance(value, float) and math.isfinite(value) and value.is_integer():
+        return int(value)
+    if isinstance(value, dict):
+        return {key: _canonical_numbers(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_canonical_numbers(item) for item in value]
+    return value
+
+
+def _digest(value):
+    return stable_digest(_canonical_numbers(value))
+
+
 def _encode(value):
     try:
-        encoded = json.dumps(value, sort_keys=True, ensure_ascii=False, allow_nan=False, separators=(',', ':'))
+        encoded = json.dumps(_canonical_numbers(value), sort_keys=True, ensure_ascii=False, allow_nan=False, separators=(',', ':'))
     except (ValueError, TypeError, RecursionError) as exc:
         raise ValueError('研究包必须是有限、非递归的 JSON 数据。') from exc
     if len(encoded.encode()) > MAX_PACKAGE_BYTES:
@@ -67,19 +82,19 @@ def _portable_snapshot(snapshot, cutoff):
               'asset_classes': provenance.get('asset_classes', {}),
               'observations': [{key: value for key, value in row.to_dict().items() if key in _ROW} for row in rows]}
     _sanitize_public(result)
-    result['fingerprint'] = stable_digest(result)
+    result['fingerprint'] = _digest(result)
     return result
 
 
 def _snapshot(value):
     if not isinstance(value, dict) or set(value) != {'mode', 'units', 'asset_classes', 'observations', 'fingerprint'}:
         raise ValueError('研究包数据结构无效。')
-    if stable_digest({key: item for key, item in value.items() if key != 'fingerprint'}) != value['fingerprint']:
+    if _digest({key: item for key, item in value.items() if key != 'fingerprint'}) != value['fingerprint']:
         raise ValueError('研究包数据摘要不匹配。')
     rows = value['observations']
     if not isinstance(rows, list) or not 4 <= len(rows) <= 5000 or any(not isinstance(row, dict) or set(row) - _ROW for row in rows):
         raise ValueError('研究包观测超出范围。')
-    if not isinstance(value['units'], dict) or set(value['units']) - {'price', 'cash', 'volume'} or not isinstance(value['asset_classes'], dict):
+    if not isinstance(value['units'], dict) or set(value['units']) - {'price', 'cash', 'volume', 'price_currency', 'volume_unit'} or not isinstance(value['asset_classes'], dict):
         raise ValueError('研究包单位声明无效。')
     result = DatasetSnapshot('portable-research', tuple(MarketObservation(**row, source='portable', provider='portable') for row in rows),
         mode=value['mode'], provenance={'units': value['units'], 'asset_classes': value['asset_classes']})
@@ -93,7 +108,7 @@ def _policy_supported(policy):
     mutable = {'version', 'max_cvar', 'signal_budget_scale', 'learning_policy_ref'}
     if not isinstance(policy, dict) or not set(base) <= set(policy) or set(policy) - (set(base) | mutable):
         return False
-    if any(policy[key] != value or type(policy[key]) is not type(value) for key, value in base.items() if key not in mutable):
+    if any(policy[key] != value or isinstance(policy[key], bool) != isinstance(value, bool) for key, value in base.items() if key not in mutable):
         return False
     if not isinstance(policy['version'], str) or not re.fullmatch(r'local-paper\.v3(?:\.learned-[0-9]{1,9})?', policy['version']):
         return False
@@ -110,7 +125,7 @@ def validate_package(package):
     if not isinstance(package, dict) or set(package) != _FIELDS or package['schema_version'] != 'research-package.v1':
         raise ValueError('研究包版本或字段不受支持。')
     _sanitize_public(package)
-    if _ref(package['package_id']) != stable_digest({key: item for key, item in package.items() if key != 'package_id'}):
+    if _ref(package['package_id']) != _digest({key: item for key, item in package.items() if key != 'package_id'}):
         raise ValueError('研究包内容被修改，摘要校验失败。')
     _ref(package['original_dataset'])
     if package['snapshot_digest'] is not None:
@@ -191,7 +206,7 @@ class ReproductionService:
             'publication_before': frozen['publication_before'], 'identity': frozen['identity'], 'policy': frozen['policy'],
             'snapshot': compact if include_data else None, 'snapshot_digest': compact['fingerprint'],
             'expected': expected, 'product_coverage': coverage, 'missing_dependencies': missing}
-        package['package_id'] = stable_digest(package)
+        package['package_id'] = _digest(package)
         return validate_package(package)
 
     def restore(self, package):
@@ -253,9 +268,9 @@ class ReproductionService:
                 tools._backtest(arguments)
                 tools._risk(arguments)
                 actual = products(tools.analysis)
-                receipt['products'] = {key: 'MATCHED' if stable_digest(actual.get(key)) == stable_digest(value) else 'DIFFERENT' for key, value in package['expected'].items()}
+                receipt['products'] = {key: 'MATCHED' if _digest(actual.get(key)) == _digest(value) else 'DIFFERENT' for key, value in package['expected'].items()}
                 receipt['products'].update({key: value for key, value in package['product_coverage'].items() if value != 'INCLUDED'})
-                receipt['computed_digests'] = {key: stable_digest(actual.get(key)) for key in package['expected']}
+                receipt['computed_digests'] = {key: _digest(actual.get(key)) for key in package['expected']}
                 receipt['status'] = 'DIFFERENT' if 'DIFFERENT' in receipt['products'].values() else 'PARTIAL' if missing else 'MATCHED'
             except (ValueError, TypeError, KeyError, ArithmeticError):
                 receipt['missing_dependencies'].append('INPUT_UNSUPPORTED')

@@ -1,3 +1,4 @@
+import { mountResearchReproduction } from './research-reproduction.js';
 import {
   CandlestickSeries,
   ColorType,
@@ -584,6 +585,7 @@ export function mountResearch(root, { payload, payloadUrl } = {}) {
 
 if (typeof document !== 'undefined') {
   mountAppShell(document);
+  document.querySelectorAll('[data-reproduction-workspace]').forEach(root => { mountResearchReproduction(root); });
   document.querySelectorAll('[data-interface-workspace]').forEach((root) => { mountInterfaceDiagnostics(root); });
   document.querySelectorAll('[data-asset-workspace]').forEach((root) => { mountAssetWorkspace(root); });
   document.querySelectorAll('[data-factor-detail]').forEach((root) => { mountFactorDetail(root); });

@@ -47,6 +47,7 @@ def compute_quant_evidence(snapshot, as_of, publication_before=None):
         'source_claims_status': 'NOT_VALIDATED',
         'limitations': ['等权固定研究权重用于历史证据，不是决策持仓；收益未扣成本。',
           '样本协方差与区块重采样仅描述已观察区间；95%区间不是未来盈利概率。',
+          '移动区块不首尾拼接，因此端部观测会较少被抽到；固定区块和200次重采样未经真实市场覆盖率校准。',
           '动量暴露是权重乘已知两期收益，不是市场或风格 beta。',
           '压力网格只证明已测情景；稳定点不是未测试的连续安全区间。',
           '单位和资产类别来自用户声明；合成输入只验证计算，未验证来源研究主张。']}
@@ -60,8 +61,10 @@ def compute_quant_evidence(snapshot, as_of, publication_before=None):
     assets = sorted({row.instrument for row in rows})
     groups = {asset: [row for row in rows if row.instrument == asset] for asset in assets}
     units = snapshot.provenance.get('units', {})
+    if isinstance(units, dict) and set(units) == {'price_currency', 'volume_unit'}:
+        units = {'price': units['price_currency'], 'cash': units['price_currency'], 'volume': units['volume_unit']}
     classes = snapshot.provenance.get('asset_classes', {})
-    if not isinstance(units, dict) or not isinstance(units.get('price'), str) or not re.fullmatch('[A-Z]{3}', units['price']) or units.get('cash') != units['price'] or units.get('volume') != 'shares':
+    if not isinstance(units, dict) or not isinstance(units.get('price'), str) or not re.fullmatch('[A-Z]{3}', units['price']) or units.get('cash') != units['price'] or units.get('volume') not in {'shares', 'units'}:
         result['blocking_reasons'].append('UNITS_REQUIRED')
     if not isinstance(classes, dict) or any(classes.get(asset) not in {'EQUITY', 'ETF'} for asset in assets):
         result['blocking_reasons'].append('ASSET_CLASS_REQUIRED')
