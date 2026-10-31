@@ -52,3 +52,11 @@ pip-audit 首轮发现锁文件 Tornado 6.5.10 的3项已知漏洞（CVE-2026-11
 提交 `cd5a162` 的 Native Task4 门禁：Python **1751通过、1条件跳过，547.75秒**；唯一跳过是可选 statsmodels 隔离适配器环境，浏览器均执行。Node **59通过**，Phase18真实浏览器 **12通过**。全量门禁包括全新 wheel 安装、实际 HTTP/独立 spawn、私密备份恢复和重复迁移。Ruff、governance、发布元数据、secret scan、pip check、actionlint、diff检查及修复后的 pip-audit 均通过。
 
 三视口与已完成质量比较的确认截图已检查，站点/包内前端由同一构建复制。接下来由一位全新上下文审查员检查整个分支，再按精确提交 CI 和合并后 main CI 完成发布。
+
+## 独立整分支审查
+
+一位全新上下文审查员（gpt-6-astra/high）审查 `4c3dffc..aefa599`；独立60项定向Python、6项Node、构建哈希、实际Chromium导航与单次探测均通过，未改动源文件。无Critical/Minor，发现1项Important：调用账本的执行中状态为DISPATCHED，评分器原先只将UNKNOWN/PENDING当未知，导致响应未返回时短暂显示0%接受率。
+
+已集中修复：真实队列与ModelCallJournal投影先复现unknown=0/rate=0.0，再将DISPATCHED纳入未知；回归覆盖调用完成后的已知零、取消后的UNKNOWN、未发送NOT_SENT和比较投影。修复不增加调用、不改预算或队列。没有另派复审员，修复后以直接回归和完整门禁验证。
+
+审查范围裁定：真实账号/费用与语义/收益保留独立验收；当前Chromium普通返回正常，未复现返回缓存问题，若缓存行为改变须重验；其他浏览器引擎不在本轮执行矩阵；压缩依赖依靠作者源码、重建与一致性门禁；完整回归和隔离notebook由作者执行，审查员采信记录并运行定向测试，最后仍由精确提交CI验证。上述边界不被表述为账号或投资效果已验证。

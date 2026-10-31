@@ -133,3 +133,45 @@ def test_local_scoring_examples_stay_explicitly_synthetic(tmp_path):
     assert {item['case_id'] for item in result['quality_demo']}=={'complete','sparse','conflict'}
     assert all(item['mode']=='SYNTHETIC_SCORE_EXAMPLE' for item in result['quality_demo'])
     assert result['external_account_verified'] is False
+
+
+def test_actual_journal_projection_distinguishes_active_finished_cancelled_and_unsent_calls(quality):
+    from finahinking.research.context_bundle import build_context_bundle
+    from finahinking.research.contracts import stable_digest
+    from finahinking.research.model_call_journal import ModelCallJournal
+    from finahinking.research.quality_cases import quality_case
+
+    def journal_for(key):
+        job=quality.submit(values(key=key))
+        request=quality.service._request(quality.service.queue.get(job['job_id']))
+        case=quality_case('complete')
+        context=build_context_bundle(request,case['snapshot'],'technical',materials=case['materials'])
+        journal=ModelCallJournal(quality.service.root/'model-calls.sqlite3',job_id=job['job_id'],run_id=request.run_id,request_digest=stable_digest(request),attempt=1,scope_id=quality.service.scope_id)
+        call=journal.begin({'role':'technical','model':'user-model','context_fingerprint':context.fingerprint,'context_bytes':len(context._json.encode())})
+        return job,journal,call
+
+    active,journal,call=journal_for('actual-active')
+    journal.dispatched(call,100)
+    assert journal.records()[0]['status']=='DISPATCHED'
+    result=quality.evaluate(active['job_id'])['metrics']
+    assert result['schema_acceptance']=={'attempted':1,'accepted':0,'unknown':1,'not_sent':0,'rate':None}
+    assert result['usage']['total_units'] is None and result['model_duration_ms'] is None
+    journal.finish(call,{'status':'READY','usage':{'total_units':0},'duration_ms':0})
+    result=quality.evaluate(active['job_id'])['metrics']
+    assert result['schema_acceptance']['rate']==1 and result['schema_acceptance']['unknown']==0
+    assert result['usage']['total_units']==0 and result['model_duration_ms']==0
+
+    cancelled,unknown,call=journal_for('actual-cancelled')
+    unknown.dispatched(call,100)
+    quality.service.cancel(cancelled['job_id'])
+    result=quality.evaluate(cancelled['job_id'])['metrics']
+    assert result['schema_acceptance']['unknown']==1 and result['schema_acceptance']['rate'] is None
+    assert result['usage']['total_units'] is None and len(unknown.records(terminal=True))==1
+
+    unsent,prepared,_=journal_for('actual-unsent')
+    quality.service.cancel(unsent['job_id'])
+    result=quality.evaluate(unsent['job_id'])['metrics']
+    assert result['schema_acceptance']['attempted']==0 and result['schema_acceptance']['not_sent']==1
+    assert result['schema_acceptance']['rate'] is None and prepared.records(terminal=True)[0]['status']=='NOT_SENT'
+    compared=quality.compare([active['job_id'],cancelled['job_id'],unsent['job_id']])
+    assert [row['metrics']['schema_acceptance']['rate'] for row in compared['items']]==[1,None,None]

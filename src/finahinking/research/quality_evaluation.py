@@ -23,7 +23,7 @@ def score_quality(job, contexts, expected_roles):
     source = job.get('model_research') or {}
     calls = source.get('calls', [])
     dispatched = [call for call in calls if call.get('dispatched') is True]
-    unknown = sum(call.get('status') in {'UNKNOWN', 'PENDING'} for call in dispatched)
+    unknown = sum(call.get('status') in {'UNKNOWN', 'PENDING', 'DISPATCHED'} for call in dispatched)
     accepted = sum(call.get('status') == 'READY' for call in dispatched)
     roles = source.get('roles', [])
     references = [(item.get('role'), ref) for item in roles for ref in item.get('evidence_refs', [])]
