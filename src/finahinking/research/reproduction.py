@@ -96,8 +96,11 @@ def _snapshot(value):
         raise ValueError('研究包观测超出范围。')
     if not isinstance(value['units'], dict) or set(value['units']) - {'price', 'cash', 'volume', 'price_currency', 'volume_unit'} or not isinstance(value['asset_classes'], dict):
         raise ValueError('研究包单位声明无效。')
-    result = DatasetSnapshot('portable-research', tuple(MarketObservation(**row, source='portable', provider='portable') for row in rows),
-        mode=value['mode'], provenance={'units': value['units'], 'asset_classes': value['asset_classes']})
+    try:
+        result = DatasetSnapshot('portable-research', tuple(MarketObservation(**row, source='portable', provider='portable') for row in rows),
+            mode=value['mode'], provenance={'units': value['units'], 'asset_classes': value['asset_classes']})
+    except OverflowError as exc:
+        raise ValueError('研究包数值超出可计算范围。') from exc
     if len(result.instruments) > 20 or set(value['asset_classes']) - set(result.instruments):
         raise ValueError('研究包资产声明超出范围。')
     return result
@@ -138,8 +141,8 @@ def validate_package(package):
     coverage = package['product_coverage']
     if not isinstance(coverage, dict) or set(coverage) - {'baseline', 'quant_evidence', 'factor_study', 'model_text'} or any(coverage.get(key) != 'INCLUDED' for key in package['expected']):
         raise ValueError('复现覆盖清单无效。')
-    if any(coverage.get(key) not in (None, 'REQUIRES_ORIGINAL_WORKFLOW') for key in ('factor_study', 'model_text')):
-        raise ValueError('模型与因子研究需要原工作流。')
+    if any(status != ('INCLUDED' if key in {'baseline', 'quant_evidence'} else 'REQUIRES_ORIGINAL_WORKFLOW') for key, status in coverage.items()) or {key for key, status in coverage.items() if status == 'INCLUDED'} != set(package['expected']):
+        raise ValueError('复现覆盖必须与已携带的确定性产物完全一致；模型与因子研究需要原工作流。')
     expected_missing = ([] if package['snapshot'] is not None else ['NORMALIZED_DATA']) + (['FACTOR_WORKFLOW_DEPENDENCIES'] if 'factor_study' in coverage else []) + (['MODEL_MATERIALS_AND_AUTHORIZATION'] if 'model_text' in coverage else [])
     if package['missing_dependencies'] != expected_missing:
         raise ValueError('缺依赖清单与复现覆盖不一致。')
@@ -192,8 +195,10 @@ class ReproductionService:
         frozen = analytics.get('reproduction')
         if not frozen or frozen != entry['manifest']['source_snapshot'].get('reproduction'):
             raise ValueError('旧报告缺少冻结的执行身份，请从原输入创建新研究。')
-        snapshot = self.service.snapshots.load(analytics['dataset_fingerprint'])
-        compact = _portable_snapshot(snapshot, frozen['publication_before'])
+        compact = None
+        if include_data:
+            snapshot = self.service.snapshots.load(analytics['dataset_fingerprint'])
+            compact = _portable_snapshot(snapshot, frozen['publication_before'])
         expected = products(analytics)
         coverage = {key: 'INCLUDED' for key in expected}
         missing = [] if include_data else ['NORMALIZED_DATA']
@@ -202,9 +207,9 @@ class ReproductionService:
                 coverage['model_text' if key == 'model_research' else key] = 'REQUIRES_ORIGINAL_WORKFLOW'
                 missing.append(code)
         package = {'schema_version': 'research-package.v1', 'run_id': run_id,
-            'original_dataset': snapshot.fingerprint, 'as_of': analytics['as_of'], 'instrument': analytics['instrument'],
+            'original_dataset': analytics['dataset_fingerprint'], 'as_of': analytics['as_of'], 'instrument': analytics['instrument'],
             'publication_before': frozen['publication_before'], 'identity': frozen['identity'], 'policy': frozen['policy'],
-            'snapshot': compact if include_data else None, 'snapshot_digest': compact['fingerprint'],
+            'snapshot': compact, 'snapshot_digest': compact['fingerprint'] if compact is not None else None,
             'expected': expected, 'product_coverage': coverage, 'missing_dependencies': missing}
         package['package_id'] = _digest(package)
         return validate_package(package)
@@ -254,7 +259,7 @@ class ReproductionService:
             missing.append('DEPENDENCY_MISMATCH')
         if not _policy_supported(package['policy']):
             missing.append('POLICY_UNSUPPORTED')
-        receipt = {'package_id': reference, 'status': 'BLOCKED', 'products': {}, 'missing_dependencies': missing,
+        receipt = {'package_id': reference, 'status': 'BLOCKED', 'products': {key: 'BLOCKED' if status == 'INCLUDED' else status for key, status in package['product_coverage'].items()}, 'missing_dependencies': missing,
                    'runtime_identity': current, 'numeric_products_only': True, 'integrity': 'CONTENT_ONLY',
                    'model_called': False, 'paper_only': True}
         blockers = set(missing) - {'FACTOR_WORKFLOW_DEPENDENCIES', 'MODEL_MATERIALS_AND_AUTHORIZATION'}

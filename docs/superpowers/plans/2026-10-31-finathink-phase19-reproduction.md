@@ -54,6 +54,6 @@
 - [x] Write HTTP/browser failures for six-category comparison, evidence, download/import/recompute/reopen, no automatic POST, error/empty, keyboard/mobile and stale response handling.
 - [x] Run new tests and observe expected failures.
 - [x] Implement existing-shell workspace with accessible native controls; update build/CI and installed journey.
-- [ ] Run frontend tests/build/perf, required Phase19 browsers at 1440x900/1920x1080/375x812, governance/ruff/release/secrets/dependencies and `python3 -m pytest -q -ra --tb=short` (expected PASS), commit.
-- [ ] Dispatch one final independent reviewer, address Critical/Important findings with RED→GREEN and full suite.
+- [x] Run frontend tests/build/perf, required Phase19 browsers at 1440x900/1920x1080/375x812, governance/ruff/release/secrets/dependencies and `python3 -m pytest -q -ra --tb=short` (expected PASS), commit.
+- [x] Dispatch one final independent reviewer, address Critical/Important findings with RED→GREEN and full suite.
 - [ ] Push PR; verify exact-head CI; merge; verify main SHA and all CI; archive evidence and remove only this plan scratch.

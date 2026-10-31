@@ -151,3 +151,60 @@ def test_browser_number_roundtrip_preserves_package_integrity_and_reproduction(o
     browser_copy = json.loads(json.dumps(package), parse_float=lambda text: int(float(text)) if float(text).is_integer() else float(text))
     restored = manager.restore(browser_copy)
     assert manager.recompute(restored['package_id'])['status'] == 'MATCHED'
+
+
+def test_metadata_export_survives_missing_original_snapshot(original):
+    service, run_id = original
+    manager = reproduction(service)
+    entry, analytics = manager.source(run_id)
+    (service.snapshots.root / (analytics['dataset_fingerprint'] + '.json')).unlink()
+    package = manager.export(run_id)
+    assert package['original_dataset'] == entry['manifest']['source_snapshot']['dataset_fingerprint']
+    assert package['snapshot'] is None and package['snapshot_digest'] is None
+    assert package['missing_dependencies'] == ['NORMALIZED_DATA']
+
+
+def test_metadata_export_accepts_report_with_more_than_replay_row_limit(original):
+    service, _ = original
+    snapshot = sample([100]*2501, [100]*2501)
+    values = {**payload(service, key='large-meta', snapshot=snapshot), 'as_of':'2035-01-01'}
+    job = wait_for(service, service.submit(values)['job_id'])
+    assert job['status'] == 'completed'
+    manager = reproduction(service)
+    assert manager.export(job['run_id'])['snapshot'] is None
+    with pytest.raises(ValueError, match='5000'):
+        manager.export(job['run_id'], include_data=True)
+
+
+def test_contradictory_product_coverage_is_rejected_before_storage(original):
+    from finahinking.research.reproduction import _digest
+    service, run_id = original
+    manager = reproduction(service)
+    package = manager.export(run_id, include_data=True)
+    for status in ('INCLUDED', 'MATCHED', 'UNKNOWN'):
+        changed = copy.deepcopy(package)
+        del changed['expected']['quant_evidence']
+        changed['product_coverage']['quant_evidence'] = status
+        changed['package_id'] = _digest({k:v for k,v in changed.items() if k != 'package_id'})
+        with pytest.raises(ValueError):
+            manager.restore(changed)
+    assert manager.list() == []
+
+
+def test_blocked_receipts_preserve_each_declared_product(original):
+    from finahinking.research.reproduction import _digest
+    service, run_id = original
+    manager = reproduction(service)
+    for cause in ('data', 'code', 'input'):
+        package = manager.export(run_id, include_data=cause != 'data')
+        package['product_coverage']['factor_study'] = 'REQUIRES_ORIGINAL_WORKFLOW'
+        package['missing_dependencies'].append('FACTOR_WORKFLOW_DEPENDENCIES')
+        if cause == 'code':
+            package['identity']['source_digest'] = '0'*64
+        elif cause == 'input':
+            package['as_of'] = '2025-01-01'
+        package['package_id'] = _digest({k:v for k,v in package.items() if k != 'package_id'})
+        manager.restore(package)
+        receipt = manager.recompute(package['package_id'])
+        assert receipt['status'] == 'BLOCKED'
+        assert receipt['products'] == {'baseline':'BLOCKED','quant_evidence':'BLOCKED', 'factor_study':'REQUIRES_ORIGINAL_WORKFLOW'}

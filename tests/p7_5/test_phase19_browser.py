@@ -113,3 +113,35 @@ def test_filled_mobile_evidence_is_readable_and_no_script_keeps_inventory(app_ht
         expect(native.get_by_text('已有研究和量化条件可在本页下方阅读。交互比较、导出与恢复需要启用 JavaScript。', exact=True)).to_be_visible()
     finally:
         context.close()
+
+
+def test_restore_selection_cannot_receive_another_packages_late_recompute(app_http, observed_page):
+    from finahinking.research.reproduction import ReproductionService
+    page, _, _ = observed_page
+    app = app_http[0]
+    manager = ReproductionService(app.research_service)
+    first = manager.export(completed(app, 'race-a'), include_data=True)
+    second = manager.export(completed(app, 'race-b'))
+    _, base = enter(app_http,page)
+    def restore(package):
+        page.locator('[data-repro-file]').set_input_files({'name':'research.json','mimeType':'application/json','buffer':json.dumps(package).encode()})
+        page.get_by_role('button',name='恢复研究包',exact=True).click()
+        expect(page.locator('[data-repro-packages]')).to_have_value(package['package_id'])
+    restore(first)
+    pending = []
+    page.route('**/'+first['package_id']+'/recompute', lambda route: pending.append(route))
+    page.get_by_role('button',name='复算已恢复产物',exact=True).click()
+    expect(page.get_by_role('button',name='复算已恢复产物',exact=True)).to_be_disabled()
+    restore(second)
+    assert pending
+    response = page.request.post(base+'/api/research/reproduction/'+first['package_id']+'/recompute', data={'_csrf':app.csrf_token})
+    pending.pop().fulfill(response=response)
+    expect(page.get_by_role('button',name='复算已恢复产物',exact=True)).to_be_enabled()
+    expect(page.locator('[data-repro-packages]')).to_have_value(second['package_id'])
+    expect(page.locator('[data-repro-receipt]')).to_contain_text('已恢复，等待显式复算')
+    page.get_by_role('button',name='复算已恢复产物',exact=True).click()
+    expect(page.locator('[data-repro-receipt]')).to_contain_text('待补充条件')
+    expect(page.locator('[data-repro-receipt] tbody tr')).to_have_count(2)
+    page.reload()
+    page.locator('[data-reproduction-ready="true"]').wait_for()
+    expect(page.locator('[data-repro-receipt] tbody tr')).to_have_count(2)

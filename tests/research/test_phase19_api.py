@@ -67,3 +67,16 @@ def test_multiasset_capture_route_records_units_and_rejects_malformed_input(app_
     from finahinking.research.quant_evidence import compute_quant_evidence
     assert compute_quant_evidence(snapshot,'2026-10-01')['status'] == 'READY'
     assert len(transport.calls) == 1
+
+
+def test_oversized_imported_number_is_a_structured_validation_error(app_http):
+    from finahinking.research.reproduction import ReproductionService, _digest
+    app, http, _ = app_http
+    package = ReproductionService(app.research_service).export(completed(app, 'oversize-number'), include_data=True)
+    package['snapshot']['observations'][0]['volume'] = 10**400
+    package['snapshot']['fingerprint'] = _digest({k:v for k,v in package['snapshot'].items() if k != 'fingerprint'})
+    package['snapshot_digest'] = package['snapshot']['fingerprint']
+    package['package_id'] = _digest({k:v for k,v in package.items() if k != 'package_id'})
+    status, result = post(app,http,BASE+'/restore',{'package':package})
+    assert status == 422 and '校验' in result['error']
+    assert http(BASE) == (200, {'packages':[]})

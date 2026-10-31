@@ -55,7 +55,8 @@ function renderReceipt(root, saved) {
   if (!saved) { panel.append(el(root, 'p', '尚无恢复记录。')); return; }
   const r = saved.receipt;
   panel.append(el(root, 'h4', r ? COPY[r.status] || r.status : '已恢复，等待显式复算'));
-  panel.append(table(root, '每项产物的复现范围', ['产物', '结果'], Object.entries(r?.products || saved.product_coverage).map(([key, status]) => [{ baseline: '基线回测与风险', quant_evidence: '多资产量化证据', factor_study: '因子研究', model_text: '模型文字' }[key], COPY[status] || status])));
+  const statuses = Object.fromEntries(Object.entries(saved.product_coverage).map(([key, status]) => [key, r?.products?.[key] || (r && status === 'INCLUDED' ? 'BLOCKED' : status)]));
+  panel.append(table(root, '每项产物的复现范围', ['产物', '结果'], Object.entries(statuses).map(([key, status]) => [{ baseline: '基线回测与风险', quant_evidence: '多资产量化证据', factor_study: '因子研究', model_text: '模型文字' }[key], COPY[status] || status])));
   const list = el(root, 'ul'); (r?.missing_dependencies || saved.missing_dependencies).forEach(code => list.append(el(root, 'li', NEEDS[code] || code))); panel.append(list);
   panel.append(el(root, 'p', '比对数值产物；原出处、运行标识与生成时间分别保留。内容摘要校验不等于第三方来源认证。'));
   if (r) panel.append(details(root, '执行版本与复算摘要', r));
@@ -87,11 +88,12 @@ export function mountResearchReproduction(root) {
     const value = await readLocalJSON(globalThis.fetch, BASE);
     if (current !== historyVersion) return;
     packages = value.packages;
-    const select = q('[data-repro-packages]'); const previous = selected || select.value;
+    const select = q('[data-repro-packages]'); const oldSelection = select.value; const previous = selected || oldSelection;
     select.replaceChildren();
     if (!packages.length) { const o = el(root,'option','暂无研究包'); o.value=''; select.append(o); }
     packages.forEach(p => { const o=el(root,'option',p.run_id+' · '+p.package_id.slice(0,8)); o.value=p.package_id; select.append(o); });
     if (packages.some(p=>p.package_id===previous)) select.value=previous;
+    if (select.value !== oldSelection) recompute.invalidate();
     renderReceipt(root, packages.find(p=>p.package_id===select.value)); sync();
   }
   q('[data-repro-compare-form]').addEventListener('submit', event => { event.preventDefault(); action('compare', async()=>{
@@ -118,7 +120,8 @@ export function mountResearchReproduction(root) {
   q('[data-repro-packages]').addEventListener('change',()=>{ historyVersion++; recompute.invalidate(); renderReceipt(root,packages.find(p=>p.package_id===q('[data-repro-packages]').value)); sync(); });
   q('[data-repro-recompute]').addEventListener('click',()=>action('recompute',async()=>{
     const id=q('[data-repro-packages]').value; const result=await recompute.run(id); if (!result) return;
-    const saved=packages.find(p=>p.package_id===id); saved.receipt=result; renderReceipt(root,saved);
+    const saved=packages.find(p=>p.package_id===id); if (saved) saved.receipt=result;
+    if (q('[data-repro-packages]').value === id) renderReceipt(root,saved);
   }));
   root.dataset.reproductionReady='true'; sync(); action('history',()=>history());
 }
