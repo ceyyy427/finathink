@@ -12,6 +12,7 @@ import threading
 import time
 from contextlib import contextmanager
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from socketserver import TCPServer
 from urllib.parse import urlsplit
 
 from finahinking.data.connection_settings import InMemoryDataCredentialStore
@@ -36,6 +37,12 @@ def compatibility_peer():
     class Server(ThreadingHTTPServer):
         daemon_threads=True
         block_on_close=False
+        def server_bind(self):
+            # HTTPServer normally calls getfqdn even for a numeric loopback
+            # address. This owned peer needs no name service in either direction.
+            TCPServer.server_bind(self)
+            self.server_name='localhost'
+            self.server_port=self.server_address[1]
         def handle_error(self,request,address):
             # Expected broken pipes/reset on bounded fault cases; no raw logs.
             pass

@@ -44,6 +44,7 @@ def test_compatibility_uses_only_owned_loopback_and_labels_every_scenario(tmp_pa
         assert host=='127.0.0.1',host
         return real_resolve(host,*args,**kwargs)
     monkeypatch.setattr(socket,'getaddrinfo',local_resolve)
+    monkeypatch.setattr(socket,'getfqdn',lambda *_:pytest.fail('local suite must not request reverse DNS'))
     calls=[]
     def local_only(address,*args,**kwargs):
         assert address[0]=='127.0.0.1',address

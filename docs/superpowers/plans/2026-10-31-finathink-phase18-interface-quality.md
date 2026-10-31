@@ -68,11 +68,11 @@
 
 **Interfaces:** GET `/api/diagnostics/interfaces`, GET `/api/diagnostics/interfaces/<id>`; POST `/api/diagnostics/interfaces/local`, POST `/api/diagnostics/interfaces/probe`; GET `/api/research/quality/cases`, POST `/api/research/quality/jobs`, GET `/api/research/quality/jobs/<id>`, POST `/api/research/quality/compare`. All POST CSRF; record GET/download inert. Same-origin evidence/repair allowlist. New diagnostic page uses existing shell.
 
-- [ ] Step 1: HTTP tests methods/CSRF/scope/malformed budgets/body/no-autocalls/safe JSON export and restart. Node late-response and safe-link tests. Browser local suite→record→download→reload, explicit own-interface probe and failures, controlled spawn quality task→report→assessment/compare; double submit, retained keys, error/recovery, keyboard and 1440/1920/375 screenshots.
-- [ ] Step 2: Run new API/Node/browser tests; Expected FAIL missing routes/controls.
-- [ ] Step 3: Implement scoped endpoints and Chinese diagnostic workspace, refresh/read-only history, explicit consent/budget, fixed-case model form and evidence details. Link nearby data/model settings. No auto retry or live benchmark on mount.
-- [ ] Step 4: Build, targeted + all existing browser, Node/perf, full Python; Ruff/governance/release/secret/pip/actionlint/clean installed wheel+backup. Inspect screenshots in one batched round; run Impeccable technical audit/detector once and fix verified issues in one batch. Expected PASS, conditional skips identified.
-- [ ] Step 5: Add guide, review/capability/roadmap status, CI browser list and installed APIs. Commit `feat: expose interface and research quality workbench`.
+- [x] Step 1: HTTP tests methods/CSRF/scope/malformed budgets/body/no-autocalls/safe JSON export and restart. Node late-response and safe-link tests. Browser local suite→record→download→reload, explicit own-interface probe and failures, controlled spawn quality task→report→assessment/compare; double submit, retained keys, error/recovery, keyboard and 1440/1920/375 screenshots.
+- [x] Step 2: Run new API/Node/browser tests; Expected FAIL missing routes/controls.
+- [x] Step 3: Implement scoped endpoints and Chinese diagnostic workspace, refresh/read-only history, explicit consent/budget, fixed-case model form and evidence details. Link nearby data/model settings. No auto retry or live benchmark on mount.
+- [x] Step 4: Build, targeted + all existing browser, Node/perf, full Python; Ruff/governance/release/secret/pip/actionlint/clean installed wheel+backup. Inspect screenshots in one batched round; run Impeccable technical audit/detector once and fix verified issues in one batch. Expected PASS, conditional skips identified.
+- [x] Step 5: Add guide, review/capability/roadmap status, CI browser list and installed APIs. Commit `feat: expose interface and research quality workbench`.
 
 ## Final gate
 

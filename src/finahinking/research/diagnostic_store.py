@@ -104,6 +104,15 @@ class DiagnosticStore:
 
     @staticmethod
     def _view(row):
+        if (row['kind'] not in _KINDS or not isinstance(row['receipt_id'],str) or not _ID.fullmatch(row['receipt_id'])
+                or not isinstance(row['intent_digest'],str) or not _DIGEST.fullmatch(row['intent_digest'])
+                or not isinstance(row['created_at'],str) or len(row['created_at'])>64):
+            raise ValueError('诊断记录身份校验失败。')
+        try:
+            created=datetime.fromisoformat(row['created_at'])
+            if created.tzinfo is None: raise ValueError()
+        except ValueError:
+            raise ValueError('诊断记录时间无效。') from None
         base={'schema_version':'interface-diagnostic.v1','receipt_id':row['receipt_id'],'kind':row['kind'],'input_digest':row['intent_digest'],'created_at':row['created_at'],'state':row['state'] or 'UNAVAILABLE','status':'UNKNOWN','request_count':None,'duration_ms':None,'usage':None,'estimated_cost':None,'cases':[]}
         if row['state'] is None:
             base.update(status='RECORD_EXPIRED')

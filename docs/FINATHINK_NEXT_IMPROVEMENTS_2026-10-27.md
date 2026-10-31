@@ -1,6 +1,6 @@
 # Finathink 下一轮优化方向
 
-日期：2026-10-27。以已合并的 Phase 10–15 为基线。这份路线将已有底座与下一步增强分开；Phase 16 已通过 PR #17 合并；Phase 17 已获确认并进入实现验收，Phase 18–20 仍为后续建议。
+日期：2026-10-27。以已合并的 Phase 10–15 为基线。这份路线将已有底座与下一步增强分开；Phase 16 已通过 PR #17 合并；Phase 17 已通过 PR #18 合并；本轮接续 Phase 18 接口与研究质量，Phase 19–20 保持后续顺序。
 
 ## 当前基础
 
@@ -42,3 +42,7 @@
 ## Phase 17 使用与验收
 
 首次研究路径、检查状态、恢复方式和接口见 [首次研究指南](RESEARCH_FIRST_RUN_GUIDE.md)，测试与审查见 [Phase 17 记录](reviews/2026-10-27-finathink-phase17-review.md)。
+
+## Phase 18 使用与验收
+
+固定样例、显式用户接口检查、去重恢复与指标口径见 [接口与研究质量指南](INTERFACE_QUALITY_GUIDE.md)，工程验收与发布记录见 [Phase 18 记录](reviews/2026-10-31-finathink-phase18-review.md)。

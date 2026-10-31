@@ -46,7 +46,7 @@ jobs:
           python -m playwright install --with-deps --only-shell chromium
           sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 install -y --no-install-recommends fonts-wqy-microhei
       - name: Required browser and HTTP journeys
-        run: python -m pytest tests/p7_5/test_e2e.py tests/p7_5/test_phase4_browser.py tests/p7_5/test_phase5_browser.py tests/p7_5/test_phase6_browser.py tests/p7_5/test_phase7_browser.py tests/p7_5/test_phase8_browser.py tests/p7_5/test_phase9_browser.py tests/p7_5/test_phase10_browser.py tests/p7_5/test_phase15_browser.py tests/p7_5/test_phase16_browser.py tests/p7_5/test_phase17_browser.py -q --junitxml=browser-results.xml
+        run: python -m pytest tests/p7_5/test_e2e.py tests/p7_5/test_phase4_browser.py tests/p7_5/test_phase5_browser.py tests/p7_5/test_phase6_browser.py tests/p7_5/test_phase7_browser.py tests/p7_5/test_phase8_browser.py tests/p7_5/test_phase9_browser.py tests/p7_5/test_phase10_browser.py tests/p7_5/test_phase15_browser.py tests/p7_5/test_phase16_browser.py tests/p7_5/test_phase17_browser.py tests/p7_5/test_phase18_browser.py -q --junitxml=browser-results.xml
       - name: Save screenshots, diagnostics, performance and test results
         if: always()
         uses: actions/upload-artifact@v4

@@ -83,3 +83,14 @@ def test_store_rejects_symlink(tmp_path):
     with pytest.raises(ValueError):
         store(link)
     assert target.read_bytes()==b'unchanged'
+
+
+def test_corrupted_receipt_metadata_is_rejected_without_echo(tmp_path):
+    from finahinking.research.diagnostic_store import DiagnosticStore
+
+    store=DiagnosticStore(tmp_path/'diag.sqlite3',scope_id='scope')
+    receipt,_=store.reserve('metadata',{},kind='USER_MODEL')
+    with store.connect() as db:
+        db.execute('UPDATE diagnostic_keys SET kind=? WHERE receipt_id=?',('https://private.invalid/secret-value',receipt['receipt_id']))
+    with pytest.raises(ValueError): store.get(receipt['receipt_id'])
+    with pytest.raises(ValueError): store.list()

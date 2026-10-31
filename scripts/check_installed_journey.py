@@ -41,6 +41,15 @@ def main():
     try:
         first_use = get('/research/jobs').decode()
         assert '从数据到第一份研究报告' in first_use and 'data-first-research-steps' in first_use
+        assert 'data-interface-workspace' in get('/diagnostics').decode()
+        assert not json.loads(get('/api/diagnostics/interfaces'))['records']
+        cases = json.loads(get('/api/research/quality/cases'))['cases']
+        assert {case['case_id'] for case in cases} == {'complete', 'sparse', 'conflict'}
+        assert not json.loads(get('/api/research/quality/jobs'))['jobs']
+        diagnostic = post('/api/diagnostics/interfaces/local', {})
+        assert diagnostic['status'] == 'READY' and len(diagnostic['cases']) == 34
+        assert diagnostic['external_account_verified'] is False and len(diagnostic['quality_demo']) == 3
+        assert json.loads(get('/api/diagnostics/interfaces/' + diagnostic['receipt_id'])) == diagnostic
         from finahinking.research.asset_catalog import ResearchAssetCatalog
 
         catalog = ResearchAssetCatalog.packaged()
@@ -85,6 +94,8 @@ def main():
     for _ in range(2):
         reopened = LocalApplication(LocalAppConfig(db_path=str(restored), offline=True))
         try:
+            restored_diagnostic = reopened.route('GET', '/api/diagnostics/interfaces/' + diagnostic['receipt_id'])
+            assert restored_diagnostic[0] == 200 and restored_diagnostic[2] == diagnostic
             value = reopened.research_service.get_job(job['job_id'])
             assert value['snapshot_ref'] == snapshot['snapshot_ref'] and value['attempts'] == 1
             assert value['report_url'] == job['report_url'] and value['report_status'] == 'AVAILABLE'
