@@ -56,11 +56,11 @@
 
 **Interfaces:** `quality_cases()` and `quality_case(case_id)` return 3 versioned curated SAMPLE inputs/expected roles. `QualityEvaluation(service, store)` exposes `submit(values)` (existing idempotency + provider consent), `evaluate(job_id)`, `compare(job_ids)` max4. Frozen binding case/input digest/request digest persisted per scope. `research-quality.v1` carries numerator/denominator/unknown, per-role evidence and recorded disagreements, latency/units/cost-null. Only comparisons with identical controlled conditions are comparable.
 
-- [ ] Step 1: Tests catalogue identity/PIT/expected roles; missing consent produces no job; identical submit returns one job; swap task/snapshot/scope/manifest/materials rejects. Existing controlled peer actually runs spawn for full/sparse/disagreement cases and reopens saved results.
-- [ ] Step 2: Tests failed/unknown/not-sent calls, zero/missing units, missing reports, foreign references, no denominator ->null; model identity does not grade quality. Same frozen conditions compare; changed budget/policy/case cannot compare. Cite current-run evidence only, no policy mutations.
-- [ ] Step 3: Run both new modules; Expected FAIL missing quality service.
-- [ ] Step 4: Implement catalogue, immutable binding and read-only scorer over existing request/report/journal, using frozen context validators; live submissions stay in current runtime. Include fixed-task scoring demonstration in local compatibility results without implying live model quality.
-- [ ] Step 5: Run new modules and grounded/context/journal/application suites; Expected PASS. Commit `feat: evaluate fixed research tasks with evidence`.
+- [x] Step 1: Tests catalogue identity/PIT/expected roles; missing consent produces no job; identical submit returns one job; swap task/snapshot/scope/manifest/materials rejects. Existing controlled peer actually runs spawn for full/sparse/disagreement cases and reopens saved results.
+- [x] Step 2: Tests failed/unknown/not-sent calls, zero/missing units, missing reports, foreign references, no denominator ->null; model identity does not grade quality. Same frozen conditions compare; changed budget/policy/case cannot compare. Cite current-run evidence only, no policy mutations.
+- [x] Step 3: Run both new modules; Expected FAIL missing quality service.
+- [x] Step 4: Implement catalogue, immutable binding and read-only scorer over existing request/report/journal, using frozen context validators; live submissions stay in current runtime. Include fixed-task scoring demonstration in local compatibility results without implying live model quality.
+- [x] Step 5: Run new modules and grounded/context/journal/application suites; Expected PASS. Commit `feat: evaluate fixed research tasks with evidence`.
 
 ### Task 4: 诊断工作区、交互验收和发布
 

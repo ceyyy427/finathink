@@ -147,5 +147,28 @@ def run_compatibility_suite():
             for name,expected in _SCENARIOS:
                 actual=model_probe(peer.model_config(name,kind),peer.model_transport,peer.credentials,.04)['status']
                 cases.append({'case_id':kind+'-'+name,'expected':expected,'observed':actual,'status':'PASS' if actual==expected else 'FAIL'})
+        demo=local_quality_examples(peer)
         count=peer.request_count
-    return {'status':'READY' if all(case['status']=='PASS' for case in cases) else 'FAILED','scope':'LOCAL_COMPATIBILITY','external_account_verified':False,'tls_verified':False,'request_count':count,'usage':None,'estimated_cost':None,'suite_version':'interface-compatibility.v1','cases':cases}
+    return {'status':'READY' if all(case['status']=='PASS' for case in cases) else 'FAILED','scope':'LOCAL_COMPATIBILITY','external_account_verified':False,'tls_verified':False,'request_count':count,'usage':None,'estimated_cost':None,'suite_version':'interface-compatibility.v1','cases':cases,'quality_demo':demo}
+
+
+def local_quality_examples(peer):
+    from .context_bundle import build_context_bundle
+    from .contracts import ResearchPlan, ResearchRequest, to_jsonable
+    from .drivers import GroundedApiDriver
+    from .quality_cases import ROLES, quality_case
+    from .quality_evaluation import score_quality
+
+    examples=[]
+    for case_id in ('complete','sparse','conflict'):
+        case=quality_case(case_id)
+        request=ResearchRequest('quality-demo-'+case_id,'SYNTH',case['as_of'],ResearchPlan(hypotheses=(case['question'],)),ROLES,'EQUITY_OR_ETF','quality-demo.v1','synthetic',snapshot_ref=case['snapshot_ref'])
+        driver=GroundedApiDriver(case['snapshot'],peer.model_config(),materials=case['materials'],transport=peer.model_transport,credential_store=peer.credentials)
+        reports=tuple(report for role in ROLES for report in driver.propose(request,{'analyst_role':role}).reports)
+        driver.propose(request,{'analyst_role':'research','reports':reports})
+        contexts={role:build_context_bundle(request,case['snapshot'],role,materials=case['materials']) for role in ROLES}
+        contexts['research']=build_context_bundle(request,case['snapshot'],'research',materials=case['materials'],reports=reports)
+        metrics=score_quality({'model_research':{'calls':driver.call_records,'roles':to_jsonable(reports),'synthesis':driver.synthesis_summary}},contexts,case['expected_roles'])
+        examples.append({'case_id':case_id,'mode':'SYNTHETIC_SCORE_EXAMPLE','attempted_calls':metrics['schema_acceptance']['attempted'],
+                         'schema_rate':metrics['schema_acceptance']['rate'],'citation_rate':metrics['citations']['rate'],'insufficient_rate':metrics['insufficient_data']['rate']})
+    return examples

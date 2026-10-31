@@ -15,7 +15,7 @@ STATUSES = frozenset({'READY','UNKNOWN','NOT_RUN','NOT_CONFIGURED','UNAUTHORIZED
 _KINDS = frozenset({'LOCAL_COMPATIBILITY','USER_DATA','USER_MODEL'})
 _ID = re.compile(r'^diag-[a-f0-9]{32}$')
 _DIGEST = re.compile(r'^[a-f0-9]{64}$')
-_FIELDS = frozenset({'status','scope','external_account_verified','tls_verified','request_count','duration_ms','usage','estimated_cost','record_count','quality_issue_count','pit_available','missing_fields','cases','suite_version'})
+_FIELDS = frozenset({'status','scope','external_account_verified','tls_verified','request_count','duration_ms','usage','estimated_cost','record_count','quality_issue_count','pit_available','missing_fields','cases','suite_version','quality_demo'})
 _PRICE_FIELDS = frozenset({'instrument','timestamp','available_at','open','high','low','close','volume','amount','industry','suspended'})
 
 
@@ -55,6 +55,15 @@ def public_report(report):
             raise ValueError('诊断检查结果不一致。')
     if report.get('suite_version') not in (None,'interface-compatibility.v1'):
         raise ValueError('诊断版本无效。')
+    demos=report.get('quality_demo',[])
+    if not isinstance(demos,list) or len(demos)>3:
+        raise ValueError('评分示例超出范围。')
+    for item in demos:
+        if (not isinstance(item,dict) or set(item)!={'case_id','mode','attempted_calls','schema_rate','citation_rate','insufficient_rate'}
+                or item['case_id'] not in {'complete','sparse','conflict'} or item['mode']!='SYNTHETIC_SCORE_EXAMPLE'
+                or type(item['attempted_calls']) is not int or not 0<=item['attempted_calls']<=6
+                or any(item[key] is not None and (type(item[key]) not in (int,float) or not 0<=item[key]<=1) for key in ('schema_rate','citation_rate','insufficient_rate'))):
+            raise ValueError('评分示例无效。')
     encoded=json.dumps(report,ensure_ascii=False,sort_keys=True,allow_nan=False,separators=(',',':'))
     if len(encoded.encode())>131072:
         raise ValueError('诊断内容超出范围。')
