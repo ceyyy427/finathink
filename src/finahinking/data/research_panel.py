@@ -104,7 +104,7 @@ def build_research_panel(snapshot, field_attachments, contract: PanelContract):
     native = {}
     for obs in snapshot.observations:
         native.setdefault(obs.instrument, []).append(obs)
-    index = pd.MultiIndex.from_product([pd.to_datetime(contract.observed_at, utc=True), contract.instrument_ids],
+    index = pd.MultiIndex.from_product([pd.DatetimeIndex([panel_time(t) for t in contract.observed_at]), contract.instrument_ids],
                                       names=['observed_at', 'instrument'])
     columns = sorted(set(units) | {'is_session', 'in_universe', 'trade_allowed', 'lot_size', 'settlement_days', 'split_factor', 'suspended'})
     if len(index) * len(columns) > 50000 or len(contract.observed_at) * (len(snapshot.observations) + len(seen)) > 5_000_000:

@@ -252,3 +252,12 @@ def test_api_explicit_unknown_availability_remains_unknown():
     fields = batch.to_panel_attachment(snap.fingerprint, units={'net_profit':'CNY'})
     assert fields.records[0]['available_at'] is None
     assert build(snap, [rules, fields], contract).frame.net_profit.isna().all()
+
+
+def test_mixed_timestamp_precision_uses_explicit_timezone_aware_parsing():
+    snap, rules, contract, build = fixture()
+    values = contract.to_dict(); values.pop('fingerprint'); values.pop('schema_version')
+    values['observed_at'][1] = '2026-01-03T16:00:00.500000Z'
+    panel = build(snap, [rules], api()[1](**values))
+    assert panel.frame.loc[(pd.Timestamp('2026-01-03T16:00:00.500000Z'),'AAA'), 'close'] == 3
+    assert panel.status == 'NEEDS_DATA'  # no calendar record at this new decision grid point
