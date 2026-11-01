@@ -423,6 +423,7 @@ class LocalApplication:
         self._research_application = None
         self._interface_diagnostics = None
         self._quality_evaluation = None
+        self._quant_knowledge = None
         self._diagnostic_provider_transport = provider_transport
         self._diagnostic_provider_credentials = provider_credential_store
         self._event_journey: Any | None = None
@@ -446,6 +447,21 @@ class LocalApplication:
         # The transport is inert until the user explicitly invokes a test or
         # research entrypoint. Saving a connection never performs I/O.
         self._data_transport = data_transport if data_transport is not None else BoundedHttpTransport()
+
+    @property
+    def quant_knowledge(self):
+        with self._lock:
+            if self._quant_knowledge is None:
+                from .research.asset_catalog import ResearchAssetCatalog
+                from .research.knowledge_index import KnowledgeIndex, KnowledgeIndexUnavailable
+
+                assets = ResearchAssetCatalog.packaged()
+                cache = None if self.config.db_path == ":memory:" else Path(self.config.db_path).expanduser().parent / ".knowledge-cache" / "public.sqlite3"
+                try:
+                    self._quant_knowledge = KnowledgeIndex.from_catalogs(DEFAULT_CATALOG, DEFAULT_KNOWLEDGE_CATALOG, assets, assets.knowledge_content(), index_path=cache)
+                except (ValueError, TypeError, KeyError) as exc:
+                    raise KnowledgeIndexUnavailable("知识目录或公开缓存未通过校验。请恢复完整安装；若缓存位置被其他文件占用，请移走该文件后重试。原文件未被覆盖。") from exc
+            return self._quant_knowledge
 
     @property
     def research_service(self):
@@ -1696,6 +1712,11 @@ class LocalApplication:
         parsed = urlsplit(path)
         query = parse_qs(parsed.query) if query is None else query
         clean = parsed.path.rstrip("/") or "/"
+        from .research.knowledge_workspace import route as knowledge_route
+
+        knowledge_response = knowledge_route(self, method, clean, query)
+        if knowledge_response is not None:
+            return knowledge_response
         from .research.learning_maintenance_routes import route as learning_maintenance_route
         from .research.reproduction_routes import route as reproduction_route
 
@@ -2544,7 +2565,15 @@ class LocalApplication:
 
             return factor_workspace_page(self.csrf_token)
         if page == "/research/jobs":
-            return self._research_jobs_page_body(query=query)
+            body = self._research_jobs_page_body(query=query)
+            if query and query.get("knowledge"):
+                from .research.knowledge_workspace import CSS, preparation_panel
+
+                try:
+                    body = f"<style>{CSS}</style>" + preparation_panel(self.quant_knowledge, query["knowledge"][0], continuation=False) + body
+                except KeyError:
+                    body = '<p role="alert">知识引用已失效，请返回知识库重新选择。</p>' + body
+            return body
         if page == "/research/compare":
             return self._research_comparison_page_body()
         if page in {"/research", "/workbench", "/ml", "/parameter", "/settings/engines", "/settings/providers", "/settings/data-sources"}:
@@ -2618,6 +2647,8 @@ class LocalApplication:
         return '<h1>未找到此页面</h1><p><a href="/">返回研究概览</a></p>'
 
     def close(self) -> None:
+        if self._quant_knowledge is not None:
+            self._quant_knowledge.close()
         if self._research_application is not None:
             self._research_application.close()
         self.connection.close()

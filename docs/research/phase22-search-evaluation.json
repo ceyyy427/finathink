@@ -1,0 +1,1486 @@
+{
+  "schema_version": "knowledge-search-evaluation.v1",
+  "evaluation_date": "2026-11-01",
+  "candidate_commit": "c7dd49d",
+  "protocol": "phase22-search-evaluation-freeze.md",
+  "note": "完整60题为验收门禁；分组独立报告，保留集技术子域2/3未达到单独75%线，未据此调参。",
+  "development": {
+    "split": "development",
+    "fingerprint": "c4e9987cd0a47742be39118fb96e33190c46413f2418f5c9c287b97869c40c75",
+    "golden_sha256": "5a4cef5f7f9d4bbcfa7a950a8a59545958ab1360d7884bc7352a885da8260a0b",
+    "top5_rate": 0.975,
+    "domains": {
+      "data-pit": {
+        "hits": 5,
+        "count": 5,
+        "rate": 1.0
+      },
+      "factor-validation": {
+        "hits": 4,
+        "count": 5,
+        "rate": 0.8
+      },
+      "fundamentals": {
+        "hits": 5,
+        "count": 5,
+        "rate": 1.0
+      },
+      "returns-market": {
+        "hits": 5,
+        "count": 5,
+        "rate": 1.0
+      },
+      "risk-review": {
+        "hits": 5,
+        "count": 5,
+        "rate": 1.0
+      },
+      "statistics": {
+        "hits": 5,
+        "count": 5,
+        "rate": 1.0
+      },
+      "strategy-portfolio": {
+        "hits": 5,
+        "count": 5,
+        "rate": 1.0
+      },
+      "technical-volume": {
+        "hits": 5,
+        "count": 5,
+        "rate": 1.0
+      }
+    },
+    "pass": true,
+    "outcomes": [
+      {
+        "query_id": "data-pit-01",
+        "hit": true,
+        "top5": [
+          "publication-lag",
+          "moving-average",
+          "backtesting",
+          "point-in-time",
+          "earnings-surprise"
+        ]
+      },
+      {
+        "query_id": "data-pit-02",
+        "hit": true,
+        "top5": [
+          "revisions",
+          "backtesting",
+          "universe-bias",
+          "adjustment",
+          "paper-settlement"
+        ]
+      },
+      {
+        "query_id": "data-pit-03",
+        "hit": true,
+        "top5": [
+          "missing-data",
+          "trading-calendar",
+          "liquidity",
+          "backtesting",
+          "adjustment"
+        ]
+      },
+      {
+        "query_id": "data-pit-04",
+        "hit": true,
+        "top5": [
+          "universe-bias",
+          "return",
+          "downside-risk",
+          "slippage",
+          "earnings-yield"
+        ]
+      },
+      {
+        "query_id": "data-pit-05",
+        "hit": true,
+        "top5": [
+          "adjustment",
+          "drawdown",
+          "compounding",
+          "market-cap",
+          "confidence-interval"
+        ]
+      },
+      {
+        "query_id": "returns-market-01",
+        "hit": true,
+        "top5": [
+          "total-return",
+          "return",
+          "bollinger",
+          "units",
+          "mean"
+        ]
+      },
+      {
+        "query_id": "returns-market-02",
+        "hit": true,
+        "top5": [
+          "compounding",
+          "standard-deviation",
+          "adjustment",
+          "overfitting",
+          "mean-reversion"
+        ]
+      },
+      {
+        "query_id": "returns-market-03",
+        "hit": true,
+        "top5": [
+          "log-return",
+          "units",
+          "excess-return",
+          "revisions",
+          "moving-average"
+        ]
+      },
+      {
+        "query_id": "returns-market-04",
+        "hit": true,
+        "top5": [
+          "excess-return",
+          "benchmark",
+          "covariance",
+          "ema",
+          "slippage"
+        ]
+      },
+      {
+        "query_id": "returns-market-05",
+        "hit": true,
+        "top5": [
+          "sharpe",
+          "annualization",
+          "rsi",
+          "icir",
+          "momentum"
+        ]
+      },
+      {
+        "query_id": "statistics-01",
+        "hit": true,
+        "top5": [
+          "standard-deviation",
+          "volatility",
+          "variance",
+          "capacity",
+          "autocorrelation"
+        ]
+      },
+      {
+        "query_id": "statistics-02",
+        "hit": true,
+        "top5": [
+          "variance",
+          "standard-deviation",
+          "correlation",
+          "volatility",
+          "risk-contribution"
+        ]
+      },
+      {
+        "query_id": "statistics-03",
+        "hit": true,
+        "top5": [
+          "covariance",
+          "inverse-volatility",
+          "asset-growth",
+          "gross-profitability",
+          "covariance-diversification"
+        ]
+      },
+      {
+        "query_id": "statistics-04",
+        "hit": true,
+        "top5": [
+          "correlation",
+          "rank-ic",
+          "standard-deviation",
+          "autocorrelation",
+          "annualization"
+        ]
+      },
+      {
+        "query_id": "statistics-05",
+        "hit": true,
+        "top5": [
+          "neutralization",
+          "regression",
+          "excess-return",
+          "quantile-return",
+          "adjustment"
+        ]
+      },
+      {
+        "query_id": "technical-volume-01",
+        "hit": true,
+        "top5": [
+          "moving-average",
+          "ema",
+          "atr",
+          "momentum",
+          "excess-return"
+        ]
+      },
+      {
+        "query_id": "technical-volume-02",
+        "hit": true,
+        "top5": [
+          "ema",
+          "vwap",
+          "rsi",
+          "reproducibility",
+          "moving-average"
+        ]
+      },
+      {
+        "query_id": "technical-volume-03",
+        "hit": true,
+        "top5": [
+          "momentum",
+          "asset-growth",
+          "volume-price",
+          "alignment",
+          "mean-reversion"
+        ]
+      },
+      {
+        "query_id": "technical-volume-04",
+        "hit": true,
+        "top5": [
+          "mean-reversion",
+          "slippage",
+          "value-at-risk",
+          "regression",
+          "variance"
+        ]
+      },
+      {
+        "query_id": "technical-volume-05",
+        "hit": true,
+        "top5": [
+          "rsi",
+          "roa",
+          "excess-return",
+          "moving-average",
+          "annualization"
+        ]
+      },
+      {
+        "query_id": "fundamentals-01",
+        "hit": true,
+        "top5": [
+          "book-to-market",
+          "earnings-yield",
+          "atr",
+          "roe",
+          "leverage"
+        ]
+      },
+      {
+        "query_id": "fundamentals-02",
+        "hit": true,
+        "top5": [
+          "earnings-yield",
+          "inverse-volatility",
+          "concentration",
+          "bollinger",
+          "log-return"
+        ]
+      },
+      {
+        "query_id": "fundamentals-03",
+        "hit": true,
+        "top5": [
+          "book-to-market",
+          "roe",
+          "leverage",
+          "earnings-yield",
+          "gross-profitability"
+        ]
+      },
+      {
+        "query_id": "fundamentals-04",
+        "hit": true,
+        "top5": [
+          "asset-growth",
+          "leverage",
+          "roa",
+          "factor-decay",
+          "backtesting"
+        ]
+      },
+      {
+        "query_id": "fundamentals-05",
+        "hit": true,
+        "top5": [
+          "accruals",
+          "cashflow-quality",
+          "asset-growth",
+          "earnings-yield",
+          "compounding"
+        ]
+      },
+      {
+        "query_id": "factor-validation-01",
+        "hit": true,
+        "top5": [
+          "publication-lag",
+          "rank-ic",
+          "factor-decay",
+          "backtesting",
+          "information-coefficient"
+        ]
+      },
+      {
+        "query_id": "factor-validation-02",
+        "hit": true,
+        "top5": [
+          "icir",
+          "sharpe",
+          "correlation",
+          "standard-deviation",
+          "variance"
+        ]
+      },
+      {
+        "query_id": "factor-validation-03",
+        "hit": true,
+        "top5": [
+          "quantile-return",
+          "alignment",
+          "benchmark",
+          "total-return",
+          "universe-bias"
+        ]
+      },
+      {
+        "query_id": "factor-validation-04",
+        "hit": true,
+        "top5": [
+          "neutralization",
+          "etf-exposure",
+          "beta",
+          "overfitting",
+          "book-to-market"
+        ]
+      },
+      {
+        "query_id": "factor-validation-05",
+        "hit": false,
+        "top5": [
+          "autocorrelation",
+          "rank-ic",
+          "annualization",
+          "rsi",
+          "roa"
+        ]
+      },
+      {
+        "query_id": "strategy-portfolio-01",
+        "hit": true,
+        "top5": [
+          "equal-weight",
+          "alignment",
+          "etf-exposure",
+          "asset-growth",
+          "log-return"
+        ]
+      },
+      {
+        "query_id": "strategy-portfolio-02",
+        "hit": true,
+        "top5": [
+          "inverse-volatility",
+          "ema",
+          "equal-weight",
+          "asset-growth",
+          "volatility"
+        ]
+      },
+      {
+        "query_id": "strategy-portfolio-03",
+        "hit": true,
+        "top5": [
+          "risk-contribution",
+          "inverse-volatility",
+          "downside-risk",
+          "concentration",
+          "asset-growth"
+        ]
+      },
+      {
+        "query_id": "strategy-portfolio-04",
+        "hit": true,
+        "top5": [
+          "equal-weight",
+          "rebalance",
+          "downside-risk",
+          "turnover-ratio",
+          "return"
+        ]
+      },
+      {
+        "query_id": "strategy-portfolio-05",
+        "hit": true,
+        "top5": [
+          "slippage",
+          "backtesting",
+          "total-return",
+          "universe-bias",
+          "transaction-cost"
+        ]
+      },
+      {
+        "query_id": "risk-review-01",
+        "hit": true,
+        "top5": [
+          "volatility",
+          "standard-deviation",
+          "sharpe",
+          "inverse-volatility",
+          "bollinger"
+        ]
+      },
+      {
+        "query_id": "risk-review-02",
+        "hit": true,
+        "top5": [
+          "drawdown",
+          "excess-return",
+          "compounding",
+          "capacity",
+          "transaction-cost"
+        ]
+      },
+      {
+        "query_id": "risk-review-03",
+        "hit": true,
+        "top5": [
+          "downside-risk",
+          "rebalance",
+          "beta",
+          "rank-ic",
+          "volatility"
+        ]
+      },
+      {
+        "query_id": "risk-review-04",
+        "hit": true,
+        "top5": [
+          "value-at-risk",
+          "expected-shortfall",
+          "quantile-return",
+          "robust-statistics",
+          "mean"
+        ]
+      },
+      {
+        "query_id": "risk-review-05",
+        "hit": true,
+        "top5": [
+          "volume-price",
+          "capacity",
+          "turnover-ratio",
+          "liquidity",
+          "vwap"
+        ]
+      }
+    ]
+  },
+  "holdout": {
+    "split": "holdout",
+    "fingerprint": "c4e9987cd0a47742be39118fb96e33190c46413f2418f5c9c287b97869c40c75",
+    "golden_sha256": "5a4cef5f7f9d4bbcfa7a950a8a59545958ab1360d7884bc7352a885da8260a0b",
+    "top5_rate": 0.95,
+    "domains": {
+      "data-pit": {
+        "hits": 3,
+        "count": 3,
+        "rate": 1.0
+      },
+      "factor-validation": {
+        "hits": 2,
+        "count": 2,
+        "rate": 1.0
+      },
+      "fundamentals": {
+        "hits": 2,
+        "count": 2,
+        "rate": 1.0
+      },
+      "returns-market": {
+        "hits": 3,
+        "count": 3,
+        "rate": 1.0
+      },
+      "risk-review": {
+        "hits": 2,
+        "count": 2,
+        "rate": 1.0
+      },
+      "statistics": {
+        "hits": 3,
+        "count": 3,
+        "rate": 1.0
+      },
+      "strategy-portfolio": {
+        "hits": 2,
+        "count": 2,
+        "rate": 1.0
+      },
+      "technical-volume": {
+        "hits": 2,
+        "count": 3,
+        "rate": 0.6666666666666666
+      }
+    },
+    "pass": false,
+    "outcomes": [
+      {
+        "query_id": "data-pit-06",
+        "hit": true,
+        "top5": [
+          "trading-calendar",
+          "capacity",
+          "covariance",
+          "alignment",
+          "paper-settlement"
+        ]
+      },
+      {
+        "query_id": "data-pit-07",
+        "hit": true,
+        "top5": [
+          "alignment",
+          "trading-calendar",
+          "units",
+          "revisions",
+          "ema"
+        ]
+      },
+      {
+        "query_id": "data-pit-08",
+        "hit": true,
+        "top5": [
+          "data-fingerprint",
+          "standard-deviation",
+          "robust-statistics",
+          "paper-settlement",
+          "revisions"
+        ]
+      },
+      {
+        "query_id": "returns-market-06",
+        "hit": true,
+        "top5": [
+          "total-return",
+          "return",
+          "earnings-yield",
+          "adjustment",
+          "roe"
+        ]
+      },
+      {
+        "query_id": "returns-market-07",
+        "hit": true,
+        "top5": [
+          "turnover-ratio",
+          "market-cap",
+          "adjustment",
+          "equal-weight",
+          "vwap"
+        ]
+      },
+      {
+        "query_id": "returns-market-08",
+        "hit": true,
+        "top5": [
+          "liquidity",
+          "turnover-ratio",
+          "backtesting",
+          "rebalance",
+          "factor-decay"
+        ]
+      },
+      {
+        "query_id": "statistics-06",
+        "hit": true,
+        "top5": [
+          "liquidity",
+          "leverage",
+          "beta",
+          "covariance-diversification",
+          "book-to-market"
+        ]
+      },
+      {
+        "query_id": "statistics-07",
+        "hit": true,
+        "top5": [
+          "confidence-interval",
+          "overfitting",
+          "vwap",
+          "log-return",
+          "mean-reversion"
+        ]
+      },
+      {
+        "query_id": "statistics-08",
+        "hit": true,
+        "top5": [
+          "autocorrelation",
+          "icir",
+          "correlation",
+          "compounding",
+          "book-to-market"
+        ]
+      },
+      {
+        "query_id": "technical-volume-06",
+        "hit": false,
+        "top5": [
+          "ema",
+          "earnings-surprise",
+          "excess-return",
+          "moving-average",
+          "bollinger"
+        ]
+      },
+      {
+        "query_id": "technical-volume-07",
+        "hit": true,
+        "top5": [
+          "atr",
+          "volatility",
+          "rsi",
+          "moving-average",
+          "annualization"
+        ]
+      },
+      {
+        "query_id": "technical-volume-08",
+        "hit": true,
+        "top5": [
+          "vwap",
+          "compounding",
+          "capacity",
+          "equal-weight",
+          "volume-price"
+        ]
+      },
+      {
+        "query_id": "fundamentals-06",
+        "hit": true,
+        "top5": [
+          "leverage",
+          "gross-profitability",
+          "expected-shortfall",
+          "return",
+          "turnover-ratio"
+        ]
+      },
+      {
+        "query_id": "fundamentals-07",
+        "hit": true,
+        "top5": [
+          "earnings-surprise",
+          "asset-growth",
+          "publication-lag",
+          "earnings-yield",
+          "confidence-interval"
+        ]
+      },
+      {
+        "query_id": "factor-validation-06",
+        "hit": true,
+        "top5": [
+          "factor-decay",
+          "revisions",
+          "liquidity",
+          "benchmark",
+          "momentum"
+        ]
+      },
+      {
+        "query_id": "factor-validation-07",
+        "hit": true,
+        "top5": [
+          "overfitting",
+          "oos",
+          "data-fingerprint",
+          "reproducibility",
+          "revisions"
+        ]
+      },
+      {
+        "query_id": "strategy-portfolio-06",
+        "hit": true,
+        "top5": [
+          "etf-exposure",
+          "equal-weight",
+          "neutralization",
+          "universe-bias",
+          "total-return"
+        ]
+      },
+      {
+        "query_id": "strategy-portfolio-07",
+        "hit": true,
+        "top5": [
+          "volatility",
+          "sharpe",
+          "compounding",
+          "inverse-volatility",
+          "book-to-market"
+        ]
+      },
+      {
+        "query_id": "risk-review-06",
+        "hit": true,
+        "top5": [
+          "paper-settlement",
+          "learning-review",
+          "backtesting",
+          "point-in-time",
+          "oos"
+        ]
+      },
+      {
+        "query_id": "risk-review-07",
+        "hit": true,
+        "top5": [
+          "capacity",
+          "reproducibility",
+          "data-fingerprint",
+          "learning-review",
+          "benchmark"
+        ]
+      }
+    ]
+  },
+  "all": {
+    "split": "all",
+    "fingerprint": "c4e9987cd0a47742be39118fb96e33190c46413f2418f5c9c287b97869c40c75",
+    "golden_sha256": "5a4cef5f7f9d4bbcfa7a950a8a59545958ab1360d7884bc7352a885da8260a0b",
+    "top5_rate": 0.9666666666666667,
+    "domains": {
+      "data-pit": {
+        "hits": 8,
+        "count": 8,
+        "rate": 1.0
+      },
+      "factor-validation": {
+        "hits": 6,
+        "count": 7,
+        "rate": 0.8571428571428571
+      },
+      "fundamentals": {
+        "hits": 7,
+        "count": 7,
+        "rate": 1.0
+      },
+      "returns-market": {
+        "hits": 8,
+        "count": 8,
+        "rate": 1.0
+      },
+      "risk-review": {
+        "hits": 7,
+        "count": 7,
+        "rate": 1.0
+      },
+      "statistics": {
+        "hits": 8,
+        "count": 8,
+        "rate": 1.0
+      },
+      "strategy-portfolio": {
+        "hits": 7,
+        "count": 7,
+        "rate": 1.0
+      },
+      "technical-volume": {
+        "hits": 7,
+        "count": 8,
+        "rate": 0.875
+      }
+    },
+    "pass": true,
+    "outcomes": [
+      {
+        "query_id": "data-pit-01",
+        "hit": true,
+        "top5": [
+          "publication-lag",
+          "moving-average",
+          "backtesting",
+          "point-in-time",
+          "earnings-surprise"
+        ]
+      },
+      {
+        "query_id": "data-pit-02",
+        "hit": true,
+        "top5": [
+          "revisions",
+          "backtesting",
+          "universe-bias",
+          "adjustment",
+          "paper-settlement"
+        ]
+      },
+      {
+        "query_id": "data-pit-03",
+        "hit": true,
+        "top5": [
+          "missing-data",
+          "trading-calendar",
+          "liquidity",
+          "backtesting",
+          "adjustment"
+        ]
+      },
+      {
+        "query_id": "data-pit-04",
+        "hit": true,
+        "top5": [
+          "universe-bias",
+          "return",
+          "downside-risk",
+          "slippage",
+          "earnings-yield"
+        ]
+      },
+      {
+        "query_id": "data-pit-05",
+        "hit": true,
+        "top5": [
+          "adjustment",
+          "drawdown",
+          "compounding",
+          "market-cap",
+          "confidence-interval"
+        ]
+      },
+      {
+        "query_id": "data-pit-06",
+        "hit": true,
+        "top5": [
+          "trading-calendar",
+          "capacity",
+          "covariance",
+          "alignment",
+          "paper-settlement"
+        ]
+      },
+      {
+        "query_id": "data-pit-07",
+        "hit": true,
+        "top5": [
+          "alignment",
+          "trading-calendar",
+          "units",
+          "revisions",
+          "ema"
+        ]
+      },
+      {
+        "query_id": "data-pit-08",
+        "hit": true,
+        "top5": [
+          "data-fingerprint",
+          "standard-deviation",
+          "robust-statistics",
+          "paper-settlement",
+          "revisions"
+        ]
+      },
+      {
+        "query_id": "returns-market-01",
+        "hit": true,
+        "top5": [
+          "total-return",
+          "return",
+          "bollinger",
+          "units",
+          "mean"
+        ]
+      },
+      {
+        "query_id": "returns-market-02",
+        "hit": true,
+        "top5": [
+          "compounding",
+          "standard-deviation",
+          "adjustment",
+          "overfitting",
+          "mean-reversion"
+        ]
+      },
+      {
+        "query_id": "returns-market-03",
+        "hit": true,
+        "top5": [
+          "log-return",
+          "units",
+          "excess-return",
+          "revisions",
+          "moving-average"
+        ]
+      },
+      {
+        "query_id": "returns-market-04",
+        "hit": true,
+        "top5": [
+          "excess-return",
+          "benchmark",
+          "covariance",
+          "ema",
+          "slippage"
+        ]
+      },
+      {
+        "query_id": "returns-market-05",
+        "hit": true,
+        "top5": [
+          "sharpe",
+          "annualization",
+          "rsi",
+          "icir",
+          "momentum"
+        ]
+      },
+      {
+        "query_id": "returns-market-06",
+        "hit": true,
+        "top5": [
+          "total-return",
+          "return",
+          "earnings-yield",
+          "adjustment",
+          "roe"
+        ]
+      },
+      {
+        "query_id": "returns-market-07",
+        "hit": true,
+        "top5": [
+          "turnover-ratio",
+          "market-cap",
+          "adjustment",
+          "equal-weight",
+          "vwap"
+        ]
+      },
+      {
+        "query_id": "returns-market-08",
+        "hit": true,
+        "top5": [
+          "liquidity",
+          "turnover-ratio",
+          "backtesting",
+          "rebalance",
+          "factor-decay"
+        ]
+      },
+      {
+        "query_id": "statistics-01",
+        "hit": true,
+        "top5": [
+          "standard-deviation",
+          "volatility",
+          "variance",
+          "capacity",
+          "autocorrelation"
+        ]
+      },
+      {
+        "query_id": "statistics-02",
+        "hit": true,
+        "top5": [
+          "variance",
+          "standard-deviation",
+          "correlation",
+          "volatility",
+          "risk-contribution"
+        ]
+      },
+      {
+        "query_id": "statistics-03",
+        "hit": true,
+        "top5": [
+          "covariance",
+          "inverse-volatility",
+          "asset-growth",
+          "gross-profitability",
+          "covariance-diversification"
+        ]
+      },
+      {
+        "query_id": "statistics-04",
+        "hit": true,
+        "top5": [
+          "correlation",
+          "rank-ic",
+          "standard-deviation",
+          "autocorrelation",
+          "annualization"
+        ]
+      },
+      {
+        "query_id": "statistics-05",
+        "hit": true,
+        "top5": [
+          "neutralization",
+          "regression",
+          "excess-return",
+          "quantile-return",
+          "adjustment"
+        ]
+      },
+      {
+        "query_id": "statistics-06",
+        "hit": true,
+        "top5": [
+          "liquidity",
+          "leverage",
+          "beta",
+          "covariance-diversification",
+          "book-to-market"
+        ]
+      },
+      {
+        "query_id": "statistics-07",
+        "hit": true,
+        "top5": [
+          "confidence-interval",
+          "overfitting",
+          "vwap",
+          "log-return",
+          "mean-reversion"
+        ]
+      },
+      {
+        "query_id": "statistics-08",
+        "hit": true,
+        "top5": [
+          "autocorrelation",
+          "icir",
+          "correlation",
+          "compounding",
+          "book-to-market"
+        ]
+      },
+      {
+        "query_id": "technical-volume-01",
+        "hit": true,
+        "top5": [
+          "moving-average",
+          "ema",
+          "atr",
+          "momentum",
+          "excess-return"
+        ]
+      },
+      {
+        "query_id": "technical-volume-02",
+        "hit": true,
+        "top5": [
+          "ema",
+          "vwap",
+          "rsi",
+          "reproducibility",
+          "moving-average"
+        ]
+      },
+      {
+        "query_id": "technical-volume-03",
+        "hit": true,
+        "top5": [
+          "momentum",
+          "asset-growth",
+          "volume-price",
+          "alignment",
+          "mean-reversion"
+        ]
+      },
+      {
+        "query_id": "technical-volume-04",
+        "hit": true,
+        "top5": [
+          "mean-reversion",
+          "slippage",
+          "value-at-risk",
+          "regression",
+          "variance"
+        ]
+      },
+      {
+        "query_id": "technical-volume-05",
+        "hit": true,
+        "top5": [
+          "rsi",
+          "roa",
+          "excess-return",
+          "moving-average",
+          "annualization"
+        ]
+      },
+      {
+        "query_id": "technical-volume-06",
+        "hit": false,
+        "top5": [
+          "ema",
+          "earnings-surprise",
+          "excess-return",
+          "moving-average",
+          "bollinger"
+        ]
+      },
+      {
+        "query_id": "technical-volume-07",
+        "hit": true,
+        "top5": [
+          "atr",
+          "volatility",
+          "rsi",
+          "moving-average",
+          "annualization"
+        ]
+      },
+      {
+        "query_id": "technical-volume-08",
+        "hit": true,
+        "top5": [
+          "vwap",
+          "compounding",
+          "capacity",
+          "equal-weight",
+          "volume-price"
+        ]
+      },
+      {
+        "query_id": "fundamentals-01",
+        "hit": true,
+        "top5": [
+          "book-to-market",
+          "earnings-yield",
+          "atr",
+          "roe",
+          "leverage"
+        ]
+      },
+      {
+        "query_id": "fundamentals-02",
+        "hit": true,
+        "top5": [
+          "earnings-yield",
+          "inverse-volatility",
+          "concentration",
+          "bollinger",
+          "log-return"
+        ]
+      },
+      {
+        "query_id": "fundamentals-03",
+        "hit": true,
+        "top5": [
+          "book-to-market",
+          "roe",
+          "leverage",
+          "earnings-yield",
+          "gross-profitability"
+        ]
+      },
+      {
+        "query_id": "fundamentals-04",
+        "hit": true,
+        "top5": [
+          "asset-growth",
+          "leverage",
+          "roa",
+          "factor-decay",
+          "backtesting"
+        ]
+      },
+      {
+        "query_id": "fundamentals-05",
+        "hit": true,
+        "top5": [
+          "accruals",
+          "cashflow-quality",
+          "asset-growth",
+          "earnings-yield",
+          "compounding"
+        ]
+      },
+      {
+        "query_id": "fundamentals-06",
+        "hit": true,
+        "top5": [
+          "leverage",
+          "gross-profitability",
+          "expected-shortfall",
+          "return",
+          "turnover-ratio"
+        ]
+      },
+      {
+        "query_id": "fundamentals-07",
+        "hit": true,
+        "top5": [
+          "earnings-surprise",
+          "asset-growth",
+          "publication-lag",
+          "earnings-yield",
+          "confidence-interval"
+        ]
+      },
+      {
+        "query_id": "factor-validation-01",
+        "hit": true,
+        "top5": [
+          "publication-lag",
+          "rank-ic",
+          "factor-decay",
+          "backtesting",
+          "information-coefficient"
+        ]
+      },
+      {
+        "query_id": "factor-validation-02",
+        "hit": true,
+        "top5": [
+          "icir",
+          "sharpe",
+          "correlation",
+          "standard-deviation",
+          "variance"
+        ]
+      },
+      {
+        "query_id": "factor-validation-03",
+        "hit": true,
+        "top5": [
+          "quantile-return",
+          "alignment",
+          "benchmark",
+          "total-return",
+          "universe-bias"
+        ]
+      },
+      {
+        "query_id": "factor-validation-04",
+        "hit": true,
+        "top5": [
+          "neutralization",
+          "etf-exposure",
+          "beta",
+          "overfitting",
+          "book-to-market"
+        ]
+      },
+      {
+        "query_id": "factor-validation-05",
+        "hit": false,
+        "top5": [
+          "autocorrelation",
+          "rank-ic",
+          "annualization",
+          "rsi",
+          "roa"
+        ]
+      },
+      {
+        "query_id": "factor-validation-06",
+        "hit": true,
+        "top5": [
+          "factor-decay",
+          "revisions",
+          "liquidity",
+          "benchmark",
+          "momentum"
+        ]
+      },
+      {
+        "query_id": "factor-validation-07",
+        "hit": true,
+        "top5": [
+          "overfitting",
+          "oos",
+          "data-fingerprint",
+          "reproducibility",
+          "revisions"
+        ]
+      },
+      {
+        "query_id": "strategy-portfolio-01",
+        "hit": true,
+        "top5": [
+          "equal-weight",
+          "alignment",
+          "etf-exposure",
+          "asset-growth",
+          "log-return"
+        ]
+      },
+      {
+        "query_id": "strategy-portfolio-02",
+        "hit": true,
+        "top5": [
+          "inverse-volatility",
+          "ema",
+          "equal-weight",
+          "asset-growth",
+          "volatility"
+        ]
+      },
+      {
+        "query_id": "strategy-portfolio-03",
+        "hit": true,
+        "top5": [
+          "risk-contribution",
+          "inverse-volatility",
+          "downside-risk",
+          "concentration",
+          "asset-growth"
+        ]
+      },
+      {
+        "query_id": "strategy-portfolio-04",
+        "hit": true,
+        "top5": [
+          "equal-weight",
+          "rebalance",
+          "downside-risk",
+          "turnover-ratio",
+          "return"
+        ]
+      },
+      {
+        "query_id": "strategy-portfolio-05",
+        "hit": true,
+        "top5": [
+          "slippage",
+          "backtesting",
+          "total-return",
+          "universe-bias",
+          "transaction-cost"
+        ]
+      },
+      {
+        "query_id": "strategy-portfolio-06",
+        "hit": true,
+        "top5": [
+          "etf-exposure",
+          "equal-weight",
+          "neutralization",
+          "universe-bias",
+          "total-return"
+        ]
+      },
+      {
+        "query_id": "strategy-portfolio-07",
+        "hit": true,
+        "top5": [
+          "volatility",
+          "sharpe",
+          "compounding",
+          "inverse-volatility",
+          "book-to-market"
+        ]
+      },
+      {
+        "query_id": "risk-review-01",
+        "hit": true,
+        "top5": [
+          "volatility",
+          "standard-deviation",
+          "sharpe",
+          "inverse-volatility",
+          "bollinger"
+        ]
+      },
+      {
+        "query_id": "risk-review-02",
+        "hit": true,
+        "top5": [
+          "drawdown",
+          "excess-return",
+          "compounding",
+          "capacity",
+          "transaction-cost"
+        ]
+      },
+      {
+        "query_id": "risk-review-03",
+        "hit": true,
+        "top5": [
+          "downside-risk",
+          "rebalance",
+          "beta",
+          "rank-ic",
+          "volatility"
+        ]
+      },
+      {
+        "query_id": "risk-review-04",
+        "hit": true,
+        "top5": [
+          "value-at-risk",
+          "expected-shortfall",
+          "quantile-return",
+          "robust-statistics",
+          "mean"
+        ]
+      },
+      {
+        "query_id": "risk-review-05",
+        "hit": true,
+        "top5": [
+          "volume-price",
+          "capacity",
+          "turnover-ratio",
+          "liquidity",
+          "vwap"
+        ]
+      },
+      {
+        "query_id": "risk-review-06",
+        "hit": true,
+        "top5": [
+          "paper-settlement",
+          "learning-review",
+          "backtesting",
+          "point-in-time",
+          "oos"
+        ]
+      },
+      {
+        "query_id": "risk-review-07",
+        "hit": true,
+        "top5": [
+          "capacity",
+          "reproducibility",
+          "data-fingerprint",
+          "learning-review",
+          "benchmark"
+        ]
+      }
+    ]
+  },
+  "post_review": {
+    "change": "仅学习路径顺序与缓存身份校验修正，未更改检索文本、分词、权重或题集。",
+    "fingerprint": "6c24ce752d1ec22cd01db8e5d3dc0c55d1c1804255cedb91f32048e511ee9c36",
+    "outcomes_unchanged": true,
+    "top5_rate": 0.9666666666666667
+  }
+}

@@ -48,7 +48,16 @@ assert 'not presented as an upstream NOTICE' in catalog.read_text('alphalens-att
 assert catalog.get_resource('alphalens-performance-reference').license_id == 'Apache-2.0'
 for ref in catalog.resources():
     if ref.availability == 'PACKAGED':
-        assert ref.rights_ref and catalog.read_text(ref.resource_id)
+        assert ref.rights_ref and catalog.read_text(ref.resource_id, max_bytes=1048576)
+from finahinking.p7_5.knowledge import DEFAULT_CATALOG
+from finahinking.p8_2b.catalog import DEFAULT_KNOWLEDGE_CATALOG
+from finahinking.research.knowledge_index import KnowledgeIndex
+with KnowledgeIndex.from_catalogs(DEFAULT_CATALOG, DEFAULT_KNOWLEDGE_CATALOG, catalog, catalog.knowledge_content()) as knowledge:
+    assert len(knowledge.export()['items']) == 80
+    assert len(knowledge.paths()) == 16
+    assert knowledge.search('时点可用')[0]['canonical_id'] == 'point-in-time'
+    assert knowledge.resolve('ols')['canonical_id'] == 'regression'
+    assert knowledge.resolve('drawdown')['examples'][0]['expected'] == .25
 print('installed research assets verified')
 """
     result = subprocess.run([str(python), "-I", "-c", probe], cwd=tmp_path,
