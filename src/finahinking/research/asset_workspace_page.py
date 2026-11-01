@@ -9,7 +9,8 @@ from urllib.parse import urlencode, urlsplit
 
 from .asset_contracts import AssetLoadError
 
-KINDS = {"methods": "研究方法", "behavior": "公开行为档案", "lessons": "反例与复盘"}
+KINDS = {"methods": "研究方法", "behavior": "公开行为档案", "lessons": "反例与复盘",
+         "sources": "开源来源"}
 _ID = re.compile(r"^[a-z0-9][a-z0-9._-]{0,159}$")
 _STATES = {"PACKAGED": "方法资料已打包", "PARTIAL": "资料待补齐", "CORRUPT": "资料校验失败", "MISSING": "资料缺失"}
 
@@ -55,6 +56,8 @@ class ResearchAssetWorkspace:
             "body": body}
 
     def _items(self, kind):
+        if kind == "sources":
+            return self._source_items()
         if kind in {"methods", "behavior"}:
             skills = self.catalog.skills()
             if kind == "behavior":
@@ -69,6 +72,40 @@ class ResearchAssetWorkspace:
             "body": "\n\n".join((lesson.summary, "修正方向：" + lesson.mitigation,
                 "回归检查：" + lesson.regression_check, "重访条件：" + lesson.revisit_when)),
             "lesson": asdict(lesson)} for lesson in self.catalog.lessons_for(())]
+
+    def _source_items(self):
+        result = []
+        try:
+            summary = self.catalog.source_intake_summary()
+        except AssetLoadError as exc:
+            if exc.code == "UNKNOWN_RESOURCE" and exc.resource_id == "source-intake-summary":
+                return result  # Historical catalogs have no source intake index.
+            raise
+        for source in summary["sources"]:
+            license_label = ("MIT（含研究用途附注）" if source["license_observed"] == "MIT_WITH_RESEARCH_NOTE"
+                             else source["license_observed"])
+            dispositions = {"ADAPTED": "已适配", "VALIDATION_PENDING": "待验证",
+                            "REFERENCE_ONLY": "研究参考", "EVIDENCE_MISSING": "待补证据",
+                            "OUT_OF_SCOPE": "后续另行评估"}
+            body = "\n".join((
+                f'项目：{source["title"]}', f'固定提交：{source["commit"]}',
+                f'核验日期：{source["capture_date"]}', f'许可记录：{license_label}',
+                f'跟踪文件：{source["tracked_file_count"]}；重点文件摘要：{source["verified_artifact_count"]}',
+                f'模块去向：{source["module_count"]}项',
+                '这是固定版本的来源完整性记录，不代表财务效果已验证或策略已获准使用。',
+                '模块映射：', *(f'{m["name"]} → Phase {m["phase"]} · {dispositions[m["disposition"]]}'
+                               for m in source["modules"]),
+            ))
+            result.append({"asset_id": "source-" + source["source_id"].lower(), "kind": "sources",
+                "title": source["title"], "version": source["commit"],
+                "tags": ["来源审计", license_label], "availability": "PACKAGED",
+                "loaded": False, "summary": f'{source["module_count"]}项模块已记录迁移去向；查看固定版本、许可与阅读范围。',
+                "required_inputs": [], "output_types": ["来源完整性记录"], "boundaries": [],
+                "source_resources": self._sources([source["license_resource_id"],
+                                                   *source["reference_resource_ids"]]),
+                "missing_dependencies": [], "evidence_status": "SOURCE_INTEGRITY_VERIFIED",
+                "body": body})
+        return result
 
     def list(self, *, kind="methods", tags=(), query="", limit=20, offset=0):
         if (kind not in KINDS or type(limit) is not int or not 1 <= limit <= 100
@@ -110,12 +147,17 @@ def render_asset_items(items):
     for item in items:
         href = f'/library/{item["kind"]}?' + urlencode({"asset": item["asset_id"]})
         enter = '/research/jobs?' + urlencode({"question": f'使用「{item["title"]}」提出可验证的研究假设；先检查所需输入与来源。'})
-        gaps = '；'.join(item["missing_dependencies"]) or '包内资料可读；用户数据与授权仍需绑定。'
+        gaps = ('来源记录可读；后续适配与验证见详情。' if item["kind"] == "sources" else
+                '；'.join(item["missing_dependencies"]) or '包内资料可读；用户数据与授权仍需绑定。')
+        inputs = ('查看来源不需要市场数据' if item["kind"] == "sources" else
+                  '、'.join(item["required_inputs"]) or '反例适用的研究上下文')
+        state_label = '来源记录可读' if item["kind"] == "sources" else _STATES[item["availability"]]
+        version_label = '提交 ' + item["version"][:12] if item["kind"] == "sources" else 'v' + item["version"]
         result.append(f'<article class="asset-entry"><div><h2><a href="{esc(href, quote=True)}">{esc(item["title"])}</a></h2><p>{esc(item["summary"])}</p>'
-            f'<p class="field-help">v{esc(item["version"])} · {esc(" / ".join(item["tags"]))} · <span class="asset-state">{esc(_STATES[item["availability"]])}</span></p></div>'
-            f'<details><summary>输入、来源与依赖</summary><p>所需输入：{esc("、".join(item["required_inputs"])) or "反例适用的研究上下文"}</p>'
+            f'<p class="field-help">{esc(version_label)} · {esc(" / ".join(item["tags"]))} · <span class="asset-state">{esc(state_label)}</span></p></div>'
+            f'<details><summary>输入、来源与依赖</summary><p>所需输入：{esc(inputs)}</p>'
             f'<p>资料状态：{esc(gaps)}</p><ul>{_source_links(item["source_resources"])}</ul></details>'
-            + (f'<a class="asset-action" href="{esc(enter, quote=True)}">带入研究问题</a>' if item["kind"] != "lessons" else '') + '</article>')
+            + (f'<a class="asset-action" href="{esc(enter, quote=True)}">带入研究问题</a>' if item["kind"] in {"methods", "behavior"} else '') + '</article>')
     return "".join(result)
 
 
@@ -130,8 +172,9 @@ def asset_workspace_page(service, kind, query):
     detail = ''
     if query.get("asset"):
         selected = service.detail(query["asset"][0])
+        state_label = '来源记录可读' if selected['kind'] == 'sources' else _STATES[selected['availability']]
         detail = (f'<section class="asset-document" aria-labelledby="asset-document-title"><h2 id="asset-document-title">{esc(selected["title"])}</h2>'
-            f'<p>v{esc(selected["version"])} · {esc(_STATES[selected["availability"]])} · 资料展示不代表已加载执行</p>'
+            f'<p>{esc(selected["version"])} · {esc(state_label)} · 资料展示不代表已加载执行</p>'
             + ('<p>来源事实：尚待用户公开材料。转述：需逐条核验来源。研究假设：以下协议只定义分析视角，不证明人物真实交易与收益。</p>' if selected['kind'] == 'behavior' else '')
             +
             f'<pre>{esc(selected["body"])}</pre><ul>{_source_links(selected["source_resources"])}</ul></section>')
@@ -139,11 +182,15 @@ def asset_workspace_page(service, kind, query):
         values = {"q": search, "limit": limit, "offset": max(0, offset + delta), "tag": tags}
         return f'<a href="/library/{kind}?{esc(urlencode(values, doseq=True), quote=True)}">{label}</a>'
     pagination = (page_link(-limit, "上一页") if offset else '') + (page_link(limit, "下一页") if offset + len(data["items"]) < data["total"] else '')
+    lede = ('查看开源项目的固定版本、许可记录与迁移去向。' if kind == 'sources'
+            else '找到方法，检查来源，再进入可验证的研究。')
+    help_text = ('记录对应本次核验的固定提交。打开详情可查看模块规划、版权与来源链接。' if kind == 'sources'
+                 else '浏览只读取本地资料；不会加载模型上下文、请求数据或提交任务。公开行为档案是研究协议，不是人物实盘记录。')
     return (f'<section data-asset-workspace data-asset-kind="{kind}" data-asset-state="ready"><header class="overview-header"><div><h1>{KINDS[kind]}</h1>'
-        '<p class="lede">找到方法，检查来源，再进入可验证的研究。</p></div></header>'
+        f'<p class="lede">{lede}</p></div></header>'
         f'<nav class="asset-tabs" aria-label="资料分类">{tabs}</nav><form class="asset-search" method="get" action="/library/{kind}" data-asset-form>'
         f'<label>检索资料<input name="q" value="{esc(search, quote=True)}" maxlength="200" placeholder="按名称、研究主题或标签检索"></label>'
-        '<button type="submit">检索</button></form><p class="field-help">浏览只读取本地资料；不会加载模型上下文、请求数据或提交任务。公开行为档案是研究协议，不是人物实盘记录。</p>'
+        f'<button type="submit">检索</button></form><p class="field-help">{help_text}</p>'
         f'<p role="status" aria-live="polite" data-asset-status>找到 {data["total"]} 项，当前显示 {len(data["items"])} 项；目录共 {data["catalog_total"]} 项。</p>'
         '<button type="button" data-asset-retry hidden>保留条件并重试</button>'
         f'{detail}<div class="asset-results" data-asset-results>{render_asset_items(data["items"])}</div>'

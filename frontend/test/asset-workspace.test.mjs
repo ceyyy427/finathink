@@ -15,3 +15,11 @@ test('query builder encodes values and does not accept execution fields', () => 
   assert.throws(() => assetQuery({ kind: 'execute' }));
   assert.throws(() => assetQuery({ kind: 'methods', submit: true }));
 });
+
+test('source audit records share read-only filtering without becoming loaded methods', () => {
+  const source = { ...page, kind: 'sources', items: [{ ...page.items[0], asset_id: 'source-qlib', kind: 'sources', version: 'a'.repeat(40) }] };
+  assert.deepEqual(normalizeAssetPage(source), source);
+  assert.equal(new URLSearchParams(assetQuery({ kind: 'sources', q: 'Qlib' })).get('kind'), 'sources');
+  assert.throws(() => assetQuery({ kind: 'sources', approve: true }));
+  assert.throws(() => normalizeAssetPage({ ...source, items: [{ ...source.items[0], version: null }] }));
+});

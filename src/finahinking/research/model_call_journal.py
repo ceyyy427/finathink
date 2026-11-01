@@ -6,6 +6,7 @@ import json
 import os
 import re
 import sqlite3
+import time
 import uuid
 from contextlib import contextmanager
 from datetime import UTC, datetime
@@ -13,6 +14,7 @@ from pathlib import Path
 
 _DIGEST = re.compile(r"^[0-9a-f]{64}$")
 _UNITS = frozenset({"input_units", "generated_units", "total_units"})
+_INITIALIZE_TIMEOUT = 30.0
 _OUTCOMES = frozenset({"READY", "FAILED", "SCHEMA_ERROR", "NOT_CONFIGURED", "TIMEOUT", "NON_JSON", "HTTP_ERROR", "TRANSPORT", "CAPABILITY_REJECTED", "RESOURCE_LIMIT", "STREAM_INTERRUPTED", "UNSUPPORTED_STREAM", "RESPONSE_TOO_LARGE"})
 
 
@@ -26,30 +28,42 @@ class ModelCallJournal:
         self.path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
         if self.path.is_symlink():
             raise ValueError("model journal must not be a symlink")
-        is_new = not self.path.exists()
         descriptor = os.open(self.path, os.O_CREAT | os.O_WRONLY | getattr(os, "O_NOFOLLOW", 0), 0o600)
         try:
             if hasattr(os, "fchmod"):
                 os.fchmod(descriptor, 0o600)
         finally:
             os.close(descriptor)
-        with self._connect() as db:
-            if is_new:
-                db.execute("PRAGMA journal_mode=WAL")
-            db.execute("""CREATE TABLE IF NOT EXISTS model_calls (
-                call_id TEXT PRIMARY KEY, scope_id TEXT NOT NULL, job_id TEXT NOT NULL,
-                request_digest TEXT NOT NULL, run_id TEXT NOT NULL, attempt INTEGER NOT NULL,
-                role TEXT NOT NULL, model TEXT NOT NULL, context_fingerprint TEXT NOT NULL,
-                context_bytes INTEGER NOT NULL, started_at TEXT NOT NULL, dispatched_at TEXT,
-                status TEXT NOT NULL, request_bytes INTEGER, usage TEXT, duration_ms INTEGER
-            )""")
+        deadline = time.monotonic() + _INITIALIZE_TIMEOUT
+        while True:
+            try:
+                with self._connect(timeout=max(0, deadline - time.monotonic())) as db:
+                    # File existence does not establish completed initialization.
+                    # Concurrent first creators can also race on the WAL switch;
+                    # SQLite may return BUSY immediately despite busy_timeout.
+                    db.execute("PRAGMA journal_mode=WAL")
+                    db.execute("""CREATE TABLE IF NOT EXISTS model_calls (
+                        call_id TEXT PRIMARY KEY, scope_id TEXT NOT NULL, job_id TEXT NOT NULL,
+                        request_digest TEXT NOT NULL, run_id TEXT NOT NULL, attempt INTEGER NOT NULL,
+                        role TEXT NOT NULL, model TEXT NOT NULL, context_fingerprint TEXT NOT NULL,
+                        context_bytes INTEGER NOT NULL, started_at TEXT NOT NULL, dispatched_at TEXT,
+                        status TEXT NOT NULL, request_bytes INTEGER, usage TEXT, duration_ms INTEGER
+                    )""")
+                break
+            except sqlite3.OperationalError as error:
+                remaining = deadline - time.monotonic()
+                code = getattr(error, "sqlite_errorcode", 0) & 0xFF
+                if code not in {sqlite3.SQLITE_BUSY, sqlite3.SQLITE_LOCKED} or remaining <= 0:
+                    raise
+                # Reopen after rollback/close instead of retrying a stale lock.
+                time.sleep(min(0.05, remaining))
 
     @contextmanager
-    def _connect(self):
-        db = sqlite3.connect(self.path, timeout=30)
+    def _connect(self, *, timeout=30):
+        db = sqlite3.connect(self.path, timeout=timeout)
         db.row_factory = sqlite3.Row
         try:
-            db.execute("PRAGMA busy_timeout=30000")
+            db.execute(f"PRAGMA busy_timeout={int(timeout * 1000)}")
             with db:
                 yield db
         finally:

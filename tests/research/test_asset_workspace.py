@@ -107,3 +107,57 @@ def test_corrupt_installed_catalog_has_a_shared_shell_recovery_page(tmp_path, mo
         assert '资料目录校验失败' in body
     finally:
         app.close()
+
+
+def test_source_records_are_read_only_and_preserve_audit_vs_financial_evidence(tmp_path):
+    service = workspace()
+    data = service.list(kind="sources")
+    assert data["total"] == 7
+    assert all(i["loaded"] is False and i["evidence_status"] == "SOURCE_INTEGRITY_VERIFIED"
+               for i in data["items"])
+    alpha = service.detail("source-alphalens-reloaded")
+    assert "Apache-2.0" in alpha["body"] and "财务效果" in alpha["body"]
+    assert "alphalens-performance-reference" in {r["resource_id"] for r in alpha["source_resources"]}
+    app = LocalApplication(LocalAppConfig(db_path=str(tmp_path / "app.sqlite"), offline=True))
+    try:
+        status, _, body = app.route("GET", "/library/sources")
+        assert status == 200 and "开源来源" in body and 'class="app-shell"' in body
+        assert "带入研究问题" not in body
+        assert app.route("GET", "/api/research/assets?kind=sources")[2]["total"] == 7
+        assert app.route("POST", "/library/sources")[0] == 405
+        assert app.research_service.list_jobs()["total"] == 0
+    finally:
+        app.close()
+
+
+def test_legacy_catalog_without_sources_still_has_working_method_detail(tmp_path):
+    from tests.research.test_research_asset_catalog import _write_catalog
+
+    _write_catalog(tmp_path)
+    service = workspace(ResearchAssetCatalog(tmp_path))
+    assert service.list(kind="sources")["total"] == 0
+    assert service.detail("guide")["body"]
+
+
+@pytest.mark.parametrize("change", ["module", "references", "phase", "source_id"])
+def test_reviewed_but_invalid_source_summary_returns_structured_error(tmp_path, change):
+    from tests.research.test_method_context import _change, _root
+
+    root = _root(tmp_path)
+    catalog = ResearchAssetCatalog(root)
+    summary = catalog.source_intake_summary()
+    item = summary["sources"][0]
+    if change == "module":
+        item["modules"][0]["disposition"] = "AUTORUN"
+    elif change == "references":
+        item["reference_resource_ids"] = "license"
+    elif change == "phase":
+        item["modules"][0]["phase"] = True
+    else:
+        item["source_id"] = "../outside"
+    import json
+
+    _change(root, "source-intake-summary", body=json.dumps(summary), reviewed=True)
+    with pytest.raises(AssetLoadError) as exc:
+        ResearchAssetCatalog(root).source_intake_summary()
+    assert exc.value.code == "INVALID_SOURCE_SUMMARY"

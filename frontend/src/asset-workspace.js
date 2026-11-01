@@ -1,11 +1,12 @@
 import { readLocalJSON, userErrorMessage } from './local-request.js';
 const mounted = new WeakMap();
-const KINDS = new Set(['methods', 'behavior', 'lessons']);
+const KINDS = new Set(['methods', 'behavior', 'lessons', 'sources']);
 const AVAILABILITY = new Set(['PACKAGED', 'PARTIAL', 'CORRUPT', 'MISSING']);
 
 export function normalizeAssetPage(value) {
   if (value?.schema_version !== 'asset-workspace.v1' || !KINDS.has(value.kind) || !Number.isInteger(value.total) || value.total < 0 || !Number.isInteger(value.limit) || value.limit < 1 || value.limit > 100 || !Number.isInteger(value.offset) || value.offset < 0 || !Array.isArray(value.items) || value.items.length > value.limit || value.total < value.items.length) throw new TypeError('资料目录响应无效，请重新读取。');
   for (const item of value.items) if (!/^[a-z0-9][a-z0-9._-]{0,159}$/.test(item?.asset_id ?? '') || typeof item.title !== 'string' || !item.title || item.title.length > 500 || item.kind !== value.kind || !AVAILABILITY.has(item.availability) || item.loaded !== false || !Array.isArray(item.tags) || item.tags.some((tag) => typeof tag !== 'string' || tag.length > 64)) throw new TypeError('资料身份或状态不一致，不能显示为已加载。');
+  if (value.kind === 'sources' && value.items.some((item) => !/^[0-9a-f]{40}$/.test(item.version ?? ''))) throw new TypeError('来源版本记录不完整，请重新读取。');
   return value;
 }
 
@@ -29,12 +30,15 @@ export function mountAssetWorkspace(root, { fetcher = globalThis.fetch } = {}) {
       if (disposed || current !== generation) return;
       const entries = data.items.map((item) => {
         const article = node('article'); article.className = 'asset-entry';
-        const state = node('span', { PACKAGED: '方法资料已打包', PARTIAL: '资料待补齐', CORRUPT: '资料校验失败', MISSING: '资料缺失' }[item.availability]); state.className = 'asset-state';
+        const state = node('span', item.kind === 'sources' ? '来源记录可读' : { PACKAGED: '方法资料已打包', PARTIAL: '资料待补齐', CORRUPT: '资料校验失败', MISSING: '资料缺失' }[item.availability]); state.className = 'asset-state';
         const heading = node('h2'); const link = node('a', item.title); link.href = `/library/${item.kind}?asset=${encodeURIComponent(item.asset_id)}`; heading.append(link);
-        const meta = node('p', `v${item.version} · ${item.tags.join(' / ')} · `); meta.append(state);
+        const version = item.kind === 'sources' ? `提交 ${item.version.slice(0, 12)}` : `v${item.version}`;
+        const meta = node('p', `${version} · ${item.tags.join(' / ')} · `); meta.append(state);
         article.append(heading, node('p', item.summary), meta);
-        const details = node('details'); details.append(node('summary', '输入、来源与依赖'), node('p', `所需输入：${(item.required_inputs ?? []).join('、') || '反例适用的研究上下文'}`), node('p', `资料缺口：${item.missing_dependencies?.join('；') || '包内资料可读，用户输入仍需绑定。'}`)); article.append(details);
-        if (item.kind !== 'lessons') { const enter = node('a', '带入研究问题'); enter.href = `/research/jobs?${new URLSearchParams({ question: `使用「${item.title}」提出可验证的研究假设；先检查所需输入与来源。` })}`; article.append(enter); }
+        const inputs = item.kind === 'sources' ? '查看来源不需要市场数据' : (item.required_inputs ?? []).join('、') || '反例适用的研究上下文';
+        const gaps = item.kind === 'sources' ? '来源记录可读；后续适配与验证见详情。' : item.missing_dependencies?.join('；') || '包内资料可读，用户输入仍需绑定。';
+        const details = node('details'); details.append(node('summary', '输入、来源与依赖'), node('p', `所需输入：${inputs}`), node('p', `资料缺口：${gaps}`)); article.append(details);
+        if (['methods', 'behavior'].includes(item.kind)) { const enter = node('a', '带入研究问题'); enter.href = `/research/jobs?${new URLSearchParams({ question: `使用「${item.title}」提出可验证的研究假设；先检查所需输入与来源。` })}`; article.append(enter); }
         return article;
       });
       results.replaceChildren(...(entries.length ? entries : [node('p', '没有匹配资料。可清空条件后重试。')]));

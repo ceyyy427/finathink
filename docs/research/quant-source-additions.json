@@ -1,0 +1,95 @@
+{
+  "schema_version": "quant-source-additions.v1",
+  "source_id": "deepseek-harness-quant",
+  "repository": "https://github.com/yuanwang589-dev/deepseek-harness-quant",
+  "commit": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+  "capture_date": "2026-10-31",
+  "meaning": "Additional source checks for legacy reconciliation; no effect or formula approval.",
+  "artifacts": [
+    {
+      "path": "assets/skills/alpha-gpt-factor-mining/SKILL.md",
+      "sha256": "113cf7283383e69893a6ad2a2ca062044f901914b4827f869229f63a2fc9a58d",
+      "bytes": 17936
+    },
+    {
+      "path": "assets/skills/alpha-gpt-factor-mining/references/trial-findings.md",
+      "sha256": "7a72cab845615a0845e39096ddf47c6c041164dd576c3d02db6c6a987130d0f8",
+      "bytes": 8212
+    },
+    {
+      "path": "assets/skills/alpha-gpt-researcher/SKILL.md",
+      "sha256": "9403291d6ee0f101eea3017e24a207f3e2fe371eaed44cee7bd64a556ba71afc",
+      "bytes": 7961
+    },
+    {
+      "path": "assets/skills/backtest-acceptance/SKILL.md",
+      "sha256": "d8b43220c53faeb856f0ec65041ad202f01f9a41402ea2c8dbe3b2320db44603",
+      "bytes": 6192
+    },
+    {
+      "path": "assets/skills/factor-mining-workflow/SKILL.md",
+      "sha256": "ff9dbbe90669d044bb5c0aac3c9c6e1b8793a1e3d127d4db974c7a20f40e950d",
+      "bytes": 11470
+    },
+    {
+      "path": "assets/skills/github-maintainer/SKILL.md",
+      "sha256": "6cb5bc64ba95ee5c8f3c3251aee1158a7a4dfe2b01616bb136b17a3f52e9e8e9",
+      "bytes": 14784
+    },
+    {
+      "path": "assets/skills/niu-san-chaoguyangjia/SKILL.md",
+      "sha256": "c37196392fa5314ca85227140932a82689f4e83a8cffe2b1612e1fb3cf718707",
+      "bytes": 2982
+    },
+    {
+      "path": "assets/skills/niu-san-chenxiaoqun/SKILL.md",
+      "sha256": "3dc0792bceb5c2d8a4dfe88007eb4bbc4533fd78cc708cb274c1ed563b12b64f",
+      "bytes": 5094
+    },
+    {
+      "path": "assets/skills/niu-san-distillation/SKILL.md",
+      "sha256": "986f5d5e105838603c2e93afbfec20166b0e4ba9c9a77dc7c2caf5e91b0a84ca",
+      "bytes": 5439
+    },
+    {
+      "path": "assets/skills/niu-san-fengliu/SKILL.md",
+      "sha256": "6421ebd742d028e6a05eb16dff3b6fae43a266c0e9f124e09b8cf76e95e15d67",
+      "bytes": 3432
+    },
+    {
+      "path": "assets/skills/niu-san-linyuan/SKILL.md",
+      "sha256": "877b2462d77cbda63a30f3d55507ae5f68b842ab6edf639aab7446b1df6cddce",
+      "bytes": 3855
+    },
+    {
+      "path": "assets/skills/niu-san-zhangmengzhu/SKILL.md",
+      "sha256": "39fb8773d2baada6c4304d7f471e2dcd8e9a53c9cd8639c79e7354c2b4ff6955",
+      "bytes": 2998
+    },
+    {
+      "path": "assets/skills/niu-san-zhaolaoge/SKILL.md",
+      "sha256": "cfe5fd3b81719f64008704baf85a4efd86773ea725780e650c1cc321b58e202e",
+      "bytes": 2797
+    },
+    {
+      "path": "factors/fscore.py",
+      "sha256": "eae2e652d64af5486c61c47f77fc3afec7562766eabbd8960b31955bb509bcf3",
+      "bytes": 4695
+    },
+    {
+      "path": "factors/fundamental.py",
+      "sha256": "d43ecc2a960ed3a3560a11875c98124cdd3e6947eddfc126dcc967ea2edab43b",
+      "bytes": 9193
+    },
+    {
+      "path": "factors/opportunities/backtest_pv_consensus.py",
+      "sha256": "ced79c774faf842332f27b9abe82a2c38cf64ff468bba7ccd9e14b0ae60aba73",
+      "bytes": 10151
+    },
+    {
+      "path": "factors/signal_family.py",
+      "sha256": "40937355ef0f0a16fd097a29e5e30be83ffd802b7dab91196f2165d543d32572",
+      "bytes": 10935
+    }
+  ]
+}

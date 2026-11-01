@@ -1,0 +1,1594 @@
+{
+  "schema_version": "quant-source-rights-plans.v1",
+  "capture_date": "2026-10-31",
+  "meaning": "Intake candidates, not automatic distribution or execution approval.",
+  "sources": [
+    {
+      "source_id": "QUANTAXIS",
+      "commit": "232aa7ac9869966108f02a8fff85f1f7b09a9ce2",
+      "file_reviews": [
+        {
+          "source_id": "QUANTAXIS",
+          "commit": "232aa7ac9869966108f02a8fff85f1f7b09a9ce2",
+          "path": "LICENSE",
+          "sha256": "96ebf515d25a58bbd8be4543a5c198e576db52738f26c82270ececb1dc273318",
+          "decision": "REFERENCE_ONLY",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "96ebf515d25a58bbd8be4543a5c198e576db52738f26c82270ececb1dc273318"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "保留文档/界面/许可为来源参考；内部引文、图片、效果和外部材料不随仓库许可自动获准复制。"
+        },
+        {
+          "source_id": "QUANTAXIS",
+          "commit": "232aa7ac9869966108f02a8fff85f1f7b09a9ce2",
+          "path": "QUANTAXIS/QAData/QADataStruct.py",
+          "sha256": "820abdc3eee3e345e91cd126061da9f01fb339e6bec7bfdf145e132105da8688",
+          "decision": "ADAPTATION_CANDIDATE",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "96ebf515d25a58bbd8be4543a5c198e576db52738f26c82270ececb1dc273318"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "已核对文件头、固定版本及适用许可；可作为后续纯算法适配候选，需按目标阶段验证。"
+        },
+        {
+          "source_id": "QUANTAXIS",
+          "commit": "232aa7ac9869966108f02a8fff85f1f7b09a9ce2",
+          "path": "QUANTAXIS/QAData/data_fq.py",
+          "sha256": "8ea6b152a4eff20bffba2216ae8dc88edbb3f0f11b0a220abb19c574cf459eff",
+          "decision": "ADAPTATION_CANDIDATE",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "96ebf515d25a58bbd8be4543a5c198e576db52738f26c82270ececb1dc273318"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "已核对文件头、固定版本及适用许可；可作为后续纯算法适配候选，需按目标阶段验证。"
+        },
+        {
+          "source_id": "QUANTAXIS",
+          "commit": "232aa7ac9869966108f02a8fff85f1f7b09a9ce2",
+          "path": "QUANTAXIS/QADataBridge/arrow_converter.py",
+          "sha256": "878b72824f32444570362f39065ceb30c8ed10fbea293003e6d47d1ae8b43173",
+          "decision": "ADAPTATION_CANDIDATE",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "96ebf515d25a58bbd8be4543a5c198e576db52738f26c82270ececb1dc273318"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "已核对文件头、固定版本及适用许可；可作为后续纯算法适配候选，需按目标阶段验证。"
+        },
+        {
+          "source_id": "QUANTAXIS",
+          "commit": "232aa7ac9869966108f02a8fff85f1f7b09a9ce2",
+          "path": "QUANTAXIS/QAFactor/feature.py",
+          "sha256": "7f09f09aeb2a7e5f150325ccedcd6a747908e60696fdc5271f34c48995b86922",
+          "decision": "ADAPTATION_CANDIDATE",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "96ebf515d25a58bbd8be4543a5c198e576db52738f26c82270ececb1dc273318"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "已核对文件头、固定版本及适用许可；可作为后续纯算法适配候选，需按目标阶段验证。"
+        },
+        {
+          "source_id": "QUANTAXIS",
+          "commit": "232aa7ac9869966108f02a8fff85f1f7b09a9ce2",
+          "path": "QUANTAXIS/QAFactor/featureAnalysis.py",
+          "sha256": "319e5842a4d56834f3114b8f4f7ecb98cb2125f057c16247364a796e85a3f8ec",
+          "decision": "ADAPTATION_CANDIDATE",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "96ebf515d25a58bbd8be4543a5c198e576db52738f26c82270ececb1dc273318"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "已核对文件头、固定版本及适用许可；可作为后续纯算法适配候选，需按目标阶段验证。"
+        },
+        {
+          "source_id": "QUANTAXIS",
+          "commit": "232aa7ac9869966108f02a8fff85f1f7b09a9ce2",
+          "path": "QUANTAXIS/QAFactor/featurebacktest.py",
+          "sha256": "389a3052cbedc7ecbcc3c9a0b29dd2946862b0f45fb09a927c3e6bd55d98edfc",
+          "decision": "ADAPTATION_CANDIDATE",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "96ebf515d25a58bbd8be4543a5c198e576db52738f26c82270ececb1dc273318"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "已核对文件头、固定版本及适用许可；可作为后续纯算法适配候选，需按目标阶段验证。"
+        },
+        {
+          "source_id": "QUANTAXIS",
+          "commit": "232aa7ac9869966108f02a8fff85f1f7b09a9ce2",
+          "path": "QUANTAXIS/QAFactor/readme.md",
+          "sha256": "5d1416ffd7f98e27dcfe1ad40b0cf7c20bab100b05701ae7f1dd824b34b299bb",
+          "decision": "REFERENCE_ONLY",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "96ebf515d25a58bbd8be4543a5c198e576db52738f26c82270ececb1dc273318"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "保留文档/界面/许可为来源参考；内部引文、图片、效果和外部材料不随仓库许可自动获准复制。"
+        },
+        {
+          "source_id": "QUANTAXIS",
+          "commit": "232aa7ac9869966108f02a8fff85f1f7b09a9ce2",
+          "path": "QUANTAXIS/QAIndicator/base.py",
+          "sha256": "fbbb3debfa0d061eb4d6e56acf783dea18a144f56ffc191769df075cf38c4737",
+          "decision": "ADAPTATION_CANDIDATE",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "96ebf515d25a58bbd8be4543a5c198e576db52738f26c82270ececb1dc273318"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "已核对文件头、固定版本及适用许可；可作为后续纯算法适配候选，需按目标阶段验证。"
+        },
+        {
+          "source_id": "QUANTAXIS",
+          "commit": "232aa7ac9869966108f02a8fff85f1f7b09a9ce2",
+          "path": "QUANTAXIS/QAIndicator/indicators.py",
+          "sha256": "94995068dbe73fdeddfea69bd51c0df52af6fc4567c5c432a265c2e3f9363ff5",
+          "decision": "ADAPTATION_CANDIDATE",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "96ebf515d25a58bbd8be4543a5c198e576db52738f26c82270ececb1dc273318"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "已核对文件头、固定版本及适用许可；可作为后续纯算法适配候选，需按目标阶段验证。"
+        },
+        {
+          "source_id": "QUANTAXIS",
+          "commit": "232aa7ac9869966108f02a8fff85f1f7b09a9ce2",
+          "path": "QUANTAXIS/QAMarket/market_preset.py",
+          "sha256": "d789ed62fd173ce2102f87c22ec6e7c155f6c07180e383ff49965fbed70bf8fd",
+          "decision": "ADAPTATION_CANDIDATE",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "96ebf515d25a58bbd8be4543a5c198e576db52738f26c82270ececb1dc273318"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "已核对文件头、固定版本及适用许可；可作为后续纯算法适配候选，需按目标阶段验证。"
+        },
+        {
+          "source_id": "QUANTAXIS",
+          "commit": "232aa7ac9869966108f02a8fff85f1f7b09a9ce2",
+          "path": "QUANTAXIS/QARSBridge/qars_backtest.py",
+          "sha256": "8a0ea51bb7d857750edd458939b9a2bac869ab04d900f10d3cfc1428d3282872",
+          "decision": "ADAPTATION_CANDIDATE",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "96ebf515d25a58bbd8be4543a5c198e576db52738f26c82270ececb1dc273318"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "已核对文件头、固定版本及适用许可；可作为后续纯算法适配候选，需按目标阶段验证。"
+        },
+        {
+          "source_id": "QUANTAXIS",
+          "commit": "232aa7ac9869966108f02a8fff85f1f7b09a9ce2",
+          "path": "QUANTAXIS/QAStrategy/qafactorbase.py",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "decision": "ADAPTATION_CANDIDATE",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "96ebf515d25a58bbd8be4543a5c198e576db52738f26c82270ececb1dc273318"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "已核对文件头、固定版本及适用许可；可作为后续纯算法适配候选，需按目标阶段验证。"
+        },
+        {
+          "source_id": "QUANTAXIS",
+          "commit": "232aa7ac9869966108f02a8fff85f1f7b09a9ce2",
+          "path": "QUANTAXIS/QIFI/QifiAccount.py",
+          "sha256": "8b1cae0450d7c3cf9fb4f112191724096f09c84fd6d9c11662d2f13020166a9d",
+          "decision": "ADAPTATION_CANDIDATE",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "96ebf515d25a58bbd8be4543a5c198e576db52738f26c82270ececb1dc273318"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "已核对文件头、固定版本及适用许可；可作为后续纯算法适配候选，需按目标阶段验证。"
+        },
+        {
+          "source_id": "QUANTAXIS",
+          "commit": "232aa7ac9869966108f02a8fff85f1f7b09a9ce2",
+          "path": "README.md",
+          "sha256": "7aad3664aedbba1bfdd6002d805c00cad2cdf3d219e98d095981a24bd4f189b6",
+          "decision": "REFERENCE_ONLY",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "96ebf515d25a58bbd8be4543a5c198e576db52738f26c82270ececb1dc273318"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "保留文档/界面/许可为来源参考；内部引文、图片、效果和外部材料不随仓库许可自动获准复制。"
+        }
+      ],
+      "proposal": {
+        "status": "PROPOSAL_ONLY",
+        "source_id": "QUANTAXIS",
+        "commit": "232aa7ac9869966108f02a8fff85f1f7b09a9ce2",
+        "eligible": [
+          {
+            "path": "QUANTAXIS/QAData/QADataStruct.py",
+            "sha256": "820abdc3eee3e345e91cd126061da9f01fb339e6bec7bfdf145e132105da8688",
+            "existing_resource_id": null,
+            "reason": "REVIEWED_ADAPTATION_CANDIDATE"
+          },
+          {
+            "path": "QUANTAXIS/QAData/data_fq.py",
+            "sha256": "8ea6b152a4eff20bffba2216ae8dc88edbb3f0f11b0a220abb19c574cf459eff",
+            "existing_resource_id": null,
+            "reason": "REVIEWED_ADAPTATION_CANDIDATE"
+          },
+          {
+            "path": "QUANTAXIS/QADataBridge/arrow_converter.py",
+            "sha256": "878b72824f32444570362f39065ceb30c8ed10fbea293003e6d47d1ae8b43173",
+            "existing_resource_id": null,
+            "reason": "REVIEWED_ADAPTATION_CANDIDATE"
+          },
+          {
+            "path": "QUANTAXIS/QAFactor/feature.py",
+            "sha256": "7f09f09aeb2a7e5f150325ccedcd6a747908e60696fdc5271f34c48995b86922",
+            "existing_resource_id": null,
+            "reason": "REVIEWED_ADAPTATION_CANDIDATE"
+          },
+          {
+            "path": "QUANTAXIS/QAFactor/featureAnalysis.py",
+            "sha256": "319e5842a4d56834f3114b8f4f7ecb98cb2125f057c16247364a796e85a3f8ec",
+            "existing_resource_id": null,
+            "reason": "REVIEWED_ADAPTATION_CANDIDATE"
+          },
+          {
+            "path": "QUANTAXIS/QAFactor/featurebacktest.py",
+            "sha256": "389a3052cbedc7ecbcc3c9a0b29dd2946862b0f45fb09a927c3e6bd55d98edfc",
+            "existing_resource_id": null,
+            "reason": "REVIEWED_ADAPTATION_CANDIDATE"
+          },
+          {
+            "path": "QUANTAXIS/QAIndicator/base.py",
+            "sha256": "fbbb3debfa0d061eb4d6e56acf783dea18a144f56ffc191769df075cf38c4737",
+            "existing_resource_id": null,
+            "reason": "REVIEWED_ADAPTATION_CANDIDATE"
+          },
+          {
+            "path": "QUANTAXIS/QAIndicator/indicators.py",
+            "sha256": "94995068dbe73fdeddfea69bd51c0df52af6fc4567c5c432a265c2e3f9363ff5",
+            "existing_resource_id": null,
+            "reason": "REVIEWED_ADAPTATION_CANDIDATE"
+          },
+          {
+            "path": "QUANTAXIS/QAMarket/market_preset.py",
+            "sha256": "d789ed62fd173ce2102f87c22ec6e7c155f6c07180e383ff49965fbed70bf8fd",
+            "existing_resource_id": null,
+            "reason": "REVIEWED_ADAPTATION_CANDIDATE"
+          },
+          {
+            "path": "QUANTAXIS/QARSBridge/qars_backtest.py",
+            "sha256": "8a0ea51bb7d857750edd458939b9a2bac869ab04d900f10d3cfc1428d3282872",
+            "existing_resource_id": null,
+            "reason": "REVIEWED_ADAPTATION_CANDIDATE"
+          },
+          {
+            "path": "QUANTAXIS/QAStrategy/qafactorbase.py",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "existing_resource_id": null,
+            "reason": "REVIEWED_ADAPTATION_CANDIDATE"
+          },
+          {
+            "path": "QUANTAXIS/QIFI/QifiAccount.py",
+            "sha256": "8b1cae0450d7c3cf9fb4f112191724096f09c84fd6d9c11662d2f13020166a9d",
+            "existing_resource_id": null,
+            "reason": "REVIEWED_ADAPTATION_CANDIDATE"
+          }
+        ],
+        "reference_only": [
+          {
+            "path": "LICENSE",
+            "sha256": "96ebf515d25a58bbd8be4543a5c198e576db52738f26c82270ececb1dc273318",
+            "existing_resource_id": "quantaxis-license",
+            "reason": "保留文档/界面/许可为来源参考；内部引文、图片、效果和外部材料不随仓库许可自动获准复制。"
+          },
+          {
+            "path": "QUANTAXIS/QAFactor/readme.md",
+            "sha256": "5d1416ffd7f98e27dcfe1ad40b0cf7c20bab100b05701ae7f1dd824b34b299bb",
+            "existing_resource_id": null,
+            "reason": "保留文档/界面/许可为来源参考；内部引文、图片、效果和外部材料不随仓库许可自动获准复制。"
+          },
+          {
+            "path": "README.md",
+            "sha256": "7aad3664aedbba1bfdd6002d805c00cad2cdf3d219e98d095981a24bd4f189b6",
+            "existing_resource_id": null,
+            "reason": "保留文档/界面/许可为来源参考；内部引文、图片、效果和外部材料不随仓库许可自动获准复制。"
+          }
+        ],
+        "blocked": [],
+        "unresolved": [],
+        "required_notices": [
+          {
+            "path": "LICENSE",
+            "sha256": "96ebf515d25a58bbd8be4543a5c198e576db52738f26c82270ececb1dc273318"
+          }
+        ]
+      }
+    },
+    {
+      "source_id": "deepseek-harness-quant",
+      "commit": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+      "file_reviews": [
+        {
+          "source_id": "deepseek-harness-quant",
+          "commit": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+          "path": "LICENSE",
+          "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4",
+          "decision": "REFERENCE_ONLY",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "保留文档/界面/许可为来源参考；内部引文、图片、效果和外部材料不随仓库许可自动获准复制。"
+        },
+        {
+          "source_id": "deepseek-harness-quant",
+          "commit": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+          "path": "README.md",
+          "sha256": "0b1e12fa96ea1a0934eb5cb0a88d4cec6a6fa1a7a6b1ebc536a936e104eef11c",
+          "decision": "REFERENCE_ONLY",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "保留文档/界面/许可为来源参考；内部引文、图片、效果和外部材料不随仓库许可自动获准复制。"
+        },
+        {
+          "source_id": "deepseek-harness-quant",
+          "commit": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+          "path": "assets/skills/factor-mining-workflow/SKILL.md",
+          "sha256": "ff9dbbe90669d044bb5c0aac3c9c6e1b8793a1e3d127d4db974c7a20f40e950d",
+          "decision": "REFERENCE_ONLY",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "保留文档/界面/许可为来源参考；内部引文、图片、效果和外部材料不随仓库许可自动获准复制。"
+        },
+        {
+          "source_id": "deepseek-harness-quant",
+          "commit": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+          "path": "backtest/bt_engine.py",
+          "sha256": "bd135a1c897fed9f0baaa1865edcd58fda0e2ee507298d6a0ad1b82744101351",
+          "decision": "ADAPTATION_CANDIDATE",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "已核对文件头、固定版本及适用许可；可作为后续纯算法适配候选，需按目标阶段验证。"
+        },
+        {
+          "source_id": "deepseek-harness-quant",
+          "commit": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+          "path": "backtest/bt_runner.py",
+          "sha256": "35b2a7e297bb0836ecc3a58ec785f6cc2289ba2fd37d50b650753a02614fcce1",
+          "decision": "ADAPTATION_CANDIDATE",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "已核对文件头、固定版本及适用许可；可作为后续纯算法适配候选，需按目标阶段验证。"
+        },
+        {
+          "source_id": "deepseek-harness-quant",
+          "commit": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+          "path": "deck/dashboard_research_lib.html",
+          "sha256": "9b8b3c3da241ace6c445ac3324f5f7308eb8ca72b1b3a412c6014baccea5c2ce",
+          "decision": "REFERENCE_ONLY",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "保留文档/界面/许可为来源参考；内部引文、图片、效果和外部材料不随仓库许可自动获准复制。"
+        },
+        {
+          "source_id": "deepseek-harness-quant",
+          "commit": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+          "path": "docs/架构.md",
+          "sha256": "9c56c2029790a5f51485e7daabc0f220b783815ab2a3603fe9af421be6b498c1",
+          "decision": "REFERENCE_ONLY",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "保留文档/界面/许可为来源参考；内部引文、图片、效果和外部材料不随仓库许可自动获准复制。"
+        },
+        {
+          "source_id": "deepseek-harness-quant",
+          "commit": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+          "path": "docs/资产盘点.md",
+          "sha256": "64b26157d4250d67e02169b8b0b071ed78a04dd4cfa7a98a28fb88188e84357a",
+          "decision": "REFERENCE_ONLY",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "保留文档/界面/许可为来源参考；内部引文、图片、效果和外部材料不随仓库许可自动获准复制。"
+        },
+        {
+          "source_id": "deepseek-harness-quant",
+          "commit": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+          "path": "etf/etf_map.py",
+          "sha256": "cacefdb73a9b88e733c894a01aa1c4aa0563d53377a9a1f667b2f1d300910f1a",
+          "decision": "ADAPTATION_CANDIDATE",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "已核对文件头、固定版本及适用许可；可作为后续纯算法适配候选，需按目标阶段验证。"
+        },
+        {
+          "source_id": "deepseek-harness-quant",
+          "commit": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+          "path": "factors/classic_indicators.py",
+          "sha256": "2d6901559c44ee7edd96d25aa42fbdd176851f9eaf5e1b4959a45802cac97110",
+          "decision": "ADAPTATION_CANDIDATE",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "已核对文件头、固定版本及适用许可；可作为后续纯算法适配候选，需按目标阶段验证。"
+        },
+        {
+          "source_id": "deepseek-harness-quant",
+          "commit": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+          "path": "factors/factor_engine.py",
+          "sha256": "a526b0c89a6154db5f2cabfc56f70a6f087591f43f5353092c16226fe0f3781e",
+          "decision": "ADAPTATION_CANDIDATE",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "已核对文件头、固定版本及适用许可；可作为后续纯算法适配候选，需按目标阶段验证。"
+        },
+        {
+          "source_id": "deepseek-harness-quant",
+          "commit": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+          "path": "factors/opportunities/pitch_track.py",
+          "sha256": "59c149ee2af82df533678343d23c0e45fa38ad51c18b391a350cff4adb2c4552",
+          "decision": "ADAPTATION_CANDIDATE",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "已核对文件头、固定版本及适用许可；可作为后续纯算法适配候选，需按目标阶段验证。"
+        },
+        {
+          "source_id": "deepseek-harness-quant",
+          "commit": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+          "path": "factors/pool/lifecycle.py",
+          "sha256": "1d93b6510d20260c7eba01bf0fae0142cbf56b557b989a40ec6f47c2e31b7c65",
+          "decision": "ADAPTATION_CANDIDATE",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "已核对文件头、固定版本及适用许可；可作为后续纯算法适配候选，需按目标阶段验证。"
+        },
+        {
+          "source_id": "deepseek-harness-quant",
+          "commit": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+          "path": "factors/pool/registry.py",
+          "sha256": "3b387ef64cbe7ff22516823c7d598d448775f12318eca70ab21df3f2f31d189e",
+          "decision": "ADAPTATION_CANDIDATE",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "已核对文件头、固定版本及适用许可；可作为后续纯算法适配候选，需按目标阶段验证。"
+        },
+        {
+          "source_id": "deepseek-harness-quant",
+          "commit": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+          "path": "harness/package.json",
+          "sha256": "b9d3e779f1c75308b4aa7160882e3c74fd58989d37878418274b45f01c899a72",
+          "decision": "REFERENCE_ONLY",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "保留文档/界面/许可为来源参考；内部引文、图片、效果和外部材料不随仓库许可自动获准复制。"
+        },
+        {
+          "source_id": "deepseek-harness-quant",
+          "commit": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+          "path": "risk/beneish_full.py",
+          "sha256": "9f1d4f71d02cdb3a45061909955cc266ab8d4e75eb33deac8dd56927be65c0cc",
+          "decision": "ADAPTATION_CANDIDATE",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "已核对文件头、固定版本及适用许可；可作为后续纯算法适配候选，需按目标阶段验证。"
+        },
+        {
+          "source_id": "deepseek-harness-quant",
+          "commit": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+          "path": "risk/data_audit.py",
+          "sha256": "e9952017cdfac9aea433b07a0d433fb6ce06d2316f8bd98546adb017b441f7bc",
+          "decision": "ADAPTATION_CANDIDATE",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "已核对文件头、固定版本及适用许可；可作为后续纯算法适配候选，需按目标阶段验证。"
+        },
+        {
+          "source_id": "deepseek-harness-quant",
+          "commit": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+          "path": "risk/pitch_review.py",
+          "sha256": "8852cd141a9d4b2f71ce08607b95b6a3750d4bace1549dfedbce23cd48e85013",
+          "decision": "ADAPTATION_CANDIDATE",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "已核对文件头、固定版本及适用许可；可作为后续纯算法适配候选，需按目标阶段验证。"
+        },
+        {
+          "source_id": "deepseek-harness-quant",
+          "commit": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+          "path": "strategy/pitch_v2.py",
+          "sha256": "a094d64378d1a8f0bb95fb87df1ac06a33406910f9758586b1b8d8547723dcd8",
+          "decision": "ADAPTATION_CANDIDATE",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "已核对文件头、固定版本及适用许可；可作为后续纯算法适配候选，需按目标阶段验证。"
+        },
+        {
+          "source_id": "deepseek-harness-quant",
+          "commit": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+          "path": "strategy/pool_layers.py",
+          "sha256": "888dc95a8a8b9053a09d7253353730775ddd063beeae5a02a63ade6aa1f57a75",
+          "decision": "ADAPTATION_CANDIDATE",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "已核对文件头、固定版本及适用许可；可作为后续纯算法适配候选，需按目标阶段验证。"
+        },
+        {
+          "source_id": "deepseek-harness-quant",
+          "commit": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+          "path": "ui_v2/index.html",
+          "sha256": "e2b008d4ad9525058501841ada44c4d22558f4ba7d798c573ae6a3e32446138c",
+          "decision": "REFERENCE_ONLY",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "保留文档/界面/许可为来源参考；内部引文、图片、效果和外部材料不随仓库许可自动获准复制。"
+        },
+        {
+          "source_id": "deepseek-harness-quant",
+          "commit": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+          "path": "validation/factor_evaluator.py",
+          "sha256": "12340eb1312583460e000abe7af98a96e772b4f301d713f40fb566c5368a52b3",
+          "decision": "ADAPTATION_CANDIDATE",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "已核对文件头、固定版本及适用许可；可作为后续纯算法适配候选，需按目标阶段验证。"
+        },
+        {
+          "source_id": "deepseek-harness-quant",
+          "commit": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+          "path": "validation/walk_forward.py",
+          "sha256": "550adf19c7a13ee4e5909a4273ebb09513da0df62b568ee40d274a247c0c1d42",
+          "decision": "ADAPTATION_CANDIDATE",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "已核对文件头、固定版本及适用许可；可作为后续纯算法适配候选，需按目标阶段验证。"
+        }
+      ],
+      "proposal": {
+        "status": "PROPOSAL_ONLY",
+        "source_id": "deepseek-harness-quant",
+        "commit": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+        "eligible": [
+          {
+            "path": "backtest/bt_engine.py",
+            "sha256": "bd135a1c897fed9f0baaa1865edcd58fda0e2ee507298d6a0ad1b82744101351",
+            "existing_resource_id": null,
+            "reason": "REVIEWED_ADAPTATION_CANDIDATE"
+          },
+          {
+            "path": "backtest/bt_runner.py",
+            "sha256": "35b2a7e297bb0836ecc3a58ec785f6cc2289ba2fd37d50b650753a02614fcce1",
+            "existing_resource_id": null,
+            "reason": "REVIEWED_ADAPTATION_CANDIDATE"
+          },
+          {
+            "path": "etf/etf_map.py",
+            "sha256": "cacefdb73a9b88e733c894a01aa1c4aa0563d53377a9a1f667b2f1d300910f1a",
+            "existing_resource_id": null,
+            "reason": "REVIEWED_ADAPTATION_CANDIDATE"
+          },
+          {
+            "path": "factors/classic_indicators.py",
+            "sha256": "2d6901559c44ee7edd96d25aa42fbdd176851f9eaf5e1b4959a45802cac97110",
+            "existing_resource_id": null,
+            "reason": "REVIEWED_ADAPTATION_CANDIDATE"
+          },
+          {
+            "path": "factors/factor_engine.py",
+            "sha256": "a526b0c89a6154db5f2cabfc56f70a6f087591f43f5353092c16226fe0f3781e",
+            "existing_resource_id": null,
+            "reason": "REVIEWED_ADAPTATION_CANDIDATE"
+          },
+          {
+            "path": "factors/opportunities/pitch_track.py",
+            "sha256": "59c149ee2af82df533678343d23c0e45fa38ad51c18b391a350cff4adb2c4552",
+            "existing_resource_id": null,
+            "reason": "REVIEWED_ADAPTATION_CANDIDATE"
+          },
+          {
+            "path": "factors/pool/lifecycle.py",
+            "sha256": "1d93b6510d20260c7eba01bf0fae0142cbf56b557b989a40ec6f47c2e31b7c65",
+            "existing_resource_id": null,
+            "reason": "REVIEWED_ADAPTATION_CANDIDATE"
+          },
+          {
+            "path": "factors/pool/registry.py",
+            "sha256": "3b387ef64cbe7ff22516823c7d598d448775f12318eca70ab21df3f2f31d189e",
+            "existing_resource_id": null,
+            "reason": "REVIEWED_ADAPTATION_CANDIDATE"
+          },
+          {
+            "path": "risk/beneish_full.py",
+            "sha256": "9f1d4f71d02cdb3a45061909955cc266ab8d4e75eb33deac8dd56927be65c0cc",
+            "existing_resource_id": null,
+            "reason": "REVIEWED_ADAPTATION_CANDIDATE"
+          },
+          {
+            "path": "risk/data_audit.py",
+            "sha256": "e9952017cdfac9aea433b07a0d433fb6ce06d2316f8bd98546adb017b441f7bc",
+            "existing_resource_id": null,
+            "reason": "REVIEWED_ADAPTATION_CANDIDATE"
+          },
+          {
+            "path": "risk/pitch_review.py",
+            "sha256": "8852cd141a9d4b2f71ce08607b95b6a3750d4bace1549dfedbce23cd48e85013",
+            "existing_resource_id": null,
+            "reason": "REVIEWED_ADAPTATION_CANDIDATE"
+          },
+          {
+            "path": "strategy/pitch_v2.py",
+            "sha256": "a094d64378d1a8f0bb95fb87df1ac06a33406910f9758586b1b8d8547723dcd8",
+            "existing_resource_id": null,
+            "reason": "REVIEWED_ADAPTATION_CANDIDATE"
+          },
+          {
+            "path": "strategy/pool_layers.py",
+            "sha256": "888dc95a8a8b9053a09d7253353730775ddd063beeae5a02a63ade6aa1f57a75",
+            "existing_resource_id": null,
+            "reason": "REVIEWED_ADAPTATION_CANDIDATE"
+          },
+          {
+            "path": "validation/factor_evaluator.py",
+            "sha256": "12340eb1312583460e000abe7af98a96e772b4f301d713f40fb566c5368a52b3",
+            "existing_resource_id": null,
+            "reason": "REVIEWED_ADAPTATION_CANDIDATE"
+          },
+          {
+            "path": "validation/walk_forward.py",
+            "sha256": "550adf19c7a13ee4e5909a4273ebb09513da0df62b568ee40d274a247c0c1d42",
+            "existing_resource_id": null,
+            "reason": "REVIEWED_ADAPTATION_CANDIDATE"
+          }
+        ],
+        "reference_only": [
+          {
+            "path": "LICENSE",
+            "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4",
+            "existing_resource_id": "upstream-license",
+            "reason": "保留文档/界面/许可为来源参考；内部引文、图片、效果和外部材料不随仓库许可自动获准复制。"
+          },
+          {
+            "path": "README.md",
+            "sha256": "0b1e12fa96ea1a0934eb5cb0a88d4cec6a6fa1a7a6b1ebc536a936e104eef11c",
+            "existing_resource_id": null,
+            "reason": "保留文档/界面/许可为来源参考；内部引文、图片、效果和外部材料不随仓库许可自动获准复制。"
+          },
+          {
+            "path": "assets/skills/factor-mining-workflow/SKILL.md",
+            "sha256": "ff9dbbe90669d044bb5c0aac3c9c6e1b8793a1e3d127d4db974c7a20f40e950d",
+            "existing_resource_id": "source-factor-mining-workflow",
+            "reason": "保留文档/界面/许可为来源参考；内部引文、图片、效果和外部材料不随仓库许可自动获准复制。"
+          },
+          {
+            "path": "deck/dashboard_research_lib.html",
+            "sha256": "9b8b3c3da241ace6c445ac3324f5f7308eb8ca72b1b3a412c6014baccea5c2ce",
+            "existing_resource_id": null,
+            "reason": "保留文档/界面/许可为来源参考；内部引文、图片、效果和外部材料不随仓库许可自动获准复制。"
+          },
+          {
+            "path": "docs/架构.md",
+            "sha256": "9c56c2029790a5f51485e7daabc0f220b783815ab2a3603fe9af421be6b498c1",
+            "existing_resource_id": null,
+            "reason": "保留文档/界面/许可为来源参考；内部引文、图片、效果和外部材料不随仓库许可自动获准复制。"
+          },
+          {
+            "path": "docs/资产盘点.md",
+            "sha256": "64b26157d4250d67e02169b8b0b071ed78a04dd4cfa7a98a28fb88188e84357a",
+            "existing_resource_id": null,
+            "reason": "保留文档/界面/许可为来源参考；内部引文、图片、效果和外部材料不随仓库许可自动获准复制。"
+          },
+          {
+            "path": "harness/package.json",
+            "sha256": "b9d3e779f1c75308b4aa7160882e3c74fd58989d37878418274b45f01c899a72",
+            "existing_resource_id": null,
+            "reason": "保留文档/界面/许可为来源参考；内部引文、图片、效果和外部材料不随仓库许可自动获准复制。"
+          },
+          {
+            "path": "ui_v2/index.html",
+            "sha256": "e2b008d4ad9525058501841ada44c4d22558f4ba7d798c573ae6a3e32446138c",
+            "existing_resource_id": null,
+            "reason": "保留文档/界面/许可为来源参考；内部引文、图片、效果和外部材料不随仓库许可自动获准复制。"
+          }
+        ],
+        "blocked": [],
+        "unresolved": [],
+        "required_notices": [
+          {
+            "path": "LICENSE",
+            "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+          }
+        ]
+      }
+    },
+    {
+      "source_id": "qlib",
+      "commit": "54355232463878d2eebb91fe0ee5fa7fa1f5976c",
+      "file_reviews": [
+        {
+          "source_id": "qlib",
+          "commit": "54355232463878d2eebb91fe0ee5fa7fa1f5976c",
+          "path": "LICENSE",
+          "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383",
+          "decision": "REFERENCE_ONLY",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "保留文档/界面/许可为来源参考；内部引文、图片、效果和外部材料不随仓库许可自动获准复制。"
+        },
+        {
+          "source_id": "qlib",
+          "commit": "54355232463878d2eebb91fe0ee5fa7fa1f5976c",
+          "path": "qlib/contrib/data/handler.py",
+          "sha256": "b621481c6009c39066c67c71390fd2bea635f56daf9f2c4e38817eff268e3232",
+          "decision": "ADAPTATION_CANDIDATE",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "已核对文件头、固定版本及适用许可；可作为后续纯算法适配候选，需按目标阶段验证。"
+        },
+        {
+          "source_id": "qlib",
+          "commit": "54355232463878d2eebb91fe0ee5fa7fa1f5976c",
+          "path": "qlib/contrib/data/loader.py",
+          "sha256": "814b7f7ab3d418ae3c87ce352220080b239eba2670eac9e38376b794be4075cb",
+          "decision": "ADAPTATION_CANDIDATE",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "已核对文件头、固定版本及适用许可；可作为后续纯算法适配候选，需按目标阶段验证。"
+        },
+        {
+          "source_id": "qlib",
+          "commit": "54355232463878d2eebb91fe0ee5fa7fa1f5976c",
+          "path": "qlib/data/dataset/processor.py",
+          "sha256": "424af44e81c99467171c2d0b7978fb9f95d3b4c8b743a535ff4fe45d708cf517",
+          "decision": "ADAPTATION_CANDIDATE",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "已核对文件头、固定版本及适用许可；可作为后续纯算法适配候选，需按目标阶段验证。"
+        },
+        {
+          "source_id": "qlib",
+          "commit": "54355232463878d2eebb91fe0ee5fa7fa1f5976c",
+          "path": "qlib/workflow/record_temp.py",
+          "sha256": "80eacd668e6f8475995ff67f115766c4c241a469b03419fa82a4bb41482e13de",
+          "decision": "ADAPTATION_CANDIDATE",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "已核对文件头、固定版本及适用许可；可作为后续纯算法适配候选，需按目标阶段验证。"
+        }
+      ],
+      "proposal": {
+        "status": "PROPOSAL_ONLY",
+        "source_id": "qlib",
+        "commit": "54355232463878d2eebb91fe0ee5fa7fa1f5976c",
+        "eligible": [
+          {
+            "path": "qlib/contrib/data/handler.py",
+            "sha256": "b621481c6009c39066c67c71390fd2bea635f56daf9f2c4e38817eff268e3232",
+            "existing_resource_id": null,
+            "reason": "REVIEWED_ADAPTATION_CANDIDATE"
+          },
+          {
+            "path": "qlib/contrib/data/loader.py",
+            "sha256": "814b7f7ab3d418ae3c87ce352220080b239eba2670eac9e38376b794be4075cb",
+            "existing_resource_id": null,
+            "reason": "REVIEWED_ADAPTATION_CANDIDATE"
+          },
+          {
+            "path": "qlib/data/dataset/processor.py",
+            "sha256": "424af44e81c99467171c2d0b7978fb9f95d3b4c8b743a535ff4fe45d708cf517",
+            "existing_resource_id": null,
+            "reason": "REVIEWED_ADAPTATION_CANDIDATE"
+          },
+          {
+            "path": "qlib/workflow/record_temp.py",
+            "sha256": "80eacd668e6f8475995ff67f115766c4c241a469b03419fa82a4bb41482e13de",
+            "existing_resource_id": null,
+            "reason": "REVIEWED_ADAPTATION_CANDIDATE"
+          }
+        ],
+        "reference_only": [
+          {
+            "path": "LICENSE",
+            "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383",
+            "existing_resource_id": "qlib-license",
+            "reason": "保留文档/界面/许可为来源参考；内部引文、图片、效果和外部材料不随仓库许可自动获准复制。"
+          }
+        ],
+        "blocked": [],
+        "unresolved": [],
+        "required_notices": [
+          {
+            "path": "LICENSE",
+            "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+          }
+        ]
+      }
+    },
+    {
+      "source_id": "alphalens-reloaded",
+      "commit": "60755d1cc7d9d36a4c70c8344cbdb168fe99df24",
+      "file_reviews": [
+        {
+          "source_id": "alphalens-reloaded",
+          "commit": "60755d1cc7d9d36a4c70c8344cbdb168fe99df24",
+          "path": "LICENSE",
+          "sha256": "2b651c2d29c644d1c73417cd96e6cfa506d6de102ed96fc3de96d676e089cf29",
+          "decision": "REFERENCE_ONLY",
+          "license_id": "Apache-2.0",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "2b651c2d29c644d1c73417cd96e6cfa506d6de102ed96fc3de96d676e089cf29"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "保留文档/界面/许可为来源参考；内部引文、图片、效果和外部材料不随仓库许可自动获准复制。"
+        },
+        {
+          "source_id": "alphalens-reloaded",
+          "commit": "60755d1cc7d9d36a4c70c8344cbdb168fe99df24",
+          "path": "src/alphalens/performance.py",
+          "sha256": "dc4c7c661b19a61b434f67cd5015a986f5aea85fd319e08a3d7fb04469203d25",
+          "decision": "ADAPTATION_CANDIDATE",
+          "license_id": "Apache-2.0",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "2b651c2d29c644d1c73417cd96e6cfa506d6de102ed96fc3de96d676e089cf29"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "已核对文件头、固定版本及适用许可；可作为后续纯算法适配候选，需按目标阶段验证。"
+        },
+        {
+          "source_id": "alphalens-reloaded",
+          "commit": "60755d1cc7d9d36a4c70c8344cbdb168fe99df24",
+          "path": "src/alphalens/tears.py",
+          "sha256": "924638a485ccf668d582781d67f0a761ba1d92c8681c990e444518200f64f572",
+          "decision": "ADAPTATION_CANDIDATE",
+          "license_id": "Apache-2.0",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "2b651c2d29c644d1c73417cd96e6cfa506d6de102ed96fc3de96d676e089cf29"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "已核对文件头、固定版本及适用许可；可作为后续纯算法适配候选，需按目标阶段验证。"
+        },
+        {
+          "source_id": "alphalens-reloaded",
+          "commit": "60755d1cc7d9d36a4c70c8344cbdb168fe99df24",
+          "path": "src/alphalens/utils.py",
+          "sha256": "093e9eb62d2c9cd7d4cf93ffb64998064ec7c67092f496e3b52f118187ed33da",
+          "decision": "ADAPTATION_CANDIDATE",
+          "license_id": "Apache-2.0",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "2b651c2d29c644d1c73417cd96e6cfa506d6de102ed96fc3de96d676e089cf29"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "已核对文件头、固定版本及适用许可；可作为后续纯算法适配候选，需按目标阶段验证。"
+        }
+      ],
+      "proposal": {
+        "status": "PROPOSAL_ONLY",
+        "source_id": "alphalens-reloaded",
+        "commit": "60755d1cc7d9d36a4c70c8344cbdb168fe99df24",
+        "eligible": [
+          {
+            "path": "src/alphalens/performance.py",
+            "sha256": "dc4c7c661b19a61b434f67cd5015a986f5aea85fd319e08a3d7fb04469203d25",
+            "existing_resource_id": "alphalens-performance-reference",
+            "reason": "REVIEWED_ADAPTATION_CANDIDATE"
+          },
+          {
+            "path": "src/alphalens/tears.py",
+            "sha256": "924638a485ccf668d582781d67f0a761ba1d92c8681c990e444518200f64f572",
+            "existing_resource_id": null,
+            "reason": "REVIEWED_ADAPTATION_CANDIDATE"
+          },
+          {
+            "path": "src/alphalens/utils.py",
+            "sha256": "093e9eb62d2c9cd7d4cf93ffb64998064ec7c67092f496e3b52f118187ed33da",
+            "existing_resource_id": null,
+            "reason": "REVIEWED_ADAPTATION_CANDIDATE"
+          }
+        ],
+        "reference_only": [
+          {
+            "path": "LICENSE",
+            "sha256": "2b651c2d29c644d1c73417cd96e6cfa506d6de102ed96fc3de96d676e089cf29",
+            "existing_resource_id": "alphalens-reloaded-license",
+            "reason": "保留文档/界面/许可为来源参考；内部引文、图片、效果和外部材料不随仓库许可自动获准复制。"
+          }
+        ],
+        "blocked": [],
+        "unresolved": [],
+        "required_notices": [
+          {
+            "path": "LICENSE",
+            "sha256": "2b651c2d29c644d1c73417cd96e6cfa506d6de102ed96fc3de96d676e089cf29"
+          }
+        ]
+      }
+    },
+    {
+      "source_id": "pyanomaly",
+      "commit": "59758c913a4146bbfb9d3c056668ccdc5231c8c8",
+      "file_reviews": [
+        {
+          "source_id": "pyanomaly",
+          "commit": "59758c913a4146bbfb9d3c056668ccdc5231c8c8",
+          "path": "LICENSE.txt",
+          "sha256": "84dc4ddcfd08d382bbe4ac775ebee4da7e40280b8aba4f841884f0234303f6f4",
+          "decision": "REFERENCE_ONLY",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE.txt",
+              "sha256": "84dc4ddcfd08d382bbe4ac775ebee4da7e40280b8aba4f841884f0234303f6f4"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "保留文档/界面/许可为来源参考；内部引文、图片、效果和外部材料不随仓库许可自动获准复制。"
+        },
+        {
+          "source_id": "pyanomaly",
+          "commit": "59758c913a4146bbfb9d3c056668ccdc5231c8c8",
+          "path": "pyanomaly/characteristics.py",
+          "sha256": "c9ad1d14b61fae774d1a7446609971225fb0a709f0e0da7dc998d7aead32bc20",
+          "decision": "ADAPTATION_CANDIDATE",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE.txt",
+              "sha256": "84dc4ddcfd08d382bbe4ac775ebee4da7e40280b8aba4f841884f0234303f6f4"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "已核对文件头、固定版本及适用许可；可作为后续纯算法适配候选，需按目标阶段验证。"
+        },
+        {
+          "source_id": "pyanomaly",
+          "commit": "59758c913a4146bbfb9d3c056668ccdc5231c8c8",
+          "path": "pyanomaly/factors.py",
+          "sha256": "7d0f671ceb12b63b3878b7ba16b431eabb862209cb96407f829fa7a92ea45fd5",
+          "decision": "ADAPTATION_CANDIDATE",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE.txt",
+              "sha256": "84dc4ddcfd08d382bbe4ac775ebee4da7e40280b8aba4f841884f0234303f6f4"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "已核对文件头、固定版本及适用许可；可作为后续纯算法适配候选，需按目标阶段验证。"
+        },
+        {
+          "source_id": "pyanomaly",
+          "commit": "59758c913a4146bbfb9d3c056668ccdc5231c8c8",
+          "path": "pyanomaly/panel.py",
+          "sha256": "bfde5914994f6445880f2a495e42efc33d3271e6a382e9999eb67affc3b1b2fc",
+          "decision": "ADAPTATION_CANDIDATE",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE.txt",
+              "sha256": "84dc4ddcfd08d382bbe4ac775ebee4da7e40280b8aba4f841884f0234303f6f4"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "已核对文件头、固定版本及适用许可；可作为后续纯算法适配候选，需按目标阶段验证。"
+        },
+        {
+          "source_id": "pyanomaly",
+          "commit": "59758c913a4146bbfb9d3c056668ccdc5231c8c8",
+          "path": "pyanomaly/portfolio.py",
+          "sha256": "bcabae2c9899e8861140900c23fef37a6e04729dffb668475c0df670a5df503c",
+          "decision": "ADAPTATION_CANDIDATE",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE.txt",
+              "sha256": "84dc4ddcfd08d382bbe4ac775ebee4da7e40280b8aba4f841884f0234303f6f4"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "已核对文件头、固定版本及适用许可；可作为后续纯算法适配候选，需按目标阶段验证。"
+        },
+        {
+          "source_id": "pyanomaly",
+          "commit": "59758c913a4146bbfb9d3c056668ccdc5231c8c8",
+          "path": "pyanomaly/tcost.py",
+          "sha256": "b6f92dcda38e8921ca3e27683c503b38f570ba9ded5ac7304a5f335f6b54157a",
+          "decision": "ADAPTATION_CANDIDATE",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE.txt",
+              "sha256": "84dc4ddcfd08d382bbe4ac775ebee4da7e40280b8aba4f841884f0234303f6f4"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "已核对文件头、固定版本及适用许可；可作为后续纯算法适配候选，需按目标阶段验证。"
+        }
+      ],
+      "proposal": {
+        "status": "PROPOSAL_ONLY",
+        "source_id": "pyanomaly",
+        "commit": "59758c913a4146bbfb9d3c056668ccdc5231c8c8",
+        "eligible": [
+          {
+            "path": "pyanomaly/characteristics.py",
+            "sha256": "c9ad1d14b61fae774d1a7446609971225fb0a709f0e0da7dc998d7aead32bc20",
+            "existing_resource_id": null,
+            "reason": "REVIEWED_ADAPTATION_CANDIDATE"
+          },
+          {
+            "path": "pyanomaly/factors.py",
+            "sha256": "7d0f671ceb12b63b3878b7ba16b431eabb862209cb96407f829fa7a92ea45fd5",
+            "existing_resource_id": null,
+            "reason": "REVIEWED_ADAPTATION_CANDIDATE"
+          },
+          {
+            "path": "pyanomaly/panel.py",
+            "sha256": "bfde5914994f6445880f2a495e42efc33d3271e6a382e9999eb67affc3b1b2fc",
+            "existing_resource_id": null,
+            "reason": "REVIEWED_ADAPTATION_CANDIDATE"
+          },
+          {
+            "path": "pyanomaly/portfolio.py",
+            "sha256": "bcabae2c9899e8861140900c23fef37a6e04729dffb668475c0df670a5df503c",
+            "existing_resource_id": null,
+            "reason": "REVIEWED_ADAPTATION_CANDIDATE"
+          },
+          {
+            "path": "pyanomaly/tcost.py",
+            "sha256": "b6f92dcda38e8921ca3e27683c503b38f570ba9ded5ac7304a5f335f6b54157a",
+            "existing_resource_id": null,
+            "reason": "REVIEWED_ADAPTATION_CANDIDATE"
+          }
+        ],
+        "reference_only": [
+          {
+            "path": "LICENSE.txt",
+            "sha256": "84dc4ddcfd08d382bbe4ac775ebee4da7e40280b8aba4f841884f0234303f6f4",
+            "existing_resource_id": "pyanomaly-license",
+            "reason": "保留文档/界面/许可为来源参考；内部引文、图片、效果和外部材料不随仓库许可自动获准复制。"
+          }
+        ],
+        "blocked": [],
+        "unresolved": [],
+        "required_notices": [
+          {
+            "path": "LICENSE.txt",
+            "sha256": "84dc4ddcfd08d382bbe4ac775ebee4da7e40280b8aba4f841884f0234303f6f4"
+          }
+        ]
+      }
+    },
+    {
+      "source_id": "RD-Agent",
+      "commit": "484776c211e4fbbeef03e0ec00d6bbee7362a4f4",
+      "file_reviews": [
+        {
+          "source_id": "RD-Agent",
+          "commit": "484776c211e4fbbeef03e0ec00d6bbee7362a4f4",
+          "path": "LICENSE",
+          "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383",
+          "decision": "REFERENCE_ONLY",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "保留文档/界面/许可为来源参考；内部引文、图片、效果和外部材料不随仓库许可自动获准复制。"
+        },
+        {
+          "source_id": "RD-Agent",
+          "commit": "484776c211e4fbbeef03e0ec00d6bbee7362a4f4",
+          "path": "rdagent/components/knowledge_management/graph.py",
+          "sha256": "de316b949525afedf1e844018a9e4e7124a863e332bb27680e11b14680064c8a",
+          "decision": "ADAPTATION_CANDIDATE",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "已核对文件头、固定版本及适用许可；可作为后续纯算法适配候选，需按目标阶段验证。"
+        },
+        {
+          "source_id": "RD-Agent",
+          "commit": "484776c211e4fbbeef03e0ec00d6bbee7362a4f4",
+          "path": "rdagent/components/knowledge_management/vector_base.py",
+          "sha256": "c4d3dac98430c3a700d1ca014d4345a03eba411a904c185b3d0dab990f3ce6d3",
+          "decision": "ADAPTATION_CANDIDATE",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "已核对文件头、固定版本及适用许可；可作为后续纯算法适配候选，需按目标阶段验证。"
+        },
+        {
+          "source_id": "RD-Agent",
+          "commit": "484776c211e4fbbeef03e0ec00d6bbee7362a4f4",
+          "path": "rdagent/scenarios/qlib/experiment/factor_experiment.py",
+          "sha256": "451bc9a4b01c73f5d8d30d071c0e54f27f87d001898dbed853e7264b5332af79",
+          "decision": "ADAPTATION_CANDIDATE",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "已核对文件头、固定版本及适用许可；可作为后续纯算法适配候选，需按目标阶段验证。"
+        },
+        {
+          "source_id": "RD-Agent",
+          "commit": "484776c211e4fbbeef03e0ec00d6bbee7362a4f4",
+          "path": "rdagent/scenarios/qlib/proposal/factor_proposal.py",
+          "sha256": "8da980804f48a7850a978f481d5731523d5604971b2f21f2e363ae766c005c51",
+          "decision": "ADAPTATION_CANDIDATE",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "已核对文件头、固定版本及适用许可；可作为后续纯算法适配候选，需按目标阶段验证。"
+        }
+      ],
+      "proposal": {
+        "status": "PROPOSAL_ONLY",
+        "source_id": "RD-Agent",
+        "commit": "484776c211e4fbbeef03e0ec00d6bbee7362a4f4",
+        "eligible": [
+          {
+            "path": "rdagent/components/knowledge_management/graph.py",
+            "sha256": "de316b949525afedf1e844018a9e4e7124a863e332bb27680e11b14680064c8a",
+            "existing_resource_id": null,
+            "reason": "REVIEWED_ADAPTATION_CANDIDATE"
+          },
+          {
+            "path": "rdagent/components/knowledge_management/vector_base.py",
+            "sha256": "c4d3dac98430c3a700d1ca014d4345a03eba411a904c185b3d0dab990f3ce6d3",
+            "existing_resource_id": null,
+            "reason": "REVIEWED_ADAPTATION_CANDIDATE"
+          },
+          {
+            "path": "rdagent/scenarios/qlib/experiment/factor_experiment.py",
+            "sha256": "451bc9a4b01c73f5d8d30d071c0e54f27f87d001898dbed853e7264b5332af79",
+            "existing_resource_id": null,
+            "reason": "REVIEWED_ADAPTATION_CANDIDATE"
+          },
+          {
+            "path": "rdagent/scenarios/qlib/proposal/factor_proposal.py",
+            "sha256": "8da980804f48a7850a978f481d5731523d5604971b2f21f2e363ae766c005c51",
+            "existing_resource_id": null,
+            "reason": "REVIEWED_ADAPTATION_CANDIDATE"
+          }
+        ],
+        "reference_only": [
+          {
+            "path": "LICENSE",
+            "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383",
+            "existing_resource_id": "rd-agent-license",
+            "reason": "保留文档/界面/许可为来源参考；内部引文、图片、效果和外部材料不随仓库许可自动获准复制。"
+          }
+        ],
+        "blocked": [],
+        "unresolved": [],
+        "required_notices": [
+          {
+            "path": "LICENSE",
+            "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+          }
+        ]
+      }
+    },
+    {
+      "source_id": "bt",
+      "commit": "4ae4090266300c0185f418aca18e28e649509a33",
+      "file_reviews": [
+        {
+          "source_id": "bt",
+          "commit": "4ae4090266300c0185f418aca18e28e649509a33",
+          "path": "LICENSE",
+          "sha256": "8711471566d722d55eca3f09196f342b2ee2960616e68127ec2a17b39ff99949",
+          "decision": "REFERENCE_ONLY",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "8711471566d722d55eca3f09196f342b2ee2960616e68127ec2a17b39ff99949"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "保留文档/界面/许可为来源参考；内部引文、图片、效果和外部材料不随仓库许可自动获准复制。"
+        },
+        {
+          "source_id": "bt",
+          "commit": "4ae4090266300c0185f418aca18e28e649509a33",
+          "path": "bt/algos.py",
+          "sha256": "81b79443e7dc36356293a22bf4c237a76267d77bcfbaeb90e3a5df374425f2ee",
+          "decision": "ADAPTATION_CANDIDATE",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "8711471566d722d55eca3f09196f342b2ee2960616e68127ec2a17b39ff99949"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "已核对文件头、固定版本及适用许可；可作为后续纯算法适配候选，需按目标阶段验证。"
+        },
+        {
+          "source_id": "bt",
+          "commit": "4ae4090266300c0185f418aca18e28e649509a33",
+          "path": "bt/backtest.py",
+          "sha256": "ce5fda01fd1a077b891a87711235f1a6b49d2cd0db173034d546bf1a509976fa",
+          "decision": "ADAPTATION_CANDIDATE",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "8711471566d722d55eca3f09196f342b2ee2960616e68127ec2a17b39ff99949"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "已核对文件头、固定版本及适用许可；可作为后续纯算法适配候选，需按目标阶段验证。"
+        },
+        {
+          "source_id": "bt",
+          "commit": "4ae4090266300c0185f418aca18e28e649509a33",
+          "path": "bt/core.py",
+          "sha256": "9d74efb71035f15b62ab4c24720b552d3ba2b467d7f9d130b48bdb62d454d9ad",
+          "decision": "ADAPTATION_CANDIDATE",
+          "license_id": "MIT",
+          "inspected_notices": [
+            {
+              "path": "LICENSE",
+              "sha256": "8711471566d722d55eca3f09196f342b2ee2960616e68127ec2a17b39ff99949"
+            }
+          ],
+          "reviewed_by": "Finathink Phase 21 source review",
+          "reviewed_on": "2026-10-31",
+          "rationale": "已核对文件头、固定版本及适用许可；可作为后续纯算法适配候选，需按目标阶段验证。"
+        }
+      ],
+      "proposal": {
+        "status": "PROPOSAL_ONLY",
+        "source_id": "bt",
+        "commit": "4ae4090266300c0185f418aca18e28e649509a33",
+        "eligible": [
+          {
+            "path": "bt/algos.py",
+            "sha256": "81b79443e7dc36356293a22bf4c237a76267d77bcfbaeb90e3a5df374425f2ee",
+            "existing_resource_id": null,
+            "reason": "REVIEWED_ADAPTATION_CANDIDATE"
+          },
+          {
+            "path": "bt/backtest.py",
+            "sha256": "ce5fda01fd1a077b891a87711235f1a6b49d2cd0db173034d546bf1a509976fa",
+            "existing_resource_id": null,
+            "reason": "REVIEWED_ADAPTATION_CANDIDATE"
+          },
+          {
+            "path": "bt/core.py",
+            "sha256": "9d74efb71035f15b62ab4c24720b552d3ba2b467d7f9d130b48bdb62d454d9ad",
+            "existing_resource_id": null,
+            "reason": "REVIEWED_ADAPTATION_CANDIDATE"
+          }
+        ],
+        "reference_only": [
+          {
+            "path": "LICENSE",
+            "sha256": "8711471566d722d55eca3f09196f342b2ee2960616e68127ec2a17b39ff99949",
+            "existing_resource_id": "bt-license",
+            "reason": "保留文档/界面/许可为来源参考；内部引文、图片、效果和外部材料不随仓库许可自动获准复制。"
+          }
+        ],
+        "blocked": [],
+        "unresolved": [],
+        "required_notices": [
+          {
+            "path": "LICENSE",
+            "sha256": "8711471566d722d55eca3f09196f342b2ee2960616e68127ec2a17b39ff99949"
+          }
+        ]
+      }
+    }
+  ]
+}

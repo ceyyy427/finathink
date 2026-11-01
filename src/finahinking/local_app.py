@@ -1336,7 +1336,7 @@ class LocalApplication:
                 kind = clean.rsplit("/", 1)[-1]
                 content = asset_workspace_page(service, kind, query or {})
                 return 200, "text/html; charset=utf-8", self.render_shell(clean, KINDS[kind], content,
-                    inspector=self._inspector("资料上下文", {"来源": "包内校验资源", "执行": "尚未加载到研究", "下一步": "检查输入后带入问题"}))
+                    inspector=self._inspector("资料上下文", {"来源": "包内校验资源", "执行": "尚未加载到研究", "下一步": "查看模块迁移去向" if kind == "sources" else "检查输入后带入问题"}))
             if clean != "/api/research/assets":
                 return 200, "application/json", service.detail(clean.removeprefix("/api/research/assets/"))
             values = query or {}
