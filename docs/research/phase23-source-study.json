@@ -1,0 +1,78 @@
+{
+  "schema_version": "phase23-source-study.v1",
+  "entries": [
+    {
+      "repository": "https://github.com/yutiansut/QUANTAXIS",
+      "commit": "232aa7ac9869966108f02a8fff85f1f7b09a9ce2",
+      "path": "QUANTAXIS/QAData/QADataStruct.py",
+      "sha256": "820abdc3eee3e345e91cd126061da9f01fb339e6bec7bfdf145e132105da8688",
+      "license_path": "LICENSE",
+      "license_observed": "MIT",
+      "read_date": "2026-11-01",
+      "decision": "REFERENCE_ONLY_INDEPENDENT_IMPLEMENTATION",
+      "upstream_executed": false
+    },
+    {
+      "repository": "https://github.com/yutiansut/QUANTAXIS",
+      "commit": "232aa7ac9869966108f02a8fff85f1f7b09a9ce2",
+      "path": "QUANTAXIS/QAIndicator/base.py",
+      "sha256": "fbbb3debfa0d061eb4d6e56acf783dea18a144f56ffc191769df075cf38c4737",
+      "license_path": "LICENSE",
+      "license_observed": "MIT",
+      "read_date": "2026-11-01",
+      "decision": "REFERENCE_ONLY_INDEPENDENT_IMPLEMENTATION",
+      "upstream_executed": false
+    },
+    {
+      "repository": "https://github.com/yuanwang589-dev/deepseek-harness-quant",
+      "commit": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+      "path": "factors/classic_indicators.py",
+      "sha256": "2d6901559c44ee7edd96d25aa42fbdd176851f9eaf5e1b4959a45802cac97110",
+      "license_path": "LICENSE",
+      "license_observed": "MIT_WITH_RESEARCH_NOTE",
+      "read_date": "2026-11-01",
+      "decision": "REFERENCE_ONLY_INDEPENDENT_IMPLEMENTATION",
+      "upstream_executed": false
+    },
+    {
+      "repository": "https://github.com/microsoft/qlib",
+      "commit": "54355232463878d2eebb91fe0ee5fa7fa1f5976c",
+      "path": "qlib/data/dataset/processor.py",
+      "sha256": "424af44e81c99467171c2d0b7978fb9f95d3b4c8b743a535ff4fe45d708cf517",
+      "license_path": "LICENSE",
+      "license_observed": "MIT",
+      "read_date": "2026-11-01",
+      "decision": "REFERENCE_ONLY_INDEPENDENT_IMPLEMENTATION",
+      "upstream_executed": false
+    },
+    {
+      "repository": "https://github.com/chulwoohan/pyanomaly",
+      "commit": "59758c913a4146bbfb9d3c056668ccdc5231c8c8",
+      "path": "pyanomaly/panel.py",
+      "sha256": "bfde5914994f6445880f2a495e42efc33d3271e6a382e9999eb67affc3b1b2fc",
+      "license_path": "LICENSE.txt",
+      "license_observed": "MIT",
+      "read_date": "2026-11-01",
+      "decision": "REFERENCE_ONLY_INDEPENDENT_IMPLEMENTATION",
+      "upstream_executed": false
+    },
+    {
+      "repository": "https://github.com/chulwoohan/pyanomaly",
+      "commit": "59758c913a4146bbfb9d3c056668ccdc5231c8c8",
+      "path": "pyanomaly/characteristics.py",
+      "sha256": "c9ad1d14b61fae774d1a7446609971225fb0a709f0e0da7dc998d7aead32bc20",
+      "license_path": "LICENSE.txt",
+      "license_observed": "MIT",
+      "read_date": "2026-11-01",
+      "decision": "REFERENCE_ONLY_INDEPENDENT_IMPLEMENTATION",
+      "upstream_executed": false
+    }
+  ],
+  "decisions": [
+    "借鉴 QUANTAXIS 面板、日历与滚动算子结构，独立实现时点选择与规则合同。",
+    "DeepSeek 指标的缺高低价近似不进入本实现；保留明确缺失。",
+    "Qlib 训练期拟合与截面变换分开；本实现固定 ddof=0、独立数值边界与训练摘要。",
+    "Pyanomaly 的资产隔离与财务口径作为阅读参考，不引入数据商 SDK。"
+  ],
+  "dependencies": "No new runtime dependencies; existing numpy/pandas only; no upstream code copied."
+}

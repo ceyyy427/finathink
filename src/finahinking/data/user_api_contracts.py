@@ -225,6 +225,13 @@ class DataBatch:
             "pit_available": self.pit_available,
         }
 
+    def to_panel_attachment(self, snapshot_ref, *, units):
+        from .panel_contracts import PanelFieldAttachment
+
+        if fingerprint_records(self.records) != self.data_fingerprint or self.quality_issues:
+            raise ValueError("数据批次校验失败，请先处理字段质量问题")
+        return PanelFieldAttachment(snapshot_ref, units, list(self.records), self.source_declaration)
+
     def to_research_attachment(self, snapshot_ref, *, market, units):
         from .research_fields import (
             DATE_RESEARCH_FIELDS,

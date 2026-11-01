@@ -292,14 +292,16 @@ class JsonApiConnector:
             as_of=request.as_of,
         )
 
-    def capture(self, request: DataRequest, store, *, units=None, asset_classes=None) -> str:
+    def capture(self, request: DataRequest, store, *, units=None, asset_classes=None, adjustment="UNKNOWN") -> str:
         """Explicitly fetch once and retain an immutable replay reference."""
         from finahinking.data.units import snapshot_asset_classes, snapshot_units
         from finahinking.p8_2.data_sources import snapshot_from_batch
 
+        if adjustment not in {"RAW", "UNKNOWN"}:
+            raise ValueError("请明确声明 RAW 原始价格或 UNKNOWN，不接受未来复权序列")
         declaration = snapshot_units(units)
         classes = snapshot_asset_classes(asset_classes)
-        return store.save(snapshot_from_batch(self.fetch(request), units=declaration, asset_classes=classes))
+        return store.save(snapshot_from_batch(self.fetch(request), units=declaration, asset_classes=classes, adjustment=adjustment))
 
 
 __all__ = [

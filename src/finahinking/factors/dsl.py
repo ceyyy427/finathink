@@ -257,3 +257,10 @@ def evaluate_expression(
     if not isinstance(result, pd.Series):
         raise TypeError("factor expression must produce a series")
     return result.replace([float("inf"), float("-inf")], float("nan"))
+
+
+def evaluate_panel_expression(expression, panel):
+    """Explicit opt-in to bounded-panel-dsl.v1; legacy parsing is unchanged."""
+    from .panel_operators import evaluate_panel
+
+    return evaluate_panel(expression, panel)

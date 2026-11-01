@@ -33,3 +33,18 @@
 | 全部间接下游 | `python3 -m pytest -q`；`python3 -m ruff check src tests scripts` | 不以定向门禁替代全量回归 |
 
 实际结果、截图与本轮发现的缺陷见[Phase22验收](reviews/2026-10-31-finathink-phase22-review.md)。
+
+## Phase23 时点面板与算子传播
+
+基线为已发布Phase22 `1388a5c`。依赖定位：`rg -n 'ResearchFieldAttachment|ResearchFieldStore|normalize_records|SnapshotStore|evaluate_expression' src/finahinking`；新增调用：`rg -n 'build_panel|evaluate_panel_request|evaluate_panel_expression' src tests scripts`。数据附件读取影响方法研究、因子验证及持久快照；新HTTP复用既有本地CSRF和研究服务。
+
+| 模块与下游 | 回归命令 | 传播要求 |
+| --- | --- | --- |
+| 数据合同/映射/存储 → 因子研究与面板 | `python3 -m pytest tests/data tests/research/test_method_factor_journey.py -q` | 旧附件、字段单位、可用时间与真实worker均覆盖 |
+| 24算子 → 版本表达式与研究结果 | `python3 -m pytest tests/research/test_panel_operators.py tests/research/test_panel_dsl.py tests/research/test_factor_dsl.py -q` | 手算、未来变更、资产重排、训练边界、旧指纹 |
+| 面板API → 实际HTTP/spawn | `python3 -m pytest tests/research/test_panel_journey.py -q` | CSRF、绑定、结果重建、错误、无隐式排队 |
+| 应用外壳 → 既有浏览器入口 | `FINATHINK_REQUIRE_BROWSER=1 python3 -m pytest tests/p7_5/test_phase22_browser.py -q` | 三尺寸、键盘、控制台、现有知识到准备路径 |
+| 新模块与API → 全新安装 | `python3 scripts/clean_install.py` | 独立wheel环境真实HTTP，离开checkout运行 |
+| 未逐项列举下游 | `FINATHINK_REQUIRE_BROWSER=1 python3 -m pytest -q`；`python3 -m ruff check src tests scripts` | 冻结生产源码后运行全量；前端build/test/perf保留 |
+
+命令在已授权的隔离工作树内执行，使用本地合成数据。安装门禁下载公开运行依赖；不调用用户API或模型账户。结果见[Phase23验收](reviews/2026-10-31-finathink-phase23-review.md)。
