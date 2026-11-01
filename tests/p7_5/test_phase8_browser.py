@@ -161,15 +161,18 @@ def test_switching_reruns_disables_old_cancel_until_new_job_is_bound(observed_pa
     app = LocalApplication(LocalAppConfig(db_path=str(tmp_path / "app.sqlite"), offline=True))
     service = app.research_service
     source, source_ref, _ = inputs(service)
+    server = create_server(app, host="127.0.0.1", port=0)
+    # Bootstrap starts an owner. Stop it before enqueueing the two jobs whose
+    # queued state this cancellation test deliberately needs to preserve.
     service.close()
     values = {"run_id": source["run_id"], "snapshot_ref": source_ref, "as_of": "2026-01-12", "policy_ref": service.learning.policies()[0]["policy_ref"]}
     one, two = [service.learning.rerun({**values, "idempotency_key": f"queued-{index}"}) for index in range(2)]
-    server = create_server(app, host="127.0.0.1", port=0)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     base = f"http://127.0.0.1:{server.server_address[1]}"
     pending = []
     try:
+        assert service.runtime._supervisor._process is None, "queued-case fixture must stop the server-started owner"
         page.goto(base + "/research/learning")
         root = page.locator('[data-learning-workspace]')
         root.locator('[data-learning-runs]').get_by_role("button", name=one["run_id"], exact=False).click()
