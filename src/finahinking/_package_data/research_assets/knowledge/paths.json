@@ -1,0 +1,212 @@
+{
+  "schema_version": "quant-knowledge-paths.v1",
+  "version": "1.0.0",
+  "paths": [
+    {
+      "path_id": "data-readiness",
+      "title": "从数据到可用信息",
+      "description": "先查字段与单位，再核对时点和版本。",
+      "item_ids": [
+        "units",
+        "point-in-time",
+        "publication-lag",
+        "revisions",
+        "missing-data",
+        "data-fingerprint"
+      ],
+      "path_type": "research",
+      "practice": "列出自己数据的可用时间、单位和缺口；未提供数据时保留待补字段。",
+      "legacy": false
+    },
+    {
+      "path_id": "return-foundations",
+      "title": "读懂收益与净值",
+      "description": "从单期变化走到含息与基准比较。",
+      "item_ids": [
+        "return",
+        "compounding",
+        "log-return",
+        "total-return",
+        "excess-return",
+        "annualization",
+        "benchmark"
+      ],
+      "path_type": "research",
+      "practice": "用固定例子核对价格收益、总回报与复合年化的差异。",
+      "legacy": false
+    },
+    {
+      "path_id": "statistics-foundations",
+      "title": "统计基础与不确定性",
+      "description": "理解中心、离散、关系和估计误差。",
+      "item_ids": [
+        "mean",
+        "variance",
+        "standard-deviation",
+        "covariance",
+        "correlation",
+        "regression",
+        "confidence-interval"
+      ],
+      "path_type": "research",
+      "practice": "手算样本统计并说明哪些推断假设还没有满足。",
+      "legacy": false
+    },
+    {
+      "path_id": "trend-research",
+      "title": "趋势与动量研究准备",
+      "description": "先明确价格和窗口，再提出待验证假设。",
+      "item_ids": [
+        "adjustment",
+        "trading-calendar",
+        "moving-average",
+        "ema",
+        "momentum",
+        "macd",
+        "oos"
+      ],
+      "path_type": "research",
+      "practice": "记录周期、EMA初始化、交易时点及样本外划分。",
+      "legacy": false
+    },
+    {
+      "path_id": "reversal-research",
+      "title": "反转与波动尺度",
+      "description": "理解偏离、强弱和波幅的不同含义。",
+      "item_ids": [
+        "moving-average",
+        "standard-deviation",
+        "bollinger",
+        "rsi",
+        "atr",
+        "mean-reversion",
+        "oos"
+      ],
+      "path_type": "research",
+      "practice": "提出一个带失效条件的反转假设，不把阈值直接当结论。",
+      "legacy": false
+    },
+    {
+      "path_id": "fundamental-quality",
+      "title": "财务质量与时点",
+      "description": "把披露、盈利、现金与杠杆连起来。",
+      "item_ids": [
+        "point-in-time",
+        "publication-lag",
+        "roe",
+        "roa",
+        "gross-profitability",
+        "accruals",
+        "cashflow-quality",
+        "leverage"
+      ],
+      "path_type": "research",
+      "practice": "列出利润期间、资产分母和公告可用时间，检查异常分母。",
+      "legacy": false
+    },
+    {
+      "path_id": "valuation-research",
+      "title": "估值与增长假设",
+      "description": "把市场价格和财务信息对齐后再比较。",
+      "item_ids": [
+        "market-cap",
+        "book-to-market",
+        "earnings-yield",
+        "asset-growth",
+        "earnings-surprise",
+        "universe-bias"
+      ],
+      "path_type": "research",
+      "practice": "选择事前可见的财报与市值版本，并解释行业可比性。",
+      "legacy": false
+    },
+    {
+      "path_id": "factor-evidence",
+      "title": "因子证据与稳定性",
+      "description": "从截面关联走到分组、衰减和样本外。",
+      "item_ids": [
+        "alignment",
+        "information-coefficient",
+        "rank-ic",
+        "icir",
+        "quantile-return",
+        "factor-decay",
+        "neutralization",
+        "oos",
+        "overfitting"
+      ],
+      "path_type": "research",
+      "practice": "声明IC口径、持有期、并列排名和所有尝试记录。",
+      "legacy": false
+    },
+    {
+      "path_id": "execution-research",
+      "title": "从信号到可执行模拟",
+      "description": "理解流动性、订单与成本约束。",
+      "item_ids": [
+        "units",
+        "liquidity",
+        "vwap",
+        "slippage",
+        "capacity",
+        "transaction-cost",
+        "rebalance",
+        "backtesting"
+      ],
+      "path_type": "research",
+      "practice": "确定信号与成交顺序，准备成本和未成交敏感性情景。",
+      "legacy": false
+    },
+    {
+      "path_id": "portfolio-research",
+      "title": "组合配置与风险来源",
+      "description": "从简单基准走到协方差和暴露。",
+      "item_ids": [
+        "equal-weight",
+        "covariance",
+        "correlation",
+        "inverse-volatility",
+        "covariance-diversification",
+        "risk-contribution",
+        "concentration",
+        "etf-exposure"
+      ],
+      "path_type": "research",
+      "practice": "比较资金权重与风险贡献，保留未知穿透暴露。",
+      "legacy": false
+    },
+    {
+      "path_id": "risk-research",
+      "title": "风险尺度与尾部情景",
+      "description": "同时观察波动、路径、尾部和假设冲击。",
+      "item_ids": [
+        "volatility",
+        "drawdown",
+        "downside-risk",
+        "value-at-risk",
+        "expected-shortfall",
+        "stress-testing",
+        "sharpe"
+      ],
+      "path_type": "research",
+      "practice": "区分VaR阈值、ES尾部均值和压力情景，不把它们当损失保证。",
+      "legacy": false
+    },
+    {
+      "path_id": "review-reproduce",
+      "title": "从成熟结果到可复现学习",
+      "description": "冻结研究，再结算、复盘和版本化复跑。",
+      "item_ids": [
+        "data-fingerprint",
+        "oos",
+        "overfitting",
+        "paper-settlement",
+        "learning-review",
+        "reproducibility"
+      ],
+      "path_type": "research",
+      "practice": "保留原假设与原报告，用新版本复跑检验改进提案。",
+      "legacy": false
+    }
+  ]
+}

@@ -164,3 +164,25 @@ def test_corrupt_projection_is_rebuilt_from_public_content(tmp_path):
         db.execute("UPDATE knowledge_fts SET title='wrong' WHERE item_id='volatility'")
     with index(path=path) as store:
         assert store.search("历史波动") == expected
+
+
+def test_missing_fts5_has_an_explicit_install_diagnostic(monkeypatch):
+    from finahinking.research.knowledge_index import KnowledgeIndexUnavailable
+
+    original = sqlite3.connect
+
+    class WithoutFTS:
+        def __init__(self, *args, **kwargs):
+            self.db = original(*args, **kwargs)
+
+        def execute(self, sql, *args):
+            if 'CREATE VIRTUAL TABLE' in sql:
+                raise sqlite3.OperationalError('no such module: fts5')
+            return self.db.execute(sql, *args)
+
+        def __getattr__(self, name):
+            return getattr(self.db, name)
+
+    monkeypatch.setattr(sqlite3, 'connect', WithoutFTS)
+    with pytest.raises(KnowledgeIndexUnavailable, match='FTS5.*Python'):
+        index()

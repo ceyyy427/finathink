@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import re
 import sqlite3
 import threading
@@ -18,6 +19,7 @@ from .knowledge_contracts import (
     references,
     text,
 )
+from .knowledge_examples import evaluate_example
 
 INDEX_VERSION = "knowledge-fts5-bigram.v1"
 # Fixed before the held-out evaluation: title, aliases, summary, explanation.
@@ -86,6 +88,7 @@ class KnowledgeIndex:
         self._counterexamples = _records(content.get("misconceptions"), "counterexample_id", 2000)
         self._examples = _records(content.get("examples"), "example_id", 2000)
         self._paths = _records(content.get("paths"), "path_id", 256)
+        self._validate_public_records()
         self._methods = {s.skill_id: asdict(s) for s in assets.skills()}
         self._aliases, self._legacy, self._terms = {}, {}, {}
         for key, item in self._items.items():
@@ -142,6 +145,37 @@ class KnowledgeIndex:
             self._projection.append((key, *(" ".join(t) for t in tokens)))
         self._open(index_path)
         return self
+
+    def _validate_public_records(self):
+        contracts = (
+            (self._formulas, {"formula_id", "expression", "meaning", "source_refs"}, ("expression", "meaning")),
+            (self._counterexamples, {"counterexample_id", "claim", "correction", "scenario", "source_refs"}, ("claim", "correction", "scenario")),
+            (self._examples, {"example_id", "item_id", "title", "operation", "inputs", "expected", "derivation", "source_refs", "tolerance"}, ("title", "derivation")),
+            (self._paths, {"path_id", "title", "description", "item_ids", "path_type", "practice", "legacy"}, ("title", "description", "practice")),
+        )
+        for rows, fields, texts in contracts:
+            for row in rows.values():
+                if set(row) != fields:
+                    raise ValueError("unknown or missing public knowledge record field")
+                for field in texts:
+                    text(row[field], field)
+                if "source_refs" in fields and not set(references(row["source_refs"], "record sources")) <= self._sources.keys():
+                    raise ValueError("unknown public knowledge source")
+        for row in self._examples.values():
+            if row["item_id"] not in self._items or row["example_id"] not in self._items[row["item_id"]].example_refs:
+                raise ValueError("example must be linked to its canonical item")
+            if type(row["tolerance"]) not in (float, int) or not 0 < row["tolerance"] <= 1e-8:
+                raise ValueError("example tolerance is invalid")
+            expected, actual = row["expected"], evaluate_example(row)
+            if isinstance(expected, list) != isinstance(actual, list):
+                raise ValueError("example expected shape differs")
+            left = expected if isinstance(expected, list) else [expected]
+            right = actual if isinstance(actual, list) else [actual]
+            if len(left) != len(right) or any(type(a) not in (int, float) or not math.isfinite(a) or not math.isclose(a, b, rel_tol=row["tolerance"], abs_tol=row["tolerance"]) for a, b in zip(left, right)):
+                raise ValueError("example differs from the authored expected value")
+        for row in self._paths.values():
+            if row["legacy"] is not False or row["path_type"] not in {"learning", "research"}:
+                raise ValueError("new paths cannot impersonate legacy paths")
 
     def _alias(self, alias, canonical):
         text(alias, "alias", 256)
@@ -245,8 +279,8 @@ class KnowledgeIndex:
             with self._lock:
                 selected = [row[0] for row in self._db.execute(
                     "SELECT item_id FROM knowledge_fts WHERE knowledge_fts MATCH ? "
-                    f"AND item_id IN ({slots}) ORDER BY bm25(knowledge_fts,0,6,4,2,1),item_id LIMIT ?",
-                    (match, *allowed, limit))]
+                    f"AND item_id IN ({slots}) ORDER BY bm25(knowledge_fts,0,?,?,?,?),item_id LIMIT ?",
+                    (match, *allowed, *FIELD_WEIGHTS, limit))]
         return [{**self.resolve(key), "matched_fields": [name for name, terms in self._terms[key].items() if set(tokens) & terms]} for key in selected]
 
     def path(self, path_id):

@@ -1,0 +1,964 @@
+{
+  "schema_version": "quant-knowledge-examples.v1",
+  "version": "1.0.0",
+  "examples": [
+    {
+      "example_id": "point-in-time-worked-example",
+      "item_id": "point-in-time",
+      "title": "时点可用性（PIT） · 手算核对",
+      "operation": "visible_count",
+      "inputs": {
+        "available": [
+          14,
+          16,
+          18
+        ],
+        "cutoff": 15
+      },
+      "expected": 1,
+      "derivation": "同一会话小时14≤15可见，16和18均晚于截止，因此计数为1。",
+      "source_refs": [
+        "own-pit",
+        "ds-data-audit"
+      ],
+      "tolerance": 1e-10
+    },
+    {
+      "example_id": "publication-lag-worked-example",
+      "item_id": "publication-lag",
+      "title": "披露延迟与执行延迟 · 手算核对",
+      "operation": "latest_time",
+      "inputs": {
+        "times": [
+          18,
+          18.05
+        ]
+      },
+      "expected": 18.05,
+      "derivation": "公告18:00、接收18:03，以小时表示18.05，取较晚时间18.05。",
+      "source_refs": [
+        "own-fields",
+        "ds-data-audit"
+      ],
+      "tolerance": 1e-10
+    },
+    {
+      "example_id": "revisions-worked-example",
+      "item_id": "revisions",
+      "title": "数据修订与历史版本 · 手算核对",
+      "operation": "asof_value",
+      "inputs": {
+        "available": [
+          4,
+          6
+        ],
+        "values": [
+          10,
+          8
+        ],
+        "cutoff": 5
+      },
+      "expected": 10,
+      "derivation": "以月份序号示意：5月截止只能读取4月版本10，6月版本8不可见。",
+      "source_refs": [
+        "own-fields",
+        "own-snapshot"
+      ],
+      "tolerance": 1e-10
+    },
+    {
+      "example_id": "missing-data-worked-example",
+      "item_id": "missing-data",
+      "title": "缺失值与观测状态 · 手算核对",
+      "operation": "coverage",
+      "inputs": {
+        "observed": 8,
+        "expected_count": 10
+      },
+      "expected": 0.8,
+      "derivation": "应有10项，实际观察8项，覆盖率8除以10等于0.8。",
+      "source_refs": [
+        "ds-data-audit",
+        "own-fields"
+      ],
+      "tolerance": 1e-10
+    },
+    {
+      "example_id": "units-worked-example",
+      "item_id": "units",
+      "title": "单位、币种与数量口径 · 手算核对",
+      "operation": "scale",
+      "inputs": {
+        "value": 5,
+        "scale": 10000
+      },
+      "expected": 50000,
+      "derivation": "声明原单位万元，规范单位元，5乘10000得到50000元。",
+      "source_refs": [
+        "own-units",
+        "own-fields"
+      ],
+      "tolerance": 1e-10
+    },
+    {
+      "example_id": "alignment-worked-example",
+      "item_id": "alignment",
+      "title": "标签、特征与标的对齐 · 手算核对",
+      "operation": "paired_count",
+      "inputs": {
+        "left": [
+          "A@1",
+          "B@1"
+        ],
+        "right": [
+          "B@1",
+          "C@1"
+        ]
+      },
+      "expected": 1,
+      "derivation": "两组规范键交集只有B@1，配对数为1，而不是数组长度2。",
+      "source_refs": [
+        "al-forward",
+        "own-fields"
+      ],
+      "tolerance": 1e-10
+    },
+    {
+      "example_id": "return-worked-example",
+      "item_id": "return",
+      "title": "简单收益率 · 手算核对",
+      "operation": "price_return",
+      "inputs": {
+        "start": 100,
+        "end": 110
+      },
+      "expected": 0.1,
+      "derivation": "期末110除以期初100再减1，结果0.10，即10%。",
+      "source_refs": [
+        "al-forward",
+        "pa-returns"
+      ],
+      "tolerance": 1e-10
+    },
+    {
+      "example_id": "compounding-worked-example",
+      "item_id": "compounding",
+      "title": "复利与累计净值 · 手算核对",
+      "operation": "compound",
+      "inputs": {
+        "returns": [
+          0.1,
+          -0.1
+        ]
+      },
+      "expected": -0.01,
+      "derivation": "增长因子1.1乘0.9等于0.99，再减1得到−0.01。",
+      "source_refs": [
+        "al-cumulative",
+        "pa-returns"
+      ],
+      "tolerance": 1e-10
+    },
+    {
+      "example_id": "log-return-worked-example",
+      "item_id": "log-return",
+      "title": "对数收益率 · 手算核对",
+      "operation": "log_return",
+      "inputs": {
+        "start": 1,
+        "end": 2.718281828459045
+      },
+      "expected": 1,
+      "derivation": "期末为自然常数e，期初1；ln(e/1)=1，误差来自e的小数表示。",
+      "source_refs": [
+        "pa-returns"
+      ],
+      "tolerance": 1e-10
+    },
+    {
+      "example_id": "excess-return-worked-example",
+      "item_id": "excess-return",
+      "title": "超额收益与相对净值 · 手算核对",
+      "operation": "difference",
+      "inputs": {
+        "left": 0.05,
+        "right": 0.08
+      },
+      "expected": -0.03,
+      "derivation": "同期间策略5%减基准8%得到−3个百分点，以小数表示−0.03。",
+      "source_refs": [
+        "al-beta",
+        "al-quantiles"
+      ],
+      "tolerance": 1e-10
+    },
+    {
+      "example_id": "annualization-worked-example",
+      "item_id": "annualization",
+      "title": "年化与频率换算 · 手算核对",
+      "operation": "annualized_growth",
+      "inputs": {
+        "growth": 1.01,
+        "periods_per_year": 12,
+        "observations": 1
+      },
+      "expected": 0.12682503013196972,
+      "derivation": "一个月增长因子1.01，十二次复利为1.01的12次方减1，约0.126825。",
+      "source_refs": [
+        "ds-annualization",
+        "pa-returns"
+      ],
+      "tolerance": 1e-10
+    },
+    {
+      "example_id": "total-return-worked-example",
+      "item_id": "total-return",
+      "title": "总回报与现金分红 · 手算核对",
+      "operation": "total_return",
+      "inputs": {
+        "start": 100,
+        "end": 98,
+        "distribution": 3
+      },
+      "expected": 0.01,
+      "derivation": "期末98加现金3减期初100等于1，再除100等于0.01。",
+      "source_refs": [
+        "qa-adjustment",
+        "pa-returns"
+      ],
+      "tolerance": 1e-10
+    },
+    {
+      "example_id": "mean-worked-example",
+      "item_id": "mean",
+      "title": "均值与样本中心 · 手算核对",
+      "operation": "mean",
+      "inputs": {
+        "values": [
+          1,
+          3,
+          5
+        ]
+      },
+      "expected": 3,
+      "derivation": "三个有效观察相加1+3+5=9，除以样本数3，均值为3。",
+      "source_refs": [
+        "qlib-normalize",
+        "pa-returns"
+      ],
+      "tolerance": 1e-10
+    },
+    {
+      "example_id": "variance-worked-example",
+      "item_id": "variance",
+      "title": "方差与分母约定 · 手算核对",
+      "operation": "sample_variance",
+      "inputs": {
+        "values": [
+          1,
+          3,
+          5
+        ]
+      },
+      "expected": 4,
+      "derivation": "相对均值3的平方差为4、0、4，总和8除以n−1=2，结果4。",
+      "source_refs": [
+        "qa-std",
+        "qlib-normalize"
+      ],
+      "tolerance": 1e-10
+    },
+    {
+      "example_id": "standard-deviation-worked-example",
+      "item_id": "standard-deviation",
+      "title": "标准差与尺度 · 手算核对",
+      "operation": "sample_sd",
+      "inputs": {
+        "values": [
+          1,
+          3,
+          5
+        ]
+      },
+      "expected": 2,
+      "derivation": "样本平方差和8除以2得方差4，再取正平方根得到标准差2。",
+      "source_refs": [
+        "qa-std",
+        "pa-returns"
+      ],
+      "tolerance": 1e-10
+    },
+    {
+      "example_id": "covariance-worked-example",
+      "item_id": "covariance",
+      "title": "协方差与共同变化 · 手算核对",
+      "operation": "sample_covariance",
+      "inputs": {
+        "x": [
+          1,
+          3,
+          5
+        ],
+        "y": [
+          2,
+          6,
+          10
+        ]
+      },
+      "expected": 8,
+      "derivation": "偏差乘积为8、0、8，总和16除以n−1=2，样本协方差为8。",
+      "source_refs": [
+        "al-beta",
+        "bt-risk"
+      ],
+      "tolerance": 1e-10
+    },
+    {
+      "example_id": "correlation-worked-example",
+      "item_id": "correlation",
+      "title": "相关系数与非因果性 · 手算核对",
+      "operation": "correlation",
+      "inputs": {
+        "x": [
+          1,
+          3,
+          5
+        ],
+        "y": [
+          2,
+          6,
+          10
+        ]
+      },
+      "expected": 1,
+      "derivation": "协方差8，两个样本标准差为2和4，因此8/(2×4)=1。",
+      "source_refs": [
+        "al-beta",
+        "al-ic"
+      ],
+      "tolerance": 1e-10
+    },
+    {
+      "example_id": "confidence-interval-worked-example",
+      "item_id": "confidence-interval",
+      "title": "置信区间与抽样不确定性 · 手算核对",
+      "operation": "known_sigma_interval",
+      "inputs": {
+        "mean": 10,
+        "sigma": 2,
+        "n": 100,
+        "z": 1.96
+      },
+      "expected": [
+        9.608,
+        10.392
+      ],
+      "derivation": "标准误2/√100=0.2，边际1.96×0.2=0.392，两端为10±0.392。",
+      "source_refs": [
+        "al-quantiles"
+      ],
+      "tolerance": 1e-10
+    },
+    {
+      "example_id": "moving-average-worked-example",
+      "item_id": "moving-average",
+      "title": "移动平均与窗口 · 手算核对",
+      "operation": "mean",
+      "inputs": {
+        "values": [
+          10,
+          12,
+          14
+        ]
+      },
+      "expected": 12,
+      "derivation": "完整三期窗口10+12+14=36，等权平均36/3=12。",
+      "source_refs": [
+        "qa-average"
+      ],
+      "tolerance": 1e-10
+    },
+    {
+      "example_id": "ema-worked-example",
+      "item_id": "ema",
+      "title": "指数移动平均与初始化 · 手算核对",
+      "operation": "ema_step",
+      "inputs": {
+        "previous": 10,
+        "price": 14,
+        "alpha": 0.5
+      },
+      "expected": 12,
+      "derivation": "声明递推初值10与alpha0.5：0.5×14+0.5×10=12。",
+      "source_refs": [
+        "qa-average"
+      ],
+      "tolerance": 1e-10
+    },
+    {
+      "example_id": "momentum-worked-example",
+      "item_id": "momentum",
+      "title": "价格动量与跳过窗口 · 手算核对",
+      "operation": "price_return",
+      "inputs": {
+        "start": 100,
+        "end": 120
+      },
+      "expected": 0.2,
+      "derivation": "本例采用收益动量，120/100−1=0.2；价格差版则是20。",
+      "source_refs": [
+        "qa-momentum",
+        "al-forward"
+      ],
+      "tolerance": 1e-10
+    },
+    {
+      "example_id": "rsi-worked-example",
+      "item_id": "rsi",
+      "title": "RSI与平滑口径 · 手算核对",
+      "operation": "rsi",
+      "inputs": {
+        "average_up": 2,
+        "average_down": 1
+      },
+      "expected": 66.66666666666667,
+      "derivation": "同口径平均上涨2、下跌绝对值1，100×2/(2+1)=200/3。",
+      "source_refs": [
+        "qa-rsi"
+      ],
+      "tolerance": 1e-10
+    },
+    {
+      "example_id": "atr-worked-example",
+      "item_id": "atr",
+      "title": "真实波幅与ATR · 手算核对",
+      "operation": "true_range",
+      "inputs": {
+        "high": 12,
+        "low": 8,
+        "previous_close": 7
+      },
+      "expected": 5,
+      "derivation": "三项分别为12−8=4、|12−7|=5、|8−7|=1，最大为5。",
+      "source_refs": [
+        "qa-atr"
+      ],
+      "tolerance": 1e-10
+    },
+    {
+      "example_id": "vwap-worked-example",
+      "item_id": "vwap",
+      "title": "成交量加权均价 · 手算核对",
+      "operation": "weighted_mean",
+      "inputs": {
+        "values": [
+          10,
+          20
+        ],
+        "weights": [
+          2,
+          1
+        ]
+      },
+      "expected": 13.333333333333334,
+      "derivation": "成交额10×2+20×1=40，成交数量3，均价40/3。",
+      "source_refs": [
+        "qlib-vwap",
+        "own-units"
+      ],
+      "tolerance": 1e-10
+    },
+    {
+      "example_id": "book-to-market-worked-example",
+      "item_id": "book-to-market",
+      "title": "账面市值比与价值假设 · 手算核对",
+      "operation": "ratio",
+      "inputs": {
+        "numerator": 50,
+        "denominator": 100
+      },
+      "expected": 0.5,
+      "derivation": "同币种账面权益50、市值100，账面市值比50/100=0.5。",
+      "source_refs": [
+        "pa-value"
+      ],
+      "tolerance": 1e-10
+    },
+    {
+      "example_id": "earnings-yield-worked-example",
+      "item_id": "earnings-yield",
+      "title": "盈利收益率与负利润 · 手算核对",
+      "operation": "ratio",
+      "inputs": {
+        "numerator": 2,
+        "denominator": 20
+      },
+      "expected": 0.1,
+      "derivation": "同股本口径EPS为2、价格20，盈利收益率2/20=0.1。",
+      "source_refs": [
+        "pa-value"
+      ],
+      "tolerance": 1e-10
+    },
+    {
+      "example_id": "roe-worked-example",
+      "item_id": "roe",
+      "title": "净资产收益率与平均权益 · 手算核对",
+      "operation": "ratio",
+      "inputs": {
+        "numerator": 10,
+        "denominator": 50
+      },
+      "expected": 0.2,
+      "derivation": "本例已经提供期间平均权益50，净利润10除以50得20%。",
+      "source_refs": [
+        "pa-profit"
+      ],
+      "tolerance": 1e-10
+    },
+    {
+      "example_id": "asset-growth-worked-example",
+      "item_id": "asset-growth",
+      "title": "资产增长与扩张质量 · 手算核对",
+      "operation": "price_return",
+      "inputs": {
+        "start": 100,
+        "end": 120
+      },
+      "expected": 0.2,
+      "derivation": "两个可比年度总资产100与120，120/100−1=20%。",
+      "source_refs": [
+        "pa-growth"
+      ],
+      "tolerance": 1e-10
+    },
+    {
+      "example_id": "accruals-worked-example",
+      "item_id": "accruals",
+      "title": "应计项目与现金利润差 · 手算核对",
+      "operation": "scaled_difference",
+      "inputs": {
+        "left": 12,
+        "right": 8,
+        "scale": 100
+      },
+      "expected": 0.04,
+      "derivation": "净利润12减经营现金流8等于4，除平均资产100得到4%。",
+      "source_refs": [
+        "pa-accruals"
+      ],
+      "tolerance": 1e-10
+    },
+    {
+      "example_id": "leverage-worked-example",
+      "item_id": "leverage",
+      "title": "财务杠杆与分母选择 · 手算核对",
+      "operation": "ratio",
+      "inputs": {
+        "numerator": 60,
+        "denominator": 100
+      },
+      "expected": 0.6,
+      "derivation": "本例定义有息债务60除以总资产100，结果0.6，不混用市值分母。",
+      "source_refs": [
+        "pa-leverage",
+        "own-stress"
+      ],
+      "tolerance": 1e-10
+    },
+    {
+      "example_id": "information-coefficient-worked-example",
+      "item_id": "information-coefficient",
+      "title": "信息系数（Pearson IC） · 手算核对",
+      "operation": "correlation",
+      "inputs": {
+        "x": [
+          1,
+          2,
+          3
+        ],
+        "y": [
+          0.01,
+          0.02,
+          0.03
+        ]
+      },
+      "expected": 1,
+      "derivation": "未来收益恰为因子的正线性倍数且两边非恒定，Pearson相关为1。",
+      "source_refs": [
+        "al-ic",
+        "al-forward"
+      ],
+      "tolerance": 1e-10
+    },
+    {
+      "example_id": "rank-ic-worked-example",
+      "item_id": "rank-ic",
+      "title": "Rank IC与并列排名 · 手算核对",
+      "operation": "rank_correlation",
+      "inputs": {
+        "x": [
+          1,
+          2,
+          2
+        ],
+        "y": [
+          0.3,
+          0.2,
+          0.1
+        ]
+      },
+      "expected": -0.8660254037844386,
+      "derivation": "平均秩为[1,2.5,2.5]与[3,2,1]，中心乘积和−1.5，除sqrt(1.5×2)得−√3/2。",
+      "source_refs": [
+        "al-ic"
+      ],
+      "tolerance": 1e-10
+    },
+    {
+      "example_id": "icir-worked-example",
+      "item_id": "icir",
+      "title": "ICIR与时间稳定性 · 手算核对",
+      "operation": "mean_sd_ratio",
+      "inputs": {
+        "values": [
+          0.1,
+          0.3
+        ]
+      },
+      "expected": 1.4142135623730951,
+      "derivation": "均值0.2，样本方差0.02，0.2/√0.02=√2；本例不年化。",
+      "source_refs": [
+        "ds-factor-check",
+        "al-ic"
+      ],
+      "tolerance": 1e-10
+    },
+    {
+      "example_id": "quantile-return-worked-example",
+      "item_id": "quantile-return",
+      "title": "分组收益与组间价差 · 手算核对",
+      "operation": "mean_difference",
+      "inputs": {
+        "left": [
+          0.03,
+          0.05
+        ],
+        "right": [
+          -0.01,
+          0.01
+        ]
+      },
+      "expected": 0.04,
+      "derivation": "高组平均0.04，低组平均0，原始组差0.04；未除以总毛敞口2。",
+      "source_refs": [
+        "al-quantiles",
+        "ds-factor-check"
+      ],
+      "tolerance": 1e-10
+    },
+    {
+      "example_id": "factor-turnover-worked-example",
+      "item_id": "factor-turnover",
+      "title": "因子成员换手与仓位换手 · 手算核对",
+      "operation": "membership_turnover",
+      "inputs": {
+        "previous": [
+          "A",
+          "B"
+        ],
+        "current": [
+          "B",
+          "C"
+        ]
+      },
+      "expected": 0.5,
+      "derivation": "当前组B、C中新增只有C，一名新增除以当前两名成员得0.5。",
+      "source_refs": [
+        "al-turnover",
+        "pa-cost"
+      ],
+      "tolerance": 1e-10
+    },
+    {
+      "example_id": "oos-worked-example",
+      "item_id": "oos",
+      "title": "样本外与滚动验证 · 手算核对",
+      "operation": "paired_count",
+      "inputs": {
+        "left": [
+          "2020",
+          "2021",
+          "2022"
+        ],
+        "right": [
+          "2023",
+          "2024"
+        ]
+      },
+      "expected": 0,
+      "derivation": "训练日期2020至2022与测试日期2023至2024没有交集，重叠计数0；仍需另查标签结束日。",
+      "source_refs": [
+        "ds-walk-forward",
+        "qlib-fit"
+      ],
+      "tolerance": 1e-10
+    },
+    {
+      "example_id": "equal-weight-worked-example",
+      "item_id": "equal-weight",
+      "title": "等权组合与漂移 · 手算核对",
+      "operation": "equal_weights",
+      "inputs": {
+        "count": 3
+      },
+      "expected": [
+        0.3333333333333333,
+        0.3333333333333333,
+        0.3333333333333333
+      ],
+      "derivation": "三个资产各分配1/3资金，三个权重之和为1。",
+      "source_refs": [
+        "bt-weights"
+      ],
+      "tolerance": 1e-10
+    },
+    {
+      "example_id": "inverse-volatility-worked-example",
+      "item_id": "inverse-volatility",
+      "title": "倒波动权重与相关性 · 手算核对",
+      "operation": "inverse_volatility",
+      "inputs": {
+        "volatilities": [
+          0.1,
+          0.2
+        ]
+      },
+      "expected": [
+        0.6666666666666666,
+        0.3333333333333333
+      ],
+      "derivation": "波动倒数为10和5，分别除总和15得到2/3与1/3。",
+      "source_refs": [
+        "bt-inv-vol",
+        "bt-risk"
+      ],
+      "tolerance": 1e-10
+    },
+    {
+      "example_id": "covariance-diversification-worked-example",
+      "item_id": "covariance-diversification",
+      "title": "协方差分散与组合波动 · 手算核对",
+      "operation": "portfolio_variance",
+      "inputs": {
+        "weights": [
+          0.5,
+          0.5
+        ],
+        "covariance": [
+          [
+            0.04,
+            0
+          ],
+          [
+            0,
+            0.09
+          ]
+        ]
+      },
+      "expected": 0.0325,
+      "derivation": "不相关时交叉项为0，0.5²×0.04+0.5²×0.09=0.0325。",
+      "source_refs": [
+        "bt-risk"
+      ],
+      "tolerance": 1e-10
+    },
+    {
+      "example_id": "transaction-cost-worked-example",
+      "item_id": "transaction-cost",
+      "title": "交易成本与换手口径 · 手算核对",
+      "operation": "scale",
+      "inputs": {
+        "value": 0.5,
+        "scale": 0.002
+      },
+      "expected": 0.001,
+      "derivation": "匹配口径换手0.5乘综合费率0.002，成本为净值0.001，即10基点。",
+      "source_refs": [
+        "pa-cost"
+      ],
+      "tolerance": 1e-10
+    },
+    {
+      "example_id": "slippage-worked-example",
+      "item_id": "slippage",
+      "title": "滑点与执行参照 · 手算核对",
+      "operation": "price_return",
+      "inputs": {
+        "start": 100,
+        "end": 100.2
+      },
+      "expected": 0.002,
+      "derivation": "买入不利滑点100.2/100−1=0.002，即20基点。",
+      "source_refs": [
+        "pa-cost",
+        "bt-rebalance"
+      ],
+      "tolerance": 1e-10
+    },
+    {
+      "example_id": "sharpe-worked-example",
+      "item_id": "sharpe",
+      "title": "Sharpe比率与频率假设 · 手算核对",
+      "operation": "sharpe_from_moments",
+      "inputs": {
+        "mean_excess": 0.02,
+        "sample_sd": 0.04,
+        "periods_per_year": 12
+      },
+      "expected": 1.7320508075688772,
+      "derivation": "同频超额均值与样本标准差比为0.5，再乘√12得到√3。",
+      "source_refs": [
+        "pa-returns",
+        "ds-annualization"
+      ],
+      "tolerance": 1e-10
+    },
+    {
+      "example_id": "drawdown-worked-example",
+      "item_id": "drawdown",
+      "title": "回撤、峰值与修复 · 手算核对",
+      "operation": "max_drawdown",
+      "inputs": {
+        "nav": [
+          100,
+          120,
+          90,
+          110
+        ]
+      },
+      "expected": 0.25,
+      "derivation": "峰值120之后最低90，正损失幅度1−90/120=0.25；其他时点更小。",
+      "source_refs": [
+        "pa-drawdown"
+      ],
+      "tolerance": 1e-10
+    },
+    {
+      "example_id": "downside-risk-worked-example",
+      "item_id": "downside-risk",
+      "title": "下行偏差与目标收益 · 手算核对",
+      "operation": "downside_deviation",
+      "inputs": {
+        "returns": [
+          -0.02,
+          0.01
+        ],
+        "target": 0
+      },
+      "expected": 0.01414213562373095,
+      "derivation": "下行平方偏离为0.0004和0，除全部两期得到0.0002，再开平方。",
+      "source_refs": [
+        "pa-returns",
+        "own-tail"
+      ],
+      "tolerance": 1e-10
+    },
+    {
+      "example_id": "value-at-risk-worked-example",
+      "item_id": "value-at-risk",
+      "title": "VaR与分位数定义 · 手算核对",
+      "operation": "nearest_rank_var",
+      "inputs": {
+        "returns": [
+          -0.01,
+          -0.02,
+          -0.03,
+          -0.04,
+          -0.05,
+          -0.06,
+          -0.07,
+          -0.08,
+          -0.09,
+          -0.1
+        ],
+        "confidence": 0.8
+      },
+      "expected": 0.08,
+      "derivation": "损失升序1%至10%，ceil(0.8×10)=8，取第8项8%。",
+      "source_refs": [
+        "own-tail",
+        "own-stress"
+      ],
+      "tolerance": 1e-10
+    },
+    {
+      "example_id": "expected-shortfall-worked-example",
+      "item_id": "expected-shortfall",
+      "title": "ES与分数尾部质量 · 手算核对",
+      "operation": "fractional_es",
+      "inputs": {
+        "returns": [
+          -0.01,
+          -0.02,
+          -0.03,
+          -0.04,
+          -0.05,
+          -0.06,
+          -0.07,
+          -0.08,
+          -0.09,
+          -0.1
+        ],
+        "confidence": 0.8
+      },
+      "expected": 0.095,
+      "derivation": "最差20%共两项，为10%与9%，平均(0.10+0.09)/2=0.095。",
+      "source_refs": [
+        "own-tail"
+      ],
+      "tolerance": 1e-10
+    },
+    {
+      "example_id": "concentration-worked-example",
+      "item_id": "concentration",
+      "title": "集中度与重叠风险 · 手算核对",
+      "operation": "concentration",
+      "inputs": {
+        "weights": [
+          0.6,
+          0.4
+        ]
+      },
+      "expected": 0.52,
+      "derivation": "长仓归一化权重平方和0.6²+0.4²=0.36+0.16=0.52。",
+      "source_refs": [
+        "own-stress",
+        "bt-risk"
+      ],
+      "tolerance": 1e-10
+    },
+    {
+      "example_id": "stress-testing-worked-example",
+      "item_id": "stress-testing",
+      "title": "压力测试与情景分析 · 手算核对",
+      "operation": "weighted_sum",
+      "inputs": {
+        "values": [
+          -0.2,
+          -0.1
+        ],
+        "weights": [
+          0.6,
+          0.4
+        ]
+      },
+      "expected": -0.16,
+      "derivation": "线性单期情景为0.6×(−0.2)+0.4×(−0.1)=−0.16，不包含非线性。",
+      "source_refs": [
+        "own-stress"
+      ],
+      "tolerance": 1e-10
+    }
+  ]
+}
