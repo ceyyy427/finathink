@@ -25,6 +25,11 @@ class KnowledgeCatalog:
     units: tuple[KnowledgeUnit, ...]
     references: LocalReferenceCache
 
+    def canonical_ids(self) -> dict[str, str]:
+        """Old teaching units remain readable under their original IDs."""
+        aliases = {"returns": "return", "ols": "regression", "oos-overfitting": "oos"}
+        return {unit.unit_id: aliases.get(unit.unit_id, unit.unit_id) for unit in self.units}
+
     @property
     def fingerprint(self) -> str:
         payload = {"units": [unit.to_dict() for unit in self.units], "references": [record.to_dict() for record in self.references.records()]}

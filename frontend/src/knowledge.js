@@ -92,3 +92,99 @@ export function mountKnowledge(root, { payload, payloadUrl } = {}) {
 if (typeof document !== 'undefined') {
   document.querySelectorAll('[data-finathink-knowledge]').forEach((root) => { mountKnowledge(root); });
 }
+
+export function normalizeKnowledgeSearch(payload) {
+  if (!payload || payload.schema_version !== 'knowledge-search.v1' || !Array.isArray(payload.items)
+      || payload.items.length > 16 || !Number.isInteger(payload.total) || payload.total < 0
+      || !Number.isInteger(payload.offset) || payload.offset < 0 || payload.page_size !== 16
+      || typeof payload.query !== 'string' || !payload.filters || typeof payload.filters !== 'object') throw new TypeError('知识检索响应无效');
+  const ids = new Set();
+  for (const item of payload.items) {
+    if (!item || !/^[a-z0-9][a-z0-9._-]{0,127}$/.test(item.canonical_id) || ids.has(item.canonical_id)
+        || !['title', 'summary', 'domain', 'kind', 'evidence_level'].every(key => typeof item[key] === 'string')
+        || !Array.isArray(item.aliases) || item.aliases.some(alias => typeof alias !== 'string')) throw new TypeError('知识词条响应无效');
+    ids.add(item.canonical_id);
+  }
+  return payload;
+}
+
+// Generation checks remain necessary even when a mocked/cached transport ignores abort.
+export function createKnowledgeSearch({ fetcher = fetch, update }) {
+  let generation = 0;
+  let active;
+  return {
+    async run(params) {
+      const current = ++generation;
+      active?.abort();
+      active = new AbortController();
+      update({ state: 'loading' });
+      try {
+        const response = await fetcher(`/api/knowledge/search?${new URLSearchParams(params)}`, { signal: active.signal, credentials: 'same-origin' });
+        if (!response.ok) throw new Error('request failed');
+        const payload = normalizeKnowledgeSearch(await response.json());
+        if (current === generation) update({ state: payload.items.length ? 'ready' : 'empty', payload });
+      } catch (error) {
+        if (current === generation && error.name !== 'AbortError') update({ state: 'error', message: '暂时无法读取检索结果。请检查本地应用状态后重新检索。' });
+      }
+    },
+    dispose() { generation++; active?.abort(); },
+  };
+}
+
+const knowledgeDomains = { 'data-pit': '数据与时点', 'returns-market': '收益与市场', statistics: '统计方法', 'technical-volume': '技术与价量', fundamentals: '财务分析', 'factor-validation': '因子检验', 'strategy-portfolio': '策略与组合', 'risk-review': '风险与复盘' };
+const knowledgeKinds = { CONCEPT: '基础概念', METHOD: '研究方法', FACTOR: '因子假设', STRATEGY: '组合规则', RISK: '风险检查', CASE: '案例' };
+const knowledgeLevels = { DEFINITION_CHECKED: '定义已核对', SOURCE_REPORTED: '来源中的研究假设' };
+
+export function mountQuantKnowledge(root) {
+  if (root.dataset.knowledgeMounted === 'true') return;
+  root.dataset.knowledgeMounted = 'true';
+  const form = root.querySelector('[data-knowledge-search]');
+  const results = root.querySelector('[data-knowledge-results]');
+  const status = root.querySelector('[data-knowledge-status]');
+  const empty = root.querySelector('[data-knowledge-empty]');
+  const retry = root.querySelector('[data-knowledge-retry]');
+  const pages = root.querySelector('[data-knowledge-pagination]');
+  const node = (tag, text, className) => {
+    const el = document.createElement(tag);
+    if (text != null) el.textContent = text;
+    if (className) el.className = className;
+    return el;
+  };
+  const controller = createKnowledgeSearch({ update({ state, payload, message }) {
+    root.dataset.knowledgeState = state;
+    results.setAttribute('aria-busy', String(state === 'loading'));
+    results.hidden = state === 'loading' || state === 'error';
+    retry.hidden = state !== 'error';
+    empty.hidden = state !== 'empty';
+    pages.hidden = state === 'loading' || state === 'error';
+    status.textContent = state === 'loading' ? '正在检索本地知识…' : state === 'error' ? message : `找到 ${payload.total} 个词条。`;
+    if (!payload) return;
+    results.replaceChildren();
+    for (const item of payload.items) {
+      const card = node('article', null, 'knowledge-tile');
+      const heading = node('h2');
+      const link = node('a', item.title);
+      link.href = `/knowledge/items/${encodeURIComponent(item.canonical_id)}`;
+      heading.append(link);
+      card.append(node('span', `${knowledgeDomains[item.domain] || item.domain} · ${knowledgeKinds[item.kind] || item.kind}`, 'knowledge-tag'), heading,
+        node('p', item.summary), node('p', item.aliases.slice(0, 3).join(' · '), 'knowledge-alias'), node('p', knowledgeLevels[item.evidence_level] || item.evidence_level, 'meta'));
+      results.append(card);
+    }
+    const nav = node('nav', null, 'knowledge-pagination');
+    nav.setAttribute('aria-label', '知识结果分页');
+    for (const [label, offset] of [['上一页', payload.offset - 16], ['下一页', payload.offset + 16]]) {
+      if (offset < 0 || offset >= payload.total) continue;
+      const link = node('a', label);
+      link.href = `/knowledge?${new URLSearchParams({ q: payload.query, ...payload.filters, offset })}`;
+      nav.append(link);
+    }
+    pages.replaceChildren(nav);
+  } });
+  const run = () => controller.run(Object.fromEntries(new FormData(form)));
+  form.addEventListener('submit', event => { event.preventDefault(); run(); });
+  retry.addEventListener('click', run);
+  // The first page is server-rendered; no duplicate initialization request.
+  return controller;
+}
+
+if (typeof document !== 'undefined') document.querySelectorAll('[data-quant-knowledge]').forEach(mountQuantKnowledge);

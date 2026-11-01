@@ -1,0 +1,631 @@
+{
+  "schema_version": "quant-knowledge-goldens.v1",
+  "frozen_on": "2026-10-31",
+  "baseline_commit": "c2b50d53ff2788c0204a7320203cc6e35bc6402f",
+  "protocol": "先冻结题目和相关集合。40题用于开发诊断，20题在检索规则固定后评估。题目不进入产品内容包或索引，不按题目添加排名规则。相关集合表示足以回答该问题的知识条目，并非收益证据。",
+  "queries": [
+    {
+      "query_id": "data-pit-01",
+      "domain": "data-pit",
+      "split": "development",
+      "query": "公告收盘以后才发布，能放进当天信号吗？",
+      "relevant_ids": [
+        "publication-lag",
+        "point-in-time"
+      ],
+      "review_rationale": "信息发布时间必须不晚于决策时点。"
+    },
+    {
+      "query_id": "data-pit-02",
+      "domain": "data-pit",
+      "split": "development",
+      "query": "同一年度财报后来改过数字，历史回测应该读哪一版？",
+      "relevant_ids": [
+        "revisions",
+        "point-in-time"
+      ],
+      "review_rationale": "修订版本须按当时可见版本选择。"
+    },
+    {
+      "query_id": "data-pit-03",
+      "domain": "data-pit",
+      "split": "development",
+      "query": "停牌日期没有成交，能把缺失价格都填成零吗？",
+      "relevant_ids": [
+        "missing-data",
+        "trading-calendar"
+      ],
+      "review_rationale": "缺失、停牌和零值不能混用。"
+    },
+    {
+      "query_id": "data-pit-04",
+      "domain": "data-pit",
+      "split": "development",
+      "query": "用今天仍上市的股票名单回看十年前会有什么偏差？",
+      "relevant_ids": [
+        "universe-bias"
+      ],
+      "review_rationale": "当前存续集合遗漏退市样本。"
+    },
+    {
+      "query_id": "data-pit-05",
+      "domain": "data-pit",
+      "split": "development",
+      "query": "拆股前后股价减半，怎样避免把它算成亏损？",
+      "relevant_ids": [
+        "adjustment",
+        "total-return"
+      ],
+      "review_rationale": "复权或总回报应处理公司行动。"
+    },
+    {
+      "query_id": "data-pit-06",
+      "domain": "data-pit",
+      "split": "holdout",
+      "query": "两个交易所休市日不同，面板该如何对齐？",
+      "relevant_ids": [
+        "trading-calendar",
+        "alignment"
+      ],
+      "review_rationale": "交易日历及跨市场时点是对齐依据。"
+    },
+    {
+      "query_id": "data-pit-07",
+      "domain": "data-pit",
+      "split": "holdout",
+      "query": "一个接口给万元，另一个给元，导入前要核对什么？",
+      "relevant_ids": [
+        "units"
+      ],
+      "review_rationale": "金额单位需要显式换算。"
+    },
+    {
+      "query_id": "data-pit-08",
+      "domain": "data-pit",
+      "split": "holdout",
+      "query": "怎样证明两次研究用的是同一批原始数据？",
+      "relevant_ids": [
+        "data-fingerprint",
+        "reproducibility"
+      ],
+      "review_rationale": "内容摘要与固定版本支持输入身份核验。"
+    },
+    {
+      "query_id": "returns-market-01",
+      "domain": "returns-market",
+      "split": "development",
+      "query": "价格从100变110，这一期赚了百分之几？",
+      "relevant_ids": [
+        "return"
+      ],
+      "review_rationale": "简单收益率按期初价格计算。"
+    },
+    {
+      "query_id": "returns-market-02",
+      "domain": "returns-market",
+      "split": "development",
+      "query": "先涨10%再跌10%，本金为什么没回到原点？",
+      "relevant_ids": [
+        "compounding"
+      ],
+      "review_rationale": "多期净值是增长因子的乘积。"
+    },
+    {
+      "query_id": "returns-market-03",
+      "domain": "returns-market",
+      "split": "development",
+      "query": "哪一种收益可以按时间相加？",
+      "relevant_ids": [
+        "log-return"
+      ],
+      "review_rationale": "对数收益在正价格及一致口径下可累加。"
+    },
+    {
+      "query_id": "returns-market-04",
+      "domain": "returns-market",
+      "split": "development",
+      "query": "策略涨了5%，同期参照指数涨8%，相对表现怎么算？",
+      "relevant_ids": [
+        "excess-return",
+        "benchmark"
+      ],
+      "review_rationale": "相对基准需要明确收益差或相对净值口径。"
+    },
+    {
+      "query_id": "returns-market-05",
+      "domain": "returns-market",
+      "split": "development",
+      "query": "月度结果换成年化时应采用什么频率？",
+      "relevant_ids": [
+        "annualization"
+      ],
+      "review_rationale": "年化必须声明观察周期及假设。"
+    },
+    {
+      "query_id": "returns-market-06",
+      "domain": "returns-market",
+      "split": "holdout",
+      "query": "现金分红也算进来时，应该看哪种回报？",
+      "relevant_ids": [
+        "total-return"
+      ],
+      "review_rationale": "总回报包含分红并声明再投资假设。"
+    },
+    {
+      "query_id": "returns-market-07",
+      "domain": "returns-market",
+      "split": "holdout",
+      "query": "成交股数除以流通股数叫什么？",
+      "relevant_ids": [
+        "turnover-ratio"
+      ],
+      "review_rationale": "市场换手率用交易量与股本的相同单位。"
+    },
+    {
+      "query_id": "returns-market-08",
+      "domain": "returns-market",
+      "split": "holdout",
+      "query": "信号好却很难成交，该检查什么交易条件？",
+      "relevant_ids": [
+        "liquidity",
+        "capacity",
+        "slippage"
+      ],
+      "review_rationale": "流动性、订单容量和冲击影响可执行性。"
+    },
+    {
+      "query_id": "statistics-01",
+      "domain": "statistics",
+      "split": "development",
+      "query": "如何用离均差衡量一组样本的离散程度？",
+      "relevant_ids": [
+        "variance",
+        "standard-deviation"
+      ],
+      "review_rationale": "方差和标准差是离均差统计量。"
+    },
+    {
+      "query_id": "statistics-02",
+      "domain": "statistics",
+      "split": "development",
+      "query": "为什么样本方差通常除以n减1？",
+      "relevant_ids": [
+        "variance"
+      ],
+      "review_rationale": "自由度修正对应样本均值被估计。"
+    },
+    {
+      "query_id": "statistics-03",
+      "domain": "statistics",
+      "split": "development",
+      "query": "两个资产通常一起涨跌，怎样描述这种共同变化？",
+      "relevant_ids": [
+        "covariance",
+        "correlation"
+      ],
+      "review_rationale": "协方差和相关描述线性共变。"
+    },
+    {
+      "query_id": "statistics-04",
+      "domain": "statistics",
+      "split": "development",
+      "query": "相关系数很高能证明一个指标导致收益吗？",
+      "relevant_ids": [
+        "correlation",
+        "regression"
+      ],
+      "review_rationale": "相关及回归不能单独识别因果。"
+    },
+    {
+      "query_id": "statistics-05",
+      "domain": "statistics",
+      "split": "development",
+      "query": "用一条直线拟合收益与解释变量，残差怎么定义？",
+      "relevant_ids": [
+        "regression"
+      ],
+      "review_rationale": "OLS以观测减拟合构造残差。"
+    },
+    {
+      "query_id": "statistics-06",
+      "domain": "statistics",
+      "split": "holdout",
+      "query": "资产对市场涨跌的敏感程度怎样估计？",
+      "relevant_ids": [
+        "beta"
+      ],
+      "review_rationale": "市场回归斜率或协方差方差比刻画beta。"
+    },
+    {
+      "query_id": "statistics-07",
+      "domain": "statistics",
+      "split": "holdout",
+      "query": "样本均值不精确时，怎样给一个不确定区间？",
+      "relevant_ids": [
+        "confidence-interval"
+      ],
+      "review_rationale": "均值区间需要标准误及分布假设。"
+    },
+    {
+      "query_id": "statistics-08",
+      "domain": "statistics",
+      "split": "holdout",
+      "query": "相邻日期的收益相关会影响独立样本假设吗？",
+      "relevant_ids": [
+        "autocorrelation"
+      ],
+      "review_rationale": "序列相关改变有效样本与标准误。"
+    },
+    {
+      "query_id": "technical-volume-01",
+      "domain": "technical-volume",
+      "split": "development",
+      "query": "最近几天的收盘价平均线怎样计算？",
+      "relevant_ids": [
+        "moving-average"
+      ],
+      "review_rationale": "简单移动平均在固定历史窗口计算。"
+    },
+    {
+      "query_id": "technical-volume-02",
+      "domain": "technical-volume",
+      "split": "development",
+      "query": "想让近期价格权重更大，可以用什么平滑方法？",
+      "relevant_ids": [
+        "ema"
+      ],
+      "review_rationale": "指数移动平均递推强调近期值。"
+    },
+    {
+      "query_id": "technical-volume-03",
+      "domain": "technical-volume",
+      "split": "development",
+      "query": "过去一段时间上涨的股票以后继续涨，这是什么假设？",
+      "relevant_ids": [
+        "momentum"
+      ],
+      "review_rationale": "动量是假设延续，不是未来收益保证。"
+    },
+    {
+      "query_id": "technical-volume-04",
+      "domain": "technical-volume",
+      "split": "development",
+      "query": "价格偏离均值后回归，怎样先定义这个偏离？",
+      "relevant_ids": [
+        "mean-reversion",
+        "bollinger"
+      ],
+      "review_rationale": "偏离尺度及窗口需要预先定义。"
+    },
+    {
+      "query_id": "technical-volume-05",
+      "domain": "technical-volume",
+      "split": "development",
+      "query": "平均上涨幅度和平均下跌幅度的比值常用于哪个指标？",
+      "relevant_ids": [
+        "rsi"
+      ],
+      "review_rationale": "RSI由上涨与下跌平滑幅度计算。"
+    },
+    {
+      "query_id": "technical-volume-06",
+      "domain": "technical-volume",
+      "split": "holdout",
+      "query": "两条指数均线的差再减去信号线是什么？",
+      "relevant_ids": [
+        "macd"
+      ],
+      "review_rationale": "MACD直方图的倍数约定需要说明。"
+    },
+    {
+      "query_id": "technical-volume-07",
+      "domain": "technical-volume",
+      "split": "holdout",
+      "query": "跳空也要算进每日波幅，用哪个指标？",
+      "relevant_ids": [
+        "atr"
+      ],
+      "review_rationale": "真实波幅纳入前收盘与当日高低价。"
+    },
+    {
+      "query_id": "technical-volume-08",
+      "domain": "technical-volume",
+      "split": "holdout",
+      "query": "按成交数量加权的平均成交价如何理解？",
+      "relevant_ids": [
+        "vwap"
+      ],
+      "review_rationale": "VWAP按真实成交价与成交量加权。"
+    },
+    {
+      "query_id": "fundamentals-01",
+      "domain": "fundamentals",
+      "split": "development",
+      "query": "账面股东权益相对市场估值高低怎样衡量？",
+      "relevant_ids": [
+        "book-to-market"
+      ],
+      "review_rationale": "账面市值比要求日期和权益口径一致。"
+    },
+    {
+      "query_id": "fundamentals-02",
+      "domain": "fundamentals",
+      "split": "development",
+      "query": "市盈率的倒数叫什么，亏损企业还能直接比较吗？",
+      "relevant_ids": [
+        "earnings-yield"
+      ],
+      "review_rationale": "盈利收益率保留负利润及估值口径边界。"
+    },
+    {
+      "query_id": "fundamentals-03",
+      "domain": "fundamentals",
+      "split": "development",
+      "query": "用股东权益衡量盈利效率应看什么比率？",
+      "relevant_ids": [
+        "roe"
+      ],
+      "review_rationale": "ROE分母常取平均权益并关注杠杆。"
+    },
+    {
+      "query_id": "fundamentals-04",
+      "domain": "fundamentals",
+      "split": "development",
+      "query": "资产扩张很快，是哪类财务变化信号？",
+      "relevant_ids": [
+        "asset-growth"
+      ],
+      "review_rationale": "资产增长是跨报告期可比资产的变化。"
+    },
+    {
+      "query_id": "fundamentals-05",
+      "domain": "fundamentals",
+      "split": "development",
+      "query": "利润增长但现金没有同步增加，该看什么质量指标？",
+      "relevant_ids": [
+        "accruals",
+        "cashflow-quality"
+      ],
+      "review_rationale": "应计和现金利润差揭示盈利质量问题。"
+    },
+    {
+      "query_id": "fundamentals-06",
+      "domain": "fundamentals",
+      "split": "holdout",
+      "query": "负债占资产比例很高会放大哪些风险？",
+      "relevant_ids": [
+        "leverage"
+      ],
+      "review_rationale": "财务杠杆与偿债、权益回报敏感度相关。"
+    },
+    {
+      "query_id": "fundamentals-07",
+      "domain": "fundamentals",
+      "split": "holdout",
+      "query": "公告盈利超出预期，如何区分预测误差和同比增长？",
+      "relevant_ids": [
+        "earnings-surprise"
+      ],
+      "review_rationale": "盈利意外必须声明预期来源，不等同同比增速。"
+    },
+    {
+      "query_id": "factor-validation-01",
+      "domain": "factor-validation",
+      "split": "development",
+      "query": "因子今天的排序与未来收益之间怎样检验关系？",
+      "relevant_ids": [
+        "rank-ic",
+        "information-coefficient"
+      ],
+      "review_rationale": "截面关联评估需要前瞻收益标签和可用时间。"
+    },
+    {
+      "query_id": "factor-validation-02",
+      "domain": "factor-validation",
+      "split": "development",
+      "query": "每天IC均值除以它的标准差说明什么？",
+      "relevant_ids": [
+        "icir"
+      ],
+      "review_rationale": "ICIR是跨期IC信噪比，年化口径另行声明。"
+    },
+    {
+      "query_id": "factor-validation-03",
+      "domain": "factor-validation",
+      "split": "development",
+      "query": "把股票按因子分成五组后应该比较什么？",
+      "relevant_ids": [
+        "quantile-return"
+      ],
+      "review_rationale": "分组收益用于检查排序方向和非线性。"
+    },
+    {
+      "query_id": "factor-validation-04",
+      "domain": "factor-validation",
+      "split": "development",
+      "query": "因子其实只是在挑小盘股，怎样控制这个暴露？",
+      "relevant_ids": [
+        "neutralization"
+      ],
+      "review_rationale": "对规模等暴露回归残差或分组处理。"
+    },
+    {
+      "query_id": "factor-validation-05",
+      "domain": "factor-validation",
+      "split": "development",
+      "query": "排名每天大幅变化，什么指标提示交易负担？",
+      "relevant_ids": [
+        "factor-turnover"
+      ],
+      "review_rationale": "组合成员或排名变化与交易负担相关。"
+    },
+    {
+      "query_id": "factor-validation-06",
+      "domain": "factor-validation",
+      "split": "holdout",
+      "query": "怎样判断一个信号过几天就失效？",
+      "relevant_ids": [
+        "factor-decay"
+      ],
+      "review_rationale": "多持有期关联曲线与稳定性提示衰减。"
+    },
+    {
+      "query_id": "factor-validation-07",
+      "domain": "factor-validation",
+      "split": "holdout",
+      "query": "在同一段历史反复挑最优参数，为什么需要未看过的数据？",
+      "relevant_ids": [
+        "overfitting",
+        "oos"
+      ],
+      "review_rationale": "模型选择污染需要独立OOS并约束多重试验。"
+    },
+    {
+      "query_id": "strategy-portfolio-01",
+      "domain": "strategy-portfolio",
+      "split": "development",
+      "query": "十只股票每只分到相同资金，这是什么配置？",
+      "relevant_ids": [
+        "equal-weight"
+      ],
+      "review_rationale": "等权按资金权重分配，不是相同股数。"
+    },
+    {
+      "query_id": "strategy-portfolio-02",
+      "domain": "strategy-portfolio",
+      "split": "development",
+      "query": "波动率小的资产给更大资金权重，怎样归一化？",
+      "relevant_ids": [
+        "inverse-volatility"
+      ],
+      "review_rationale": "倒波动权重需归一化并处理零波动。"
+    },
+    {
+      "query_id": "strategy-portfolio-03",
+      "domain": "strategy-portfolio",
+      "split": "development",
+      "query": "资产权重一样，风险贡献也会一样吗？",
+      "relevant_ids": [
+        "risk-contribution",
+        "covariance-diversification"
+      ],
+      "review_rationale": "风险贡献依赖协方差及组合权重。"
+    },
+    {
+      "query_id": "strategy-portfolio-04",
+      "domain": "strategy-portfolio",
+      "split": "development",
+      "query": "持仓涨跌后偏离目标比例，什么时候重新配比？",
+      "relevant_ids": [
+        "rebalance"
+      ],
+      "review_rationale": "再平衡规则需预定时点或阈值及费用。"
+    },
+    {
+      "query_id": "strategy-portfolio-05",
+      "domain": "strategy-portfolio",
+      "split": "development",
+      "query": "回测扣了佣金以后，还需要考虑成交价格偏差吗？",
+      "relevant_ids": [
+        "slippage",
+        "transaction-cost"
+      ],
+      "review_rationale": "佣金和滑点是不同成本项。"
+    },
+    {
+      "query_id": "strategy-portfolio-06",
+      "domain": "strategy-portfolio",
+      "split": "holdout",
+      "query": "买两只基金是否可能仍重仓同一行业？",
+      "relevant_ids": [
+        "etf-exposure",
+        "concentration"
+      ],
+      "review_rationale": "基金穿透暴露可能重叠，数量不等于分散。"
+    },
+    {
+      "query_id": "strategy-portfolio-07",
+      "domain": "strategy-portfolio",
+      "split": "holdout",
+      "query": "超额平均收益除以波动率的指标应如何解读？",
+      "relevant_ids": [
+        "sharpe"
+      ],
+      "review_rationale": "夏普比率需同频无风险收益和波动假设。"
+    },
+    {
+      "query_id": "risk-review-01",
+      "domain": "risk-review",
+      "split": "development",
+      "query": "收益的标准差较大，说明怎样的历史波动特征？",
+      "relevant_ids": [
+        "volatility"
+      ],
+      "review_rationale": "波动是历史离散度，不覆盖全部风险。"
+    },
+    {
+      "query_id": "risk-review-02",
+      "domain": "risk-review",
+      "split": "development",
+      "query": "净值从历史最高点跌下来最深多少，如何计算？",
+      "relevant_ids": [
+        "drawdown"
+      ],
+      "review_rationale": "回撤以此前最高净值为基准。"
+    },
+    {
+      "query_id": "risk-review-03",
+      "domain": "risk-review",
+      "split": "development",
+      "query": "只关注低于目标收益的波动该用什么？",
+      "relevant_ids": [
+        "downside-risk"
+      ],
+      "review_rationale": "下行偏差需声明目标和分母。"
+    },
+    {
+      "query_id": "risk-review-04",
+      "domain": "risk-review",
+      "split": "development",
+      "query": "损失分位数以后更坏的尾部平均损失叫什么？",
+      "relevant_ids": [
+        "expected-shortfall",
+        "value-at-risk"
+      ],
+      "review_rationale": "ES与VaR分别描述尾均值和分位阈值。"
+    },
+    {
+      "query_id": "risk-review-05",
+      "domain": "risk-review",
+      "split": "development",
+      "query": "市场突然下跌并且成交量减少，怎样做假设检验？",
+      "relevant_ids": [
+        "stress-testing",
+        "liquidity"
+      ],
+      "review_rationale": "压力测试声明情景，不声称预测概率。"
+    },
+    {
+      "query_id": "risk-review-06",
+      "domain": "risk-review",
+      "split": "holdout",
+      "query": "纸面信号发出后怎样确认后续结果能用于复盘？",
+      "relevant_ids": [
+        "paper-settlement",
+        "learning-review"
+      ],
+      "review_rationale": "结算窗口成熟、实际可成交观察与证据先后关系。"
+    },
+    {
+      "query_id": "risk-review-07",
+      "domain": "risk-review",
+      "split": "holdout",
+      "query": "改了策略规则后如何复跑并和原版本公平比较？",
+      "relevant_ids": [
+        "reproducibility",
+        "learning-review"
+      ],
+      "review_rationale": "冻结输入和版本，复跑与规则审核分离。"
+    }
+  ]
+}

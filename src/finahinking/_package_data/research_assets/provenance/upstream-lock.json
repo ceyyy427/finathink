@@ -1224,6 +1224,57 @@
       "version": "1.0.0",
       "derivation": "FINATHINK_ORIGINAL",
       "rights_ref": "rights-source-intake-summary"
+    },
+    {
+      "resource_id": "quant-knowledge-catalog",
+      "path": "knowledge/catalog.json",
+      "sha256": "ec71c920c347b1fa0d1b45ab10e0dc0fd386a85d35df87025b4f777b7e68bc4b",
+      "byte_size": 216040,
+      "availability": "PACKAGED",
+      "kind": "metadata",
+      "author": "Finahinking contributors",
+      "license_id": "MIT",
+      "license_ref": "finathink-license",
+      "version": "1.0.0",
+      "source_url": null,
+      "source_path": null,
+      "source_sha256": null,
+      "derivation": "FINATHINK_ORIGINAL",
+      "rights_ref": "rights-quant-knowledge-catalog"
+    },
+    {
+      "resource_id": "quant-knowledge-examples",
+      "path": "knowledge/examples.json",
+      "sha256": "0102bb056d5452dd0ddb532858e9e86f6474fce31619845c42ce6715930a7698",
+      "byte_size": 24860,
+      "availability": "PACKAGED",
+      "kind": "metadata",
+      "author": "Finahinking contributors",
+      "license_id": "MIT",
+      "license_ref": "finathink-license",
+      "version": "1.0.0",
+      "source_url": null,
+      "source_path": null,
+      "source_sha256": null,
+      "derivation": "FINATHINK_ORIGINAL",
+      "rights_ref": "rights-quant-knowledge-examples"
+    },
+    {
+      "resource_id": "quant-knowledge-paths",
+      "path": "knowledge/paths.json",
+      "sha256": "bbd352104becd61562874857d09ed6602b2d3d8359149d64ecd6f28fb58c7c59",
+      "byte_size": 6205,
+      "availability": "PACKAGED",
+      "kind": "metadata",
+      "author": "Finahinking contributors",
+      "license_id": "MIT",
+      "license_ref": "finathink-license",
+      "version": "1.0.0",
+      "source_url": null,
+      "source_path": null,
+      "source_sha256": null,
+      "derivation": "FINATHINK_ORIGINAL",
+      "rights_ref": "rights-quant-knowledge-paths"
     }
   ],
   "rights_reviews": [
@@ -2202,6 +2253,69 @@
       "reviewed_by": "Finathink Phase 21 file review",
       "reviewed_on": "2026-10-31",
       "rationale": "逐文件核对内容及许可；Apache参考保留原版权头、完整许可证与Finathink署名说明。此决定仅覆盖指定字节。",
+      "source_url": null,
+      "source_path": null,
+      "source_sha256": null
+    },
+    {
+      "review_id": "rights-quant-knowledge-catalog",
+      "resource_id": "quant-knowledge-catalog",
+      "resource_sha256": "ec71c920c347b1fa0d1b45ab10e0dc0fd386a85d35df87025b4f777b7e68bc4b",
+      "license_id": "MIT",
+      "license_refs": [
+        {
+          "resource_id": "finathink-license",
+          "sha256": "8f005100947b20fd54ad3d7c5dd501d303a627fd1c738f75f95f5f7b66040015"
+        }
+      ],
+      "notice_refs": [],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase 22 editorial file review",
+      "reviewed_on": "2026-11-01",
+      "rationale": "Finathink原创中文解释、手算示例与学习路径；外部源码仅以固定提交和行范围引用，未移植可执行代码。按MIT发布，仅覆盖指定字节。",
+      "source_url": null,
+      "source_path": null,
+      "source_sha256": null
+    },
+    {
+      "review_id": "rights-quant-knowledge-examples",
+      "resource_id": "quant-knowledge-examples",
+      "resource_sha256": "0102bb056d5452dd0ddb532858e9e86f6474fce31619845c42ce6715930a7698",
+      "license_id": "MIT",
+      "license_refs": [
+        {
+          "resource_id": "finathink-license",
+          "sha256": "8f005100947b20fd54ad3d7c5dd501d303a627fd1c738f75f95f5f7b66040015"
+        }
+      ],
+      "notice_refs": [],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase 22 editorial file review",
+      "reviewed_on": "2026-11-01",
+      "rationale": "Finathink原创中文解释、手算示例与学习路径；外部源码仅以固定提交和行范围引用，未移植可执行代码。按MIT发布，仅覆盖指定字节。",
+      "source_url": null,
+      "source_path": null,
+      "source_sha256": null
+    },
+    {
+      "review_id": "rights-quant-knowledge-paths",
+      "resource_id": "quant-knowledge-paths",
+      "resource_sha256": "bbd352104becd61562874857d09ed6602b2d3d8359149d64ecd6f28fb58c7c59",
+      "license_id": "MIT",
+      "license_refs": [
+        {
+          "resource_id": "finathink-license",
+          "sha256": "8f005100947b20fd54ad3d7c5dd501d303a627fd1c738f75f95f5f7b66040015"
+        }
+      ],
+      "notice_refs": [],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase 22 editorial file review",
+      "reviewed_on": "2026-11-01",
+      "rationale": "Finathink原创中文解释、手算示例与学习路径；外部源码仅以固定提交和行范围引用，未移植可执行代码。按MIT发布，仅覆盖指定字节。",
       "source_url": null,
       "source_path": null,
       "source_sha256": null

@@ -1,0 +1,6659 @@
+{
+  "schema_version": "quant-knowledge.v1",
+  "version": "1.0.0",
+  "items": [
+    {
+      "item_id": "point-in-time",
+      "canonical_id": "point-in-time",
+      "version": "1.0.0",
+      "kind": "METHOD",
+      "title": "时点可用性（PIT）",
+      "domain": "data-pit",
+      "summary": "在每个决策时点，只使用当时已经公开且已到达系统的信息。",
+      "explanation": "数据所属日期不等于可以获得它的日期。先保留observed_at与available_at，再按决策截止时间选择记录；未知披露时间不能用固定滞后天数冒充已验证PIT。",
+      "application": "先做可用性检查，再构造历史特征。",
+      "example_text": "收盘15:00决策，18:00发布的财报不能用于这次决策。",
+      "prerequisites": [],
+      "assumptions": [
+        "时间带时区",
+        "字段发布时间有证据"
+      ],
+      "required_fields": [
+        "available_at",
+        "decision_at",
+        "observed_at"
+      ],
+      "formula_refs": [
+        "point-in-time-definition"
+      ],
+      "code_refs": [
+        "own-pit"
+      ],
+      "source_refs": [
+        "own-pit",
+        "ds-data-audit"
+      ],
+      "claim_kind": "ENGINEERING",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "point-in-time-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Point in time",
+        "PIT",
+        "历史可见信息"
+      ],
+      "tags": [
+        "data-pit"
+      ],
+      "example_refs": [
+        "point-in-time-worked-example"
+      ]
+    },
+    {
+      "item_id": "publication-lag",
+      "canonical_id": "publication-lag",
+      "version": "1.0.0",
+      "kind": "CONCEPT",
+      "title": "披露延迟与执行延迟",
+      "domain": "data-pit",
+      "summary": "把公告时间、接收时间、决策时间和可交易时间分开记录。",
+      "explanation": "盘后公告只能影响其公开后形成的决策；即使公告在盘中，也要考虑接口更新和执行延迟。延迟是数据合同的一部分，不是把公告日期统一减一天的技巧。",
+      "application": "检查因子与标签之间是否存在抢先使用公告。",
+      "example_text": "公告18:00发布、18:03接收，当天15:00的排序不能引用它。",
+      "prerequisites": [
+        "point-in-time"
+      ],
+      "assumptions": [
+        "公开时间可追溯",
+        "接收时间不早于发布"
+      ],
+      "required_fields": [
+        "published_at",
+        "received_at",
+        "decision_at"
+      ],
+      "formula_refs": [
+        "publication-lag-definition"
+      ],
+      "code_refs": [
+        "own-fields"
+      ],
+      "source_refs": [
+        "own-fields",
+        "ds-data-audit"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "publication-lag-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Publication lag",
+        "公告延迟",
+        "信息延迟"
+      ],
+      "tags": [
+        "data-pit"
+      ],
+      "example_refs": [
+        "publication-lag-worked-example"
+      ]
+    },
+    {
+      "item_id": "revisions",
+      "canonical_id": "revisions",
+      "version": "1.0.0",
+      "kind": "CONCEPT",
+      "title": "数据修订与历史版本",
+      "domain": "data-pit",
+      "summary": "同一观察期可以有多个发布时间不同的修订版本。",
+      "explanation": "以标的、观察期、版本可用时间识别记录。历史研究选择截止时点能看到的最新版本；后来的更正可用于新研究，但不应覆盖旧快照。",
+      "application": "研究财报修订、宏观数据发布和历史重现。",
+      "example_text": "4月发布利润10，6月修订为8；5月的历史研究仍应读取10。",
+      "prerequisites": [
+        "point-in-time"
+      ],
+      "assumptions": [
+        "版本记录不覆盖",
+        "修订时间有证据"
+      ],
+      "required_fields": [
+        "instrument",
+        "observed_at",
+        "available_at",
+        "value"
+      ],
+      "formula_refs": [
+        "revisions-definition"
+      ],
+      "code_refs": [
+        "own-fields",
+        "own-snapshot"
+      ],
+      "source_refs": [
+        "own-fields",
+        "own-snapshot"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "revisions-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Revision",
+        "历史修订",
+        "版本数据"
+      ],
+      "tags": [
+        "data-pit"
+      ],
+      "example_refs": [
+        "revisions-worked-example"
+      ]
+    },
+    {
+      "item_id": "universe-bias",
+      "canonical_id": "universe-bias",
+      "version": "1.0.0",
+      "kind": "CONCEPT",
+      "title": "样本池与幸存者偏差",
+      "domain": "data-pit",
+      "summary": "按历史时点确定候选集合，保留退出和退市对象。",
+      "explanation": "当前股票名单、最新指数成分和成功基金名单都可能排除历史失败者。研究需要当时的成员资格、上市/退市时间以及退出时的收益处理，而不是仅过滤缺数据的对象。",
+      "application": "核对选股和基金比较的样本选择过程。",
+      "example_text": "十年前有100家公司，今天剩80家；只回测80家会漏掉20家历史经历。",
+      "prerequisites": [
+        "point-in-time"
+      ],
+      "assumptions": [
+        "成员资格有历史版本",
+        "退出样本有明确处理"
+      ],
+      "required_fields": [
+        "instrument",
+        "membership_start",
+        "membership_end",
+        "delisting_return"
+      ],
+      "formula_refs": [
+        "universe-bias-definition"
+      ],
+      "code_refs": [
+        "own-fields"
+      ],
+      "source_refs": [
+        "ds-data-audit",
+        "own-fields"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "universe-bias-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Survivorship bias",
+        "幸存者偏差",
+        "历史成分"
+      ],
+      "tags": [
+        "data-pit"
+      ],
+      "example_refs": []
+    },
+    {
+      "item_id": "adjustment",
+      "canonical_id": "adjustment",
+      "version": "1.0.0",
+      "kind": "CONCEPT",
+      "title": "复权与公司行动",
+      "domain": "data-pit",
+      "summary": "让价格变化、拆股和分红采用一致的计量口径。",
+      "explanation": "前复权、后复权和不复权服务不同目的。记录公司行动事件、调整因子及基准版本，避免后来的事件改变历史特征；成交与资金账本仍需使用可成交价格及现金流。",
+      "application": "处理拆股跳变，并核对价格研究与交易账本的一致性。",
+      "example_text": "1拆2后股价从100到50、股数翻倍，持仓价值并没有因拆股本身减半。",
+      "prerequisites": [
+        "point-in-time"
+      ],
+      "assumptions": [
+        "价格和因子同一币种",
+        "基准与公司行动已固定"
+      ],
+      "required_fields": [
+        "raw_close",
+        "adjustment_factor",
+        "corporate_action",
+        "available_at"
+      ],
+      "formula_refs": [
+        "adjustment-definition"
+      ],
+      "code_refs": [],
+      "source_refs": [
+        "qa-adjustment",
+        "ds-data-audit"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "adjustment-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Adjustment",
+        "复权",
+        "拆股",
+        "除权"
+      ],
+      "tags": [
+        "data-pit"
+      ],
+      "example_refs": []
+    },
+    {
+      "item_id": "trading-calendar",
+      "canonical_id": "trading-calendar",
+      "version": "1.0.0",
+      "kind": "CONCEPT",
+      "title": "交易日历与观察频率",
+      "domain": "data-pit",
+      "summary": "用明确的市场日历定义窗口、休市和执行日期。",
+      "explanation": "一个月、20个交易日和20个自然日不是同一个区间。跨市场样本应保存市场、时区和会话标识，不能靠删除所有空行假定相同交易节奏。",
+      "application": "把滚动特征、持有期和回测成交对齐到可交易会话。",
+      "example_text": "一地周一休市，另一地开市，不能把两地的第20行直接看作同一天。",
+      "prerequisites": [
+        "point-in-time"
+      ],
+      "assumptions": [
+        "日历版本已绑定",
+        "会话结束时间有时区"
+      ],
+      "required_fields": [
+        "exchange",
+        "calendar_id",
+        "timestamp",
+        "session_status"
+      ],
+      "formula_refs": [
+        "trading-calendar-definition"
+      ],
+      "code_refs": [
+        "own-fields"
+      ],
+      "source_refs": [
+        "al-calendar",
+        "own-fields"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "trading-calendar-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Trading calendar",
+        "交易日历",
+        "交易日"
+      ],
+      "tags": [
+        "data-pit"
+      ],
+      "example_refs": []
+    },
+    {
+      "item_id": "missing-data",
+      "canonical_id": "missing-data",
+      "version": "1.0.0",
+      "kind": "CONCEPT",
+      "title": "缺失值与观测状态",
+      "domain": "data-pit",
+      "summary": "将未提供、未发布、停牌和真实的零值分别表达。",
+      "explanation": "先识别缺失原因，再决定丢弃、保留或按明确规则填补。填零会制造无风险或负收益的假象；前向填充需要限时并保留原可用时间，不能把无成交变成可以成交。",
+      "application": "研究前报告缺口，给出NEEDS_DATA和修复入口。",
+      "example_text": "暂停交易的日期没有成交价；填成0会凭空形成100%跌幅。",
+      "prerequisites": [
+        "trading-calendar"
+      ],
+      "assumptions": [
+        "缺失原因有状态",
+        "分母按约定样本池和日历"
+      ],
+      "required_fields": [
+        "value",
+        "missing_reason",
+        "available_at",
+        "suspended"
+      ],
+      "formula_refs": [
+        "missing-data-definition"
+      ],
+      "code_refs": [
+        "own-fields"
+      ],
+      "source_refs": [
+        "ds-data-audit",
+        "own-fields"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "missing-data-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Missing data",
+        "缺失值",
+        "停牌",
+        "空值"
+      ],
+      "tags": [
+        "data-pit"
+      ],
+      "example_refs": [
+        "missing-data-worked-example"
+      ]
+    },
+    {
+      "item_id": "units",
+      "canonical_id": "units",
+      "version": "1.0.0",
+      "kind": "CONCEPT",
+      "title": "单位、币种与数量口径",
+      "domain": "data-pit",
+      "summary": "每个数值都应绑定单位、币种和缩放系数。",
+      "explanation": "成交量可能是手或股，金额可能是元或万元，收益可能是百分数或小数。只做数据字典允许的显式换算；价格与财务分母的币种也要对齐，汇率必须具有相应可用时间。",
+      "application": "在API字段映射时拦截量纲错误。",
+      "example_text": "5万元应规范为50000元；5%的收益应规范为0.05。",
+      "prerequisites": [],
+      "assumptions": [
+        "原始单位已知",
+        "跨币种时有可用汇率"
+      ],
+      "required_fields": [
+        "raw_value",
+        "unit",
+        "currency",
+        "scale",
+        "available_at"
+      ],
+      "formula_refs": [
+        "units-definition"
+      ],
+      "code_refs": [
+        "own-units",
+        "own-fields"
+      ],
+      "source_refs": [
+        "own-units",
+        "own-fields"
+      ],
+      "claim_kind": "ENGINEERING",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "units-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Units",
+        "单位换算",
+        "币种",
+        "手与股"
+      ],
+      "tags": [
+        "data-pit"
+      ],
+      "example_refs": [
+        "units-worked-example"
+      ]
+    },
+    {
+      "item_id": "alignment",
+      "canonical_id": "alignment",
+      "version": "1.0.0",
+      "kind": "CONCEPT",
+      "title": "标签、特征与标的对齐",
+      "domain": "data-pit",
+      "summary": "按照标的、时间及可用版本对齐特征和评价标签。",
+      "explanation": "相邻数组位置不代表同一资产同一日。先对齐规范键，再处理缺失，并确认未来收益只在评价区使用；合并后的行数、重复键及标签覆盖都要核查。",
+      "application": "准备横截面IC、分组收益和跨市场比较。",
+      "example_text": "价格表少了一只股票时，直接按行相乘会把另一只股票的收益配错。",
+      "prerequisites": [
+        "point-in-time",
+        "missing-data"
+      ],
+      "assumptions": [
+        "标的身份稳定",
+        "重复键与缺失处理明确"
+      ],
+      "required_fields": [
+        "instrument",
+        "timestamp",
+        "available_at",
+        "factor",
+        "forward_return"
+      ],
+      "formula_refs": [
+        "alignment-definition"
+      ],
+      "code_refs": [
+        "al-forward",
+        "own-fields"
+      ],
+      "source_refs": [
+        "al-forward",
+        "own-fields"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "alignment-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Alignment",
+        "数据对齐",
+        "索引对齐"
+      ],
+      "tags": [
+        "data-pit"
+      ],
+      "example_refs": [
+        "alignment-worked-example"
+      ]
+    },
+    {
+      "item_id": "data-fingerprint",
+      "canonical_id": "data-fingerprint",
+      "version": "1.0.0",
+      "kind": "CONCEPT",
+      "title": "数据指纹与不可变快照",
+      "domain": "data-pit",
+      "summary": "用固定序列化后的内容摘要识别一次研究输入。",
+      "explanation": "指纹证明输入字节或规范内容相同，不证明数据真实、完整或有分发许可。把字段顺序、时间格式、规范化规则和源版本纳入快照合同，保存后以新指纹产生新版本。",
+      "application": "复跑、比较和报告中绑定具体输入，避免悄悄覆盖。",
+      "example_text": "同一价格快照改变一条记录，后续运行应得到不同的数据引用。",
+      "prerequisites": [
+        "units"
+      ],
+      "assumptions": [
+        "序列化规则固定",
+        "源数据及许可另有记录"
+      ],
+      "required_fields": [
+        "snapshot_bytes",
+        "schema_version",
+        "source_version"
+      ],
+      "formula_refs": [
+        "data-fingerprint-definition"
+      ],
+      "code_refs": [
+        "own-snapshot"
+      ],
+      "source_refs": [
+        "own-snapshot",
+        "own-reproduction"
+      ],
+      "claim_kind": "ENGINEERING",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "data-fingerprint-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Data fingerprint",
+        "内容摘要",
+        "数据快照",
+        "SHA256"
+      ],
+      "tags": [
+        "data-pit"
+      ],
+      "example_refs": []
+    },
+    {
+      "item_id": "return",
+      "canonical_id": "return",
+      "version": "1.0.0",
+      "kind": "CONCEPT",
+      "title": "简单收益率",
+      "domain": "returns-market",
+      "summary": "比较期末与期初价值，得到一个期间的比例变化。",
+      "explanation": "价格收益不自动包含现金分红、费用或新增资金。正的期初价值是分母前提；日、周和月收益要有一致的时点定义，横向比较还需同一币种。",
+      "application": "把价格变化转换成同频可比较的收益观察。",
+      "example_text": "100涨到110，收益为110/100−1=0.10，即10%。",
+      "prerequisites": [
+        "units"
+      ],
+      "assumptions": [
+        "期初价格为正",
+        "两个价格的复权和币种一致"
+      ],
+      "required_fields": [
+        "close",
+        "previous_close",
+        "timestamp"
+      ],
+      "formula_refs": [
+        "return-definition"
+      ],
+      "code_refs": [
+        "al-forward",
+        "pa-returns"
+      ],
+      "source_refs": [
+        "al-forward",
+        "pa-returns"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "return-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Return",
+        "Returns",
+        "简单回报",
+        "收益率"
+      ],
+      "tags": [
+        "returns-market"
+      ],
+      "example_refs": [
+        "return-worked-example"
+      ]
+    },
+    {
+      "item_id": "compounding",
+      "canonical_id": "compounding",
+      "version": "1.0.0",
+      "kind": "CONCEPT",
+      "title": "复利与累计净值",
+      "domain": "returns-market",
+      "summary": "连续期间的收益通过相乘累积，涨跌次序还会影响回撤路径。",
+      "explanation": "固定持有且没有外部现金流时，将每期增长因子连乘。算术平均收益不是实际累计增长；有充值、赎回或调仓时，还要定义资金加权或时间加权的口径。",
+      "application": "核算净值并检查平均收益与实际财富变化的差异。",
+      "example_text": "先涨10%再跌10%：1.1×0.9=0.99，累计亏损1%。",
+      "prerequisites": [
+        "return"
+      ],
+      "assumptions": [
+        "期间连续且不重叠",
+        "外部现金流另行处理"
+      ],
+      "required_fields": [
+        "returns",
+        "starting_value",
+        "cashflows"
+      ],
+      "formula_refs": [
+        "compounding-definition"
+      ],
+      "code_refs": [
+        "al-cumulative",
+        "pa-returns"
+      ],
+      "source_refs": [
+        "al-cumulative",
+        "pa-returns"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "compounding-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Compounding",
+        "复利",
+        "累计净值"
+      ],
+      "tags": [
+        "returns-market"
+      ],
+      "example_refs": [
+        "compounding-worked-example"
+      ]
+    },
+    {
+      "item_id": "log-return",
+      "canonical_id": "log-return",
+      "version": "1.0.0",
+      "kind": "CONCEPT",
+      "title": "对数收益率",
+      "domain": "returns-market",
+      "summary": "把价格比取自然对数，便于按时间累加。",
+      "explanation": "对数收益适用于正价格或正增长因子。它在同一资产的连续时间区间可相加，但不同资产的组合收益一般不能直接按权重平均对数收益得到精确值。",
+      "application": "研究复利分解，并在报告中区分对数与简单回报。",
+      "example_text": "价格比为e时，对数收益为1，简单收益却约为171.83%。",
+      "prerequisites": [
+        "compounding"
+      ],
+      "assumptions": [
+        "价格严格为正",
+        "时间区间连续"
+      ],
+      "required_fields": [
+        "close",
+        "previous_close"
+      ],
+      "formula_refs": [
+        "log-return-definition"
+      ],
+      "code_refs": [
+        "pa-returns"
+      ],
+      "source_refs": [
+        "pa-returns"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "log-return-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Log return",
+        "对数回报",
+        "对数收益"
+      ],
+      "tags": [
+        "returns-market"
+      ],
+      "example_refs": [
+        "log-return-worked-example"
+      ]
+    },
+    {
+      "item_id": "excess-return",
+      "canonical_id": "excess-return",
+      "version": "1.0.0",
+      "kind": "CONCEPT",
+      "title": "超额收益与相对净值",
+      "domain": "returns-market",
+      "summary": "先声明参照对象，再计算同期间策略与参照的差别。",
+      "explanation": "相对于无风险资产的收益常用于Sharpe；相对于指数的主动收益常用于策略比较。算术收益差和相对净值比是两种定义，不应在不同图表中交替使用。",
+      "application": "衡量策略相对于可比参照的历史表现。",
+      "example_text": "策略5%、指数8%，算术主动收益为−3个百分点，不是正超额。",
+      "prerequisites": [
+        "return"
+      ],
+      "assumptions": [
+        "基准在研究前确定",
+        "观察区间相同"
+      ],
+      "required_fields": [
+        "portfolio_return",
+        "benchmark_return",
+        "timestamp"
+      ],
+      "formula_refs": [
+        "excess-return-definition"
+      ],
+      "code_refs": [
+        "al-beta",
+        "al-quantiles"
+      ],
+      "source_refs": [
+        "al-beta",
+        "al-quantiles"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "excess-return-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Excess return",
+        "超额收益",
+        "主动收益"
+      ],
+      "tags": [
+        "returns-market"
+      ],
+      "example_refs": [
+        "excess-return-worked-example"
+      ]
+    },
+    {
+      "item_id": "annualization",
+      "canonical_id": "annualization",
+      "version": "1.0.0",
+      "kind": "CONCEPT",
+      "title": "年化与频率换算",
+      "domain": "returns-market",
+      "summary": "年化是带假设的尺度换算，必须声明观察次数和指标类型。",
+      "explanation": "复合收益可按年内期数幂次换算；均值和波动的换算依赖稳定性及相关结构。日频252只是常见约定，不能直接套用到月频、全天交易或不规则观察。",
+      "application": "把不同观察长度的描述统计放在一致尺度，并展示假设。",
+      "example_text": "每月固定1%持续12个月，复合年收益约12.6825%，不是精确12%。",
+      "prerequisites": [
+        "compounding"
+      ],
+      "assumptions": [
+        "复利口径一致",
+        "频率固定且年期数明确"
+      ],
+      "required_fields": [
+        "returns",
+        "periods_per_year"
+      ],
+      "formula_refs": [
+        "annualization-definition"
+      ],
+      "code_refs": [
+        "ds-annualization",
+        "pa-returns"
+      ],
+      "source_refs": [
+        "ds-annualization",
+        "pa-returns"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "annualization-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Annualization",
+        "年化",
+        "观察频率"
+      ],
+      "tags": [
+        "returns-market"
+      ],
+      "example_refs": [
+        "annualization-worked-example"
+      ]
+    },
+    {
+      "item_id": "benchmark",
+      "canonical_id": "benchmark",
+      "version": "1.0.0",
+      "kind": "CONCEPT",
+      "title": "基准与可比研究",
+      "domain": "returns-market",
+      "summary": "为策略选择一个事前定义、可获得且风险特征可解释的参照。",
+      "explanation": "基准应匹配市场、币种、资产类型和研究区间。可以同时报告广泛市场和简单规则基准，但不能在看到结果后才选最容易战胜的对象。",
+      "application": "判断复杂策略是否比简单可实施的方案增加研究价值。",
+      "example_text": "股票策略和现金基准比较只能回答一部分问题，还应检查市场暴露。",
+      "prerequisites": [
+        "return"
+      ],
+      "assumptions": [
+        "基准选择事前记录",
+        "区间和估值时点一致"
+      ],
+      "required_fields": [
+        "benchmark_return",
+        "portfolio_return",
+        "currency",
+        "timestamp"
+      ],
+      "formula_refs": [
+        "benchmark-definition"
+      ],
+      "code_refs": [
+        "al-beta",
+        "pa-returns"
+      ],
+      "source_refs": [
+        "al-beta",
+        "pa-returns"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "benchmark-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Benchmark",
+        "比较基准",
+        "参照组合"
+      ],
+      "tags": [
+        "returns-market"
+      ],
+      "example_refs": []
+    },
+    {
+      "item_id": "total-return",
+      "canonical_id": "total-return",
+      "version": "1.0.0",
+      "kind": "CONCEPT",
+      "title": "总回报与现金分红",
+      "domain": "returns-market",
+      "summary": "把持有期间的现金分配纳入收益，明确是否再投资。",
+      "explanation": "一期间简单总回报可将现金分红加到期末价值；多期再投资还需要分红时点与再投资价格。不要再把已含分红的复权收益重复加一次现金。",
+      "application": "比较股票、ETF和含息指数，检查分配带来的回报差异。",
+      "example_text": "100变98但收到分红3，一期总回报为1%，价格收益为−2%。",
+      "prerequisites": [
+        "return",
+        "adjustment"
+      ],
+      "assumptions": [
+        "股数和分红口径一致",
+        "公司行动不重复计入"
+      ],
+      "required_fields": [
+        "close",
+        "previous_close",
+        "dividend",
+        "corporate_action"
+      ],
+      "formula_refs": [
+        "total-return-definition"
+      ],
+      "code_refs": [
+        "pa-returns"
+      ],
+      "source_refs": [
+        "qa-adjustment",
+        "pa-returns"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "total-return-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Total return",
+        "总回报",
+        "含息收益"
+      ],
+      "tags": [
+        "returns-market"
+      ],
+      "example_refs": [
+        "total-return-worked-example"
+      ]
+    },
+    {
+      "item_id": "market-cap",
+      "canonical_id": "market-cap",
+      "version": "1.0.0",
+      "kind": "CONCEPT",
+      "title": "市值与股本口径",
+      "domain": "returns-market",
+      "summary": "市场价格乘以相应股数，股数口径决定市值含义。",
+      "explanation": "总股本、流通股本和自由流通股本会得到不同结果。跨币种、拆股或股本变更时，价格和股数必须来自一致时点；市值不是企业净资产。",
+      "application": "准备规模分组、估值比率及规模暴露检查。",
+      "example_text": "每股20元、100万股总股本，总市值为2000万元。",
+      "prerequisites": [
+        "units"
+      ],
+      "assumptions": [
+        "价格和股数时点一致",
+        "股本种类明确"
+      ],
+      "required_fields": [
+        "close",
+        "shares_outstanding",
+        "shares_type",
+        "currency",
+        "available_at"
+      ],
+      "formula_refs": [
+        "market-cap-definition"
+      ],
+      "code_refs": [
+        "pa-value",
+        "own-units"
+      ],
+      "source_refs": [
+        "pa-value",
+        "own-units"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "market-cap-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Market capitalization",
+        "总市值",
+        "流通市值"
+      ],
+      "tags": [
+        "returns-market"
+      ],
+      "example_refs": []
+    },
+    {
+      "item_id": "turnover-ratio",
+      "canonical_id": "turnover-ratio",
+      "version": "1.0.0",
+      "kind": "CONCEPT",
+      "title": "市场成交换手率",
+      "domain": "returns-market",
+      "summary": "成交股数与明确股本基数的比例，区别于组合调仓换手。",
+      "explanation": "先把手转换成股，再使用流通股或自由流通股分母。异常的大值可能来自单位错配，也可能来自真实高频交易；它不直接等于持仓主体的更换比例。",
+      "application": "分析交易活跃度，并检查数据字典中的成交口径。",
+      "example_text": "成交2万股、流通股100万股，市场换手率为2%。",
+      "prerequisites": [
+        "market-cap"
+      ],
+      "assumptions": [
+        "股本分母版本明确",
+        "成交量单位已规范"
+      ],
+      "required_fields": [
+        "volume",
+        "reference_shares",
+        "volume_unit",
+        "available_at"
+      ],
+      "formula_refs": [
+        "turnover-ratio-definition"
+      ],
+      "code_refs": [
+        "pa-value",
+        "own-units"
+      ],
+      "source_refs": [
+        "pa-value",
+        "own-units"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "turnover-ratio-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Turnover ratio",
+        "市场换手率",
+        "股本换手"
+      ],
+      "tags": [
+        "returns-market"
+      ],
+      "example_refs": []
+    },
+    {
+      "item_id": "liquidity",
+      "canonical_id": "liquidity",
+      "version": "1.0.0",
+      "kind": "CONCEPT",
+      "title": "流动性与可成交性",
+      "domain": "returns-market",
+      "summary": "能否在合理时间内以合理价格完成交易，需要量、价差和深度共同判断。",
+      "explanation": "日成交量只提供一部分信息。停牌、涨跌停、报价断层和订单相对市场规模都会改变可成交性；历史高成交也不能保证下一次订单成功。",
+      "application": "为研究准备成交约束，进一步做容量与滑点敏感性分析。",
+      "example_text": "一笔订单占当天成交量50%，即使信号很强也可能明显冲击价格。",
+      "prerequisites": [
+        "units",
+        "trading-calendar"
+      ],
+      "assumptions": [
+        "订单与成交量单位一致",
+        "交易规则和时点已知"
+      ],
+      "required_fields": [
+        "order_quantity",
+        "volume",
+        "bid",
+        "ask",
+        "suspended"
+      ],
+      "formula_refs": [
+        "liquidity-definition"
+      ],
+      "code_refs": [
+        "pa-cost"
+      ],
+      "source_refs": [
+        "pa-cost",
+        "own-stress"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "liquidity-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Liquidity",
+        "流动性",
+        "买卖价差",
+        "成交深度"
+      ],
+      "tags": [
+        "returns-market"
+      ],
+      "example_refs": []
+    },
+    {
+      "item_id": "mean",
+      "canonical_id": "mean",
+      "version": "1.0.0",
+      "kind": "CONCEPT",
+      "title": "均值与样本中心",
+      "domain": "statistics",
+      "summary": "均值把所有观测加总再除以有效观测数。",
+      "explanation": "极端值会显著拉动均值；它描述给定样本的中心，不是下一期必然结果。缺失处理、权重及观察频率变化都会改变估计对象。",
+      "application": "汇总收益或特征，并与中位数和分布一起观察。",
+      "example_text": "1、3、5的均值为3；新增100会明显改变中心。",
+      "prerequisites": [
+        "missing-data"
+      ],
+      "assumptions": [
+        "有效样本非空",
+        "单位和频率一致"
+      ],
+      "required_fields": [
+        "values",
+        "valid_mask"
+      ],
+      "formula_refs": [
+        "mean-definition"
+      ],
+      "code_refs": [
+        "qlib-normalize",
+        "pa-returns"
+      ],
+      "source_refs": [
+        "qlib-normalize",
+        "pa-returns"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "mean-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Mean",
+        "平均值",
+        "算术平均"
+      ],
+      "tags": [
+        "statistics"
+      ],
+      "example_refs": [
+        "mean-worked-example"
+      ]
+    },
+    {
+      "item_id": "variance",
+      "canonical_id": "variance",
+      "version": "1.0.0",
+      "kind": "CONCEPT",
+      "title": "方差与分母约定",
+      "domain": "statistics",
+      "summary": "方差用平方偏离描述离散程度，单位也是原单位的平方。",
+      "explanation": "总体描述常除以n；在独立同分布样本下，无偏样本方差除以n−1。二者都合理但必须标明，短窗口中差别尤为明显。",
+      "application": "检查标准差与风险实现的分母是否一致。",
+      "example_text": "1、3、5相对均值3的平方差和为8，样本方差为4。",
+      "prerequisites": [
+        "mean"
+      ],
+      "assumptions": [
+        "n大于1",
+        "有限数值",
+        "估计解释需样本假设"
+      ],
+      "required_fields": [
+        "values",
+        "ddof"
+      ],
+      "formula_refs": [
+        "variance-definition"
+      ],
+      "code_refs": [
+        "qa-std",
+        "qlib-normalize"
+      ],
+      "source_refs": [
+        "qa-std",
+        "qlib-normalize"
+      ],
+      "claim_kind": "MATHEMATICAL",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "variance-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Variance",
+        "方差",
+        "样本方差"
+      ],
+      "tags": [
+        "statistics"
+      ],
+      "example_refs": [
+        "variance-worked-example"
+      ]
+    },
+    {
+      "item_id": "standard-deviation",
+      "canonical_id": "standard-deviation",
+      "version": "1.0.0",
+      "kind": "CONCEPT",
+      "title": "标准差与尺度",
+      "domain": "statistics",
+      "summary": "标准差是方差的平方根，回到原始数值的单位。",
+      "explanation": "它同时计入上行与下行偏离。样本标准差、总体标准差及稳健尺度不能互换；标准差为零只说明当前窗口没有变化，不能证明未来无风险。",
+      "application": "比较同频收益波动，或规范化同单位变量。",
+      "example_text": "1、3、5的样本方差4，标准差为2。",
+      "prerequisites": [
+        "variance"
+      ],
+      "assumptions": [
+        "有效样本大于1",
+        "分母约定固定"
+      ],
+      "required_fields": [
+        "values",
+        "ddof"
+      ],
+      "formula_refs": [
+        "standard-deviation-definition"
+      ],
+      "code_refs": [
+        "qa-std",
+        "pa-returns"
+      ],
+      "source_refs": [
+        "qa-std",
+        "pa-returns"
+      ],
+      "claim_kind": "MATHEMATICAL",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "standard-deviation-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Standard deviation",
+        "标准差",
+        "离散程度"
+      ],
+      "tags": [
+        "statistics"
+      ],
+      "example_refs": [
+        "standard-deviation-worked-example"
+      ]
+    },
+    {
+      "item_id": "covariance",
+      "canonical_id": "covariance",
+      "version": "1.0.0",
+      "kind": "CONCEPT",
+      "title": "协方差与共同变化",
+      "domain": "statistics",
+      "summary": "协方差度量两个对齐变量相对各自均值的共同变化。",
+      "explanation": "数值依赖两边的单位。样本行需要按身份和时点配对；分别删除缺失后再按位置相乘会制造伪关系。组合使用的协方差矩阵还应检查对称性与半正定性。",
+      "application": "准备beta与组合方差，并检查矩阵质量。",
+      "example_text": "x为1、3、5，y为2、6、10，样本协方差为8。",
+      "prerequisites": [
+        "variance",
+        "alignment"
+      ],
+      "assumptions": [
+        "观测成对对齐",
+        "统一缺失策略"
+      ],
+      "required_fields": [
+        "x",
+        "y",
+        "paired_timestamp"
+      ],
+      "formula_refs": [
+        "covariance-definition"
+      ],
+      "code_refs": [
+        "al-beta",
+        "bt-risk"
+      ],
+      "source_refs": [
+        "al-beta",
+        "bt-risk"
+      ],
+      "claim_kind": "MATHEMATICAL",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "covariance-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Covariance",
+        "协方差",
+        "共同波动"
+      ],
+      "tags": [
+        "statistics"
+      ],
+      "example_refs": [
+        "covariance-worked-example"
+      ]
+    },
+    {
+      "item_id": "correlation",
+      "canonical_id": "correlation",
+      "version": "1.0.0",
+      "kind": "CONCEPT",
+      "title": "相关系数与非因果性",
+      "domain": "statistics",
+      "summary": "Pearson相关把协方差除以两边标准差，描述线性关系。",
+      "explanation": "相关范围为−1到1，但零相关仍可能有非线性联系。共同趋势、遗漏变量和样本选择都会影响相关；相关既不是因果证据，也不是稳定预测能力。",
+      "application": "分析特征冗余与风险分散，结合散点与时间稳定性。",
+      "example_text": "y=2x且x不恒定时相关为1；它不说明x导致y。",
+      "prerequisites": [
+        "covariance",
+        "standard-deviation"
+      ],
+      "assumptions": [
+        "成对样本足够",
+        "两边有变化"
+      ],
+      "required_fields": [
+        "x",
+        "y",
+        "timestamp"
+      ],
+      "formula_refs": [
+        "correlation-definition"
+      ],
+      "code_refs": [
+        "al-beta",
+        "al-ic"
+      ],
+      "source_refs": [
+        "al-beta",
+        "al-ic"
+      ],
+      "claim_kind": "MATHEMATICAL",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "correlation-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Correlation",
+        "Pearson",
+        "相关系数"
+      ],
+      "tags": [
+        "statistics"
+      ],
+      "example_refs": [
+        "correlation-worked-example"
+      ]
+    },
+    {
+      "item_id": "regression",
+      "canonical_id": "regression",
+      "version": "1.0.0",
+      "kind": "METHOD",
+      "title": "线性回归与最小二乘",
+      "domain": "statistics",
+      "summary": "OLS选择系数，使样本残差平方和最小。",
+      "explanation": "带截距模型区分平均水平和斜率。解释系数需要清楚的变量与样本；估计的标准误依赖误差结构，时间序列常需处理异方差与自相关。",
+      "application": "估计暴露和残差，保留窗口、变量版本及诊断。",
+      "example_text": "y=1+2x的无噪声样本会得到截距1、斜率2。",
+      "prerequisites": [
+        "covariance"
+      ],
+      "assumptions": [
+        "设计矩阵可识别",
+        "特征在时点上可用"
+      ],
+      "required_fields": [
+        "dependent_variable",
+        "predictors",
+        "timestamp"
+      ],
+      "formula_refs": [
+        "regression-definition"
+      ],
+      "code_refs": [
+        "al-beta"
+      ],
+      "source_refs": [
+        "al-beta"
+      ],
+      "claim_kind": "MATHEMATICAL",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "regression-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Regression",
+        "OLS",
+        "线性回归",
+        "最小二乘"
+      ],
+      "tags": [
+        "statistics"
+      ],
+      "example_refs": []
+    },
+    {
+      "item_id": "beta",
+      "canonical_id": "beta",
+      "version": "1.0.0",
+      "kind": "CONCEPT",
+      "title": "市场Beta与暴露",
+      "domain": "statistics",
+      "summary": "单因子Beta描述资产收益对同频市场收益的线性敏感度。",
+      "explanation": "在带截距回归中，Beta是协方差与市场方差之比。窗口、基准和收益口径都会改变结果；Beta为零不意味着没有流动性、尾部或特有风险。",
+      "application": "解释市场方向暴露，而不是把Beta当收益保证。",
+      "example_text": "市场每变1个百分点、样本资产同步变2个百分点，斜率约2。",
+      "prerequisites": [
+        "regression",
+        "benchmark"
+      ],
+      "assumptions": [
+        "同期间同频收益",
+        "基准事前确定"
+      ],
+      "required_fields": [
+        "asset_return",
+        "market_return",
+        "risk_free_return",
+        "timestamp"
+      ],
+      "formula_refs": [
+        "beta-definition"
+      ],
+      "code_refs": [
+        "al-beta"
+      ],
+      "source_refs": [
+        "al-beta"
+      ],
+      "claim_kind": "MATHEMATICAL",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "beta-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Beta",
+        "β",
+        "市场敏感度"
+      ],
+      "tags": [
+        "statistics"
+      ],
+      "example_refs": []
+    },
+    {
+      "item_id": "confidence-interval",
+      "canonical_id": "confidence-interval",
+      "version": "1.0.0",
+      "kind": "CONCEPT",
+      "title": "置信区间与抽样不确定性",
+      "domain": "statistics",
+      "summary": "置信区间描述重复抽样程序的覆盖性质。",
+      "explanation": "正态独立样本且总体标准差已知时可用z区间；标准差未知、小样本或序列相关需其他方法。固定数据计算出的区间不表示参数随机落入其中的频率。",
+      "application": "展示估计误差，避免只报告一个均值或斜率。",
+      "example_text": "均值10、已知sigma=2、n=100，95%区间为[9.608,10.392]。",
+      "prerequisites": [
+        "standard-deviation",
+        "mean"
+      ],
+      "assumptions": [
+        "独立正态样本或有效近似",
+        "sigma已知"
+      ],
+      "required_fields": [
+        "mean",
+        "known_sigma",
+        "n",
+        "confidence_level"
+      ],
+      "formula_refs": [
+        "confidence-interval-definition"
+      ],
+      "code_refs": [
+        "al-quantiles"
+      ],
+      "source_refs": [
+        "al-quantiles"
+      ],
+      "claim_kind": "MATHEMATICAL",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "confidence-interval-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Confidence interval",
+        "置信区间",
+        "标准误"
+      ],
+      "tags": [
+        "statistics"
+      ],
+      "example_refs": [
+        "confidence-interval-worked-example"
+      ]
+    },
+    {
+      "item_id": "autocorrelation",
+      "canonical_id": "autocorrelation",
+      "version": "1.0.0",
+      "kind": "CONCEPT",
+      "title": "自相关与有效样本",
+      "domain": "statistics",
+      "summary": "自相关比较同一序列与它滞后版本的关系。",
+      "explanation": "重叠持有期会机械地产生相关，减少有效独立信息。时间序列收益自相关和跨期截面排名自相关是不同对象；必须记录滞后长度和配对样本。",
+      "application": "检查年化假设、标准误及因子稳定性。",
+      "example_text": "20日持有收益每天取样会共享大量未来日期，不能按独立样本计算把握度。",
+      "prerequisites": [
+        "correlation"
+      ],
+      "assumptions": [
+        "时间有序",
+        "缺失与重叠规则明确"
+      ],
+      "required_fields": [
+        "values",
+        "timestamp",
+        "lag"
+      ],
+      "formula_refs": [
+        "autocorrelation-definition"
+      ],
+      "code_refs": [
+        "al-rank-autocorr"
+      ],
+      "source_refs": [
+        "al-rank-autocorr",
+        "ds-walk-forward"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "autocorrelation-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Autocorrelation",
+        "自相关",
+        "序列相关"
+      ],
+      "tags": [
+        "statistics"
+      ],
+      "example_refs": []
+    },
+    {
+      "item_id": "robust-statistics",
+      "canonical_id": "robust-statistics",
+      "version": "1.0.0",
+      "kind": "METHOD",
+      "title": "稳健统计与异常值处理",
+      "domain": "statistics",
+      "summary": "使用对少量极端值较不敏感的中心和尺度，同时保留原始数据。",
+      "explanation": "中位数与MAD提供稳健描述；正态参考下MAD乘1.4826可近似标准差。截尾阈值应在训练数据上确定，极端风险不能仅因不方便就从风控报告删除。",
+      "application": "减少特征估计被异常记录支配，并分析处理敏感性。",
+      "example_text": "1、2、3、100的均值26.5，中位数2.5；两者描述不同中心。",
+      "prerequisites": [
+        "mean",
+        "point-in-time"
+      ],
+      "assumptions": [
+        "拟合窗口仅含训练信息",
+        "原始值可追溯"
+      ],
+      "required_fields": [
+        "values",
+        "fit_start",
+        "fit_end"
+      ],
+      "formula_refs": [
+        "robust-statistics-definition"
+      ],
+      "code_refs": [
+        "qlib-robust"
+      ],
+      "source_refs": [
+        "qlib-robust",
+        "qlib-fit"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "robust-statistics-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Robust statistics",
+        "稳健统计",
+        "MAD",
+        "缩尾"
+      ],
+      "tags": [
+        "statistics"
+      ],
+      "example_refs": []
+    },
+    {
+      "item_id": "moving-average",
+      "canonical_id": "moving-average",
+      "version": "1.0.0",
+      "kind": "METHOD",
+      "title": "移动平均与窗口",
+      "domain": "technical-volume",
+      "summary": "滚动平均平滑最近窗口的观测，必然带来滞后。",
+      "explanation": "简单移动平均等权使用过去n个有效会话。窗口不足是否输出、是否包含当前收盘以及交易发生在哪个后续时点都应写明；均线本身不证明趋势可盈利。",
+      "application": "构造趋势描述或偏离特征，并测试窗口敏感性。",
+      "example_text": "最近价格10、12、14，三期均线12。",
+      "prerequisites": [
+        "mean",
+        "trading-calendar"
+      ],
+      "assumptions": [
+        "窗口完整",
+        "当前价格在决策时已知"
+      ],
+      "required_fields": [
+        "close",
+        "timestamp",
+        "window"
+      ],
+      "formula_refs": [
+        "moving-average-definition"
+      ],
+      "code_refs": [
+        "qa-average"
+      ],
+      "source_refs": [
+        "qa-average"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "moving-average-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Moving average",
+        "MA",
+        "SMA",
+        "均线"
+      ],
+      "tags": [
+        "technical-volume"
+      ],
+      "example_refs": [
+        "moving-average-worked-example"
+      ]
+    },
+    {
+      "item_id": "ema",
+      "canonical_id": "ema",
+      "version": "1.0.0",
+      "kind": "METHOD",
+      "title": "指数移动平均与初始化",
+      "domain": "technical-volume",
+      "summary": "EMA对近期价格给更高权重，但早期数值受初始化规则影响。",
+      "explanation": "递推EMA常用alpha=2/(n+1)，指定初值后逐期更新。QUANTAXIS固定版本使用adjust=True的归一化权重，短样本与递推版可不同，比较前要对齐。",
+      "application": "研究不同平滑速度，同时保留实现版本。",
+      "example_text": "上一EMA10、现价14、alpha=0.5，递推结果12。",
+      "prerequisites": [
+        "moving-average"
+      ],
+      "assumptions": [
+        "alpha在0到1之间",
+        "初值和暖机长度明确"
+      ],
+      "required_fields": [
+        "close",
+        "previous_ema",
+        "alpha"
+      ],
+      "formula_refs": [
+        "ema-definition"
+      ],
+      "code_refs": [
+        "qa-average"
+      ],
+      "source_refs": [
+        "qa-average"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "ema-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "EMA",
+        "指数均线",
+        "指数平滑"
+      ],
+      "tags": [
+        "technical-volume"
+      ],
+      "example_refs": [
+        "ema-worked-example"
+      ]
+    },
+    {
+      "item_id": "momentum",
+      "canonical_id": "momentum",
+      "version": "1.0.0",
+      "kind": "FACTOR",
+      "title": "价格动量与跳过窗口",
+      "domain": "technical-volume",
+      "summary": "动量描述过去一段时间的价格变化，作为未来表现的假设仍需检验。",
+      "explanation": "收益动量使用价格比；MTM也常指价格差。月度中期动量可能排除最近一个月，短期信号则不同；频率和跳过窗口必须在实验前确定。",
+      "application": "提出趋势延续假设后进入样本外与成本评价。",
+      "example_text": "100到120的收益动量20%，价格差动量为20元，两者单位不同。",
+      "prerequisites": [
+        "return",
+        "moving-average"
+      ],
+      "assumptions": [
+        "L大于s",
+        "价格口径一致",
+        "不含未来价格"
+      ],
+      "required_fields": [
+        "close",
+        "timestamp",
+        "lookback",
+        "skip"
+      ],
+      "formula_refs": [
+        "momentum-definition"
+      ],
+      "code_refs": [
+        "qa-momentum",
+        "al-forward"
+      ],
+      "source_refs": [
+        "qa-momentum",
+        "al-forward"
+      ],
+      "claim_kind": "EMPIRICAL",
+      "evidence_refs": [],
+      "evidence_level": "SOURCE_REPORTED",
+      "counterexample_refs": [
+        "momentum-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Momentum",
+        "动量",
+        "趋势延续"
+      ],
+      "tags": [
+        "technical-volume"
+      ],
+      "example_refs": [
+        "momentum-worked-example"
+      ]
+    },
+    {
+      "item_id": "mean-reversion",
+      "canonical_id": "mean-reversion",
+      "version": "1.0.0",
+      "kind": "FACTOR",
+      "title": "均值回归假设与偏离",
+      "domain": "technical-volume",
+      "summary": "偏离历史参考水平后回归的想法，需要区分均值变化与短期扰动。",
+      "explanation": "可用价格相对均线偏离构造候选，但参考水平本身可能迁移。股票绝对价格不必平稳；应明确回归对象、持有期和退出条件，再做样本外检验。",
+      "application": "形成短期反转研究假设并观察趋势市场中的失败。",
+      "example_text": "价格80、历史均线100，偏离−20%；若基本价值改变，价格未必回到100。",
+      "prerequisites": [
+        "moving-average",
+        "oos"
+      ],
+      "assumptions": [
+        "参考均值非零且仅用历史",
+        "对象和期限事前确定"
+      ],
+      "required_fields": [
+        "close",
+        "moving_average",
+        "timestamp"
+      ],
+      "formula_refs": [
+        "mean-reversion-definition"
+      ],
+      "code_refs": [
+        "qa-bias"
+      ],
+      "source_refs": [
+        "qa-bias",
+        "ds-factor-check"
+      ],
+      "claim_kind": "EMPIRICAL",
+      "evidence_refs": [],
+      "evidence_level": "SOURCE_REPORTED",
+      "counterexample_refs": [
+        "mean-reversion-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Mean reversion",
+        "均值回归",
+        "反转",
+        "乖离率"
+      ],
+      "tags": [
+        "technical-volume"
+      ],
+      "example_refs": []
+    },
+    {
+      "item_id": "rsi",
+      "canonical_id": "rsi",
+      "version": "1.0.0",
+      "kind": "METHOD",
+      "title": "RSI与平滑口径",
+      "domain": "technical-volume",
+      "summary": "RSI比较上涨与下跌幅度的平滑规模，常落在0到100。",
+      "explanation": "采用相同平滑器时可写为100*U/(U+D)。Wilder、简单平均和来源SMA递推有初始化差异；U+D为零时应声明缺失或约定值，不能制造信号。",
+      "application": "描述相对强弱，并研究阈值在不同市场状态中的效果。",
+      "example_text": "U=2、D=1时RSI约66.67；高位可维持很久。",
+      "prerequisites": [
+        "ema",
+        "return"
+      ],
+      "assumptions": [
+        "窗口和初始化明确",
+        "分母大于零"
+      ],
+      "required_fields": [
+        "close",
+        "previous_close",
+        "window",
+        "smoothing"
+      ],
+      "formula_refs": [
+        "rsi-definition"
+      ],
+      "code_refs": [
+        "qa-rsi"
+      ],
+      "source_refs": [
+        "qa-rsi"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "rsi-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "RSI",
+        "相对强弱指标",
+        "超买超卖"
+      ],
+      "tags": [
+        "technical-volume"
+      ],
+      "example_refs": [
+        "rsi-worked-example"
+      ]
+    },
+    {
+      "item_id": "macd",
+      "canonical_id": "macd",
+      "version": "1.0.0",
+      "kind": "METHOD",
+      "title": "MACD与柱值倍数",
+      "domain": "technical-volume",
+      "summary": "MACD比较快慢EMA，再对差值平滑。",
+      "explanation": "DIF为快EMA减慢EMA，DEA是DIF的EMA。柱值有DIF−DEA与两倍差值两种常见口径；QUANTAXIS采用两倍，图表与阈值要匹配。",
+      "application": "识别趋势变化候选，比较滞后与误报。",
+      "example_text": "DIF为3、DEA为2，两倍柱值为2，不乘2版本为1。",
+      "prerequisites": [
+        "ema"
+      ],
+      "assumptions": [
+        "快慢周期和信号周期已固定",
+        "足够暖机"
+      ],
+      "required_fields": [
+        "close",
+        "fast_period",
+        "slow_period",
+        "signal_period"
+      ],
+      "formula_refs": [
+        "macd-definition"
+      ],
+      "code_refs": [
+        "qa-macd"
+      ],
+      "source_refs": [
+        "qa-macd"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "macd-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "MACD",
+        "DIF",
+        "DEA",
+        "趋势差分"
+      ],
+      "tags": [
+        "technical-volume"
+      ],
+      "example_refs": []
+    },
+    {
+      "item_id": "atr",
+      "canonical_id": "atr",
+      "version": "1.0.0",
+      "kind": "METHOD",
+      "title": "真实波幅与ATR",
+      "domain": "technical-volume",
+      "summary": "真实波幅同时考虑当期高低差和相对前收盘的跳空。",
+      "explanation": "TR取三项最大值。ATR再平滑TR，QUANTAXIS这里用简单均值，Wilder递推是另一版本；ATR有价格单位，跨价格水平比较可另做规范化。",
+      "application": "描述波动范围并为仓位或止损研究提供尺度。",
+      "example_text": "最高12、最低8、前收7，TR=max(4,5,1)=5。",
+      "prerequisites": [
+        "moving-average",
+        "adjustment"
+      ],
+      "assumptions": [
+        "高低价和前收盘同复权口径",
+        "窗口完整"
+      ],
+      "required_fields": [
+        "high",
+        "low",
+        "previous_close",
+        "window"
+      ],
+      "formula_refs": [
+        "atr-definition"
+      ],
+      "code_refs": [
+        "qa-atr"
+      ],
+      "source_refs": [
+        "qa-atr"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "atr-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "ATR",
+        "True range",
+        "真实波幅",
+        "平均真实波幅"
+      ],
+      "tags": [
+        "technical-volume"
+      ],
+      "example_refs": [
+        "atr-worked-example"
+      ]
+    },
+    {
+      "item_id": "bollinger",
+      "canonical_id": "bollinger",
+      "version": "1.0.0",
+      "kind": "METHOD",
+      "title": "布林带与分布假设",
+      "domain": "technical-volume",
+      "summary": "布林带以均线为中心，加减指定倍数的滚动标准差。",
+      "explanation": "窗口、标准差分母和倍数决定带宽。价格不一定正态独立，触碰两倍标准差带不能直接解释为固定尾部概率，更不意味着必然反转。",
+      "application": "研究价格相对局部尺度的位置。",
+      "example_text": "均线100、标准差5、k=2，带为90到110；不是保证区间。",
+      "prerequisites": [
+        "moving-average",
+        "standard-deviation"
+      ],
+      "assumptions": [
+        "窗口完整",
+        "k和ddof已记录"
+      ],
+      "required_fields": [
+        "close",
+        "window",
+        "band_multiplier",
+        "ddof"
+      ],
+      "formula_refs": [
+        "bollinger-definition"
+      ],
+      "code_refs": [
+        "qa-bollinger"
+      ],
+      "source_refs": [
+        "qa-bollinger"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "bollinger-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Bollinger bands",
+        "布林带",
+        "波动通道"
+      ],
+      "tags": [
+        "technical-volume"
+      ],
+      "example_refs": []
+    },
+    {
+      "item_id": "volume-price",
+      "canonical_id": "volume-price",
+      "version": "1.0.0",
+      "kind": "FACTOR",
+      "title": "价量关系与成交方向代理",
+      "domain": "technical-volume",
+      "summary": "把价格变化和成交量结合可以形成活跃度或累计方向代理。",
+      "explanation": "OBV按收盘涨跌给整期成交量加减号，无法识别每笔交易的主动买卖方。拆股、量单位和低流动性会影响解释；放量上涨仍只是观察。",
+      "application": "形成价量确认假设并核对量单位。",
+      "example_text": "收盘上涨且成交1000股，OBV增加1000，不表示净买入1000股。",
+      "prerequisites": [
+        "units",
+        "alignment"
+      ],
+      "assumptions": [
+        "价格和量对齐",
+        "公司行动已处理"
+      ],
+      "required_fields": [
+        "close",
+        "previous_close",
+        "volume",
+        "timestamp"
+      ],
+      "formula_refs": [
+        "volume-price-definition"
+      ],
+      "code_refs": [
+        "qa-volume"
+      ],
+      "source_refs": [
+        "qa-volume"
+      ],
+      "claim_kind": "EMPIRICAL",
+      "evidence_refs": [],
+      "evidence_level": "SOURCE_REPORTED",
+      "counterexample_refs": [
+        "volume-price-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Volume price",
+        "价量关系",
+        "量价",
+        "OBV"
+      ],
+      "tags": [
+        "technical-volume"
+      ],
+      "example_refs": []
+    },
+    {
+      "item_id": "vwap",
+      "canonical_id": "vwap",
+      "version": "1.0.0",
+      "kind": "METHOD",
+      "title": "成交量加权均价",
+      "domain": "technical-volume",
+      "summary": "VWAP用每笔或每段成交量作为价格权重。",
+      "explanation": "真实区间VWAP需要同一区间成交额与成交量，或可加总的逐笔数据。OHLC典型价只能近似；Qlib读取已有VWAP字段并不保证输入就是逐笔计算。",
+      "application": "比较执行价格或构造价量特征，标记精确与近似口径。",
+      "example_text": "10元成交2股、20元成交1股，VWAP=40/3≈13.33元。",
+      "prerequisites": [
+        "units",
+        "mean"
+      ],
+      "assumptions": [
+        "同一区间",
+        "有效成交量非负且合计为正"
+      ],
+      "required_fields": [
+        "trade_price",
+        "trade_volume",
+        "interval"
+      ],
+      "formula_refs": [
+        "vwap-definition"
+      ],
+      "code_refs": [
+        "own-units"
+      ],
+      "source_refs": [
+        "qlib-vwap",
+        "own-units"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "vwap-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "VWAP",
+        "成交量加权价格",
+        "均价"
+      ],
+      "tags": [
+        "technical-volume"
+      ],
+      "example_refs": [
+        "vwap-worked-example"
+      ]
+    },
+    {
+      "item_id": "book-to-market",
+      "canonical_id": "book-to-market",
+      "version": "1.0.0",
+      "kind": "FACTOR",
+      "title": "账面市值比与价值假设",
+      "domain": "fundamentals",
+      "summary": "账面权益除以对应市值，描述会计权益相对市场定价。",
+      "explanation": "账面权益必须按真实披露时点可见，市值要按声明日期和币种匹配。负权益、少数股东权益及不同会计准则会改变解释；高比率可能包含困境风险。",
+      "application": "提出估值研究假设，检查行业与困境暴露。",
+      "example_text": "权益50、市值100，BM为0.5；不意味着合理价格必定为50。",
+      "prerequisites": [
+        "point-in-time",
+        "market-cap"
+      ],
+      "assumptions": [
+        "财报已公开",
+        "权益范围与股本一致"
+      ],
+      "required_fields": [
+        "book_equity",
+        "market_cap",
+        "available_at",
+        "fiscal_period"
+      ],
+      "formula_refs": [
+        "book-to-market-definition"
+      ],
+      "code_refs": [
+        "pa-value"
+      ],
+      "source_refs": [
+        "pa-value"
+      ],
+      "claim_kind": "EMPIRICAL",
+      "evidence_refs": [],
+      "evidence_level": "SOURCE_REPORTED",
+      "counterexample_refs": [
+        "book-to-market-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Book to market",
+        "账面市值比",
+        "BM",
+        "价值因子"
+      ],
+      "tags": [
+        "fundamentals"
+      ],
+      "example_refs": [
+        "book-to-market-worked-example"
+      ]
+    },
+    {
+      "item_id": "earnings-yield",
+      "canonical_id": "earnings-yield",
+      "version": "1.0.0",
+      "kind": "FACTOR",
+      "title": "盈利收益率与负利润",
+      "domain": "fundamentals",
+      "summary": "净利润相对市值，或每股收益相对价格。",
+      "explanation": "期间利润可以采用年度、滚动四季或预测值，但这些信息集不同。负利润时EP仍可记录为负，不能把无意义的负PE误排序为便宜；一次性损益也需说明。",
+      "application": "研究估值与盈利质量的组合条件。",
+      "example_text": "EPS为2、价格20，EP为10%；它不是承诺的股东现金回报。",
+      "prerequisites": [
+        "market-cap",
+        "point-in-time"
+      ],
+      "assumptions": [
+        "利润期间明确",
+        "市值为正",
+        "披露可用"
+      ],
+      "required_fields": [
+        "earnings",
+        "eps",
+        "market_cap",
+        "close",
+        "available_at"
+      ],
+      "formula_refs": [
+        "earnings-yield-definition"
+      ],
+      "code_refs": [
+        "pa-value"
+      ],
+      "source_refs": [
+        "pa-value"
+      ],
+      "claim_kind": "EMPIRICAL",
+      "evidence_refs": [],
+      "evidence_level": "SOURCE_REPORTED",
+      "counterexample_refs": [
+        "earnings-yield-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Earnings yield",
+        "盈利收益率",
+        "EP",
+        "市盈率倒数"
+      ],
+      "tags": [
+        "fundamentals"
+      ],
+      "example_refs": [
+        "earnings-yield-worked-example"
+      ]
+    },
+    {
+      "item_id": "roe",
+      "canonical_id": "roe",
+      "version": "1.0.0",
+      "kind": "FACTOR",
+      "title": "净资产收益率与平均权益",
+      "domain": "fundamentals",
+      "summary": "ROE把期间净利润与支撑该期间经营的权益规模比较。",
+      "explanation": "本教学使用期初期末平均权益；来源某实现使用期末权益，必须标注差异。负权益、回购和高杠杆可能使比率极端，不能脱离资本结构排序。",
+      "application": "分析盈利能力，同时查看杠杆和现金流。",
+      "example_text": "利润10、平均权益50，ROE为20%。",
+      "prerequisites": [
+        "point-in-time",
+        "mean"
+      ],
+      "assumptions": [
+        "财报可用",
+        "利润归属与权益归属一致"
+      ],
+      "required_fields": [
+        "net_income",
+        "equity_begin",
+        "equity_end",
+        "available_at"
+      ],
+      "formula_refs": [
+        "roe-definition"
+      ],
+      "code_refs": [
+        "pa-profit"
+      ],
+      "source_refs": [
+        "pa-profit"
+      ],
+      "claim_kind": "EMPIRICAL",
+      "evidence_refs": [],
+      "evidence_level": "SOURCE_REPORTED",
+      "counterexample_refs": [
+        "roe-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "ROE",
+        "净资产收益率",
+        "权益回报"
+      ],
+      "tags": [
+        "fundamentals"
+      ],
+      "example_refs": [
+        "roe-worked-example"
+      ]
+    },
+    {
+      "item_id": "roa",
+      "canonical_id": "roa",
+      "version": "1.0.0",
+      "kind": "FACTOR",
+      "title": "总资产收益率与期间匹配",
+      "domain": "fundamentals",
+      "summary": "ROA比较期间利润与资产规模，定义随利润口径而变化。",
+      "explanation": "本条用净利润除以期初期末平均总资产；来源季度版本以滞后资产作分母。EBIT、净利润、季度和年度不能混为同一指标，需要记录税息及频率。",
+      "application": "分析资产使用效率并比较同业。",
+      "example_text": "半年利润5、平均资产100，半年ROA为5%，不是未经说明的年化值。",
+      "prerequisites": [
+        "point-in-time",
+        "mean"
+      ],
+      "assumptions": [
+        "资产为正",
+        "财务期间和币种一致"
+      ],
+      "required_fields": [
+        "net_income",
+        "assets_begin",
+        "assets_end",
+        "fiscal_period",
+        "available_at"
+      ],
+      "formula_refs": [
+        "roa-definition"
+      ],
+      "code_refs": [
+        "pa-roa",
+        "pa-profit"
+      ],
+      "source_refs": [
+        "pa-roa",
+        "pa-profit"
+      ],
+      "claim_kind": "EMPIRICAL",
+      "evidence_refs": [],
+      "evidence_level": "SOURCE_REPORTED",
+      "counterexample_refs": [
+        "roa-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "ROA",
+        "总资产收益率",
+        "资产回报"
+      ],
+      "tags": [
+        "fundamentals"
+      ],
+      "example_refs": []
+    },
+    {
+      "item_id": "gross-profitability",
+      "canonical_id": "gross-profitability",
+      "version": "1.0.0",
+      "kind": "FACTOR",
+      "title": "毛盈利能力与行业差异",
+      "domain": "fundamentals",
+      "summary": "毛利润相对资产规模，描述业务创造毛利的能力。",
+      "explanation": "毛利润通常由收入减营业成本得到。服务业、金融业及不同成本分类下可比性有限；来源用资产口径，教学须绑定具体财报映射而不是只看字段名。",
+      "application": "研究盈利质量，并按行业核对结构性差异。",
+      "example_text": "收入100、成本70、资产150，比率为20%。",
+      "prerequisites": [
+        "point-in-time",
+        "units"
+      ],
+      "assumptions": [
+        "收入成本同期间",
+        "行业会计口径可比"
+      ],
+      "required_fields": [
+        "revenue",
+        "cost_of_goods_sold",
+        "assets",
+        "available_at"
+      ],
+      "formula_refs": [
+        "gross-profitability-definition"
+      ],
+      "code_refs": [
+        "pa-profit"
+      ],
+      "source_refs": [
+        "pa-profit"
+      ],
+      "claim_kind": "EMPIRICAL",
+      "evidence_refs": [],
+      "evidence_level": "SOURCE_REPORTED",
+      "counterexample_refs": [
+        "gross-profitability-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Gross profitability",
+        "毛盈利能力",
+        "毛利资产比"
+      ],
+      "tags": [
+        "fundamentals"
+      ],
+      "example_refs": []
+    },
+    {
+      "item_id": "asset-growth",
+      "canonical_id": "asset-growth",
+      "version": "1.0.0",
+      "kind": "FACTOR",
+      "title": "资产增长与扩张质量",
+      "domain": "fundamentals",
+      "summary": "比较两个可比报告期的资产规模变化。",
+      "explanation": "同比与环比不同，合并范围变化、并购和汇率也会扩大资产。资产增长因子的经验关联不是扩张必然有害的因果结论，应拆分增长来源。",
+      "application": "研究投资扩张与后续表现，核查并购和行业因素。",
+      "example_text": "资产100变120，增长20%；若来自并购，应保留事件解释。",
+      "prerequisites": [
+        "point-in-time",
+        "return"
+      ],
+      "assumptions": [
+        "同会计口径",
+        "两期财报按时点可见"
+      ],
+      "required_fields": [
+        "assets",
+        "current_period",
+        "prior_period",
+        "available_at"
+      ],
+      "formula_refs": [
+        "asset-growth-definition"
+      ],
+      "code_refs": [
+        "pa-growth"
+      ],
+      "source_refs": [
+        "pa-growth"
+      ],
+      "claim_kind": "EMPIRICAL",
+      "evidence_refs": [],
+      "evidence_level": "SOURCE_REPORTED",
+      "counterexample_refs": [
+        "asset-growth-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Asset growth",
+        "资产增长",
+        "投资因子"
+      ],
+      "tags": [
+        "fundamentals"
+      ],
+      "example_refs": [
+        "asset-growth-worked-example"
+      ]
+    },
+    {
+      "item_id": "accruals",
+      "canonical_id": "accruals",
+      "version": "1.0.0",
+      "kind": "FACTOR",
+      "title": "应计项目与现金利润差",
+      "domain": "fundamentals",
+      "summary": "利润与经营现金流的差异提供盈利实现方式的信息。",
+      "explanation": "常见近似为净利润减经营现金流，再除平均资产。资产负债表法与现金流法未必相同；营运资本季节性和快速增长也会改变差异，需按行业解释。",
+      "application": "研究利润质量，并检查高应计的持续性。",
+      "example_text": "利润12、经营现金流8、平均资产100，应计比为4%。",
+      "prerequisites": [
+        "roa",
+        "point-in-time"
+      ],
+      "assumptions": [
+        "两项同期间同合并范围",
+        "资产为正"
+      ],
+      "required_fields": [
+        "net_income",
+        "operating_cashflow",
+        "average_assets",
+        "available_at"
+      ],
+      "formula_refs": [
+        "accruals-definition"
+      ],
+      "code_refs": [
+        "pa-accruals"
+      ],
+      "source_refs": [
+        "pa-accruals"
+      ],
+      "claim_kind": "EMPIRICAL",
+      "evidence_refs": [],
+      "evidence_level": "SOURCE_REPORTED",
+      "counterexample_refs": [
+        "accruals-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Accruals",
+        "应计",
+        "应计因子"
+      ],
+      "tags": [
+        "fundamentals"
+      ],
+      "example_refs": [
+        "accruals-worked-example"
+      ]
+    },
+    {
+      "item_id": "leverage",
+      "canonical_id": "leverage",
+      "version": "1.0.0",
+      "kind": "RISK",
+      "title": "财务杠杆与分母选择",
+      "domain": "fundamentals",
+      "summary": "债务、总负债、权益或市值构成不同的杠杆比率。",
+      "explanation": "本教学使用有息债务除以资产；资产负债率则使用总负债。来源debt/me是债务市值比，市场价格变化会影响分母，不能当作同一指标。",
+      "application": "识别融资结构及压力情景下的敏感度。",
+      "example_text": "有息债务60、资产100，比率60%；它不自动等于总负债率。",
+      "prerequisites": [
+        "point-in-time",
+        "units"
+      ],
+      "assumptions": [
+        "资产为正",
+        "债务定义和租赁处理明确"
+      ],
+      "required_fields": [
+        "interest_bearing_debt",
+        "total_assets",
+        "available_at"
+      ],
+      "formula_refs": [
+        "leverage-definition"
+      ],
+      "code_refs": [],
+      "source_refs": [
+        "pa-leverage",
+        "own-stress"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "leverage-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Leverage",
+        "财务杠杆",
+        "负债率",
+        "债务资产比"
+      ],
+      "tags": [
+        "fundamentals"
+      ],
+      "example_refs": [
+        "leverage-worked-example"
+      ]
+    },
+    {
+      "item_id": "cashflow-quality",
+      "canonical_id": "cashflow-quality",
+      "version": "1.0.0",
+      "kind": "FACTOR",
+      "title": "经营现金流与盈利质量",
+      "domain": "fundamentals",
+      "summary": "把经营现金流与利润、资产和资本开支结合观察。",
+      "explanation": "经营现金流/利润在利润接近零或为负时会失真。一次性收款、应付账款延后和季节性也能抬高现金流，需要连续期间与会计细项支持。",
+      "application": "研究盈利兑现与资金压力，保留异常分母状态。",
+      "example_text": "利润10、经营现金流12，转换比1.2；不能忽略延迟付款的影响。",
+      "prerequisites": [
+        "accruals"
+      ],
+      "assumptions": [
+        "同期间同口径",
+        "分母适合解释"
+      ],
+      "required_fields": [
+        "operating_cashflow",
+        "net_income",
+        "capital_expenditure",
+        "available_at"
+      ],
+      "formula_refs": [
+        "cashflow-quality-definition"
+      ],
+      "code_refs": [
+        "pa-accruals",
+        "pa-value"
+      ],
+      "source_refs": [
+        "pa-accruals",
+        "pa-value"
+      ],
+      "claim_kind": "EMPIRICAL",
+      "evidence_refs": [],
+      "evidence_level": "SOURCE_REPORTED",
+      "counterexample_refs": [
+        "cashflow-quality-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Cashflow quality",
+        "现金流质量",
+        "经营现金流"
+      ],
+      "tags": [
+        "fundamentals"
+      ],
+      "example_refs": []
+    },
+    {
+      "item_id": "earnings-surprise",
+      "canonical_id": "earnings-surprise",
+      "version": "1.0.0",
+      "kind": "FACTOR",
+      "title": "盈利意外与预期版本",
+      "domain": "fundamentals",
+      "summary": "实际盈利相对于事先可见预期的差异，需要固定预期形成时间。",
+      "explanation": "分析师共识差与季节性历史模型是不同定义。来源SUE先取季节差，再减滞后均值并除滞后标准差；不能把公告后修订的预测当公告前共识。",
+      "application": "研究公告信息及其后续反应，核对盘后与成交时点。",
+      "example_text": "实际2、事前预期1.5，差0.5；标准化还要明确历史误差尺度。",
+      "prerequisites": [
+        "publication-lag",
+        "standard-deviation"
+      ],
+      "assumptions": [
+        "预期早于公告",
+        "尺度非零",
+        "窗口只用历史"
+      ],
+      "required_fields": [
+        "earnings",
+        "seasonal_lag",
+        "lagged_mean",
+        "lagged_sd",
+        "published_at",
+        "forecast_asof"
+      ],
+      "formula_refs": [
+        "earnings-surprise-definition"
+      ],
+      "code_refs": [
+        "pa-surprise",
+        "own-fields"
+      ],
+      "source_refs": [
+        "pa-surprise",
+        "own-fields"
+      ],
+      "claim_kind": "EMPIRICAL",
+      "evidence_refs": [],
+      "evidence_level": "SOURCE_REPORTED",
+      "counterexample_refs": [
+        "earnings-surprise-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Earnings surprise",
+        "盈利意外",
+        "SUE",
+        "标准化意外盈利"
+      ],
+      "tags": [
+        "fundamentals"
+      ],
+      "example_refs": []
+    },
+    {
+      "item_id": "information-coefficient",
+      "canonical_id": "information-coefficient",
+      "version": "1.0.0",
+      "kind": "METHOD",
+      "title": "信息系数（Pearson IC）",
+      "domain": "factor-validation",
+      "summary": "在同一截面比较因子值与其后的收益，Pearson IC衡量线性关联。",
+      "explanation": "按标的与决策日配对，前瞻收益只能作为评价标签。本条是Pearson定义；Alphalens名为factor_information_coefficient的函数使用Spearman，二者要分开报告。",
+      "application": "评价截面排序候选的线性关联，再观察稳定性与成本。",
+      "example_text": "因子1、2、3对应未来收益1%、2%、3%，该截面Pearson IC为1。",
+      "prerequisites": [
+        "correlation",
+        "alignment"
+      ],
+      "assumptions": [
+        "特征时点可用",
+        "标签持有期固定",
+        "无零方差"
+      ],
+      "required_fields": [
+        "factor",
+        "forward_return",
+        "instrument",
+        "decision_at"
+      ],
+      "formula_refs": [
+        "information-coefficient-definition"
+      ],
+      "code_refs": [
+        "al-ic",
+        "al-forward"
+      ],
+      "source_refs": [
+        "al-ic",
+        "al-forward"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "information-coefficient-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Information coefficient",
+        "IC",
+        "信息系数"
+      ],
+      "tags": [
+        "factor-validation"
+      ],
+      "example_refs": [
+        "information-coefficient-worked-example"
+      ]
+    },
+    {
+      "item_id": "rank-ic",
+      "canonical_id": "rank-ic",
+      "version": "1.0.0",
+      "kind": "METHOD",
+      "title": "Rank IC与并列排名",
+      "domain": "factor-validation",
+      "summary": "先给因子和未来收益排名，再计算相关。",
+      "explanation": "Spearman更关注单调关系，对极端数值幅度相对不敏感。并列值需一致的平均秩规则；小样本、常量和缺失会导致不稳定或未定义。",
+      "application": "比较非线性单调候选，并与Pearson IC共同检查。",
+      "example_text": "因子1、2、2的秩为1、2.5、2.5，不应随行顺序拆开并列。",
+      "prerequisites": [
+        "information-coefficient"
+      ],
+      "assumptions": [
+        "并列策略明确",
+        "排名方差非零"
+      ],
+      "required_fields": [
+        "factor",
+        "forward_return",
+        "instrument",
+        "timestamp"
+      ],
+      "formula_refs": [
+        "rank-ic-definition"
+      ],
+      "code_refs": [
+        "al-ic"
+      ],
+      "source_refs": [
+        "al-ic"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "rank-ic-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Rank IC",
+        "Spearman",
+        "秩相关",
+        "排名相关"
+      ],
+      "tags": [
+        "factor-validation"
+      ],
+      "example_refs": [
+        "rank-ic-worked-example"
+      ]
+    },
+    {
+      "item_id": "icir",
+      "canonical_id": "icir",
+      "version": "1.0.0",
+      "kind": "METHOD",
+      "title": "ICIR与时间稳定性",
+      "domain": "factor-validation",
+      "summary": "ICIR用IC序列均值除以其时间标准差，描述所选窗口内的稳定性。",
+      "explanation": "未年化ICIR与乘sqrt(频次)版本应区分。本条用样本标准差且不年化；重叠标签会产生自相关，不能机械把日数当独立样本。",
+      "application": "检查因子评价是否由少数日期驱动。",
+      "example_text": "IC为0.1、0.3时均值0.2、样本标准差约0.1414，ICIR约1.4142。",
+      "prerequisites": [
+        "information-coefficient",
+        "autocorrelation"
+      ],
+      "assumptions": [
+        "频率和窗口固定",
+        "有效IC数大于1"
+      ],
+      "required_fields": [
+        "ic_series",
+        "timestamp",
+        "ddof"
+      ],
+      "formula_refs": [
+        "icir-definition"
+      ],
+      "code_refs": [
+        "al-ic"
+      ],
+      "source_refs": [
+        "ds-factor-check",
+        "al-ic"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "icir-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "ICIR",
+        "信息系数比率",
+        "IC稳定性"
+      ],
+      "tags": [
+        "factor-validation"
+      ],
+      "example_refs": [
+        "icir-worked-example"
+      ]
+    },
+    {
+      "item_id": "quantile-return",
+      "canonical_id": "quantile-return",
+      "version": "1.0.0",
+      "kind": "METHOD",
+      "title": "分组收益与组间价差",
+      "domain": "factor-validation",
+      "summary": "按因子值分组，再计算各组未来收益及组间差。",
+      "explanation": "明确组数、并列处理、权重、调仓和成本。本条原始价差是高组减低组；固定Alphalens版本额外除2对应单位总敞口口径，不可混用。",
+      "application": "观察单调性、尾部组与行业集中，而不只看平均IC。",
+      "example_text": "高组3%、5%均值4%，低组−1%、1%均值0%，原始组差4%。",
+      "prerequisites": [
+        "information-coefficient",
+        "mean"
+      ],
+      "assumptions": [
+        "分组只用当时特征",
+        "收益期一致",
+        "权重明确"
+      ],
+      "required_fields": [
+        "factor",
+        "forward_return",
+        "group_id",
+        "weights"
+      ],
+      "formula_refs": [
+        "quantile-return-definition"
+      ],
+      "code_refs": [
+        "al-quantiles"
+      ],
+      "source_refs": [
+        "al-quantiles",
+        "ds-factor-check"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "quantile-return-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Quantile return",
+        "分组收益",
+        "分位数组合",
+        "多空组差"
+      ],
+      "tags": [
+        "factor-validation"
+      ],
+      "example_refs": [
+        "quantile-return-worked-example"
+      ]
+    },
+    {
+      "item_id": "neutralization",
+      "canonical_id": "neutralization",
+      "version": "1.0.0",
+      "kind": "METHOD",
+      "title": "中性化与残差因子",
+      "domain": "factor-validation",
+      "summary": "从因子中剔除指定暴露的线性部分，得到条件于这些控制变量的残差。",
+      "explanation": "行业去均值与对行业及规模回归是不同方法。控制变量必须时点可见，拟合范围和缺失规则也要固定；中性化不保证消除所有风险或行业收益。",
+      "application": "判断研究关联是否仅由已知暴露解释。",
+      "example_text": "小盘股整体因子高，控制规模后可检查剩余关联。",
+      "prerequisites": [
+        "regression",
+        "point-in-time"
+      ],
+      "assumptions": [
+        "控制变量时点可用",
+        "矩阵可识别",
+        "截面足够"
+      ],
+      "required_fields": [
+        "factor",
+        "industry",
+        "market_cap",
+        "available_at"
+      ],
+      "formula_refs": [
+        "neutralization-definition"
+      ],
+      "code_refs": [
+        "al-ic",
+        "al-beta"
+      ],
+      "source_refs": [
+        "al-ic",
+        "al-beta"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "neutralization-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Neutralization",
+        "中性化",
+        "行业中性",
+        "市值中性"
+      ],
+      "tags": [
+        "factor-validation"
+      ],
+      "example_refs": []
+    },
+    {
+      "item_id": "factor-turnover",
+      "canonical_id": "factor-turnover",
+      "version": "1.0.0",
+      "kind": "METHOD",
+      "title": "因子成员换手与仓位换手",
+      "domain": "factor-validation",
+      "summary": "成员换手观察分组成员变化，仓位换手观察资金权重变化。",
+      "explanation": "Alphalens成员换手为当前组中新加入成员占当前组人数。组合单边换手常用0.5*sum(abs(w_new-w_old))，旧权重应先随价格漂移；两个数字不可替代。",
+      "application": "解释因子稳定性及成本压力，分别报告成员与金额换手。",
+      "example_text": "原组A、B，新组B、C，成员换手为1/2。",
+      "prerequisites": [
+        "alignment",
+        "rebalance"
+      ],
+      "assumptions": [
+        "组定义一致",
+        "成员身份稳定"
+      ],
+      "required_fields": [
+        "current_members",
+        "previous_members",
+        "weights"
+      ],
+      "formula_refs": [
+        "factor-turnover-definition"
+      ],
+      "code_refs": [
+        "al-turnover",
+        "pa-cost"
+      ],
+      "source_refs": [
+        "al-turnover",
+        "pa-cost"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "factor-turnover-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Factor turnover",
+        "因子换手",
+        "成员换手"
+      ],
+      "tags": [
+        "factor-validation"
+      ],
+      "example_refs": [
+        "factor-turnover-worked-example"
+      ]
+    },
+    {
+      "item_id": "factor-decay",
+      "canonical_id": "factor-decay",
+      "version": "1.0.0",
+      "kind": "METHOD",
+      "title": "因子衰减与持有期",
+      "domain": "factor-validation",
+      "summary": "比较同一时点信号在不同未来期限的关联或收益。",
+      "explanation": "跨期排名相关衡量信号稳定性，多持有期IC衡量预测关联衰减，它们不是一回事。窗口重叠、调仓成本和选择最佳期限会引入额外偏差。",
+      "application": "选择待验证的持有期，并记录失效与再检验条件。",
+      "example_text": "1日IC高、20日IC低，只说明该样本不同期限的关联不同。",
+      "prerequisites": [
+        "information-coefficient",
+        "autocorrelation"
+      ],
+      "assumptions": [
+        "期限在试验前声明",
+        "重叠结构可追溯"
+      ],
+      "required_fields": [
+        "factor",
+        "forward_returns",
+        "horizons",
+        "timestamp"
+      ],
+      "formula_refs": [
+        "factor-decay-definition"
+      ],
+      "code_refs": [
+        "al-rank-autocorr"
+      ],
+      "source_refs": [
+        "ds-factor-check",
+        "al-rank-autocorr"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "factor-decay-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Factor decay",
+        "因子衰减",
+        "半衰期",
+        "持有期评价"
+      ],
+      "tags": [
+        "factor-validation"
+      ],
+      "example_refs": []
+    },
+    {
+      "item_id": "backtesting",
+      "canonical_id": "backtesting",
+      "version": "1.0.0",
+      "kind": "METHOD",
+      "title": "回测事件顺序与账户核算",
+      "domain": "factor-validation",
+      "summary": "回测把历史可见信号转化为按规则模拟的持仓、现金和收益。",
+      "explanation": "信号生成、订单提交、成交、费用和估值必须有明确顺序。历史价格不自动代表可成交价，回测还要处理停牌、公司行动、退市和未成交订单。",
+      "application": "检验规则在声明假设下的历史行为，保存账本与证据。",
+      "example_text": "收盘后形成的信号应按后续可成交规则处理，不能回填当日收盘成交。",
+      "prerequisites": [
+        "point-in-time",
+        "transaction-cost"
+      ],
+      "assumptions": [
+        "输入快照固定",
+        "撮合及费用规则明确"
+      ],
+      "required_fields": [
+        "snapshot",
+        "signal_time",
+        "order_time",
+        "fill_price",
+        "fee",
+        "positions",
+        "cash"
+      ],
+      "formula_refs": [
+        "backtesting-definition"
+      ],
+      "code_refs": [],
+      "source_refs": [
+        "bt-rebalance",
+        "ds-walk-forward"
+      ],
+      "claim_kind": "ENGINEERING",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "backtesting-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Backtesting",
+        "回测",
+        "历史模拟"
+      ],
+      "tags": [
+        "factor-validation"
+      ],
+      "example_refs": []
+    },
+    {
+      "item_id": "oos",
+      "canonical_id": "oos",
+      "version": "1.0.0",
+      "kind": "METHOD",
+      "title": "样本外与滚动验证",
+      "domain": "factor-validation",
+      "summary": "保留未参与选择的时间区间，检查规则在后续数据上的表现。",
+      "explanation": "滚动验证按过去训练、未来测试顺序推进。标签跨边界时应清除重叠或留隔离间隙；看过测试结果再调参后，该测试集就不再是未见样本。",
+      "application": "限制时间泄漏并观察参数跨阶段稳定性。",
+      "example_text": "先用2020–2022训练，再看2023；若因2023结果改规则，应再留新测试。",
+      "prerequisites": [
+        "point-in-time",
+        "alignment"
+      ],
+      "assumptions": [
+        "划分事前固定",
+        "标签重叠已处理"
+      ],
+      "required_fields": [
+        "timestamps",
+        "label_end",
+        "train_end",
+        "test_start",
+        "parameters"
+      ],
+      "formula_refs": [
+        "oos-definition"
+      ],
+      "code_refs": [],
+      "source_refs": [
+        "ds-walk-forward",
+        "qlib-fit"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "oos-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "OOS",
+        "Out of sample",
+        "样本外",
+        "Walk forward",
+        "滚动验证"
+      ],
+      "tags": [
+        "factor-validation"
+      ],
+      "example_refs": [
+        "oos-worked-example"
+      ]
+    },
+    {
+      "item_id": "overfitting",
+      "canonical_id": "overfitting",
+      "version": "1.0.0",
+      "kind": "RISK",
+      "title": "过拟合与多重尝试",
+      "domain": "factor-validation",
+      "summary": "大量尝试后挑最佳结果，会高估规则的可重复表现。",
+      "explanation": "因子、窗口、市场、成本假设和筛选规则都算研究选择。记录所有尝试并保留冻结样本，比较简单基准与稳健参数区域；单个漂亮p值不能抵消选择过程。",
+      "application": "区分真实可复现证据与搜索偶然性。",
+      "example_text": "试一千个随机信号后选最好一个，在新数据上可能回到随机水平。",
+      "prerequisites": [
+        "oos"
+      ],
+      "assumptions": [
+        "试验日志完整",
+        "最终冻结区间未参与选择"
+      ],
+      "required_fields": [
+        "trial_id",
+        "candidate",
+        "parameters",
+        "split",
+        "score"
+      ],
+      "formula_refs": [
+        "overfitting-definition"
+      ],
+      "code_refs": [],
+      "source_refs": [
+        "ds-walk-forward",
+        "ds-factor-check"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "overfitting-pitfall"
+      ],
+      "method_refs": [
+        "factor-mining-workflow"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Overfitting",
+        "过拟合",
+        "数据窥探",
+        "多重检验"
+      ],
+      "tags": [
+        "factor-validation"
+      ],
+      "example_refs": []
+    },
+    {
+      "item_id": "equal-weight",
+      "canonical_id": "equal-weight",
+      "version": "1.0.0",
+      "kind": "STRATEGY",
+      "title": "等权组合与漂移",
+      "domain": "strategy-portfolio",
+      "summary": "把可配置资金平均分给选定资产，权重为1/n。",
+      "explanation": "等资金与等股数不同。成交价格变化后权重会漂移，重新等权会产生交易；现金、最小交易单位和不可成交资产会使实际权重偏离目标。",
+      "application": "作为可解释基准，衡量复杂配置增加的价值。",
+      "example_text": "三个资产各占1/3资金，不是各买一股。",
+      "prerequisites": [
+        "benchmark"
+      ],
+      "assumptions": [
+        "选定集合时点可见",
+        "资金和成交限制明确"
+      ],
+      "required_fields": [
+        "selected_assets",
+        "prices",
+        "available_cash"
+      ],
+      "formula_refs": [
+        "equal-weight-definition"
+      ],
+      "code_refs": [
+        "bt-weights"
+      ],
+      "source_refs": [
+        "bt-weights"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "equal-weight-pitfall"
+      ],
+      "method_refs": [
+        "backtest-acceptance"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Equal weight",
+        "等权",
+        "等资金权重"
+      ],
+      "tags": [
+        "strategy-portfolio"
+      ],
+      "example_refs": [
+        "equal-weight-worked-example"
+      ]
+    },
+    {
+      "item_id": "inverse-volatility",
+      "canonical_id": "inverse-volatility",
+      "version": "1.0.0",
+      "kind": "STRATEGY",
+      "title": "倒波动权重与相关性",
+      "domain": "strategy-portfolio",
+      "summary": "按历史波动的倒数分配资金，再归一化。",
+      "explanation": "低波动资产得到更高权重，但相关性可能使风险贡献并不均等。估计窗口、波动下限和权重上限需要固定；零波动可能来自停牌或缺失填充。",
+      "application": "研究风险分散基准并比较估计稳定性。",
+      "example_text": "波动10%、20%两个资产，权重为2/3、1/3。",
+      "prerequisites": [
+        "standard-deviation",
+        "equal-weight"
+      ],
+      "assumptions": [
+        "样本足够",
+        "零波动先诊断",
+        "约束事前声明"
+      ],
+      "required_fields": [
+        "asset_returns",
+        "volatility_window",
+        "weight_cap"
+      ],
+      "formula_refs": [
+        "inverse-volatility-definition"
+      ],
+      "code_refs": [
+        "bt-inv-vol",
+        "bt-risk"
+      ],
+      "source_refs": [
+        "bt-inv-vol",
+        "bt-risk"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "inverse-volatility-pitfall"
+      ],
+      "method_refs": [
+        "backtest-acceptance"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Inverse volatility",
+        "倒波动",
+        "波动率倒数权重"
+      ],
+      "tags": [
+        "strategy-portfolio"
+      ],
+      "example_refs": [
+        "inverse-volatility-worked-example"
+      ]
+    },
+    {
+      "item_id": "risk-contribution",
+      "canonical_id": "risk-contribution",
+      "version": "1.0.0",
+      "kind": "METHOD",
+      "title": "风险贡献与边际风险",
+      "domain": "strategy-portfolio",
+      "summary": "按权重和协方差分解组合波动的来源。",
+      "explanation": "波动风险的边际贡献是Σw除以组合波动，分量贡献再乘权重。分量之和等于组合波动；对冲资产可为负，不能只按绝对权重理解。",
+      "application": "解释风险集中，并比较倒波动和等风险贡献。",
+      "example_text": "两只波动相同且不相关的等权资产贡献相等；相关结构改变后需重算。",
+      "prerequisites": [
+        "covariance",
+        "equal-weight"
+      ],
+      "assumptions": [
+        "协方差对称半正定",
+        "权重单位一致"
+      ],
+      "required_fields": [
+        "weights",
+        "covariance_matrix"
+      ],
+      "formula_refs": [
+        "risk-contribution-definition"
+      ],
+      "code_refs": [
+        "bt-risk"
+      ],
+      "source_refs": [
+        "bt-risk"
+      ],
+      "claim_kind": "MATHEMATICAL",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "risk-contribution-pitfall"
+      ],
+      "method_refs": [
+        "backtest-acceptance"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Risk contribution",
+        "风险贡献",
+        "边际风险",
+        "风险平价"
+      ],
+      "tags": [
+        "strategy-portfolio"
+      ],
+      "example_refs": []
+    },
+    {
+      "item_id": "covariance-diversification",
+      "canonical_id": "covariance-diversification",
+      "version": "1.0.0",
+      "kind": "METHOD",
+      "title": "协方差分散与组合波动",
+      "domain": "strategy-portfolio",
+      "summary": "组合方差由各资产方差和两两协方差共同决定。",
+      "explanation": "增加资产数量不保证有效分散，相关性在压力中也可能上升。估计协方差需同频对齐并检查半正定性，不能用不同窗口的成对结果随意拼矩阵。",
+      "application": "研究风险分散并对相关性变化做敏感性分析。",
+      "example_text": "等权两资产方差0.04、0.09且不相关，组合方差0.0325。",
+      "prerequisites": [
+        "covariance",
+        "correlation"
+      ],
+      "assumptions": [
+        "样本对齐",
+        "矩阵质量可验证"
+      ],
+      "required_fields": [
+        "weights",
+        "asset_ids",
+        "covariance_matrix"
+      ],
+      "formula_refs": [
+        "covariance-diversification-definition"
+      ],
+      "code_refs": [
+        "bt-risk"
+      ],
+      "source_refs": [
+        "bt-risk"
+      ],
+      "claim_kind": "MATHEMATICAL",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "covariance-diversification-pitfall"
+      ],
+      "method_refs": [
+        "backtest-acceptance"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Diversification",
+        "分散化",
+        "组合方差",
+        "协方差组合"
+      ],
+      "tags": [
+        "strategy-portfolio"
+      ],
+      "example_refs": [
+        "covariance-diversification-worked-example"
+      ]
+    },
+    {
+      "item_id": "rebalance",
+      "canonical_id": "rebalance",
+      "version": "1.0.0",
+      "kind": "METHOD",
+      "title": "调仓时点与目标权重",
+      "domain": "strategy-portfolio",
+      "summary": "调仓把随价格漂移后的持仓调整到声明的目标。",
+      "explanation": "先估值现有权重，再比较目标，生成受现金与可交易性约束的订单。信号、下单、成交三种时点要分开，未成交部分不能被直接写成目标仓位。",
+      "application": "比较周期调仓与阈值调仓的成本和偏离。",
+      "example_text": "原等权组合中一只上涨后变60%，恢复50%需要卖出而非假定仍等权。",
+      "prerequisites": [
+        "equal-weight",
+        "liquidity"
+      ],
+      "assumptions": [
+        "估值与目标同一时点",
+        "现金和最小单位明确"
+      ],
+      "required_fields": [
+        "positions",
+        "cash",
+        "prices",
+        "target_weights",
+        "decision_at"
+      ],
+      "formula_refs": [
+        "rebalance-definition"
+      ],
+      "code_refs": [],
+      "source_refs": [
+        "bt-rebalance"
+      ],
+      "claim_kind": "ENGINEERING",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "rebalance-pitfall"
+      ],
+      "method_refs": [
+        "backtest-acceptance"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Rebalance",
+        "调仓",
+        "再平衡"
+      ],
+      "tags": [
+        "strategy-portfolio"
+      ],
+      "example_refs": []
+    },
+    {
+      "item_id": "transaction-cost",
+      "canonical_id": "transaction-cost",
+      "version": "1.0.0",
+      "kind": "METHOD",
+      "title": "交易成本与换手口径",
+      "domain": "strategy-portfolio",
+      "summary": "费用、价差与冲击会降低模拟收益，需分别声明计费基础。",
+      "explanation": "单边和双边换手定义不同。若用0.5*sum绝对权重变化，费率必须与该口径配套；买卖税费、固定最低费用和非线性冲击不应被一个模糊常数隐藏。",
+      "application": "检验策略对成本参数的敏感性。",
+      "example_text": "换手0.5、匹配综合费率0.002，成本占净值0.001，即10基点。",
+      "prerequisites": [
+        "units"
+      ],
+      "assumptions": [
+        "费用单位明确",
+        "不重复计算价差或滑点"
+      ],
+      "required_fields": [
+        "turnover",
+        "commission",
+        "tax",
+        "spread",
+        "impact"
+      ],
+      "formula_refs": [
+        "transaction-cost-definition"
+      ],
+      "code_refs": [
+        "pa-cost"
+      ],
+      "source_refs": [
+        "pa-cost"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "transaction-cost-pitfall"
+      ],
+      "method_refs": [
+        "backtest-acceptance"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Transaction cost",
+        "交易成本",
+        "佣金",
+        "手续费"
+      ],
+      "tags": [
+        "strategy-portfolio"
+      ],
+      "example_refs": [
+        "transaction-cost-worked-example"
+      ]
+    },
+    {
+      "item_id": "slippage",
+      "canonical_id": "slippage",
+      "version": "1.0.0",
+      "kind": "METHOD",
+      "title": "滑点与执行参照",
+      "domain": "strategy-portfolio",
+      "summary": "比较实际或模拟成交价与事前声明参照价的偏差。",
+      "explanation": "买入价格越高越不利，卖出方向相反。参照可以是决策价、到达价或VWAP，但必须固定；把未来最优价当参照会引入后见偏差。",
+      "application": "做执行敏感性分析并解释回测与纸面观察差异。",
+      "example_text": "买入参照100、成交100.2，买入不利滑点为0.2%。",
+      "prerequisites": [
+        "liquidity",
+        "vwap"
+      ],
+      "assumptions": [
+        "参照价事前定义",
+        "价格口径一致"
+      ],
+      "required_fields": [
+        "side",
+        "fill_price",
+        "reference_price",
+        "timestamp"
+      ],
+      "formula_refs": [
+        "slippage-definition"
+      ],
+      "code_refs": [
+        "pa-cost"
+      ],
+      "source_refs": [
+        "pa-cost",
+        "bt-rebalance"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "slippage-pitfall"
+      ],
+      "method_refs": [
+        "backtest-acceptance"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Slippage",
+        "滑点",
+        "执行价格偏差"
+      ],
+      "tags": [
+        "strategy-portfolio"
+      ],
+      "example_refs": [
+        "slippage-worked-example"
+      ]
+    },
+    {
+      "item_id": "capacity",
+      "canonical_id": "capacity",
+      "version": "1.0.0",
+      "kind": "RISK",
+      "title": "策略容量与市场参与率",
+      "domain": "strategy-portfolio",
+      "summary": "容量研究资金规模扩大后，交易约束和成本如何变化。",
+      "explanation": "订单相对成交量、报价深度和交易时间影响可执行性。日均量只能粗略筛查，不能保证具体时刻可成交；容量上限需通过声明模型和压力情景检验。",
+      "application": "研究资金规模和换手限制，而非承诺可交易额度。",
+      "example_text": "订单占可用区间成交量30%，应测试更高冲击和未成交。",
+      "prerequisites": [
+        "liquidity",
+        "slippage"
+      ],
+      "assumptions": [
+        "流动性窗口可见",
+        "未成交规则明确"
+      ],
+      "required_fields": [
+        "order_quantity",
+        "market_volume",
+        "spread",
+        "execution_window"
+      ],
+      "formula_refs": [
+        "capacity-definition"
+      ],
+      "code_refs": [
+        "pa-cost"
+      ],
+      "source_refs": [
+        "pa-cost",
+        "own-stress"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "capacity-pitfall"
+      ],
+      "method_refs": [
+        "backtest-acceptance"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Capacity",
+        "策略容量",
+        "市场冲击",
+        "参与率"
+      ],
+      "tags": [
+        "strategy-portfolio"
+      ],
+      "example_refs": []
+    },
+    {
+      "item_id": "etf-exposure",
+      "canonical_id": "etf-exposure",
+      "version": "1.0.0",
+      "kind": "METHOD",
+      "title": "ETF穿透暴露与持仓时点",
+      "domain": "strategy-portfolio",
+      "summary": "用基金持仓权重把组合暴露展开到资产、行业或因子层。",
+      "explanation": "持仓披露有延迟，衍生品、现金和抽样复制会影响穿透完整性。多个ETF可能持有相同资产，基金数量不是独立风险数量；未知部分应单独显示。",
+      "application": "分析重叠与集中，并选择后续风险研究。",
+      "example_text": "两个ETF各50%，若都把40%投同一行业，组合该行业仍为40%。",
+      "prerequisites": [
+        "point-in-time",
+        "concentration"
+      ],
+      "assumptions": [
+        "持仓版本可见",
+        "同标的合并",
+        "未知部分保留"
+      ],
+      "required_fields": [
+        "etf_weights",
+        "holdings_weights",
+        "holdings_available_at",
+        "asset_ids"
+      ],
+      "formula_refs": [
+        "etf-exposure-definition"
+      ],
+      "code_refs": [],
+      "source_refs": [
+        "ds-etf",
+        "own-stress"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "etf-exposure-pitfall"
+      ],
+      "method_refs": [
+        "backtest-acceptance"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "ETF exposure",
+        "ETF穿透",
+        "基金重叠",
+        "行业暴露"
+      ],
+      "tags": [
+        "strategy-portfolio"
+      ],
+      "example_refs": []
+    },
+    {
+      "item_id": "sharpe",
+      "canonical_id": "sharpe",
+      "version": "1.0.0",
+      "kind": "METHOD",
+      "title": "Sharpe比率与频率假设",
+      "domain": "strategy-portfolio",
+      "summary": "Sharpe以同频超额收益均值除以其标准差。",
+      "explanation": "本条采用样本标准差，年化乘sqrt(m)只在相应独立稳定近似下解释。无风险收益要转换到同频；零波动、小样本和非正态尾部需要单独诊断。",
+      "application": "比较历史风险收益描述，同时报告回撤、尾部与样本长度。",
+      "example_text": "月超额均值2%、标准差4%，按12期近似年化Sharpe约1.732。",
+      "prerequisites": [
+        "excess-return",
+        "annualization",
+        "standard-deviation"
+      ],
+      "assumptions": [
+        "收益与rf同频",
+        "标准差非零",
+        "年化假设公开"
+      ],
+      "required_fields": [
+        "returns",
+        "risk_free_returns",
+        "periods_per_year"
+      ],
+      "formula_refs": [
+        "sharpe-definition"
+      ],
+      "code_refs": [
+        "pa-returns",
+        "ds-annualization"
+      ],
+      "source_refs": [
+        "pa-returns",
+        "ds-annualization"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "sharpe-pitfall"
+      ],
+      "method_refs": [
+        "backtest-acceptance"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Sharpe",
+        "夏普比率",
+        "风险调整收益"
+      ],
+      "tags": [
+        "strategy-portfolio"
+      ],
+      "example_refs": [
+        "sharpe-worked-example"
+      ]
+    },
+    {
+      "item_id": "volatility",
+      "canonical_id": "volatility",
+      "version": "1.0.0",
+      "kind": "RISK",
+      "title": "收益波动率与窗口",
+      "domain": "risk-review",
+      "summary": "历史波动率通常用收益标准差描述同频离散程度。",
+      "explanation": "需要声明简单或对数收益、样本分母、窗口和年化期数。波动不等于全部风险：流动性枯竭、跳空和数据缺口可能在安静样本中没有体现。",
+      "application": "解释风险尺度，并比较窗口与压力场景。",
+      "example_text": "日波动1%按252期近似年化约15.87%，不是未来损失上限。",
+      "prerequisites": [
+        "standard-deviation",
+        "annualization"
+      ],
+      "assumptions": [
+        "窗口有效样本足够",
+        "收益频率一致"
+      ],
+      "required_fields": [
+        "returns",
+        "timestamp",
+        "window",
+        "periods_per_year"
+      ],
+      "formula_refs": [
+        "volatility-definition"
+      ],
+      "code_refs": [
+        "qa-std",
+        "pa-returns"
+      ],
+      "source_refs": [
+        "qa-std",
+        "pa-returns"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "volatility-pitfall"
+      ],
+      "method_refs": [
+        "backtest-acceptance"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Volatility",
+        "波动率",
+        "历史波动"
+      ],
+      "tags": [
+        "risk-review"
+      ],
+      "example_refs": []
+    },
+    {
+      "item_id": "drawdown",
+      "canonical_id": "drawdown",
+      "version": "1.0.0",
+      "kind": "RISK",
+      "title": "回撤、峰值与修复",
+      "domain": "risk-review",
+      "summary": "回撤比较当前净值与此前峰值，描述路径中的损失深度。",
+      "explanation": "本条用正数表示损失幅度，最大回撤是历史窗口内最大值。现金流需先调整，观察频率影响峰谷捕捉；修复时间与深度都是路径信息。",
+      "application": "观察历史最深损失和恢复过程。",
+      "example_text": "净值100、120、90、110，最大回撤为1−90/120=25%。",
+      "prerequisites": [
+        "compounding"
+      ],
+      "assumptions": [
+        "净值已处理外部现金流",
+        "频率固定"
+      ],
+      "required_fields": [
+        "nav",
+        "timestamp",
+        "cashflows"
+      ],
+      "formula_refs": [
+        "drawdown-definition"
+      ],
+      "code_refs": [
+        "pa-drawdown"
+      ],
+      "source_refs": [
+        "pa-drawdown"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "drawdown-pitfall"
+      ],
+      "method_refs": [
+        "backtest-acceptance"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Drawdown",
+        "回撤",
+        "最大回撤",
+        "水下曲线"
+      ],
+      "tags": [
+        "risk-review"
+      ],
+      "example_refs": [
+        "drawdown-worked-example"
+      ]
+    },
+    {
+      "item_id": "downside-risk",
+      "canonical_id": "downside-risk",
+      "version": "1.0.0",
+      "kind": "RISK",
+      "title": "下行偏差与目标收益",
+      "domain": "risk-review",
+      "summary": "相对目标收益，只统计低于目标部分的偏离。",
+      "explanation": "本条下行偏差把所有观察作为分母，包括未跌破目标的零贡献。只用负收益数量作分母是另一口径，目标为零或无风险收益也会改变结果。",
+      "application": "区分整体波动与目标以下的风险。",
+      "example_text": "收益−2%、1%，目标0，下行偏差sqrt(0.0004/2)约1.414%。",
+      "prerequisites": [
+        "standard-deviation"
+      ],
+      "assumptions": [
+        "目标与收益同频",
+        "分母约定明确"
+      ],
+      "required_fields": [
+        "returns",
+        "target_return"
+      ],
+      "formula_refs": [
+        "downside-risk-definition"
+      ],
+      "code_refs": [
+        "pa-returns",
+        "own-tail"
+      ],
+      "source_refs": [
+        "pa-returns",
+        "own-tail"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "downside-risk-pitfall"
+      ],
+      "method_refs": [
+        "backtest-acceptance"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Downside risk",
+        "下行风险",
+        "下行偏差",
+        "半方差"
+      ],
+      "tags": [
+        "risk-review"
+      ],
+      "example_refs": [
+        "downside-risk-worked-example"
+      ]
+    },
+    {
+      "item_id": "value-at-risk",
+      "canonical_id": "value-at-risk",
+      "version": "1.0.0",
+      "kind": "RISK",
+      "title": "VaR与分位数定义",
+      "domain": "risk-review",
+      "summary": "VaR给出声明分布与置信水平下的损失分位数。",
+      "explanation": "历史法依赖窗口及分位数插值定义。本教学用损失序列的nearest-rank经验分位数，VaR不是最坏损失，也不描述超过阈值后的严重程度。",
+      "application": "建立尾部阈值描述并与ES及压力测试一起使用。",
+      "example_text": "十个损失从1%到10%，80% nearest-rank VaR为8%。",
+      "prerequisites": [
+        "return",
+        "confidence-interval"
+      ],
+      "assumptions": [
+        "样本及置信度固定",
+        "损失方向一致"
+      ],
+      "required_fields": [
+        "returns",
+        "confidence",
+        "window"
+      ],
+      "formula_refs": [
+        "value-at-risk-definition"
+      ],
+      "code_refs": [
+        "own-tail"
+      ],
+      "source_refs": [
+        "own-tail",
+        "own-stress"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "value-at-risk-pitfall"
+      ],
+      "method_refs": [
+        "backtest-acceptance"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Value at risk",
+        "VaR",
+        "风险价值",
+        "损失分位数"
+      ],
+      "tags": [
+        "risk-review"
+      ],
+      "example_refs": [
+        "value-at-risk-worked-example"
+      ]
+    },
+    {
+      "item_id": "expected-shortfall",
+      "canonical_id": "expected-shortfall",
+      "version": "1.0.0",
+      "kind": "RISK",
+      "title": "ES与分数尾部质量",
+      "domain": "risk-review",
+      "summary": "ES描述最差指定比例观察的平均损失，补充VaR的阈值信息。",
+      "explanation": "有限样本中尾部可能不足整数个观察。Finathink按尾部质量分配边界观测的分数权重，并将负的损失均值截为0；不能简单把大于等于VaR的点全平均。",
+      "application": "解释尾部风险并核对报告与计算实现口径。",
+      "example_text": "十个损失1%到10%，80%尾部是9%和10%，ES为9.5%。",
+      "prerequisites": [
+        "value-at-risk"
+      ],
+      "assumptions": [
+        "置信度固定",
+        "样本为有限收益",
+        "分数质量保留"
+      ],
+      "required_fields": [
+        "returns",
+        "confidence"
+      ],
+      "formula_refs": [
+        "expected-shortfall-definition"
+      ],
+      "code_refs": [
+        "own-tail"
+      ],
+      "source_refs": [
+        "own-tail"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "expected-shortfall-pitfall"
+      ],
+      "method_refs": [
+        "backtest-acceptance"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Expected shortfall",
+        "ES",
+        "CVaR",
+        "条件尾部损失"
+      ],
+      "tags": [
+        "risk-review"
+      ],
+      "example_refs": [
+        "expected-shortfall-worked-example"
+      ]
+    },
+    {
+      "item_id": "concentration",
+      "canonical_id": "concentration",
+      "version": "1.0.0",
+      "kind": "RISK",
+      "title": "集中度与重叠风险",
+      "domain": "risk-review",
+      "summary": "权重平方和衡量长仓资金集中，行业和底层重叠还需另看。",
+      "explanation": "HHI在非负且和为1的权重下有直观解释，倒数是有效持仓数。多空组合、杠杆和未穿透ETF不能直接沿用同一解释。",
+      "application": "识别单一资产和分组集中，进一步看相关风险。",
+      "example_text": "权重60%、40%，HHI为0.36+0.16=0.52，有效数量约1.92。",
+      "prerequisites": [
+        "equal-weight"
+      ],
+      "assumptions": [
+        "权重非负且总和1",
+        "未知暴露单列"
+      ],
+      "required_fields": [
+        "weights",
+        "asset_ids",
+        "industry"
+      ],
+      "formula_refs": [
+        "concentration-definition"
+      ],
+      "code_refs": [
+        "bt-risk"
+      ],
+      "source_refs": [
+        "own-stress",
+        "bt-risk"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "concentration-pitfall"
+      ],
+      "method_refs": [
+        "backtest-acceptance"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Concentration",
+        "集中度",
+        "HHI",
+        "持仓集中"
+      ],
+      "tags": [
+        "risk-review"
+      ],
+      "example_refs": [
+        "concentration-worked-example"
+      ]
+    },
+    {
+      "item_id": "stress-testing",
+      "canonical_id": "stress-testing",
+      "version": "1.0.0",
+      "kind": "RISK",
+      "title": "压力测试与情景分析",
+      "domain": "risk-review",
+      "summary": "把明确冲击施加于持仓或暴露，观察假设下的损失和约束。",
+      "explanation": "历史与假设情景都需要记录冲击大小、传导规则和未覆盖风险。线性权重加总不适合直接代表期权非线性；情景结果也不是事件发生概率。",
+      "application": "检查市场下跌、相关性上升和流动性收缩的影响。",
+      "example_text": "60%资产跌20%、40%资产跌10%，线性组合情景收益为−16%。",
+      "prerequisites": [
+        "covariance-diversification",
+        "liquidity"
+      ],
+      "assumptions": [
+        "情景版本固定",
+        "权重时点与暴露对应"
+      ],
+      "required_fields": [
+        "weights",
+        "shocks",
+        "scenario_id",
+        "available_at"
+      ],
+      "formula_refs": [
+        "stress-testing-definition"
+      ],
+      "code_refs": [],
+      "source_refs": [
+        "own-stress"
+      ],
+      "claim_kind": "DEFINITION",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "stress-testing-pitfall"
+      ],
+      "method_refs": [
+        "backtest-acceptance"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Stress testing",
+        "压力测试",
+        "情景分析",
+        "黑天鹅"
+      ],
+      "tags": [
+        "risk-review"
+      ],
+      "example_refs": [
+        "stress-testing-worked-example"
+      ]
+    },
+    {
+      "item_id": "paper-settlement",
+      "canonical_id": "paper-settlement",
+      "version": "1.0.0",
+      "kind": "METHOD",
+      "title": "纸面结果结算与成熟期",
+      "domain": "risk-review",
+      "summary": "只有评价窗口结束且结果数据可用后，才能结算一次纸面观察。",
+      "explanation": "决策时点、持有期结束和数据到达时间分别保留。尚未成熟的结果不能作为成败标签，缺失结果应保留原因；后来补数据也不能改写当初的决策信息。",
+      "application": "把预测或假设与后来观察分开，准备复盘证据。",
+      "example_text": "计划观察20个交易日，第5日浮盈不能充当完整20日结算结果。",
+      "prerequisites": [
+        "point-in-time",
+        "trading-calendar"
+      ],
+      "assumptions": [
+        "评价规则事前固定",
+        "结果版本可追溯"
+      ],
+      "required_fields": [
+        "decision_at",
+        "horizon_end",
+        "outcome_available_at",
+        "run_id",
+        "snapshot_id"
+      ],
+      "formula_refs": [
+        "paper-settlement-definition"
+      ],
+      "code_refs": [],
+      "source_refs": [
+        "own-learning",
+        "ds-forward-pool"
+      ],
+      "claim_kind": "ENGINEERING",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "paper-settlement-pitfall"
+      ],
+      "method_refs": [
+        "backtest-acceptance"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Paper settlement",
+        "纸面结算",
+        "远期观察",
+        "成熟结果"
+      ],
+      "tags": [
+        "risk-review"
+      ],
+      "example_refs": []
+    },
+    {
+      "item_id": "learning-review",
+      "canonical_id": "learning-review",
+      "version": "1.0.0",
+      "kind": "METHOD",
+      "title": "学习复盘与审核边界",
+      "domain": "risk-review",
+      "summary": "将成熟结果与原研究假设对照，生成有版本的改进提案。",
+      "explanation": "错误可能来自数据、模型、执行或偶然波动，不能只按盈亏归因。学习建议要保留证据和反例，经过已有审核流程再成为新策略版本；浏览知识不会批准规则。",
+      "application": "形成下一轮问题和受控改进，而非静默改写历史。",
+      "example_text": "一次失败可提出成本敏感性复验，不足以自动删除整个因子。",
+      "prerequisites": [
+        "paper-settlement",
+        "overfitting"
+      ],
+      "assumptions": [
+        "结果已成熟",
+        "原假设和版本冻结"
+      ],
+      "required_fields": [
+        "run_id",
+        "settled_outcome",
+        "policy_version",
+        "evidence_refs"
+      ],
+      "formula_refs": [
+        "learning-review-definition"
+      ],
+      "code_refs": [],
+      "source_refs": [
+        "own-learning",
+        "ds-review"
+      ],
+      "claim_kind": "ENGINEERING",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "learning-review-pitfall"
+      ],
+      "method_refs": [
+        "backtest-acceptance"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Learning review",
+        "学习复盘",
+        "学习审核",
+        "规则更新"
+      ],
+      "tags": [
+        "risk-review"
+      ],
+      "example_refs": []
+    },
+    {
+      "item_id": "reproducibility",
+      "canonical_id": "reproducibility",
+      "version": "1.0.0",
+      "kind": "METHOD",
+      "title": "研究复现与版本化复跑",
+      "domain": "risk-review",
+      "summary": "复现需要绑定数据、方法、参数、代码与环境版本。",
+      "explanation": "相同标题或相同文件名不能代表相同研究。保存源运行、快照指纹、方法合同和依赖版本；复跑结果作为新记录并与原结果比较，不覆盖原证据。",
+      "application": "追踪差异来源并区分同版复现与改版实验。",
+      "example_text": "数据修订后重跑产生不同结果，应显示新快照与差异而非改写旧报告。",
+      "prerequisites": [
+        "data-fingerprint",
+        "oos"
+      ],
+      "assumptions": [
+        "依赖和随机种子声明",
+        "源证据可获得"
+      ],
+      "required_fields": [
+        "snapshot_fingerprint",
+        "method_version",
+        "parameters",
+        "code_commit",
+        "environment"
+      ],
+      "formula_refs": [
+        "reproducibility-definition"
+      ],
+      "code_refs": [
+        "own-snapshot"
+      ],
+      "source_refs": [
+        "own-reproduction",
+        "own-snapshot"
+      ],
+      "claim_kind": "ENGINEERING",
+      "evidence_refs": [],
+      "evidence_level": "DEFINITION_CHECKED",
+      "counterexample_refs": [
+        "reproducibility-pitfall"
+      ],
+      "method_refs": [
+        "backtest-acceptance"
+      ],
+      "review_status": "REVIEWED",
+      "aliases": [
+        "Reproducibility",
+        "复现",
+        "版本化复跑",
+        "可追溯"
+      ],
+      "tags": [
+        "risk-review"
+      ],
+      "example_refs": []
+    }
+  ],
+  "sources": [
+    {
+      "source_ref": "qa-average",
+      "title": "QUANTAXIS · base.py",
+      "repository": "https://github.com/yutiansut/QUANTAXIS",
+      "commit": "232aa7ac9869966108f02a8fff85f1f7b09a9ce2",
+      "path": "QUANTAXIS/QAIndicator/base.py",
+      "sha256": "fbbb3debfa0d061eb4d6e56acf783dea18a144f56ffc191769df075cf38c4737",
+      "license_resource_id": "quantaxis-license",
+      "capture_date": "2026-10-31",
+      "start_line": 40,
+      "end_line": 48,
+      "relation": "IMPLEMENTATION_REFERENCE",
+      "scope_note": "MA为滚动平均；EMA使用adjust=True，与递推初值版存在早期差异。"
+    },
+    {
+      "source_ref": "qa-std",
+      "title": "QUANTAXIS · base.py",
+      "repository": "https://github.com/yutiansut/QUANTAXIS",
+      "commit": "232aa7ac9869966108f02a8fff85f1f7b09a9ce2",
+      "path": "QUANTAXIS/QAIndicator/base.py",
+      "sha256": "fbbb3debfa0d061eb4d6e56acf783dea18a144f56ffc191769df075cf38c4737",
+      "license_resource_id": "quantaxis-license",
+      "capture_date": "2026-10-31",
+      "start_line": 221,
+      "end_line": 232,
+      "relation": "IMPLEMENTATION_REFERENCE",
+      "scope_note": "滚动标准差及平均绝对偏差；样本/总体分母需按条目声明。"
+    },
+    {
+      "source_ref": "qa-macd",
+      "title": "QUANTAXIS · base.py",
+      "repository": "https://github.com/yutiansut/QUANTAXIS",
+      "commit": "232aa7ac9869966108f02a8fff85f1f7b09a9ce2",
+      "path": "QUANTAXIS/QAIndicator/base.py",
+      "sha256": "fbbb3debfa0d061eb4d6e56acf783dea18a144f56ffc191769df075cf38c4737",
+      "license_resource_id": "quantaxis-license",
+      "capture_date": "2026-10-31",
+      "start_line": 235,
+      "end_line": 247,
+      "relation": "IMPLEMENTATION_REFERENCE",
+      "scope_note": "此实现将DIF减DEA后乘2；教学同时说明不乘2口径。"
+    },
+    {
+      "source_ref": "qa-momentum",
+      "title": "QUANTAXIS · indicators.py",
+      "repository": "https://github.com/yutiansut/QUANTAXIS",
+      "commit": "232aa7ac9869966108f02a8fff85f1f7b09a9ce2",
+      "path": "QUANTAXIS/QAIndicator/indicators.py",
+      "sha256": "94995068dbe73fdeddfea69bd51c0df52af6fc4567c5c432a265c2e3f9363ff5",
+      "license_resource_id": "quantaxis-license",
+      "capture_date": "2026-10-31",
+      "start_line": 158,
+      "end_line": 166,
+      "relation": "IMPLEMENTATION_REFERENCE",
+      "scope_note": "这里MTM是价格差；本词条收益动量使用价格比，单位不同。"
+    },
+    {
+      "source_ref": "qa-bias",
+      "title": "QUANTAXIS · indicators.py",
+      "repository": "https://github.com/yutiansut/QUANTAXIS",
+      "commit": "232aa7ac9869966108f02a8fff85f1f7b09a9ce2",
+      "path": "QUANTAXIS/QAIndicator/indicators.py",
+      "sha256": "94995068dbe73fdeddfea69bd51c0df52af6fc4567c5c432a265c2e3f9363ff5",
+      "license_resource_id": "quantaxis-license",
+      "capture_date": "2026-10-31",
+      "start_line": 226,
+      "end_line": 245,
+      "relation": "IMPLEMENTATION_REFERENCE",
+      "scope_note": "BIAS与ROC提供偏离和变化率的计算参照，不证明均值回归有效。"
+    },
+    {
+      "source_ref": "qa-rsi",
+      "title": "QUANTAXIS · indicators.py",
+      "repository": "https://github.com/yutiansut/QUANTAXIS",
+      "commit": "232aa7ac9869966108f02a8fff85f1f7b09a9ce2",
+      "path": "QUANTAXIS/QAIndicator/indicators.py",
+      "sha256": "94995068dbe73fdeddfea69bd51c0df52af6fc4567c5c432a265c2e3f9363ff5",
+      "license_resource_id": "quantaxis-license",
+      "capture_date": "2026-10-31",
+      "start_line": 292,
+      "end_line": 303,
+      "relation": "IMPLEMENTATION_REFERENCE",
+      "scope_note": "使用平滑上涨幅度相对总幅度；与RS表达在同一平滑口径下对应。"
+    },
+    {
+      "source_ref": "qa-volume",
+      "title": "QUANTAXIS · indicators.py",
+      "repository": "https://github.com/yutiansut/QUANTAXIS",
+      "commit": "232aa7ac9869966108f02a8fff85f1f7b09a9ce2",
+      "path": "QUANTAXIS/QAIndicator/indicators.py",
+      "sha256": "94995068dbe73fdeddfea69bd51c0df52af6fc4567c5c432a265c2e3f9363ff5",
+      "license_resource_id": "quantaxis-license",
+      "capture_date": "2026-10-31",
+      "start_line": 433,
+      "end_line": 466,
+      "relation": "IMPLEMENTATION_REFERENCE",
+      "scope_note": "价量累计指标展示按价格方向加权的量；不是买卖盘身份识别。"
+    },
+    {
+      "source_ref": "qa-bollinger",
+      "title": "QUANTAXIS · indicators.py",
+      "repository": "https://github.com/yutiansut/QUANTAXIS",
+      "commit": "232aa7ac9869966108f02a8fff85f1f7b09a9ce2",
+      "path": "QUANTAXIS/QAIndicator/indicators.py",
+      "sha256": "94995068dbe73fdeddfea69bd51c0df52af6fc4567c5c432a265c2e3f9363ff5",
+      "license_resource_id": "quantaxis-license",
+      "capture_date": "2026-10-31",
+      "start_line": 467,
+      "end_line": 477,
+      "relation": "IMPLEMENTATION_REFERENCE",
+      "scope_note": "均线加减倍数标准差；这里rolling.std使用样本分母。"
+    },
+    {
+      "source_ref": "qa-atr",
+      "title": "QUANTAXIS · indicators.py",
+      "repository": "https://github.com/yutiansut/QUANTAXIS",
+      "commit": "232aa7ac9869966108f02a8fff85f1f7b09a9ce2",
+      "path": "QUANTAXIS/QAIndicator/indicators.py",
+      "sha256": "94995068dbe73fdeddfea69bd51c0df52af6fc4567c5c432a265c2e3f9363ff5",
+      "license_resource_id": "quantaxis-license",
+      "capture_date": "2026-10-31",
+      "start_line": 539,
+      "end_line": 554,
+      "relation": "IMPLEMENTATION_REFERENCE",
+      "scope_note": "此ATR以TR的简单均值平滑；Wilder平滑是另一版本。"
+    },
+    {
+      "source_ref": "qa-adjustment",
+      "title": "QUANTAXIS · data_fq.py",
+      "repository": "https://github.com/yutiansut/QUANTAXIS",
+      "commit": "232aa7ac9869966108f02a8fff85f1f7b09a9ce2",
+      "path": "QUANTAXIS/QAData/data_fq.py",
+      "sha256": "8ea6b152a4eff20bffba2216ae8dc88edbb3f0f11b0a220abb19c574cf459eff",
+      "license_resource_id": "quantaxis-license",
+      "capture_date": "2026-10-31",
+      "start_line": 1,
+      "end_line": 100,
+      "relation": "RELATED_WORKFLOW",
+      "scope_note": "公司行动与复权的工程参照；固定复权基准及输入版本。"
+    },
+    {
+      "source_ref": "ds-data-audit",
+      "title": "deepseek-harness-quant · data_audit.py",
+      "repository": "https://github.com/yuanwang589-dev/deepseek-harness-quant",
+      "commit": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+      "path": "risk/data_audit.py",
+      "sha256": "e9952017cdfac9aea433b07a0d433fb6ce06d2316f8bd98546adb017b441f7bc",
+      "license_resource_id": "upstream-license",
+      "capture_date": "2026-10-31",
+      "start_line": 1,
+      "end_line": 36,
+      "relation": "RELATED_WORKFLOW",
+      "scope_note": "保留来源明确记录的幸存者偏差、披露日近似和复权漂移反例，不把近似延迟当真实PIT。"
+    },
+    {
+      "source_ref": "ds-factor-check",
+      "title": "deepseek-harness-quant · factor_evaluator.py",
+      "repository": "https://github.com/yuanwang589-dev/deepseek-harness-quant",
+      "commit": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+      "path": "validation/factor_evaluator.py",
+      "sha256": "12340eb1312583460e000abe7af98a96e772b4f301d713f40fb566c5368a52b3",
+      "license_resource_id": "upstream-license",
+      "capture_date": "2026-10-31",
+      "start_line": 51,
+      "end_line": 157,
+      "relation": "RELATED_WORKFLOW",
+      "scope_note": "分组、换手和多持有期评价流程；财务效果须用独立数据重新检验。"
+    },
+    {
+      "source_ref": "ds-walk-forward",
+      "title": "deepseek-harness-quant · walk_forward.py",
+      "repository": "https://github.com/yuanwang589-dev/deepseek-harness-quant",
+      "commit": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+      "path": "validation/walk_forward.py",
+      "sha256": "550adf19c7a13ee4e5909a4273ebb09513da0df62b568ee40d274a247c0c1d42",
+      "license_resource_id": "upstream-license",
+      "capture_date": "2026-10-31",
+      "start_line": 32,
+      "end_line": 85,
+      "relation": "RELATED_WORKFLOW",
+      "scope_note": "训练与未来测试分段的流程参照；窗口和重叠规则需独立声明。"
+    },
+    {
+      "source_ref": "ds-annualization",
+      "title": "deepseek-harness-quant · walk_forward.py",
+      "repository": "https://github.com/yuanwang589-dev/deepseek-harness-quant",
+      "commit": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+      "path": "validation/walk_forward.py",
+      "sha256": "550adf19c7a13ee4e5909a4273ebb09513da0df62b568ee40d274a247c0c1d42",
+      "license_resource_id": "upstream-license",
+      "capture_date": "2026-10-31",
+      "start_line": 147,
+      "end_line": 160,
+      "relation": "IMPLEMENTATION_REFERENCE",
+      "scope_note": "来源使用252与总体标准差；教学显式传入频率和同频无风险收益，不默认照搬。"
+    },
+    {
+      "source_ref": "ds-forward-pool",
+      "title": "deepseek-harness-quant · pitch_track.py",
+      "repository": "https://github.com/yuanwang589-dev/deepseek-harness-quant",
+      "commit": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+      "path": "factors/opportunities/pitch_track.py",
+      "sha256": "59c149ee2af82df533678343d23c0e45fa38ad51c18b391a350cff4adb2c4552",
+      "license_resource_id": "upstream-license",
+      "capture_date": "2026-10-31",
+      "start_line": 195,
+      "end_line": 290,
+      "relation": "RELATED_WORKFLOW",
+      "scope_note": "远期观察池的相关工作流。源码含日期回退，教学要求不可倒填决策时点。"
+    },
+    {
+      "source_ref": "ds-review",
+      "title": "deepseek-harness-quant · pitch_review.py",
+      "repository": "https://github.com/yuanwang589-dev/deepseek-harness-quant",
+      "commit": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+      "path": "risk/pitch_review.py",
+      "sha256": "8852cd141a9d4b2f71ce08607b95b6a3750d4bace1549dfedbce23cd48e85013",
+      "license_resource_id": "upstream-license",
+      "capture_date": "2026-10-31",
+      "start_line": 35,
+      "end_line": 108,
+      "relation": "RELATED_WORKFLOW",
+      "scope_note": "批次复查与来源比较的工作流参照，不移植其样本结论和默认阈值。"
+    },
+    {
+      "source_ref": "ds-etf",
+      "title": "deepseek-harness-quant · etf_map.py",
+      "repository": "https://github.com/yuanwang589-dev/deepseek-harness-quant",
+      "commit": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+      "path": "etf/etf_map.py",
+      "sha256": "cacefdb73a9b88e733c894a01aa1c4aa0563d53377a9a1f667b2f1d300910f1a",
+      "license_resource_id": "upstream-license",
+      "capture_date": "2026-10-31",
+      "start_line": 1,
+      "end_line": 100,
+      "relation": "RELATED_WORKFLOW",
+      "scope_note": "ETF暴露映射的相关研究流程；穿透权重与时点由用户数据提供。"
+    },
+    {
+      "source_ref": "qlib-fit",
+      "title": "qlib · handler.py",
+      "repository": "https://github.com/microsoft/qlib",
+      "commit": "54355232463878d2eebb91fe0ee5fa7fa1f5976c",
+      "path": "qlib/contrib/data/handler.py",
+      "sha256": "b621481c6009c39066c67c71390fd2bea635f56daf9f2c4e38817eff268e3232",
+      "license_resource_id": "qlib-license",
+      "capture_date": "2026-10-31",
+      "start_line": 12,
+      "end_line": 46,
+      "relation": "RELATED_WORKFLOW",
+      "scope_note": "处理器拟合区间配置；标签与可用特征必须分开。"
+    },
+    {
+      "source_ref": "qlib-normalize",
+      "title": "qlib · processor.py",
+      "repository": "https://github.com/microsoft/qlib",
+      "commit": "54355232463878d2eebb91fe0ee5fa7fa1f5976c",
+      "path": "qlib/data/dataset/processor.py",
+      "sha256": "424af44e81c99467171c2d0b7978fb9f95d3b4c8b743a535ff4fe45d708cf517",
+      "license_resource_id": "qlib-license",
+      "capture_date": "2026-10-31",
+      "start_line": 228,
+      "end_line": 260,
+      "relation": "IMPLEMENTATION_REFERENCE",
+      "scope_note": "在训练区间估计均值和总体标准差，之后用于变换。"
+    },
+    {
+      "source_ref": "qlib-robust",
+      "title": "qlib · processor.py",
+      "repository": "https://github.com/microsoft/qlib",
+      "commit": "54355232463878d2eebb91fe0ee5fa7fa1f5976c",
+      "path": "qlib/data/dataset/processor.py",
+      "sha256": "424af44e81c99467171c2d0b7978fb9f95d3b4c8b743a535ff4fe45d708cf517",
+      "license_resource_id": "qlib-license",
+      "capture_date": "2026-10-31",
+      "start_line": 262,
+      "end_line": 299,
+      "relation": "IMPLEMENTATION_REFERENCE",
+      "scope_note": "中位数/MAD、1.4826尺度与可选截尾；与真实极端风险保留是两件事。"
+    },
+    {
+      "source_ref": "qlib-vwap",
+      "title": "qlib · loader.py",
+      "repository": "https://github.com/microsoft/qlib",
+      "commit": "54355232463878d2eebb91fe0ee5fa7fa1f5976c",
+      "path": "qlib/contrib/data/loader.py",
+      "sha256": "814b7f7ab3d418ae3c87ce352220080b239eba2670eac9e38376b794be4075cb",
+      "license_resource_id": "qlib-license",
+      "capture_date": "2026-10-31",
+      "start_line": 4,
+      "end_line": 60,
+      "relation": "RELATED_WORKFLOW",
+      "scope_note": "使用已提供的VWAP字段构造特征；该代码不从OHLC自动恢复真实逐笔VWAP。"
+    },
+    {
+      "source_ref": "al-ic",
+      "title": "alphalens-reloaded · performance.py",
+      "repository": "https://github.com/stefan-jansen/alphalens-reloaded",
+      "commit": "60755d1cc7d9d36a4c70c8344cbdb168fe99df24",
+      "path": "src/alphalens/performance.py",
+      "sha256": "dc4c7c661b19a61b434f67cd5015a986f5aea85fd319e08a3d7fb04469203d25",
+      "license_resource_id": "alphalens-reloaded-license",
+      "capture_date": "2026-10-31",
+      "start_line": 38,
+      "end_line": 88,
+      "relation": "IMPLEMENTATION_REFERENCE",
+      "scope_note": "此IC函数使用Spearman排序相关；Pearson IC必须另外标明。"
+    },
+    {
+      "source_ref": "al-beta",
+      "title": "alphalens-reloaded · performance.py",
+      "repository": "https://github.com/stefan-jansen/alphalens-reloaded",
+      "commit": "60755d1cc7d9d36a4c70c8344cbdb168fe99df24",
+      "path": "src/alphalens/performance.py",
+      "sha256": "dc4c7c661b19a61b434f67cd5015a986f5aea85fd319e08a3d7fb04469203d25",
+      "license_resource_id": "alphalens-reloaded-license",
+      "capture_date": "2026-10-31",
+      "start_line": 280,
+      "end_line": 356,
+      "relation": "IMPLEMENTATION_REFERENCE",
+      "scope_note": "带截距OLS估计alpha和beta。教学单因子公式另声明同频、非零市场方差与样本口径。"
+    },
+    {
+      "source_ref": "al-cumulative",
+      "title": "alphalens-reloaded · performance.py",
+      "repository": "https://github.com/stefan-jansen/alphalens-reloaded",
+      "commit": "60755d1cc7d9d36a4c70c8344cbdb168fe99df24",
+      "path": "src/alphalens/performance.py",
+      "sha256": "dc4c7c661b19a61b434f67cd5015a986f5aea85fd319e08a3d7fb04469203d25",
+      "license_resource_id": "alphalens-reloaded-license",
+      "capture_date": "2026-10-31",
+      "start_line": 359,
+      "end_line": 380,
+      "relation": "IMPLEMENTATION_REFERENCE",
+      "scope_note": "简单收益累计为净值；起点1与累计收益率差1。"
+    },
+    {
+      "source_ref": "al-quantiles",
+      "title": "alphalens-reloaded · performance.py",
+      "repository": "https://github.com/stefan-jansen/alphalens-reloaded",
+      "commit": "60755d1cc7d9d36a4c70c8344cbdb168fe99df24",
+      "path": "src/alphalens/performance.py",
+      "sha256": "dc4c7c661b19a61b434f67cd5015a986f5aea85fd319e08a3d7fb04469203d25",
+      "license_resource_id": "alphalens-reloaded-license",
+      "capture_date": "2026-10-31",
+      "start_line": 483,
+      "end_line": 611,
+      "relation": "IMPLEMENTATION_REFERENCE",
+      "scope_note": "分组均值及标准误。此固定版本组间spread额外除2，教学原始组差单独标明。"
+    },
+    {
+      "source_ref": "al-turnover",
+      "title": "alphalens-reloaded · performance.py",
+      "repository": "https://github.com/stefan-jansen/alphalens-reloaded",
+      "commit": "60755d1cc7d9d36a4c70c8344cbdb168fe99df24",
+      "path": "src/alphalens/performance.py",
+      "sha256": "dc4c7c661b19a61b434f67cd5015a986f5aea85fd319e08a3d7fb04469203d25",
+      "license_resource_id": "alphalens-reloaded-license",
+      "capture_date": "2026-10-31",
+      "start_line": 613,
+      "end_line": 655,
+      "relation": "IMPLEMENTATION_REFERENCE",
+      "scope_note": "当前组中新增成员占当前组大小的比例，不等同金额换手。"
+    },
+    {
+      "source_ref": "al-rank-autocorr",
+      "title": "alphalens-reloaded · performance.py",
+      "repository": "https://github.com/stefan-jansen/alphalens-reloaded",
+      "commit": "60755d1cc7d9d36a4c70c8344cbdb168fe99df24",
+      "path": "src/alphalens/performance.py",
+      "sha256": "dc4c7c661b19a61b434f67cd5015a986f5aea85fd319e08a3d7fb04469203d25",
+      "license_resource_id": "alphalens-reloaded-license",
+      "capture_date": "2026-10-31",
+      "start_line": 658,
+      "end_line": 703,
+      "relation": "IMPLEMENTATION_REFERENCE",
+      "scope_note": "跨期截面排名的相关，区别于单个资产时间序列自相关。"
+    },
+    {
+      "source_ref": "al-forward",
+      "title": "alphalens-reloaded · utils.py",
+      "repository": "https://github.com/stefan-jansen/alphalens-reloaded",
+      "commit": "60755d1cc7d9d36a4c70c8344cbdb168fe99df24",
+      "path": "src/alphalens/utils.py",
+      "sha256": "093e9eb62d2c9cd7d4cf93ffb64998064ec7c67092f496e3b52f118187ed33da",
+      "license_resource_id": "alphalens-reloaded-license",
+      "capture_date": "2026-10-31",
+      "start_line": 227,
+      "end_line": 381,
+      "relation": "IMPLEMENTATION_REFERENCE",
+      "scope_note": "前瞻收益标签按未来价格计算，只能用于评价，不能作为当日特征。"
+    },
+    {
+      "source_ref": "al-calendar",
+      "title": "alphalens-reloaded · utils.py",
+      "repository": "https://github.com/stefan-jansen/alphalens-reloaded",
+      "commit": "60755d1cc7d9d36a4c70c8344cbdb168fe99df24",
+      "path": "src/alphalens/utils.py",
+      "sha256": "093e9eb62d2c9cd7d4cf93ffb64998064ec7c67092f496e3b52f118187ed33da",
+      "license_resource_id": "alphalens-reloaded-license",
+      "capture_date": "2026-10-31",
+      "start_line": 182,
+      "end_line": 224,
+      "relation": "RELATED_WORKFLOW",
+      "scope_note": "由观测推断日历是工程近似；生产研究应绑定明确交易所日历。"
+    },
+    {
+      "source_ref": "pa-growth",
+      "title": "pyanomaly · characteristics.py",
+      "repository": "https://github.com/chulwoohan/pyanomaly",
+      "commit": "59758c913a4146bbfb9d3c056668ccdc5231c8c8",
+      "path": "pyanomaly/characteristics.py",
+      "sha256": "c9ad1d14b61fae774d1a7446609971225fb0a709f0e0da7dc998d7aead32bc20",
+      "license_resource_id": "pyanomaly-license",
+      "capture_date": "2026-10-31",
+      "start_line": 350,
+      "end_line": 356,
+      "relation": "IMPLEMENTATION_REFERENCE",
+      "scope_note": "资产增长使用跨期变动，报告期和可比口径需核对。"
+    },
+    {
+      "source_ref": "pa-profit",
+      "title": "pyanomaly · characteristics.py",
+      "repository": "https://github.com/chulwoohan/pyanomaly",
+      "commit": "59758c913a4146bbfb9d3c056668ccdc5231c8c8",
+      "path": "pyanomaly/characteristics.py",
+      "sha256": "c9ad1d14b61fae774d1a7446609971225fb0a709f0e0da7dc998d7aead32bc20",
+      "license_resource_id": "pyanomaly-license",
+      "capture_date": "2026-10-31",
+      "start_line": 486,
+      "end_line": 506,
+      "relation": "IMPLEMENTATION_REFERENCE",
+      "scope_note": "毛利/资产及净利润/权益的参照；教学ROE平均权益口径与来源期末权益区分。"
+    },
+    {
+      "source_ref": "pa-accruals",
+      "title": "pyanomaly · characteristics.py",
+      "repository": "https://github.com/chulwoohan/pyanomaly",
+      "commit": "59758c913a4146bbfb9d3c056668ccdc5231c8c8",
+      "path": "pyanomaly/characteristics.py",
+      "sha256": "c9ad1d14b61fae774d1a7446609971225fb0a709f0e0da7dc998d7aead32bc20",
+      "license_resource_id": "pyanomaly-license",
+      "capture_date": "2026-10-31",
+      "start_line": 549,
+      "end_line": 565,
+      "relation": "IMPLEMENTATION_REFERENCE",
+      "scope_note": "来源展示应计的期末或平均资产分母及现金流差近似。"
+    },
+    {
+      "source_ref": "pa-value",
+      "title": "pyanomaly · characteristics.py",
+      "repository": "https://github.com/chulwoohan/pyanomaly",
+      "commit": "59758c913a4146bbfb9d3c056668ccdc5231c8c8",
+      "path": "pyanomaly/characteristics.py",
+      "sha256": "c9ad1d14b61fae774d1a7446609971225fb0a709f0e0da7dc998d7aead32bc20",
+      "license_resource_id": "pyanomaly-license",
+      "capture_date": "2026-10-31",
+      "start_line": 639,
+      "end_line": 675,
+      "relation": "IMPLEMENTATION_REFERENCE",
+      "scope_note": "账面权益、市值、盈利和经营现金流估值比。市值匹配规则不可省略。"
+    },
+    {
+      "source_ref": "pa-leverage",
+      "title": "pyanomaly · characteristics.py",
+      "repository": "https://github.com/chulwoohan/pyanomaly",
+      "commit": "59758c913a4146bbfb9d3c056668ccdc5231c8c8",
+      "path": "pyanomaly/characteristics.py",
+      "sha256": "c9ad1d14b61fae774d1a7446609971225fb0a709f0e0da7dc998d7aead32bc20",
+      "license_resource_id": "pyanomaly-license",
+      "capture_date": "2026-10-31",
+      "start_line": 851,
+      "end_line": 863,
+      "relation": "RELATED_WORKFLOW",
+      "scope_note": "来源是债务/市值；本教学同时明确债务/资产的另一个定义，不混成同一因子。"
+    },
+    {
+      "source_ref": "pa-roa",
+      "title": "pyanomaly · characteristics.py",
+      "repository": "https://github.com/chulwoohan/pyanomaly",
+      "commit": "59758c913a4146bbfb9d3c056668ccdc5231c8c8",
+      "path": "pyanomaly/characteristics.py",
+      "sha256": "c9ad1d14b61fae774d1a7446609971225fb0a709f0e0da7dc998d7aead32bc20",
+      "license_resource_id": "pyanomaly-license",
+      "capture_date": "2026-10-31",
+      "start_line": 1849,
+      "end_line": 1857,
+      "relation": "IMPLEMENTATION_REFERENCE",
+      "scope_note": "来源季度ROA用滞后总资产；教学年度平均资产口径明确作为另一版本。"
+    },
+    {
+      "source_ref": "pa-surprise",
+      "title": "pyanomaly · characteristics.py",
+      "repository": "https://github.com/chulwoohan/pyanomaly",
+      "commit": "59758c913a4146bbfb9d3c056668ccdc5231c8c8",
+      "path": "pyanomaly/characteristics.py",
+      "sha256": "c9ad1d14b61fae774d1a7446609971225fb0a709f0e0da7dc998d7aead32bc20",
+      "license_resource_id": "pyanomaly-license",
+      "capture_date": "2026-10-31",
+      "start_line": 1900,
+      "end_line": 1914,
+      "relation": "IMPLEMENTATION_REFERENCE",
+      "scope_note": "季节差值减滞后均值再除滞后波动；区别于分析师预期差及简单同比增长。"
+    },
+    {
+      "source_ref": "pa-returns",
+      "title": "pyanomaly · portfolio.py",
+      "repository": "https://github.com/chulwoohan/pyanomaly",
+      "commit": "59758c913a4146bbfb9d3c056668ccdc5231c8c8",
+      "path": "pyanomaly/portfolio.py",
+      "sha256": "bcabae2c9899e8861140900c23fef37a6e04729dffb668475c0df670a5df503c",
+      "license_resource_id": "pyanomaly-license",
+      "capture_date": "2026-10-31",
+      "start_line": 432,
+      "end_line": 519,
+      "relation": "IMPLEMENTATION_REFERENCE",
+      "scope_note": "累计对数收益、均值、标准差和Sharpe接口；年化需另声明。"
+    },
+    {
+      "source_ref": "pa-drawdown",
+      "title": "pyanomaly · portfolio.py",
+      "repository": "https://github.com/chulwoohan/pyanomaly",
+      "commit": "59758c913a4146bbfb9d3c056668ccdc5231c8c8",
+      "path": "pyanomaly/portfolio.py",
+      "sha256": "bcabae2c9899e8861140900c23fef37a6e04729dffb668475c0df670a5df503c",
+      "license_resource_id": "pyanomaly-license",
+      "capture_date": "2026-10-31",
+      "start_line": 580,
+      "end_line": 604,
+      "relation": "IMPLEMENTATION_REFERENCE",
+      "scope_note": "来源以正损失幅度表示回撤；教学亦使用正回撤幅度。"
+    },
+    {
+      "source_ref": "pa-cost",
+      "title": "pyanomaly · tcost.py",
+      "repository": "https://github.com/chulwoohan/pyanomaly",
+      "commit": "59758c913a4146bbfb9d3c056668ccdc5231c8c8",
+      "path": "pyanomaly/tcost.py",
+      "sha256": "b6f92dcda38e8921ca3e27683c503b38f570ba9ded5ac7304a5f335f6b54157a",
+      "license_resource_id": "pyanomaly-license",
+      "capture_date": "2026-10-31",
+      "start_line": 15,
+      "end_line": 99,
+      "relation": "IMPLEMENTATION_REFERENCE",
+      "scope_note": "按证券与时间配置成本，含买卖非对称、线性和二次成本示例。"
+    },
+    {
+      "source_ref": "bt-weights",
+      "title": "bt · algos.py",
+      "repository": "https://github.com/pmorissette/bt",
+      "commit": "4ae4090266300c0185f418aca18e28e649509a33",
+      "path": "bt/algos.py",
+      "sha256": "81b79443e7dc36356293a22bf4c237a76267d77bcfbaeb90e3a5df374425f2ee",
+      "license_resource_id": "bt-license",
+      "capture_date": "2026-10-31",
+      "start_line": 1081,
+      "end_line": 1110,
+      "relation": "IMPLEMENTATION_REFERENCE",
+      "scope_note": "等权按资金份额1/n；不是每个证券持相同股数。"
+    },
+    {
+      "source_ref": "bt-inv-vol",
+      "title": "bt · algos.py",
+      "repository": "https://github.com/pmorissette/bt",
+      "commit": "4ae4090266300c0185f418aca18e28e649509a33",
+      "path": "bt/algos.py",
+      "sha256": "81b79443e7dc36356293a22bf4c237a76267d77bcfbaeb90e3a5df374425f2ee",
+      "license_resource_id": "bt-license",
+      "capture_date": "2026-10-31",
+      "start_line": 1225,
+      "end_line": 1282,
+      "relation": "IMPLEMENTATION_REFERENCE",
+      "scope_note": "倒波动权重的工程接口；小样本、零波动与相关性需要额外检查。"
+    },
+    {
+      "source_ref": "bt-risk",
+      "title": "bt · algos.py",
+      "repository": "https://github.com/pmorissette/bt",
+      "commit": "4ae4090266300c0185f418aca18e28e649509a33",
+      "path": "bt/algos.py",
+      "sha256": "81b79443e7dc36356293a22bf4c237a76267d77bcfbaeb90e3a5df374425f2ee",
+      "license_resource_id": "bt-license",
+      "capture_date": "2026-10-31",
+      "start_line": 1285,
+      "end_line": 1370,
+      "relation": "IMPLEMENTATION_REFERENCE",
+      "scope_note": "等风险贡献配置接口。教学给出边际与分量风险的定义，不声称倒波动就是等风险贡献。"
+    },
+    {
+      "source_ref": "bt-rebalance",
+      "title": "bt · algos.py",
+      "repository": "https://github.com/pmorissette/bt",
+      "commit": "4ae4090266300c0185f418aca18e28e649509a33",
+      "path": "bt/algos.py",
+      "sha256": "81b79443e7dc36356293a22bf4c237a76267d77bcfbaeb90e3a5df374425f2ee",
+      "license_resource_id": "bt-license",
+      "capture_date": "2026-10-31",
+      "start_line": 2000,
+      "end_line": 2115,
+      "relation": "RELATED_WORKFLOW",
+      "scope_note": "调仓与现金约束的接口参照；信号、下单、成交三个时点分开。"
+    },
+    {
+      "source_ref": "own-pit",
+      "title": "Finathink · contracts.py",
+      "repository": "https://github.com/ceyyy427/finathink",
+      "commit": "c2b50d53ff2788c0204a7320203cc6e35bc6402f",
+      "path": "src/finahinking/p8_2/contracts.py",
+      "sha256": "45aa4f06bf5b51f7bbd31d5c39f949fd597e0b27911a3c574966cf90c9a5b895",
+      "license_resource_id": "finathink-license",
+      "capture_date": "2026-10-31",
+      "start_line": 281,
+      "end_line": 355,
+      "relation": "IMPLEMENTATION_REFERENCE",
+      "scope_note": "当前版本快照及PIT检查的实际合同；用于说明可用时间、快照与质量证据。"
+    },
+    {
+      "source_ref": "own-fields",
+      "title": "Finathink · research_fields.py",
+      "repository": "https://github.com/ceyyy427/finathink",
+      "commit": "c2b50d53ff2788c0204a7320203cc6e35bc6402f",
+      "path": "src/finahinking/data/research_fields.py",
+      "sha256": "ffa4a8f49b0189fd13e98050801ab6a54a4bd0e0cf469b4bee82829db1767e8a",
+      "license_resource_id": "finathink-license",
+      "capture_date": "2026-10-31",
+      "start_line": 1,
+      "end_line": 118,
+      "relation": "IMPLEMENTATION_REFERENCE",
+      "scope_note": "研究字段、时区与版本身份的现有输入合同。"
+    },
+    {
+      "source_ref": "own-units",
+      "title": "Finathink · units.py",
+      "repository": "https://github.com/ceyyy427/finathink",
+      "commit": "c2b50d53ff2788c0204a7320203cc6e35bc6402f",
+      "path": "src/finahinking/data/units.py",
+      "sha256": "ff616b96fcf451ed1b58133072ce0f8b88c7539bea976ed1b591bff642af018a",
+      "license_resource_id": "finathink-license",
+      "capture_date": "2026-10-31",
+      "start_line": 1,
+      "end_line": 27,
+      "relation": "IMPLEMENTATION_REFERENCE",
+      "scope_note": "现有单位正规化接口。教学仅做声明过的确定性换算，不猜测单位。"
+    },
+    {
+      "source_ref": "own-snapshot",
+      "title": "Finathink · snapshot_store.py",
+      "repository": "https://github.com/ceyyy427/finathink",
+      "commit": "c2b50d53ff2788c0204a7320203cc6e35bc6402f",
+      "path": "src/finahinking/data/snapshot_store.py",
+      "sha256": "c59cfda001f08e6ef8dd8086055c8f09f0f946f7f0d2e30a950ca052c24abc2a",
+      "license_resource_id": "finathink-license",
+      "capture_date": "2026-10-31",
+      "start_line": 16,
+      "end_line": 67,
+      "relation": "IMPLEMENTATION_REFERENCE",
+      "scope_note": "内容寻址快照及不覆盖已有快照的真实实现。"
+    },
+    {
+      "source_ref": "own-tail",
+      "title": "Finathink · risk_runtime.py",
+      "repository": "https://github.com/ceyyy427/finathink",
+      "commit": "c2b50d53ff2788c0204a7320203cc6e35bc6402f",
+      "path": "src/finahinking/research/risk_runtime.py",
+      "sha256": "01b11f93367dab91a63f3994a091023176fe423b19a4104175a0d77b3a28cae2",
+      "license_resource_id": "finathink-license",
+      "capture_date": "2026-10-31",
+      "start_line": 583,
+      "end_line": 594,
+      "relation": "IMPLEMENTATION_REFERENCE",
+      "scope_note": "现有ES使用分数尾部质量；与简单阈值以上平均在离散样本中可能不同。"
+    },
+    {
+      "source_ref": "own-stress",
+      "title": "Finathink · risk_runtime.py",
+      "repository": "https://github.com/ceyyy427/finathink",
+      "commit": "c2b50d53ff2788c0204a7320203cc6e35bc6402f",
+      "path": "src/finahinking/research/risk_runtime.py",
+      "sha256": "01b11f93367dab91a63f3994a091023176fe423b19a4104175a0d77b3a28cae2",
+      "license_resource_id": "finathink-license",
+      "capture_date": "2026-10-31",
+      "start_line": 759,
+      "end_line": 875,
+      "relation": "RELATED_WORKFLOW",
+      "scope_note": "确定性暴露冲击的相关工作流；情景不是发生概率预测。"
+    },
+    {
+      "source_ref": "own-learning",
+      "title": "Finathink · learning_review.py",
+      "repository": "https://github.com/ceyyy427/finathink",
+      "commit": "c2b50d53ff2788c0204a7320203cc6e35bc6402f",
+      "path": "src/finahinking/research/learning_review.py",
+      "sha256": "38324f32af6288e455670c519a6fb8dd9696eec34a7bad6de37a351b57f34110",
+      "license_resource_id": "finathink-license",
+      "capture_date": "2026-10-31",
+      "start_line": 195,
+      "end_line": 246,
+      "relation": "RELATED_WORKFLOW",
+      "scope_note": "结算后生成复盘、按版本复跑；阅读或评价不会直接批准新政策。"
+    },
+    {
+      "source_ref": "own-reproduction",
+      "title": "Finathink · reproduction.py",
+      "repository": "https://github.com/ceyyy427/finathink",
+      "commit": "c2b50d53ff2788c0204a7320203cc6e35bc6402f",
+      "path": "src/finahinking/research/reproduction.py",
+      "sha256": "b8fca7e0167647272b9e2855a695c42df1a2bd44d152a5874d1177ef27881d19",
+      "license_resource_id": "finathink-license",
+      "capture_date": "2026-10-31",
+      "start_line": 167,
+      "end_line": 226,
+      "relation": "RELATED_WORKFLOW",
+      "scope_note": "源运行、导出与恢复的版本约束；复跑结果与原始结果分别保存。"
+    }
+  ],
+  "formulas": [
+    {
+      "formula_id": "point-in-time-definition",
+      "expression": "visible = available_at <= decision_at",
+      "meaning": "两个时间必须采用同一时区；可见并不意味着数据完整。",
+      "source_refs": [
+        "own-pit",
+        "ds-data-audit"
+      ]
+    },
+    {
+      "formula_id": "publication-lag-definition",
+      "expression": "usable_at = max(published_at, received_at)",
+      "meaning": "若策略还要求等待期，应在usable_at之后再加明确规则。",
+      "source_refs": [
+        "own-fields",
+        "ds-data-audit"
+      ]
+    },
+    {
+      "formula_id": "revisions-definition",
+      "expression": "v(t) = argmax(available_at <= t)",
+      "meaning": "在可见版本中选发布时间最近的一个；不存在可见版本则缺失。",
+      "source_refs": [
+        "own-fields",
+        "own-snapshot"
+      ]
+    },
+    {
+      "formula_id": "universe-bias-definition",
+      "expression": "U(t) = {i: membership_start_i <= t < membership_end_i}",
+      "meaning": "成员区间及退市处理属于数据版本。",
+      "source_refs": [
+        "ds-data-audit",
+        "own-fields"
+      ]
+    },
+    {
+      "formula_id": "adjustment-definition",
+      "expression": "adjusted_price_t = raw_price_t * adjustment_factor_t",
+      "meaning": "调整因子随所选基准变化；现金分红的总回报另行定义。",
+      "source_refs": [
+        "qa-adjustment",
+        "ds-data-audit"
+      ]
+    },
+    {
+      "formula_id": "trading-calendar-definition",
+      "expression": "window(t,n) = last_n_sessions(calendar,t)",
+      "meaning": "窗口按指定日历取会话；缺失交易与休市须区分。",
+      "source_refs": [
+        "al-calendar",
+        "own-fields"
+      ]
+    },
+    {
+      "formula_id": "missing-data-definition",
+      "expression": "coverage = observed_count / expected_count",
+      "meaning": "覆盖率只描述可观察程度，不证明数据正确。",
+      "source_refs": [
+        "ds-data-audit",
+        "own-fields"
+      ]
+    },
+    {
+      "formula_id": "units-definition",
+      "expression": "canonical_value = raw_value * declared_scale",
+      "meaning": "缩放系数来自字段声明，不能从数值大小猜测。",
+      "source_refs": [
+        "own-units",
+        "own-fields"
+      ]
+    },
+    {
+      "formula_id": "alignment-definition",
+      "expression": "join_key = (instrument, timestamp); feature.available_at <= decision_at",
+      "meaning": "前瞻标签可晚于决策，但不能进入可用特征。",
+      "source_refs": [
+        "al-forward",
+        "own-fields"
+      ]
+    },
+    {
+      "formula_id": "data-fingerprint-definition",
+      "expression": "fingerprint = SHA256(canonical_snapshot_bytes)",
+      "meaning": "相同内容和规范化版本产生相同摘要；修改内容得到新身份。",
+      "source_refs": [
+        "own-snapshot",
+        "own-reproduction"
+      ]
+    },
+    {
+      "formula_id": "return-definition",
+      "expression": "r = P1 / P0 - 1",
+      "meaning": "P0为期初价格，P1为期末价格；结果用小数表示。",
+      "source_refs": [
+        "al-forward",
+        "pa-returns"
+      ]
+    },
+    {
+      "formula_id": "compounding-definition",
+      "expression": "V_T = V_0 * product(1 + r_t)",
+      "meaning": "每个r_t须大于等于−1；累计收益为V_T/V_0−1。",
+      "source_refs": [
+        "al-cumulative",
+        "pa-returns"
+      ]
+    },
+    {
+      "formula_id": "log-return-definition",
+      "expression": "g = ln(P1/P0); sum(g_t) = ln(V_T/V_0)",
+      "meaning": "对数累计转回简单累计收益需exp(sum(g))−1。",
+      "source_refs": [
+        "pa-returns"
+      ]
+    },
+    {
+      "formula_id": "excess-return-definition",
+      "expression": "active_return = r_p - r_b; relative_growth = (1+r_p)/(1+r_b)-1",
+      "meaning": "两项使用同频、同币种、同分红口径。",
+      "source_refs": [
+        "al-beta",
+        "al-quantiles"
+      ]
+    },
+    {
+      "formula_id": "annualization-definition",
+      "expression": "R_ann = product(1+r_t)^(m/n) - 1",
+      "meaning": "n为样本期数，m为声明的一年期数；波动sqrt(m)缩放需额外条件。",
+      "source_refs": [
+        "ds-annualization",
+        "pa-returns"
+      ]
+    },
+    {
+      "formula_id": "benchmark-definition",
+      "expression": "comparison = same_period(strategy, predeclared_benchmark)",
+      "meaning": "比较还需核对总回报、费用及可投资性。",
+      "source_refs": [
+        "al-beta",
+        "pa-returns"
+      ]
+    },
+    {
+      "formula_id": "total-return-definition",
+      "expression": "r_total = (P1 + D - P0) / P0",
+      "meaning": "D为该期间每股现金分配；税费与再投资规则需另行声明。",
+      "source_refs": [
+        "qa-adjustment",
+        "pa-returns"
+      ]
+    },
+    {
+      "formula_id": "market-cap-definition",
+      "expression": "market_cap = price * shares",
+      "meaning": "price为每股价格，shares为对应股本数量。",
+      "source_refs": [
+        "pa-value",
+        "own-units"
+      ]
+    },
+    {
+      "formula_id": "turnover-ratio-definition",
+      "expression": "turnover_ratio = traded_shares / reference_shares",
+      "meaning": "成交量与股本必须使用相同数量单位。",
+      "source_refs": [
+        "pa-value",
+        "own-units"
+      ]
+    },
+    {
+      "formula_id": "liquidity-definition",
+      "expression": "participation = order_quantity / market_volume",
+      "meaning": "参与率是一个约束输入，不是成交概率。",
+      "source_refs": [
+        "pa-cost",
+        "own-stress"
+      ]
+    },
+    {
+      "formula_id": "mean-definition",
+      "expression": "mean = sum(x_i)/n",
+      "meaning": "n只计入规则允许的有效观测，不能把缺失偷偷当零。",
+      "source_refs": [
+        "qlib-normalize",
+        "pa-returns"
+      ]
+    },
+    {
+      "formula_id": "variance-definition",
+      "expression": "s² = sum((x_i-mean)²)/(n-1)",
+      "meaning": "这里采用样本方差，至少两个有效值。",
+      "source_refs": [
+        "qa-std",
+        "qlib-normalize"
+      ]
+    },
+    {
+      "formula_id": "standard-deviation-definition",
+      "expression": "s = sqrt(sum((x_i-mean)²)/(n-1))",
+      "meaning": "采用样本分母，结果与x同单位。",
+      "source_refs": [
+        "qa-std",
+        "pa-returns"
+      ]
+    },
+    {
+      "formula_id": "covariance-definition",
+      "expression": "cov(x,y)=sum((x_i-x̄)(y_i-ȳ))/(n-1)",
+      "meaning": "样本协方差需要至少两对有效观测。",
+      "source_refs": [
+        "al-beta",
+        "bt-risk"
+      ]
+    },
+    {
+      "formula_id": "correlation-definition",
+      "expression": "rho = cov(x,y)/(sd(x)*sd(y))",
+      "meaning": "两边方差必须非零，分母与协方差采用一致样本。",
+      "source_refs": [
+        "al-beta",
+        "al-ic"
+      ]
+    },
+    {
+      "formula_id": "regression-definition",
+      "expression": "y = alpha + beta*x + error; minimize sum(error²)",
+      "meaning": "单解释变量斜率等于cov(x,y)/var(x)，前提是带截距且方差非零。",
+      "source_refs": [
+        "al-beta"
+      ]
+    },
+    {
+      "formula_id": "beta-definition",
+      "expression": "beta = cov(r_asset,r_market)/var(r_market)",
+      "meaning": "无风险调整应两边一致，市场方差不能为零。",
+      "source_refs": [
+        "al-beta"
+      ]
+    },
+    {
+      "formula_id": "confidence-interval-definition",
+      "expression": "CI = mean ± z * sigma/sqrt(n)",
+      "meaning": "这里是已知总体sigma的均值区间；95%近似z=1.96。",
+      "source_refs": [
+        "al-quantiles"
+      ]
+    },
+    {
+      "formula_id": "autocorrelation-definition",
+      "expression": "rho_k = corr(x_t,x_(t-k))",
+      "meaning": "先按时间配对再计算，不以数组环绕替代滞后。",
+      "source_refs": [
+        "al-rank-autocorr",
+        "ds-walk-forward"
+      ]
+    },
+    {
+      "formula_id": "robust-statistics-definition",
+      "expression": "MAD = median(abs(x-median(x))); scale = 1.4826*MAD",
+      "meaning": "若MAD为零，需要明确退化处理，不能无限放大标准化值。",
+      "source_refs": [
+        "qlib-robust",
+        "qlib-fit"
+      ]
+    },
+    {
+      "formula_id": "moving-average-definition",
+      "expression": "SMA_t = sum(P_(t-j),j=0..n-1)/n",
+      "meaning": "窗口按交易日历定义，缺值不悄悄改变n。",
+      "source_refs": [
+        "qa-average"
+      ]
+    },
+    {
+      "formula_id": "ema-definition",
+      "expression": "EMA_t = alpha*P_t + (1-alpha)*EMA_(t-1)",
+      "meaning": "此处教学采用声明初值的递推版，不冒充adjust=True结果。",
+      "source_refs": [
+        "qa-average"
+      ]
+    },
+    {
+      "formula_id": "momentum-definition",
+      "expression": "momentum(t,L,s) = P_(t-s)/P_(t-L)-1",
+      "meaning": "L为回看长度，s为跳过最近期数；本条采用比例收益。",
+      "source_refs": [
+        "qa-momentum",
+        "al-forward"
+      ]
+    },
+    {
+      "formula_id": "mean-reversion-definition",
+      "expression": "deviation_t = P_t/SMA_t - 1",
+      "meaning": "偏离为特征，负偏离不自动成为可执行买入命令。",
+      "source_refs": [
+        "qa-bias",
+        "ds-factor-check"
+      ]
+    },
+    {
+      "formula_id": "rsi-definition",
+      "expression": "RSI = 100*U/(U+D)",
+      "meaning": "U和D分别为非负上涨幅度、下跌绝对幅度的同口径平均。",
+      "source_refs": [
+        "qa-rsi"
+      ]
+    },
+    {
+      "formula_id": "macd-definition",
+      "expression": "DIF=EMA_fast-EMA_slow; DEA=EMA(DIF); histogram=2*(DIF-DEA)",
+      "meaning": "这里采用两倍柱值，周期与EMA初始化另行记录。",
+      "source_refs": [
+        "qa-macd"
+      ]
+    },
+    {
+      "formula_id": "atr-definition",
+      "expression": "TR=max(H-L,abs(H-C_prev),abs(L-C_prev)); ATR=SMA(TR,n)",
+      "meaning": "TR不带方向；ATR百分比需明确除以哪个价格。",
+      "source_refs": [
+        "qa-atr"
+      ]
+    },
+    {
+      "formula_id": "bollinger-definition",
+      "expression": "upper=SMA+k*sd; lower=SMA-k*sd",
+      "meaning": "这里采用样本标准差，与来源rolling.std口径对应。",
+      "source_refs": [
+        "qa-bollinger"
+      ]
+    },
+    {
+      "formula_id": "volume-price-definition",
+      "expression": "OBV_t=OBV_(t-1)+sign(C_t-C_(t-1))*volume_t",
+      "meaning": "平价时本教学增量为0；成交量单位保持一致。",
+      "source_refs": [
+        "qa-volume"
+      ]
+    },
+    {
+      "formula_id": "vwap-definition",
+      "expression": "VWAP = sum(price_i*volume_i)/sum(volume_i)",
+      "meaning": "数量与金额需同单位，分母必须为正。",
+      "source_refs": [
+        "qlib-vwap",
+        "own-units"
+      ]
+    },
+    {
+      "formula_id": "book-to-market-definition",
+      "expression": "BM = book_equity / market_cap",
+      "meaning": "分子分母为同币种；市值为正，负权益单独标记。",
+      "source_refs": [
+        "pa-value"
+      ]
+    },
+    {
+      "formula_id": "earnings-yield-definition",
+      "expression": "EP = earnings / market_cap = EPS / price",
+      "meaning": "EPS与价格的股数及复权口径必须一致。",
+      "source_refs": [
+        "pa-value"
+      ]
+    },
+    {
+      "formula_id": "roe-definition",
+      "expression": "ROE = net_income / ((equity_begin+equity_end)/2)",
+      "meaning": "利润期间与权益端点匹配，平均权益为正时解释较清楚。",
+      "source_refs": [
+        "pa-profit"
+      ]
+    },
+    {
+      "formula_id": "roa-definition",
+      "expression": "ROA = net_income / ((assets_begin+assets_end)/2)",
+      "meaning": "平均资产与利润观察期一致；本公式不自动年化。",
+      "source_refs": [
+        "pa-roa",
+        "pa-profit"
+      ]
+    },
+    {
+      "formula_id": "gross-profitability-definition",
+      "expression": "gross_profitability = (revenue - cost_of_goods_sold) / assets",
+      "meaning": "本定义分母采用声明时点的总资产。",
+      "source_refs": [
+        "pa-profit"
+      ]
+    },
+    {
+      "formula_id": "asset-growth-definition",
+      "expression": "asset_growth = assets_t/assets_(t-1)-1",
+      "meaning": "滞后周期在定义中固定，分母必须为正。",
+      "source_refs": [
+        "pa-growth"
+      ]
+    },
+    {
+      "formula_id": "accruals-definition",
+      "expression": "accruals = (net_income - operating_cashflow) / average_assets",
+      "meaning": "此处采用现金流差近似及平均资产分母。",
+      "source_refs": [
+        "pa-accruals"
+      ]
+    },
+    {
+      "formula_id": "leverage-definition",
+      "expression": "debt_to_assets = interest_bearing_debt / total_assets",
+      "meaning": "先明确债务范围，再固定分母与报告时点。",
+      "source_refs": [
+        "pa-leverage",
+        "own-stress"
+      ]
+    },
+    {
+      "formula_id": "cashflow-quality-definition",
+      "expression": "cash_conversion = operating_cashflow/net_income",
+      "meaning": "利润为零或负时单独展示原始数值，不强行排名。",
+      "source_refs": [
+        "pa-accruals",
+        "pa-value"
+      ]
+    },
+    {
+      "formula_id": "earnings-surprise-definition",
+      "expression": "SUE=(seasonal_change-lagged_mean_change)/lagged_sd_change",
+      "meaning": "本式为历史模型版本；共识版本另绑定forecast_asof。",
+      "source_refs": [
+        "pa-surprise",
+        "own-fields"
+      ]
+    },
+    {
+      "formula_id": "information-coefficient-definition",
+      "expression": "IC_t = corr_Pearson(factor_(i,t),forward_return_(i,t))",
+      "meaning": "仅使用同一截面有效配对，常量序列的IC未定义。",
+      "source_refs": [
+        "al-ic",
+        "al-forward"
+      ]
+    },
+    {
+      "formula_id": "rank-ic-definition",
+      "expression": "RankIC = corr(rank(factor),rank(forward_return))",
+      "meaning": "这里并列值使用平均秩；两边取同一有效样本。",
+      "source_refs": [
+        "al-ic"
+      ]
+    },
+    {
+      "formula_id": "icir-definition",
+      "expression": "ICIR = mean(IC_t)/sample_sd(IC_t)",
+      "meaning": "标准差为零或样本不足时返回未定义，不报无穷优势。",
+      "source_refs": [
+        "ds-factor-check",
+        "al-ic"
+      ]
+    },
+    {
+      "formula_id": "quantile-return-definition",
+      "expression": "raw_spread = mean(return_high)-mean(return_low)",
+      "meaning": "此处两组各自满额的收益差，未按总毛敞口2归一化。",
+      "source_refs": [
+        "al-quantiles",
+        "ds-factor-check"
+      ]
+    },
+    {
+      "formula_id": "neutralization-definition",
+      "expression": "residual_factor = factor - X*OLS(X,factor)",
+      "meaning": "X需明确截距、行业编码和规模变换，避免共线。",
+      "source_refs": [
+        "al-ic",
+        "al-beta"
+      ]
+    },
+    {
+      "formula_id": "factor-turnover-definition",
+      "expression": "membership_turnover = count(current - previous)/count(current)",
+      "meaning": "本条成员换手分母为当前组大小；空组未定义。",
+      "source_refs": [
+        "al-turnover",
+        "pa-cost"
+      ]
+    },
+    {
+      "formula_id": "factor-decay-definition",
+      "expression": "decay(h) = IC(factor_t,return_(t,t+h))",
+      "meaning": "每个h使用相应标签和可比样本，并报告覆盖率。",
+      "source_refs": [
+        "ds-factor-check",
+        "al-rank-autocorr"
+      ]
+    },
+    {
+      "formula_id": "backtesting-definition",
+      "expression": "state_(t+1)=account(state_t,eligible_orders,simulated_fills,costs)",
+      "meaning": "确定性相同输入应重现账本，模拟假设仍需披露。",
+      "source_refs": [
+        "bt-rebalance",
+        "ds-walk-forward"
+      ]
+    },
+    {
+      "formula_id": "oos-definition",
+      "expression": "fit(train_before_t); evaluate(test_after_t)",
+      "meaning": "训练、参数选择、测试和最终冻结样本角色分别记录。",
+      "source_refs": [
+        "ds-walk-forward",
+        "qlib-fit"
+      ]
+    },
+    {
+      "formula_id": "overfitting-definition",
+      "expression": "selection = argmax(score(candidate_j)); record all j",
+      "meaning": "尝试数与选择历史是证据的一部分，而非只保留赢家。",
+      "source_refs": [
+        "ds-walk-forward",
+        "ds-factor-check"
+      ]
+    },
+    {
+      "formula_id": "equal-weight-definition",
+      "expression": "w_i = 1/n",
+      "meaning": "n为本次可配置资产数，非空且身份不重复。",
+      "source_refs": [
+        "bt-weights"
+      ]
+    },
+    {
+      "formula_id": "inverse-volatility-definition",
+      "expression": "w_i = (1/sigma_i)/sum(1/sigma_j)",
+      "meaning": "所有sigma严格为正，波动采用同频和同窗口。",
+      "source_refs": [
+        "bt-inv-vol",
+        "bt-risk"
+      ]
+    },
+    {
+      "formula_id": "risk-contribution-definition",
+      "expression": "sigma_p=sqrt(wᵀΣw); RC_i=w_i*(Σw)_i/sigma_p",
+      "meaning": "采用波动而非方差分解，组合波动需大于零。",
+      "source_refs": [
+        "bt-risk"
+      ]
+    },
+    {
+      "formula_id": "covariance-diversification-definition",
+      "expression": "var_p = wᵀΣw",
+      "meaning": "权重对应矩阵同一资产顺序，矩阵对称且半正定。",
+      "source_refs": [
+        "bt-risk"
+      ]
+    },
+    {
+      "formula_id": "rebalance-definition",
+      "expression": "delta_weight = target_weight - drifted_weight",
+      "meaning": "差值仅是目标交易需求，实际成交还受执行约束。",
+      "source_refs": [
+        "bt-rebalance"
+      ]
+    },
+    {
+      "formula_id": "transaction-cost-definition",
+      "expression": "cost_return = declared_turnover * matching_cost_rate",
+      "meaning": "教学例采用明确匹配的单边换手与综合费率。",
+      "source_refs": [
+        "pa-cost"
+      ]
+    },
+    {
+      "formula_id": "slippage-definition",
+      "expression": "buy_slippage = fill_price/reference_price - 1",
+      "meaning": "卖出不利滑点可用1−fill/reference；统一为正成本方向。",
+      "source_refs": [
+        "pa-cost",
+        "bt-rebalance"
+      ]
+    },
+    {
+      "formula_id": "capacity-definition",
+      "expression": "participation = requested_quantity/available_market_volume",
+      "meaning": "分子分母采用同一交易区间和数量单位。",
+      "source_refs": [
+        "pa-cost",
+        "own-stress"
+      ]
+    },
+    {
+      "formula_id": "etf-exposure-definition",
+      "expression": "underlying_weight_j = sum(etf_weight_i * holding_weight_(i,j))",
+      "meaning": "持仓权重必须绑定披露可用时点和覆盖率。",
+      "source_refs": [
+        "ds-etf",
+        "own-stress"
+      ]
+    },
+    {
+      "formula_id": "sharpe-definition",
+      "expression": "Sharpe_ann = mean(r-rf)/sample_sd(r-rf)*sqrt(m)",
+      "meaning": "m是声明年期数，非一律252。",
+      "source_refs": [
+        "pa-returns",
+        "ds-annualization"
+      ]
+    },
+    {
+      "formula_id": "volatility-definition",
+      "expression": "vol_ann = sample_sd(returns)*sqrt(m)",
+      "meaning": "平方根缩放依赖稳定性与弱相关等条件。",
+      "source_refs": [
+        "qa-std",
+        "pa-returns"
+      ]
+    },
+    {
+      "formula_id": "drawdown-definition",
+      "expression": "drawdown_t = 1 - NAV_t/max(NAV_s,s<=t)",
+      "meaning": "净值与历史峰值为正；全程上涨时回撤为0。",
+      "source_refs": [
+        "pa-drawdown"
+      ]
+    },
+    {
+      "formula_id": "downside-risk-definition",
+      "expression": "downside_dev = sqrt(mean(min(r-target,0)²))",
+      "meaning": "分母为全部有效观察数，不仅是下跌次数。",
+      "source_refs": [
+        "pa-returns",
+        "own-tail"
+      ]
+    },
+    {
+      "formula_id": "value-at-risk-definition",
+      "expression": "VaR_c = sorted_loss[ceil(c*n)-1]",
+      "meaning": "损失定义为负收益，c在0与1之间；边界规则显式记录。",
+      "source_refs": [
+        "own-tail",
+        "own-stress"
+      ]
+    },
+    {
+      "formula_id": "expected-shortfall-definition",
+      "expression": "ES_c = weighted_mean(worst (1-c)*n losses)",
+      "meaning": "边界观察只取剩余质量；这里沿用当前运行时非负损失约定。",
+      "source_refs": [
+        "own-tail"
+      ]
+    },
+    {
+      "formula_id": "concentration-definition",
+      "expression": "HHI = sum(w_i²); effective_n=1/HHI",
+      "meaning": "采用非负归一化权重，资产身份去重。",
+      "source_refs": [
+        "own-stress",
+        "bt-risk"
+      ]
+    },
+    {
+      "formula_id": "stress-testing-definition",
+      "expression": "scenario_return = sum(weight_i * shock_i)",
+      "meaning": "此式为线性单期近似，不含再平衡和非线性冲击。",
+      "source_refs": [
+        "own-stress"
+      ]
+    },
+    {
+      "formula_id": "paper-settlement-definition",
+      "expression": "settle_after = max(horizon_end,outcome_available_at)",
+      "meaning": "结算需引用原始决策和结果快照，状态迁移留痕。",
+      "source_refs": [
+        "own-learning",
+        "ds-forward-pool"
+      ]
+    },
+    {
+      "formula_id": "learning-review-definition",
+      "expression": "proposal = review(frozen_hypothesis,settled_outcome,evidence)",
+      "meaning": "复盘产物与已批准策略分离，修改后的规则进入新实验。",
+      "source_refs": [
+        "own-learning",
+        "ds-review"
+      ]
+    },
+    {
+      "formula_id": "reproducibility-definition",
+      "expression": "run_identity = hash(snapshot,method,parameters,code,environment)",
+      "meaning": "指纹只确认版本身份，不能证明研究假设为真。",
+      "source_refs": [
+        "own-reproduction",
+        "own-snapshot"
+      ]
+    }
+  ],
+  "misconceptions": [
+    {
+      "counterexample_id": "point-in-time-pitfall",
+      "claim": "报告期结束就能知道全部数据",
+      "correction": "年末报表往往晚于年末披露；应按真实可用时间过滤。",
+      "scenario": "收盘15:00决策，18:00发布的财报不能用于这次决策。",
+      "source_refs": [
+        "own-pit",
+        "ds-data-audit"
+      ]
+    },
+    {
+      "counterexample_id": "publication-lag-pitfall",
+      "claim": "公告日期相同就表示当天开盘前已知",
+      "correction": "只有日期而没有时刻时，应保留不确定性，不能推断盘前可用。",
+      "scenario": "公告18:00发布、18:03接收，当天15:00的排序不能引用它。",
+      "source_refs": [
+        "own-fields",
+        "ds-data-audit"
+      ]
+    },
+    {
+      "counterexample_id": "revisions-pitfall",
+      "claim": "用最新修订值重算过去更准确所以没有偏差",
+      "correction": "它回答了另一个信息集下的问题，不能当作当时可执行结果。",
+      "scenario": "4月发布利润10，6月修订为8；5月的历史研究仍应读取10。",
+      "source_refs": [
+        "own-fields",
+        "own-snapshot"
+      ]
+    },
+    {
+      "counterexample_id": "universe-bias-pitfall",
+      "claim": "今天下载的完整名单也是历史完整名单",
+      "correction": "完整只相对于下载日期；需要历史成员记录并报告缺口。",
+      "scenario": "十年前有100家公司，今天剩80家；只回测80家会漏掉20家历史经历。",
+      "source_refs": [
+        "ds-data-audit",
+        "own-fields"
+      ]
+    },
+    {
+      "counterexample_id": "adjustment-pitfall",
+      "claim": "复权价格就是实际能成交的价格",
+      "correction": "复权是分析口径，交易还要回到原价、股数和现金流。",
+      "scenario": "1拆2后股价从100到50、股数翻倍，持仓价值并没有因拆股本身减半。",
+      "source_refs": [
+        "qa-adjustment",
+        "ds-data-audit"
+      ]
+    },
+    {
+      "counterexample_id": "trading-calendar-pitfall",
+      "claim": "日期字符串相同就表示同步收盘",
+      "correction": "时区和交易会话不同，信息集和可执行时点也不同。",
+      "scenario": "一地周一休市，另一地开市，不能把两地的第20行直接看作同一天。",
+      "source_refs": [
+        "al-calendar",
+        "own-fields"
+      ]
+    },
+    {
+      "counterexample_id": "missing-data-pitfall",
+      "claim": "能填值就说明数据已经补齐",
+      "correction": "填补是模型假设，原始缺口及其影响必须保留。",
+      "scenario": "暂停交易的日期没有成交价；填成0会凭空形成100%跌幅。",
+      "source_refs": [
+        "ds-data-audit",
+        "own-fields"
+      ]
+    },
+    {
+      "counterexample_id": "units-pitfall",
+      "claim": "大约乘100就能修正异常数量级",
+      "correction": "不同字段可能需要100、10000或不换算，必须依赖声明。",
+      "scenario": "5万元应规范为50000元；5%的收益应规范为0.05。",
+      "source_refs": [
+        "own-units",
+        "own-fields"
+      ]
+    },
+    {
+      "counterexample_id": "alignment-pitfall",
+      "claim": "两个数组长度相同就已经对齐",
+      "correction": "还需要身份与时间键逐项一致。",
+      "scenario": "价格表少了一只股票时，直接按行相乘会把另一只股票的收益配错。",
+      "source_refs": [
+        "al-forward",
+        "own-fields"
+      ]
+    },
+    {
+      "counterexample_id": "data-fingerprint-pitfall",
+      "claim": "摘要匹配说明数据没有偏差",
+      "correction": "它只验证身份；错误数据也可以有稳定的摘要。",
+      "scenario": "同一价格快照改变一条记录，后续运行应得到不同的数据引用。",
+      "source_refs": [
+        "own-snapshot",
+        "own-reproduction"
+      ]
+    },
+    {
+      "counterexample_id": "return-pitfall",
+      "claim": "价格涨了10元就等于赚了10%",
+      "correction": "比例取决于期初价格；20涨到30的收益是50%。",
+      "scenario": "100涨到110，收益为110/100−1=0.10，即10%。",
+      "source_refs": [
+        "al-forward",
+        "pa-returns"
+      ]
+    },
+    {
+      "counterexample_id": "compounding-pitfall",
+      "claim": "正负收益互相抵消就一定不亏",
+      "correction": "复利的乘法结构使波动路径影响最终净值。",
+      "scenario": "先涨10%再跌10%：1.1×0.9=0.99，累计亏损1%。",
+      "source_refs": [
+        "al-cumulative",
+        "pa-returns"
+      ]
+    },
+    {
+      "counterexample_id": "log-return-pitfall",
+      "claim": "对数收益1就是上涨100%",
+      "correction": "对数单位不同，必须通过指数函数转换。",
+      "scenario": "价格比为e时，对数收益为1，简单收益却约为171.83%。",
+      "source_refs": [
+        "pa-returns"
+      ]
+    },
+    {
+      "counterexample_id": "excess-return-pitfall",
+      "claim": "只要绝对赚钱就跑赢了基准",
+      "correction": "要用同期间的基准收益作比较。",
+      "scenario": "策略5%、指数8%，算术主动收益为−3个百分点，不是正超额。",
+      "source_refs": [
+        "al-beta",
+        "al-quantiles"
+      ]
+    },
+    {
+      "counterexample_id": "annualization-pitfall",
+      "claim": "所有收益和风险都乘252就成年化",
+      "correction": "不同统计量使用不同转换，序列相关还会破坏平方根规则。",
+      "scenario": "每月固定1%持续12个月，复合年收益约12.6825%，不是精确12%。",
+      "source_refs": [
+        "ds-annualization",
+        "pa-returns"
+      ]
+    },
+    {
+      "counterexample_id": "benchmark-pitfall",
+      "claim": "跑赢一个基准就说明所有风险都更优",
+      "correction": "基准覆盖有限，需要同时看回撤、暴露和成本。",
+      "scenario": "股票策略和现金基准比较只能回答一部分问题，还应检查市场暴露。",
+      "source_refs": [
+        "al-beta",
+        "pa-returns"
+      ]
+    },
+    {
+      "counterexample_id": "total-return-pitfall",
+      "claim": "除息后的价格下跌全部是经济损失",
+      "correction": "现金分配应在同一持有期核算，但还要考虑费用与税费。",
+      "scenario": "100变98但收到分红3，一期总回报为1%，价格收益为−2%。",
+      "source_refs": [
+        "qa-adjustment",
+        "pa-returns"
+      ]
+    },
+    {
+      "counterexample_id": "market-cap-pitfall",
+      "claim": "总市值和流通市值可以随意互换",
+      "correction": "同一价格下不同股本分母会改变估值和排序。",
+      "scenario": "每股20元、100万股总股本，总市值为2000万元。",
+      "source_refs": [
+        "pa-value",
+        "own-units"
+      ]
+    },
+    {
+      "counterexample_id": "turnover-ratio-pitfall",
+      "claim": "市场换手率就是策略今天买卖了多少仓位",
+      "correction": "市场成交与组合自己的权重变化是不同对象。",
+      "scenario": "成交2万股、流通股100万股，市场换手率为2%。",
+      "source_refs": [
+        "pa-value",
+        "own-units"
+      ]
+    },
+    {
+      "counterexample_id": "liquidity-pitfall",
+      "claim": "有收盘价就一定能按收盘价全部成交",
+      "correction": "报价、可用流动性和执行规则决定实际成交条件。",
+      "scenario": "一笔订单占当天成交量50%，即使信号很强也可能明显冲击价格。",
+      "source_refs": [
+        "pa-cost",
+        "own-stress"
+      ]
+    },
+    {
+      "counterexample_id": "mean-pitfall",
+      "claim": "均值就是最常发生的值",
+      "correction": "众数、中位数与均值回答不同问题。",
+      "scenario": "1、3、5的均值为3；新增100会明显改变中心。",
+      "source_refs": [
+        "qlib-normalize",
+        "pa-returns"
+      ]
+    },
+    {
+      "counterexample_id": "variance-pitfall",
+      "claim": "所有库的std默认分母一样",
+      "correction": "NumPy与滚动计算常有不同默认值，需显式记录ddof。",
+      "scenario": "1、3、5相对均值3的平方差和为8，样本方差为4。",
+      "source_refs": [
+        "qa-std",
+        "qlib-normalize"
+      ]
+    },
+    {
+      "counterexample_id": "standard-deviation-pitfall",
+      "claim": "标准差小就保证不会大幅亏损",
+      "correction": "历史窗口可能漏掉尾部、停牌或结构变化。",
+      "scenario": "1、3、5的样本方差4，标准差为2。",
+      "source_refs": [
+        "qa-std",
+        "pa-returns"
+      ]
+    },
+    {
+      "counterexample_id": "covariance-pitfall",
+      "claim": "协方差大就说明关系比另一对更强",
+      "correction": "改用不同单位会改变数值，比较强弱常需无量纲相关。",
+      "scenario": "x为1、3、5，y为2、6、10，样本协方差为8。",
+      "source_refs": [
+        "al-beta",
+        "bt-risk"
+      ]
+    },
+    {
+      "counterexample_id": "correlation-pitfall",
+      "claim": "相关高就证明可赚钱的因果规律",
+      "correction": "还需时间可用性、样本外和成本等独立检查。",
+      "scenario": "y=2x且x不恒定时相关为1；它不说明x导致y。",
+      "source_refs": [
+        "al-beta",
+        "al-ic"
+      ]
+    },
+    {
+      "counterexample_id": "regression-pitfall",
+      "claim": "回归拟合好就能稳定预测未来",
+      "correction": "拟合优度属于样本内描述，必须另做样本外评价。",
+      "scenario": "y=1+2x的无噪声样本会得到截距1、斜率2。",
+      "source_refs": [
+        "al-beta"
+      ]
+    },
+    {
+      "counterexample_id": "beta-pitfall",
+      "claim": "Beta小就等于整体风险小",
+      "correction": "它只覆盖指定线性市场维度。",
+      "scenario": "市场每变1个百分点、样本资产同步变2个百分点，斜率约2。",
+      "source_refs": [
+        "al-beta"
+      ]
+    },
+    {
+      "counterexample_id": "confidence-interval-pitfall",
+      "claim": "95%区间意味着下一期收益95%落在里面",
+      "correction": "参数区间与单次观测的预测区间不同。",
+      "scenario": "均值10、已知sigma=2、n=100，95%区间为[9.608,10.392]。",
+      "source_refs": [
+        "al-quantiles"
+      ]
+    },
+    {
+      "counterexample_id": "autocorrelation-pitfall",
+      "claim": "一千行就等于一千个独立实验",
+      "correction": "重叠与相关会降低有效信息量。",
+      "scenario": "20日持有收益每天取样会共享大量未来日期，不能按独立样本计算把握度。",
+      "source_refs": [
+        "al-rank-autocorr",
+        "ds-walk-forward"
+      ]
+    },
+    {
+      "counterexample_id": "robust-statistics-pitfall",
+      "claim": "缩尾以后尾部风险就消失了",
+      "correction": "处理后的特征不代表原始损失分布，风险仍需看原始值。",
+      "scenario": "1、2、3、100的均值26.5，中位数2.5；两者描述不同中心。",
+      "source_refs": [
+        "qlib-robust",
+        "qlib-fit"
+      ]
+    },
+    {
+      "counterexample_id": "moving-average-pitfall",
+      "claim": "今天收盘均线能用来保证今天收盘价成交",
+      "correction": "信号完成与实际执行必须按时间顺序建模。",
+      "scenario": "最近价格10、12、14，三期均线12。",
+      "source_refs": [
+        "qa-average"
+      ]
+    },
+    {
+      "counterexample_id": "ema-pitfall",
+      "claim": "名字都叫EMA所以数值必然相同",
+      "correction": "adjust、初值和min_periods会影响早期值。",
+      "scenario": "上一EMA10、现价14、alpha=0.5，递推结果12。",
+      "source_refs": [
+        "qa-average"
+      ]
+    },
+    {
+      "counterexample_id": "momentum-pitfall",
+      "claim": "过去涨幅大就保证未来继续涨",
+      "correction": "动量是条件性经验假设，可能反转并受成本影响。",
+      "scenario": "100到120的收益动量20%，价格差动量为20元，两者单位不同。",
+      "source_refs": [
+        "qa-momentum",
+        "al-forward"
+      ]
+    },
+    {
+      "counterexample_id": "mean-reversion-pitfall",
+      "claim": "跌得足够多就必然回到旧高点",
+      "correction": "结构变化和退市会使旧均值失效。",
+      "scenario": "价格80、历史均线100，偏离−20%；若基本价值改变，价格未必回到100。",
+      "source_refs": [
+        "qa-bias",
+        "ds-factor-check"
+      ]
+    },
+    {
+      "counterexample_id": "rsi-pitfall",
+      "claim": "RSI超过70就一定马上下跌",
+      "correction": "超买阈值是研究规则，趋势中可能持续高位。",
+      "scenario": "U=2、D=1时RSI约66.67；高位可维持很久。",
+      "source_refs": [
+        "qa-rsi"
+      ]
+    },
+    {
+      "counterexample_id": "macd-pitfall",
+      "claim": "不同平台柱值不同就是数据错误",
+      "correction": "先核对倍数和EMA算法，再排查数据。",
+      "scenario": "DIF为3、DEA为2，两倍柱值为2，不乘2版本为1。",
+      "source_refs": [
+        "qa-macd"
+      ]
+    },
+    {
+      "counterexample_id": "atr-pitfall",
+      "claim": "高低差就是所有情况下的真实波幅",
+      "correction": "跨日跳空可能大于当日高低差。",
+      "scenario": "最高12、最低8、前收7，TR=max(4,5,1)=5。",
+      "source_refs": [
+        "qa-atr"
+      ]
+    },
+    {
+      "counterexample_id": "bollinger-pitfall",
+      "claim": "价格有95%概率永远在两倍带内",
+      "correction": "滚动价格相关且分布可厚尾，这种概率解释缺少条件。",
+      "scenario": "均线100、标准差5、k=2，带为90到110；不是保证区间。",
+      "source_refs": [
+        "qa-bollinger"
+      ]
+    },
+    {
+      "counterexample_id": "volume-price-pitfall",
+      "claim": "所有上涨日成交都是买方资金净流入",
+      "correction": "每笔成交都有双方，方向代理不能代替真实订单流。",
+      "scenario": "收盘上涨且成交1000股，OBV增加1000，不表示净买入1000股。",
+      "source_refs": [
+        "qa-volume"
+      ]
+    },
+    {
+      "counterexample_id": "vwap-pitfall",
+      "claim": "用高低收三价平均就得到精确VWAP",
+      "correction": "那是典型价近似，不含真实成交权重。",
+      "scenario": "10元成交2股、20元成交1股，VWAP=40/3≈13.33元。",
+      "source_refs": [
+        "qlib-vwap",
+        "own-units"
+      ]
+    },
+    {
+      "counterexample_id": "book-to-market-pitfall",
+      "claim": "账面市值比越高股票就一定越便宜且安全",
+      "correction": "账面资产质量和盈利能力不同，需要其他证据。",
+      "scenario": "权益50、市值100，BM为0.5；不意味着合理价格必定为50。",
+      "source_refs": [
+        "pa-value"
+      ]
+    },
+    {
+      "counterexample_id": "earnings-yield-pitfall",
+      "claim": "EP为10%就意味着每年保证拿到10%收益",
+      "correction": "会计利润与分红、未来价格变化不是同一对象。",
+      "scenario": "EPS为2、价格20，EP为10%；它不是承诺的股东现金回报。",
+      "source_refs": [
+        "pa-value"
+      ]
+    },
+    {
+      "counterexample_id": "roe-pitfall",
+      "claim": "ROE上升一定来自经营改善",
+      "correction": "回购或加杠杆压低权益分母也可能提高ROE。",
+      "scenario": "利润10、平均权益50，ROE为20%。",
+      "source_refs": [
+        "pa-profit"
+      ]
+    },
+    {
+      "counterexample_id": "roa-pitfall",
+      "claim": "名字同为ROA就可以跨平台直接比较",
+      "correction": "利润、资产时点和年化规则可能不同。",
+      "scenario": "半年利润5、平均资产100，半年ROA为5%，不是未经说明的年化值。",
+      "source_refs": [
+        "pa-roa",
+        "pa-profit"
+      ]
+    },
+    {
+      "counterexample_id": "gross-profitability-pitfall",
+      "claim": "毛利率和毛利资产比是同一个指标",
+      "correction": "前者分母是收入，后者是资产，研究含义不同。",
+      "scenario": "收入100、成本70、资产150，比率为20%。",
+      "source_refs": [
+        "pa-profit"
+      ]
+    },
+    {
+      "counterexample_id": "asset-growth-pitfall",
+      "claim": "资产增长越快未来股票收益就一定越低",
+      "correction": "这是待检验的条件性假设，不能当确定规律。",
+      "scenario": "资产100变120，增长20%；若来自并购，应保留事件解释。",
+      "source_refs": [
+        "pa-growth"
+      ]
+    },
+    {
+      "counterexample_id": "accruals-pitfall",
+      "claim": "现金流低于利润就是造假",
+      "correction": "权责发生制、账期与季节性都可能形成差异，应追踪细项。",
+      "scenario": "利润12、经营现金流8、平均资产100，应计比为4%。",
+      "source_refs": [
+        "pa-accruals"
+      ]
+    },
+    {
+      "counterexample_id": "leverage-pitfall",
+      "claim": "所有叫杠杆的比率都能互相代替",
+      "correction": "债务范围、分母与频率不同会改变风险解释。",
+      "scenario": "有息债务60、资产100，比率60%；它不自动等于总负债率。",
+      "source_refs": [
+        "pa-leverage",
+        "own-stress"
+      ]
+    },
+    {
+      "counterexample_id": "cashflow-quality-pitfall",
+      "claim": "现金流高于利润就一定是高质量公司",
+      "correction": "现金收付时点可以暂时改善，需结合负债和持续性。",
+      "scenario": "利润10、经营现金流12，转换比1.2；不能忽略延迟付款的影响。",
+      "source_refs": [
+        "pa-accruals",
+        "pa-value"
+      ]
+    },
+    {
+      "counterexample_id": "earnings-surprise-pitfall",
+      "claim": "同比盈利增长就是盈利超预期",
+      "correction": "增长比较过去，意外比较事先预期，二者可以方向相反。",
+      "scenario": "实际2、事前预期1.5，差0.5；标准化还要明确历史误差尺度。",
+      "source_refs": [
+        "pa-surprise",
+        "own-fields"
+      ]
+    },
+    {
+      "counterexample_id": "information-coefficient-pitfall",
+      "claim": "高IC就能直接得到可交易收益",
+      "correction": "还缺持仓规则、成本、容量和样本外证据。",
+      "scenario": "因子1、2、3对应未来收益1%、2%、3%，该截面Pearson IC为1。",
+      "source_refs": [
+        "al-ic",
+        "al-forward"
+      ]
+    },
+    {
+      "counterexample_id": "rank-ic-pitfall",
+      "claim": "把并列项任意编号不会影响Rank IC",
+      "correction": "任意排序会制造或改变关联。",
+      "scenario": "因子1、2、2的秩为1、2.5、2.5，不应随行顺序拆开并列。",
+      "source_refs": [
+        "al-ic"
+      ]
+    },
+    {
+      "counterexample_id": "icir-pitfall",
+      "claim": "ICIR高就证明跨市场稳定有效",
+      "correction": "它依赖当前样本、频率与标签定义，仍需独立验证。",
+      "scenario": "IC为0.1、0.3时均值0.2、样本标准差约0.1414，ICIR约1.4142。",
+      "source_refs": [
+        "ds-factor-check",
+        "al-ic"
+      ]
+    },
+    {
+      "counterexample_id": "quantile-return-pitfall",
+      "claim": "分组差4%就是投入1元净赚4分",
+      "correction": "需说明多空资金、毛敞口和成本，归一化可能改变数值。",
+      "scenario": "高组3%、5%均值4%，低组−1%、1%均值0%，原始组差4%。",
+      "source_refs": [
+        "al-quantiles",
+        "ds-factor-check"
+      ]
+    },
+    {
+      "counterexample_id": "neutralization-pitfall",
+      "claim": "行业中性就等于完全没有行业风险",
+      "correction": "线性残差、持仓权重和未来暴露仍可能不同。",
+      "scenario": "小盘股整体因子高，控制规模后可检查剩余关联。",
+      "source_refs": [
+        "al-ic",
+        "al-beta"
+      ]
+    },
+    {
+      "counterexample_id": "factor-turnover-pitfall",
+      "claim": "成员换手50%就等于成交金额占净值50%",
+      "correction": "权重、现金和价格漂移会改变实际交易量。",
+      "scenario": "原组A、B，新组B、C，成员换手为1/2。",
+      "source_refs": [
+        "al-turnover",
+        "pa-cost"
+      ]
+    },
+    {
+      "counterexample_id": "factor-decay-pitfall",
+      "claim": "排名稳定就表示收益预测也稳定",
+      "correction": "稳定信号也可能长期与未来收益无关。",
+      "scenario": "1日IC高、20日IC低，只说明该样本不同期限的关联不同。",
+      "source_refs": [
+        "ds-factor-check",
+        "al-rank-autocorr"
+      ]
+    },
+    {
+      "counterexample_id": "backtesting-pitfall",
+      "claim": "回测曲线漂亮就证明实盘能重复",
+      "correction": "模拟执行和历史选择有边界，需样本外、压力与纸面观察。",
+      "scenario": "收盘后形成的信号应按后续可成交规则处理，不能回填当日收盘成交。",
+      "source_refs": [
+        "bt-rebalance",
+        "ds-walk-forward"
+      ]
+    },
+    {
+      "counterexample_id": "oos-pitfall",
+      "claim": "随机打乱金融时间序列总能得到可靠样本外",
+      "correction": "它可能把未来状态和重叠标签带入训练。",
+      "scenario": "先用2020–2022训练，再看2023；若因2023结果改规则，应再留新测试。",
+      "source_refs": [
+        "ds-walk-forward",
+        "qlib-fit"
+      ]
+    },
+    {
+      "counterexample_id": "overfitting-pitfall",
+      "claim": "只公布最优策略的显著性就足够",
+      "correction": "选择偏差需要额外控制与独立复验。",
+      "scenario": "试一千个随机信号后选最好一个，在新数据上可能回到随机水平。",
+      "source_refs": [
+        "ds-walk-forward",
+        "ds-factor-check"
+      ]
+    },
+    {
+      "counterexample_id": "equal-weight-pitfall",
+      "claim": "等权就没有集中风险",
+      "correction": "资产可能高度相关或集中在同一行业。",
+      "scenario": "三个资产各占1/3资金，不是各买一股。",
+      "source_refs": [
+        "bt-weights"
+      ]
+    },
+    {
+      "counterexample_id": "inverse-volatility-pitfall",
+      "claim": "倒波动配置总是严格风险平价",
+      "correction": "相关矩阵会影响完整风险贡献。",
+      "scenario": "波动10%、20%两个资产，权重为2/3、1/3。",
+      "source_refs": [
+        "bt-inv-vol",
+        "bt-risk"
+      ]
+    },
+    {
+      "counterexample_id": "risk-contribution-pitfall",
+      "claim": "持仓资金占比就是风险占比",
+      "correction": "资产波动和相关性都会改变风险份额。",
+      "scenario": "两只波动相同且不相关的等权资产贡献相等；相关结构改变后需重算。",
+      "source_refs": [
+        "bt-risk"
+      ]
+    },
+    {
+      "counterexample_id": "covariance-diversification-pitfall",
+      "claim": "持有很多股票就一定分散",
+      "correction": "共同市场与行业暴露可能高度重合。",
+      "scenario": "等权两资产方差0.04、0.09且不相关，组合方差0.0325。",
+      "source_refs": [
+        "bt-risk"
+      ]
+    },
+    {
+      "counterexample_id": "rebalance-pitfall",
+      "claim": "目标权重一生成就代表组合已经达到",
+      "correction": "必须经过订单、成交和账户核算。",
+      "scenario": "原等权组合中一只上涨后变60%，恢复50%需要卖出而非假定仍等权。",
+      "source_refs": [
+        "bt-rebalance"
+      ]
+    },
+    {
+      "counterexample_id": "transaction-cost-pitfall",
+      "claim": "手续费很低就可以忽略所有成本",
+      "correction": "价差、冲击与未成交机会成本也可能显著。",
+      "scenario": "换手0.5、匹配综合费率0.002，成本占净值0.001，即10基点。",
+      "source_refs": [
+        "pa-cost"
+      ]
+    },
+    {
+      "counterexample_id": "slippage-pitfall",
+      "claim": "用最低价买入最高价卖出的回测没有滑点问题",
+      "correction": "这种成交假设使用了不可提前获得的优势。",
+      "scenario": "买入参照100、成交100.2，买入不利滑点为0.2%。",
+      "source_refs": [
+        "pa-cost",
+        "bt-rebalance"
+      ]
+    },
+    {
+      "counterexample_id": "capacity-pitfall",
+      "claim": "历史日均成交很大就能随时成交同等数量",
+      "correction": "流动性有时段分布且会在压力中消失。",
+      "scenario": "订单占可用区间成交量30%，应测试更高冲击和未成交。",
+      "source_refs": [
+        "pa-cost",
+        "own-stress"
+      ]
+    },
+    {
+      "counterexample_id": "etf-exposure-pitfall",
+      "claim": "买两只不同名称ETF就得到两份独立风险",
+      "correction": "底层资产和市场暴露可能高度重叠。",
+      "scenario": "两个ETF各50%，若都把40%投同一行业，组合该行业仍为40%。",
+      "source_refs": [
+        "ds-etf",
+        "own-stress"
+      ]
+    },
+    {
+      "counterexample_id": "sharpe-pitfall",
+      "claim": "Sharpe最高就代表未来最好或最安全",
+      "correction": "估计噪声、尾部风险、成本和选择偏差仍需分析。",
+      "scenario": "月超额均值2%、标准差4%，按12期近似年化Sharpe约1.732。",
+      "source_refs": [
+        "pa-returns",
+        "ds-annualization"
+      ]
+    },
+    {
+      "counterexample_id": "volatility-pitfall",
+      "claim": "波动率15%表示最多亏15%",
+      "correction": "标准差是离散尺度，不是尾部或最大损失界限。",
+      "scenario": "日波动1%按252期近似年化约15.87%，不是未来损失上限。",
+      "source_refs": [
+        "qa-std",
+        "pa-returns"
+      ]
+    },
+    {
+      "counterexample_id": "drawdown-pitfall",
+      "claim": "回撤25%后涨25%就回到峰值",
+      "correction": "90回120需上涨33.33%，亏损与修复基数不同。",
+      "scenario": "净值100、120、90、110，最大回撤为1−90/120=25%。",
+      "source_refs": [
+        "pa-drawdown"
+      ]
+    },
+    {
+      "counterexample_id": "downside-risk-pitfall",
+      "claim": "下行风险小就没有极端亏损",
+      "correction": "有限样本和目标选择仍会漏掉尾部情景。",
+      "scenario": "收益−2%、1%，目标0，下行偏差sqrt(0.0004/2)约1.414%。",
+      "source_refs": [
+        "pa-returns",
+        "own-tail"
+      ]
+    },
+    {
+      "counterexample_id": "value-at-risk-pitfall",
+      "claim": "99% VaR表示最大只会亏到这个值",
+      "correction": "更大的损失仍可能发生，且样本可能低估尾部。",
+      "scenario": "十个损失从1%到10%，80% nearest-rank VaR为8%。",
+      "source_refs": [
+        "own-tail",
+        "own-stress"
+      ]
+    },
+    {
+      "counterexample_id": "expected-shortfall-pitfall",
+      "claim": "ES就是把所有超过VaR的样本平均",
+      "correction": "离散样本和并列值可能让尾部质量超过指定比例。",
+      "scenario": "十个损失1%到10%，80%尾部是9%和10%，ES为9.5%。",
+      "source_refs": [
+        "own-tail"
+      ]
+    },
+    {
+      "counterexample_id": "concentration-pitfall",
+      "claim": "持仓数相同就有相同分散程度",
+      "correction": "权重不均和共同暴露会显著改变风险。",
+      "scenario": "权重60%、40%，HHI为0.36+0.16=0.52，有效数量约1.92。",
+      "source_refs": [
+        "own-stress",
+        "bt-risk"
+      ]
+    },
+    {
+      "counterexample_id": "stress-testing-pitfall",
+      "claim": "通过几种情景就能保证抵御所有黑天鹅",
+      "correction": "情景覆盖有限，未知机制和流动性反馈仍可能出现。",
+      "scenario": "60%资产跌20%、40%资产跌10%，线性组合情景收益为−16%。",
+      "source_refs": [
+        "own-stress"
+      ]
+    },
+    {
+      "counterexample_id": "paper-settlement-pitfall",
+      "claim": "看到中途盈利就可以记为成功",
+      "correction": "中途状态与事前定义的最终评价不是同一标签。",
+      "scenario": "计划观察20个交易日，第5日浮盈不能充当完整20日结算结果。",
+      "source_refs": [
+        "own-learning",
+        "ds-forward-pool"
+      ]
+    },
+    {
+      "counterexample_id": "learning-review-pitfall",
+      "claim": "最近亏损就应该立即让AI重写全部权重",
+      "correction": "短期噪声与事后选择可能加重过拟合，需要审核与复验。",
+      "scenario": "一次失败可提出成本敏感性复验，不足以自动删除整个因子。",
+      "source_refs": [
+        "own-learning",
+        "ds-review"
+      ]
+    },
+    {
+      "counterexample_id": "reproducibility-pitfall",
+      "claim": "代码一样就保证研究结果完全可复现",
+      "correction": "数据、环境、随机性及模型服务版本也可能变化。",
+      "scenario": "数据修订后重跑产生不同结果，应显示新快照与差异而非改写旧报告。",
+      "source_refs": [
+        "own-reproduction",
+        "own-snapshot"
+      ]
+    }
+  ]
+}
