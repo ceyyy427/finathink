@@ -1,0 +1,12 @@
+{
+  "schema_version": "factor-validation-sample.v1",
+  "seed": 2501,
+  "assets": 64,
+  "observations": 756,
+  "start": "2021-01-04",
+  "calendar": "business-day observations; synthetic, no exchange calendar",
+  "generator": "integer-modular-v2",
+  "data_mode": "SAMPLE",
+  "price_basis": "RAW",
+  "variant": "baseline"
+}

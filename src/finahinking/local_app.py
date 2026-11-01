@@ -1406,6 +1406,28 @@ class LocalApplication:
         except (ValueError, TypeError):
             return 422, "application/json", {"error": "因子输入或证据绑定无效，请重新读取定义和范围。"}
 
+    def _factor_suite_route(self, method, clean, body, query):
+        if clean not in {"/research/factor-suites", "/api/research/factor-suites"}:
+            return None
+        try:
+            if method == "POST" and clean.startswith("/api/"):
+                denied = self._data_write_guard(body)
+                if denied is not None:
+                    return denied
+                values = {k: v for k, v in (body or {}).items() if k != "_csrf"}
+                return 202, "application/json", self.research_service.create_factor_suite(values)
+            if method != "GET":
+                return 405, "application/json", {"error": "请显式提交研究或读取已有评分。"}
+            study_id = (query or {}).get("study", [None])[0]
+            if clean.startswith("/api/"):
+                if study_id:
+                    return 200, "application/json", self.research_service.factor_study(study_id)
+                return 200, "application/json", {"studies": [{"study_id": r["study_id"], "state": r["state"]} for r in self.research_service.factor_studies.list() if r["spec"].get("version") == "factor-workbench.suite.v1"]}
+            from .research.factor_suite_page import suite_page
+            return 200, "text/html; charset=utf-8", self.render_shell("/research/experiments", "因子检验", suite_page(self.research_service, self.csrf_token, study_id))
+        except (KeyError, TypeError, ValueError):
+            return 422, "application/json", {"error": "研究输入或证据无效，请核对候选数量、数据合同和研究版本。"}
+
     def _factor_library_route(self, method, clean, body, query):
         if clean not in {"/research/factor-library", "/api/research/factor-library", "/api/research/factor-library/studies"}:
             return None
@@ -1774,6 +1796,9 @@ class LocalApplication:
         asset_response = self._asset_workspace_route(method, clean, query)
         if asset_response is not None:
             return asset_response
+        suite_response = self._factor_suite_route(method, clean, body, query)
+        if suite_response is not None:
+            return suite_response
         library_response = self._factor_library_route(method, clean, body, query)
         if library_response is not None:
             return library_response

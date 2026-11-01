@@ -1,0 +1,650 @@
+{
+  "schema_version": "factor-counterexamples.v1",
+  "version": "1.0.0",
+  "cases": [
+    {
+      "case_id": "counter-01",
+      "title": "反向信号未达到预登记方向",
+      "scenario": "adverse_direction",
+      "input": {
+        "fixture_version": "eight-assets-20-observations.v1",
+        "periods": 20,
+        "assets": 8,
+        "start": "2025-01-01T00:00:00Z",
+        "seed": "deterministic-scalar-formula",
+        "evaluation_positions": [
+          4,
+          18
+        ],
+        "train_positions": [
+          0,
+          4
+        ],
+        "scenario_mutation": "adverse_direction"
+      },
+      "expected": {
+        "path": [
+          "status"
+        ],
+        "value": "FALSIFIED",
+        "tolerance": 1e-12
+      },
+      "correction": "保持方向登记，另开独立试验；不得看完测试集倒转方向。",
+      "scope": "固定合成输入下的工程或预登记方向/成本反例；不是用户市场表现，也不授予金融用途。"
+    },
+    {
+      "case_id": "counter-02",
+      "title": "双边换仓费用击穿收益",
+      "scenario": "cost_destroys_edge",
+      "input": {
+        "fixture_version": "eight-assets-20-observations.v1",
+        "periods": 20,
+        "assets": 8,
+        "start": "2025-01-01T00:00:00Z",
+        "seed": "deterministic-scalar-formula",
+        "evaluation_positions": [
+          4,
+          18
+        ],
+        "train_positions": [
+          0,
+          4
+        ],
+        "scenario_mutation": "cost_destroys_edge"
+      },
+      "expected": {
+        "path": [
+          "status"
+        ],
+        "value": "FALSIFIED",
+        "tolerance": 1e-12
+      },
+      "correction": "降低换手或重新检验成本后的假设；保留原失败。",
+      "scope": "固定合成输入下的工程或预登记方向/成本反例；不是用户市场表现，也不授予金融用途。"
+    },
+    {
+      "case_id": "counter-03",
+      "title": "已选持仓缺少价格标记",
+      "scenario": "missing_marks",
+      "input": {
+        "fixture_version": "eight-assets-20-observations.v1",
+        "periods": 20,
+        "assets": 8,
+        "start": "2025-01-01T00:00:00Z",
+        "seed": "deterministic-scalar-formula",
+        "evaluation_positions": [
+          4,
+          18
+        ],
+        "train_positions": [
+          0,
+          4
+        ],
+        "scenario_mutation": "missing_marks"
+      },
+      "expected": {
+        "path": [
+          "status"
+        ],
+        "value": "NEEDS_DATA",
+        "tolerance": 1e-12
+      },
+      "correction": "补齐真实价格，不静默删掉坏资产后重新归一。",
+      "scope": "固定合成输入下的工程或预登记方向/成本反例；不是用户市场表现，也不授予金融用途。"
+    },
+    {
+      "case_id": "counter-04",
+      "title": "股票池有效覆盖不足",
+      "scenario": "low_coverage",
+      "input": {
+        "fixture_version": "eight-assets-20-observations.v1",
+        "periods": 20,
+        "assets": 8,
+        "start": "2025-01-01T00:00:00Z",
+        "seed": "deterministic-scalar-formula",
+        "evaluation_positions": [
+          4,
+          18
+        ],
+        "train_positions": [
+          0,
+          4
+        ],
+        "scenario_mutation": "low_coverage"
+      },
+      "expected": {
+        "path": [
+          "status"
+        ],
+        "value": "NEEDS_DATA",
+        "tolerance": 1e-12
+      },
+      "correction": "核查股票池与字段覆盖，不能把稀疏赢家当总体。",
+      "scope": "固定合成输入下的工程或预登记方向/成本反例；不是用户市场表现，也不授予金融用途。"
+    },
+    {
+      "case_id": "counter-05",
+      "title": "恒定信号无法计算秩IC",
+      "scenario": "constant_factor",
+      "input": {
+        "fixture_version": "eight-assets-20-observations.v1",
+        "periods": 20,
+        "assets": 8,
+        "start": "2025-01-01T00:00:00Z",
+        "seed": "deterministic-scalar-formula",
+        "evaluation_positions": [
+          4,
+          18
+        ],
+        "train_positions": [
+          0,
+          4
+        ],
+        "scenario_mutation": "constant_factor"
+      },
+      "expected": {
+        "path": [
+          "status"
+        ],
+        "value": "NEEDS_DATA",
+        "tolerance": 1e-12
+      },
+      "correction": "不任意按股票代码拆开并列值。",
+      "scope": "固定合成输入下的工程或预登记方向/成本反例；不是用户市场表现，也不授予金融用途。"
+    },
+    {
+      "case_id": "counter-06",
+      "title": "收益截面无方差",
+      "scenario": "constant_returns",
+      "input": {
+        "fixture_version": "eight-assets-20-observations.v1",
+        "periods": 20,
+        "assets": 8,
+        "start": "2025-01-01T00:00:00Z",
+        "seed": "deterministic-scalar-formula",
+        "evaluation_positions": [
+          4,
+          18
+        ],
+        "train_positions": [
+          0,
+          4
+        ],
+        "scenario_mutation": "constant_returns"
+      },
+      "expected": {
+        "path": [
+          "status"
+        ],
+        "value": "NEEDS_DATA",
+        "tolerance": 1e-12
+      },
+      "correction": "保留相关性未定义，而不是写0或通过。",
+      "scope": "固定合成输入下的工程或预登记方向/成本反例；不是用户市场表现，也不授予金融用途。"
+    },
+    {
+      "case_id": "counter-07",
+      "title": "全池不可交易",
+      "scenario": "all_suspended",
+      "input": {
+        "fixture_version": "eight-assets-20-observations.v1",
+        "periods": 20,
+        "assets": 8,
+        "start": "2025-01-01T00:00:00Z",
+        "seed": "deterministic-scalar-formula",
+        "evaluation_positions": [
+          4,
+          18
+        ],
+        "train_positions": [
+          0,
+          4
+        ],
+        "scenario_mutation": "all_suspended"
+      },
+      "expected": {
+        "path": [
+          "status"
+        ],
+        "value": "NEEDS_DATA",
+        "tolerance": 1e-12
+      },
+      "correction": "保留停牌和退市资产，不假装成交。",
+      "scope": "固定合成输入下的工程或预登记方向/成本反例；不是用户市场表现，也不授予金融用途。"
+    },
+    {
+      "case_id": "counter-08",
+      "title": "观察期不足",
+      "scenario": "short_window",
+      "input": {
+        "fixture_version": "eight-assets-20-observations.v1",
+        "periods": 20,
+        "assets": 8,
+        "start": "2025-01-01T00:00:00Z",
+        "seed": "deterministic-scalar-formula",
+        "evaluation_positions": [
+          4,
+          18
+        ],
+        "train_positions": [
+          0,
+          4
+        ],
+        "scenario_mutation": "short_window"
+      },
+      "expected": {
+        "path": [
+          "status"
+        ],
+        "value": "NEEDS_DATA",
+        "tolerance": 1e-12
+      },
+      "correction": "取得更多独立观察，不缩小最低样本门槛。",
+      "scope": "固定合成输入下的工程或预登记方向/成本反例；不是用户市场表现，也不授予金融用途。"
+    },
+    {
+      "case_id": "counter-09",
+      "title": "缺少成交额的容量未知",
+      "scenario": "unknown_capacity",
+      "input": {
+        "fixture_version": "eight-assets-20-observations.v1",
+        "periods": 20,
+        "assets": 8,
+        "start": "2025-01-01T00:00:00Z",
+        "seed": "deterministic-scalar-formula",
+        "evaluation_positions": [
+          4,
+          18
+        ],
+        "train_positions": [
+          0,
+          4
+        ],
+        "scenario_mutation": "unknown_capacity"
+      },
+      "expected": {
+        "path": [
+          "capacity",
+          "status"
+        ],
+        "value": "UNAVAILABLE",
+        "tolerance": 1e-12
+      },
+      "correction": "由用户提供同单位成交额；未知容量不是无限容量。",
+      "scope": "固定合成输入下的工程或预登记方向/成本反例；不是用户市场表现，也不授予金融用途。"
+    },
+    {
+      "case_id": "counter-10",
+      "title": "声明资金超过参与率容量",
+      "scenario": "exceeded_capacity",
+      "input": {
+        "fixture_version": "eight-assets-20-observations.v1",
+        "periods": 20,
+        "assets": 8,
+        "start": "2025-01-01T00:00:00Z",
+        "seed": "deterministic-scalar-formula",
+        "evaluation_positions": [
+          4,
+          18
+        ],
+        "train_positions": [
+          0,
+          4
+        ],
+        "scenario_mutation": "exceeded_capacity"
+      },
+      "expected": {
+        "path": [
+          "capacity",
+          "within_capacity"
+        ],
+        "value": false,
+        "tolerance": 1e-12
+      },
+      "correction": "降低规模或明确容量约束，不声称真实冲击已校准。",
+      "scope": "固定合成输入下的工程或预登记方向/成本反例；不是用户市场表现，也不授予金融用途。"
+    },
+    {
+      "case_id": "counter-11",
+      "title": "同源信号不是独立投票",
+      "scenario": "duplicate_signal",
+      "input": {
+        "fixture_version": "eight-assets-20-observations.v1",
+        "periods": 20,
+        "assets": 8,
+        "start": "2025-01-01T00:00:00Z",
+        "seed": "deterministic-scalar-formula",
+        "evaluation_positions": [
+          4,
+          18
+        ],
+        "train_positions": [
+          0,
+          4
+        ],
+        "scenario_mutation": "duplicate_signal"
+      },
+      "expected": {
+        "path": [
+          "family_correlation",
+          "same"
+        ],
+        "value": 1.0,
+        "tolerance": 1e-12
+      },
+      "correction": "同一信号归为同族，不能提高独立证据数量。",
+      "scope": "固定合成输入下的工程或预登记方向/成本反例；不是用户市场表现，也不授予金融用途。"
+    },
+    {
+      "case_id": "counter-12",
+      "title": "复制信号无新增解释",
+      "scenario": "zero_incremental",
+      "input": {
+        "fixture_version": "eight-assets-20-observations.v1",
+        "periods": 20,
+        "assets": 8,
+        "start": "2025-01-01T00:00:00Z",
+        "seed": "deterministic-scalar-formula",
+        "evaluation_positions": [
+          4,
+          18
+        ],
+        "train_positions": [
+          0,
+          4
+        ],
+        "scenario_mutation": "zero_incremental"
+      },
+      "expected": {
+        "path": [
+          "incremental",
+          "status"
+        ],
+        "value": "DEGENERATE_RESIDUAL",
+        "tolerance": 1e-12
+      },
+      "correction": "保留退化状态，不把副本称为新超额信息。",
+      "scope": "固定合成输入下的工程或预登记方向/成本反例；不是用户市场表现，也不授予金融用途。"
+    },
+    {
+      "case_id": "counter-13",
+      "title": "负成本输入被拒绝",
+      "scenario": "negative_cost",
+      "input": {
+        "fixture_version": "eight-assets-20-observations.v1",
+        "periods": 20,
+        "assets": 8,
+        "start": "2025-01-01T00:00:00Z",
+        "seed": "deterministic-scalar-formula",
+        "evaluation_positions": [
+          4,
+          18
+        ],
+        "train_positions": [
+          0,
+          4
+        ],
+        "scenario_mutation": "negative_cost"
+      },
+      "expected": {
+        "path": [
+          "status"
+        ],
+        "value": "EXECUTION_FAILED",
+        "tolerance": 1e-12
+      },
+      "correction": "修正费用单位与符号，程序输入错误不算经济证伪。",
+      "scope": "固定合成输入下的工程或预登记方向/成本反例；不是用户市场表现，也不授予金融用途。"
+    },
+    {
+      "case_id": "counter-14",
+      "title": "零价格输入被拒绝",
+      "scenario": "nonpositive_price",
+      "input": {
+        "fixture_version": "eight-assets-20-observations.v1",
+        "periods": 20,
+        "assets": 8,
+        "start": "2025-01-01T00:00:00Z",
+        "seed": "deterministic-scalar-formula",
+        "evaluation_positions": [
+          4,
+          18
+        ],
+        "train_positions": [
+          0,
+          4
+        ],
+        "scenario_mutation": "nonpositive_price"
+      },
+      "expected": {
+        "path": [
+          "status"
+        ],
+        "value": "EXECUTION_FAILED",
+        "tolerance": 1e-12
+      },
+      "correction": "回查原始数据，不用微小常数填补成可用价格。",
+      "scope": "固定合成输入下的工程或预登记方向/成本反例；不是用户市场表现，也不授予金融用途。"
+    },
+    {
+      "case_id": "counter-15",
+      "title": "训练与验证区间重叠",
+      "scenario": "overlap_fit",
+      "input": {
+        "fixture_version": "eight-assets-20-observations.v1",
+        "periods": 20,
+        "assets": 8,
+        "start": "2025-01-01T00:00:00Z",
+        "seed": "deterministic-scalar-formula",
+        "evaluation_positions": [
+          4,
+          18
+        ],
+        "train_positions": [
+          0,
+          4
+        ],
+        "scenario_mutation": "overlap_fit"
+      },
+      "expected": {
+        "path": [
+          "status"
+        ],
+        "value": "EXECUTION_FAILED",
+        "tolerance": 1e-12
+      },
+      "correction": "严格分离拟合和评估；保留冻结后的最终测试区间。",
+      "scope": "固定合成输入下的工程或预登记方向/成本反例；不是用户市场表现，也不授予金融用途。"
+    },
+    {
+      "case_id": "counter-16",
+      "title": "时间乱序输入被拒绝",
+      "scenario": "unordered_dates",
+      "input": {
+        "fixture_version": "eight-assets-20-observations.v1",
+        "periods": 20,
+        "assets": 8,
+        "start": "2025-01-01T00:00:00Z",
+        "seed": "deterministic-scalar-formula",
+        "evaluation_positions": [
+          4,
+          18
+        ],
+        "train_positions": [
+          0,
+          4
+        ],
+        "scenario_mutation": "unordered_dates"
+      },
+      "expected": {
+        "path": [
+          "status"
+        ],
+        "value": "EXECUTION_FAILED",
+        "tolerance": 1e-12
+      },
+      "correction": "核查排序和重复日期，再登记新的实际尝试。",
+      "scope": "固定合成输入下的工程或预登记方向/成本反例；不是用户市场表现，也不授予金融用途。"
+    },
+    {
+      "case_id": "counter-17",
+      "title": "未声明时区被拒绝",
+      "scenario": "timezone_unknown",
+      "input": {
+        "fixture_version": "eight-assets-20-observations.v1",
+        "periods": 20,
+        "assets": 8,
+        "start": "2025-01-01T00:00:00Z",
+        "seed": "deterministic-scalar-formula",
+        "evaluation_positions": [
+          4,
+          18
+        ],
+        "train_positions": [
+          0,
+          4
+        ],
+        "scenario_mutation": "timezone_unknown"
+      },
+      "expected": {
+        "path": [
+          "status"
+        ],
+        "value": "EXECUTION_FAILED",
+        "tolerance": 1e-12
+      },
+      "correction": "提供明确时区和可用时间，防止跨市场错位。",
+      "scope": "固定合成输入下的工程或预登记方向/成本反例；不是用户市场表现，也不授予金融用途。"
+    },
+    {
+      "case_id": "counter-18",
+      "title": "数值交易许可被拒绝",
+      "scenario": "unknown_tradability",
+      "input": {
+        "fixture_version": "eight-assets-20-observations.v1",
+        "periods": 20,
+        "assets": 8,
+        "start": "2025-01-01T00:00:00Z",
+        "seed": "deterministic-scalar-formula",
+        "evaluation_positions": [
+          4,
+          18
+        ],
+        "train_positions": [
+          0,
+          4
+        ],
+        "scenario_mutation": "unknown_tradability"
+      },
+      "expected": {
+        "path": [
+          "status"
+        ],
+        "value": "EXECUTION_FAILED",
+        "tolerance": 1e-12
+      },
+      "correction": "使用完整布尔交易合同，未知许可不能默认为可交易。",
+      "scope": "固定合成输入下的工程或预登记方向/成本反例；不是用户市场表现，也不授予金融用途。"
+    },
+    {
+      "case_id": "counter-19",
+      "title": "未知试验也进入多重检验分母",
+      "scenario": "hidden_trial",
+      "input": {
+        "fixture_version": "eight-assets-20-observations.v1",
+        "periods": 20,
+        "assets": 8,
+        "start": "2025-01-01T00:00:00Z",
+        "seed": "deterministic-scalar-formula",
+        "evaluation_positions": [
+          4,
+          18
+        ],
+        "train_positions": [
+          0,
+          4
+        ],
+        "scenario_mutation": "hidden_trial"
+      },
+      "expected": {
+        "path": [
+          "adjusted"
+        ],
+        "value": [
+          0.03,
+          null,
+          0.08
+        ],
+        "tolerance": 1e-12
+      },
+      "correction": "把所有尝试预登记，不能只保留赢家的p值。",
+      "scope": "固定合成输入下的工程或预登记方向/成本反例；不是用户市场表现，也不授予金融用途。"
+    },
+    {
+      "case_id": "counter-20",
+      "title": "保留区间未来更改不改变历史",
+      "scenario": "future_mutation",
+      "input": {
+        "fixture_version": "eight-assets-20-observations.v1",
+        "periods": 20,
+        "assets": 8,
+        "start": "2025-01-01T00:00:00Z",
+        "seed": "deterministic-scalar-formula",
+        "evaluation_positions": [
+          4,
+          18
+        ],
+        "train_positions": [
+          0,
+          4
+        ],
+        "scenario_mutation": "future_mutation"
+      },
+      "expected": {
+        "path": [
+          "historical_metrics_unchanged"
+        ],
+        "value": true,
+        "tolerance": 1e-12
+      },
+      "correction": "只用评价期内已成熟标签，不将未见区间用于选优。",
+      "scope": "固定合成输入下的工程或预登记方向/成本反例；不是用户市场表现，也不授予金融用途。"
+    },
+    {
+      "case_id": "counter-21",
+      "title": "晚披露财务值不得回填历史",
+      "scenario": "late_announcement",
+      "input": {
+        "fixture_version": "eight-assets-20-observations.v1",
+        "scenario_mutation": "late_announcement",
+        "availability": "late data available in 2027; historical grid 2025"
+      },
+      "expected": {
+        "path": [
+          "historical_values_remain_missing"
+        ],
+        "value": true
+      },
+      "correction": "使用available_at选择当时已知公告，不以报告所属日替代实际可用日。",
+      "scope": "固定合成数据边界反例，缺数据不代表金融证伪。"
+    },
+    {
+      "case_id": "counter-22",
+      "title": "删掉退市缺口会虚增覆盖",
+      "scenario": "delisted_name_retained",
+      "input": {
+        "fixture_version": "eight-assets-20-observations.v1",
+        "scenario_mutation": "delisted_name_retained",
+        "availability": "A4 marks missing from observation 8; keep original pool"
+      },
+      "expected": {
+        "path": [
+          "retained_status"
+        ],
+        "value": "NEEDS_DATA"
+      },
+      "correction": "保留退市和失联标的及价格缺口，幸存者视图只能单列说明。",
+      "scope": "固定合成数据边界反例，缺数据不代表金融证伪。"
+    }
+  ]
+}

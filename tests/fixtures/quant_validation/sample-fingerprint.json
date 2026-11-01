@@ -1,0 +1,16 @@
+{
+  "sample_spec": {
+    "schema_version": "factor-validation-sample.v1",
+    "seed": 2501,
+    "assets": 64,
+    "observations": 756,
+    "start": "2021-01-04",
+    "calendar": "business-day observations; synthetic, no exchange calendar",
+    "generator": "integer-modular-v2",
+    "data_mode": "SAMPLE",
+    "price_basis": "RAW",
+    "variant": "baseline"
+  },
+  "sample_fingerprint": "078a70a17f23d89d412921e2a9b9c39f12ca58eb0f53880f4024ae2ffe1d8bf3",
+  "sample_content_digest": "cd079368df992b8fda42151afc2a62863546d1b2b71b3f2ad19d8962494c4f1b"
+}
