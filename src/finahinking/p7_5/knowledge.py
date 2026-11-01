@@ -434,6 +434,10 @@ class KnowledgeCatalog:
                 raise ValueError(f"{coverage.domain_id} references an unknown source")
         self._assert_acyclic(by_id)
 
+    def canonical_ids(self) -> dict[str, str]:
+        """Stable identity bridge; translations do not add concepts."""
+        return {item.concept_id: item.concept_id for item in self.concepts}
+
     @staticmethod
     def _assert_acyclic(by_id: Mapping[str, KnowledgeConcept]) -> None:
         visiting: set[str] = set()

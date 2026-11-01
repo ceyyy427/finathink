@@ -6,6 +6,7 @@ import hashlib
 import json
 import math
 import re
+from dataclasses import asdict
 from importlib.resources import files
 from pathlib import Path, PurePosixPath
 
@@ -143,6 +144,27 @@ class ResearchAssetCatalog:
 
     def resources(self) -> tuple[ResourceRef, ...]:
         return tuple(self._resources[key] for key in sorted(self._resources))
+
+    def knowledge_fingerprint(self) -> str:
+        """Public asset identities and rights decisions, without user state."""
+        payload = {"resources": [asdict(r) for r in self.resources()],
+                   "rights": [asdict(self._rights[k]) for k in sorted(self._rights)],
+                   "methods": [asdict(s) for s in self.skills()]}
+        return hashlib.sha256(json.dumps(payload, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+
+    def knowledge_content(self):
+        """Read the single versioned authored bundle through file-rights checks."""
+        catalog = self._json(self.read_text("quant-knowledge-catalog", max_bytes=1048576), "quant-knowledge-catalog")
+        for name, schema in (("examples", "quant-knowledge-examples.v1"),
+                             ("paths", "quant-knowledge-paths.v1")):
+            resource = "quant-knowledge-" + name
+            document = self._json(self.read_text(resource, max_bytes=1048576), resource)
+            if (set(document) != {"schema_version", "version", name}
+                    or document["schema_version"] != schema
+                    or document["version"] != catalog.get("version")):
+                raise AssetLoadError("INVALID_KNOWLEDGE_BUNDLE", resource)
+            catalog[name] = document[name]
+        return catalog
 
     def source_intake_summary(self):
         doc = self._json(self.read_text("source-intake-summary"), "source-intake-summary")
