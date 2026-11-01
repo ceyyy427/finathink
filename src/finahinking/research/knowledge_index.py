@@ -24,6 +24,10 @@ from .knowledge_examples import evaluate_example
 INDEX_VERSION = "knowledge-fts5-bigram.v1"
 # Fixed before the held-out evaluation: title, aliases, summary, explanation.
 FIELD_WEIGHTS = (6.0, 4.0, 2.0, 1.0)
+CACHE_APPLICATION_ID = 0x46544B42
+_META_SQL = "CREATE TABLE knowledge_meta (fingerprint TEXT NOT NULL)"
+_FTS_SQL = "CREATE VIRTUAL TABLE knowledge_fts USING fts5(item_id UNINDEXED, title, aliases, summary, explanation, tokenize='unicode61')"
+_CACHE_TABLES = {"knowledge_meta", "knowledge_fts", "knowledge_fts_data", "knowledge_fts_idx", "knowledge_fts_content", "knowledge_fts_docsize", "knowledge_fts_config"}
 
 
 class KnowledgeIndexUnavailable(RuntimeError):
@@ -123,6 +127,10 @@ class KnowledgeIndex:
             ids = references(path.get("item_ids"), "path items")
             if len(ids) < 2 or not set(ids) <= self._items.keys():
                 raise ValueError("learning path requires known knowledge items")
+            if not path.get("legacy"):
+                positions = {key: n for n, key in enumerate(ids)}
+                if any(parent in positions and positions[parent] >= positions[key] for key in ids for parent in self._items[key].prerequisites):
+                    raise ValueError("learning path places a prerequisite after its dependent")
         for row in self._counterexamples.values():
             for name in ("claim", "correction", "scenario"):
                 text(row.get(name), "counterexample")
@@ -209,12 +217,23 @@ class KnowledgeIndex:
             path.parent.mkdir(parents=True, exist_ok=True)
         self._db = sqlite3.connect(str(path) if path is not None else ":memory:", timeout=30, check_same_thread=False)
         try:
-            names = self._db.execute("SELECT type,name FROM sqlite_master WHERE name NOT LIKE 'sqlite_%'").fetchall()
-            if any(kind != "table" or (name != "knowledge_meta" and not name.startswith("knowledge_fts")) for kind, name in names):
-                raise ValueError("knowledge projection cannot share a private or foreign database")
             self._db.execute("BEGIN IMMEDIATE")
-            self._db.execute("CREATE TABLE IF NOT EXISTS knowledge_meta (fingerprint TEXT NOT NULL)")
-            self._db.execute("CREATE VIRTUAL TABLE IF NOT EXISTS knowledge_fts USING fts5(item_id UNINDEXED, title, aliases, summary, explanation, tokenize='unicode61')")
+            schema = self._db.execute("SELECT type,name,sql FROM sqlite_master WHERE name NOT LIKE 'sqlite_%'").fetchall()
+            app_id = self._db.execute("PRAGMA application_id").fetchone()[0]
+            if schema:
+                normalize = lambda sql: " ".join((sql or "").split()).casefold()
+                definitions = {name: sql for _, name, sql in schema}
+                if (app_id != CACHE_APPLICATION_ID or set(definitions) != _CACHE_TABLES
+                        or any(kind != "table" for kind, _, _ in schema)
+                        or normalize(definitions.get("knowledge_meta")) != normalize(_META_SQL)
+                        or normalize(definitions.get("knowledge_fts")) != normalize(_FTS_SQL)):
+                    raise ValueError("knowledge projection cannot share a private or foreign database")
+            else:
+                if app_id not in {0, CACHE_APPLICATION_ID}:
+                    raise ValueError("knowledge projection cannot share a private or foreign database")
+                self._db.execute(_META_SQL)
+                self._db.execute(_FTS_SQL)
+                self._db.execute(f"PRAGMA application_id = {CACHE_APPLICATION_ID}")
             prior = self._db.execute("SELECT fingerprint FROM knowledge_meta").fetchall()
             stored = self._db.execute("SELECT * FROM knowledge_fts ORDER BY item_id LIMIT 2001").fetchall()
             if prior != [(self.fingerprint,)] or stored != self._projection:
@@ -277,10 +296,18 @@ class KnowledgeIndex:
             match = " OR ".join('"' + token + '"' for token in tokens)
             slots = ",".join("?" for _ in allowed)
             with self._lock:
-                selected = [row[0] for row in self._db.execute(
-                    "SELECT item_id FROM knowledge_fts WHERE knowledge_fts MATCH ? "
-                    f"AND item_id IN ({slots}) ORDER BY bm25(knowledge_fts,0,?,?,?,?),item_id LIMIT ?",
-                    (match, *allowed, *FIELD_WEIGHTS, limit))]
+                self._db.execute("BEGIN")
+                try:
+                    if self._db.execute("SELECT fingerprint FROM knowledge_meta").fetchall() != [(self.fingerprint,)]:
+                        raise KnowledgeIndexUnavailable("公开知识缓存已由另一版本重建，请重新启动本地应用后检索。")
+                    selected = [row[0] for row in self._db.execute(
+                        "SELECT item_id FROM knowledge_fts WHERE knowledge_fts MATCH ? "
+                        f"AND item_id IN ({slots}) ORDER BY bm25(knowledge_fts,0,?,?,?,?),item_id LIMIT ?",
+                        (match, *allowed, *FIELD_WEIGHTS, limit))]
+                    self._db.commit()
+                except Exception:
+                    self._db.rollback()
+                    raise
         return [{**self.resolve(key), "matched_fields": [name for name, terms in self._terms[key].items() if set(tokens) & terms]} for key in selected]
 
     def path(self, path_id):

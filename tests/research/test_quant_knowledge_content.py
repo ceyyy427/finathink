@@ -65,3 +65,24 @@ def test_public_nested_records_reject_unknown_private_fields():
         content[field][0]['private_note'] = 'never-public'
         with pytest.raises(ValueError):
             KnowledgeIndex.from_catalogs(DEFAULT_CATALOG, DEFAULT_KNOWLEDGE_CATALOG, ResearchAssetCatalog.packaged(), content)
+
+
+def test_fractional_tail_and_invalid_covariance_have_independent_checks():
+    # At 85%, 10 observations give 1.5 tail mass: (0.10 + .5*.09)/1.5.
+    result = evaluate_example({'operation': 'fractional_es', 'inputs': {'returns': [-.01, -.02, -.03, -.04, -.05, -.06, -.07, -.08, -.09, -.10], 'confidence': .85}})
+    assert result == pytest.approx(.09666666666666668)
+    for matrix in ([[1, 2], [0, 1]], [[1, 2], [2, 1]]):
+        with pytest.raises(ValueError):
+            evaluate_example({'operation': 'portfolio_variance', 'inputs': {'weights': [.5, .5], 'covariance': matrix}})
+    for confidence in (0, 1):
+        with pytest.raises(ValueError):
+            evaluate_example({'operation': 'nearest_rank_var', 'inputs': {'returns': [.01, -.02], 'confidence': confidence}})
+
+
+def test_learning_paths_put_included_prerequisites_before_dependents():
+    content = bundle()
+    items = {i['canonical_id']: i for i in content['items']}
+    for path in content['paths']:
+        positions = {key: n for n, key in enumerate(path['item_ids'])}
+        for key, position in positions.items():
+            assert all(parent not in positions or positions[parent] < position for parent in items[key]['prerequisites']), (path['path_id'], key)

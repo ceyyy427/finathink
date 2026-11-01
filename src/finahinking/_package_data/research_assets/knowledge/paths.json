@@ -79,8 +79,8 @@
         "bollinger",
         "rsi",
         "atr",
-        "mean-reversion",
-        "oos"
+        "oos",
+        "mean-reversion"
       ],
       "path_type": "research",
       "practice": "提出一个带失效条件的反转假设，不把阈值直接当结论。",

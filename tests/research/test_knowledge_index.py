@@ -186,3 +186,31 @@ def test_missing_fts5_has_an_explicit_install_diagnostic(monkeypatch):
     monkeypatch.setattr(sqlite3, 'connect', WithoutFTS)
     with pytest.raises(KnowledgeIndexUnavailable, match='FTS5.*Python'):
         index()
+
+
+@pytest.mark.parametrize('spoof_identity', [False, True])
+def test_ordinary_tables_cannot_impersonate_fts_projection(tmp_path, spoof_identity):
+    path = tmp_path / 'foreign-same-names.sqlite3'
+    with sqlite3.connect(path) as db:
+        if spoof_identity:
+            db.execute('PRAGMA application_id = 1179929410')
+        db.execute('CREATE TABLE knowledge_meta (fingerprint TEXT NOT NULL)')
+        db.execute('CREATE TABLE knowledge_fts (item_id, title, aliases, summary, explanation)')
+        db.execute("INSERT INTO knowledge_meta VALUES ('private-sentinel')")
+        db.execute("INSERT INTO knowledge_fts VALUES ('private', 'private-sentinel', '', '', '')")
+    before = path.read_bytes()
+    with pytest.raises(ValueError, match='private or foreign'):
+        index(path=path)
+    assert path.read_bytes() == before
+
+
+def test_simultaneous_catalog_versions_never_mix_ranking_with_details(tmp_path):
+    from finahinking.research.knowledge_index import KnowledgeIndexUnavailable
+
+    path = tmp_path / 'projection.sqlite3'
+    changed = content_fixture()
+    changed['items'][0]['summary'] = '另一版本的公开定义'
+    with index(path=path) as first, index(changed, path=path) as second:
+        assert second.search('另一版本')[0]['canonical_id'] == 'return'
+        with pytest.raises(KnowledgeIndexUnavailable, match='另一版本'):
+            first.search('历史波动')

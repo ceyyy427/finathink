@@ -1262,7 +1262,7 @@
     {
       "resource_id": "quant-knowledge-paths",
       "path": "knowledge/paths.json",
-      "sha256": "7a662f3ecf9283324a2322f25941343f4243142c569881b9be3f7605811f80e2",
+      "sha256": "bbd352104becd61562874857d09ed6602b2d3d8359149d64ecd6f28fb58c7c59",
       "byte_size": 6205,
       "availability": "PACKAGED",
       "kind": "metadata",
@@ -2302,7 +2302,7 @@
     {
       "review_id": "rights-quant-knowledge-paths",
       "resource_id": "quant-knowledge-paths",
-      "resource_sha256": "7a662f3ecf9283324a2322f25941343f4243142c569881b9be3f7605811f80e2",
+      "resource_sha256": "bbd352104becd61562874857d09ed6602b2d3d8359149d64ecd6f28fb58c7c59",
       "license_id": "MIT",
       "license_refs": [
         {
