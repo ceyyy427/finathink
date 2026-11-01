@@ -456,7 +456,8 @@ class LocalApplication:
                 from .research.knowledge_index import KnowledgeIndex, KnowledgeIndexUnavailable
 
                 assets = ResearchAssetCatalog.packaged()
-                cache = None if self.config.db_path == ":memory:" else Path(self.config.db_path).expanduser().parent / ".knowledge-cache" / "public.sqlite3"
+                main_file = next(row[2] for row in self.connection.execute("PRAGMA database_list") if row[1] == "main")
+                cache = Path(main_file).parent / ".knowledge-cache" / "public.sqlite3" if main_file else None
                 try:
                     self._quant_knowledge = KnowledgeIndex.from_catalogs(DEFAULT_CATALOG, DEFAULT_KNOWLEDGE_CATALOG, assets, assets.knowledge_content(), index_path=cache)
                 except (ValueError, TypeError, KeyError) as exc:

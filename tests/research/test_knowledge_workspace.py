@@ -100,3 +100,34 @@ def test_foreign_cache_is_a_recoverable_service_error_not_a_bad_query(tmp_path):
         assert cache.read_bytes() == before
     finally:
         app.close()
+
+
+def test_injected_memory_database_never_uses_configured_disk_cache(tmp_path):
+    import sqlite3
+
+    cache = tmp_path / '.knowledge-cache/public.sqlite3'
+    cache.parent.mkdir()
+    with sqlite3.connect(cache) as db:
+        db.execute('CREATE TABLE unrelated (note TEXT)')
+        db.execute("INSERT INTO unrelated VALUES ('leave this file alone')")
+    before = cache.read_bytes()
+    app = LocalApplication(LocalAppConfig(db_path=str(tmp_path / 'configured.sqlite3')), connection=sqlite3.connect(':memory:'))
+    try:
+        assert app.route('GET', '/api/knowledge/search?q=回撤')[0] == 200
+        assert cache.read_bytes() == before
+    finally:
+        app.close()
+
+
+def test_injected_file_database_places_cache_beside_actual_main_database(tmp_path):
+    import sqlite3
+
+    actual = tmp_path / 'actual'
+    actual.mkdir()
+    app = LocalApplication(LocalAppConfig(db_path=str(tmp_path / 'configured.sqlite3')), connection=sqlite3.connect(actual / 'private.sqlite3'))
+    try:
+        assert app.route('GET', '/api/knowledge/search?q=回撤')[0] == 200
+        assert (actual / '.knowledge-cache/public.sqlite3').exists()
+        assert not (tmp_path / '.knowledge-cache').exists()
+    finally:
+        app.close()
