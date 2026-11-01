@@ -82,6 +82,50 @@ def panel_journey(app, post):
     assert result == post("/api/research/panels/evaluate", inputs)
 
 
+def library_journey(app, get, post):
+    import math
+
+    import pandas as pd
+
+    from finahinking.data.panel_contracts import PanelContract, PanelFieldAttachment
+    from finahinking.p8_2.contracts import DatasetSnapshot, MarketObservation
+
+    catalog = json.loads(get('/api/research/factor-library'))
+    assert catalog['inventory']['executable_formula_count'] >= 80
+    assert '因子定义库' in get('/research/factor-library').decode()
+    times = pd.date_range('2025-01-01', periods=120, tz='UTC')
+    observations = []
+    for number, asset in enumerate(('LIBA', 'LIBB', 'LIBC')):
+        for i, stamp in enumerate(times):
+            close = 30 + number * 7 + i * .03 + math.sin(i / (3 + number))
+            observations.append(MarketObservation(asset, stamp, close-.1, close+.2, close-.2, close,
+                10000, available_at=stamp, suspended=False))
+    snapshot = DatasetSnapshot('installed-library-synthetic', tuple(observations), provenance={'adjustment':'RAW'})
+    app.research_service.snapshots.save(snapshot)
+    units = {'is_session':'boolean','in_universe':'boolean','trade_allowed':'boolean',
+        'lot_size':'shares','settlement_days':'sessions','split_factor':'ratio'}
+    records = [{'instrument':a,'timestamp':t.isoformat(),'available_at':t.isoformat(),
+        'is_session':True,'in_universe':True,'trade_allowed':True,'lot_size':1,'settlement_days':0,'split_factor':1}
+        for a in snapshot.instruments for t in times]
+    fields = PanelFieldAttachment(snapshot.fingerprint, units, records, 'Installed library synthetic input')
+    ref = post('/api/research/panels/fields', {'attachment':fields.to_dict()})['attachment_ref']
+    contract = PanelContract(snapshot.fingerprint, snapshot.instruments, [t.isoformat() for t in times],
+        {'open':'CNY','high':'CNY','low':'CNY','close':'CNY','volume':'shares'}, 'installed-library',
+        {a:'CNY' for a in snapshot.instruments},{a:'UTC' for a in snapshot.instruments},ref,ref,ref,ref)
+    study = post('/api/research/factor-library/studies', {'factor_id':'lib-trend-roc','factor_version':'1.0.0',
+        'idempotency_key':'installed-library','contract':contract.to_dict(),'attachment_refs':[ref],
+        'question':'验证已安装版本的因子定义与后台计算'})
+    deadline = time.monotonic()+45
+    while study['state'] in {'DECLARED','VALIDATING'} and time.monotonic()<deadline:
+        time.sleep(.05)
+        study = json.loads(get('/api/research/experiments/'+study['study_id']))
+    assert study['state']=='VALIDATED', study
+    assert study['validation']['library_validation']['backtest']['metric_basis']=='ACTUAL_NET_LEDGER'
+    assert study['validation_job']['report_status']=='AVAILABLE'
+    assert '因子库定义与量化证据' in get(study['validation_job']['report_url']).decode()
+    return study['study_id']
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--state-root', required=True, type=Path)
@@ -160,6 +204,7 @@ def main():
             portable.close()
         assessment_id, pair_id = learning_journey(app, get, post, snapshot['snapshot_ref'])
         panel_journey(app, post)
+        library_study_id = library_journey(app, get, post)
     finally:
         server.shutdown()
         server.server_close()
@@ -178,6 +223,9 @@ def main():
             assert reopened.route('GET', '/api/research/learning/pairs/'+pair_id)[2]['status'] == 'AVAILABLE'
             restored_diagnostic = reopened.route('GET', '/api/diagnostics/interfaces/' + diagnostic['receipt_id'])
             assert restored_diagnostic[0] == 200 and restored_diagnostic[2] == diagnostic
+            restored_library = reopened.research_service.factor_study(library_study_id)
+            assert restored_library['state'] == 'VALIDATED'
+            assert restored_library['validation_job']['report_status'] == 'AVAILABLE'
             value = reopened.research_service.get_job(job['job_id'])
             assert value['snapshot_ref'] == snapshot['snapshot_ref'] and value['attempts'] == 1
             assert value['report_url'] == job['report_url'] and value['report_status'] == 'AVAILABLE'
@@ -185,7 +233,7 @@ def main():
             assert (restored_report.encode() if isinstance(restored_report, str) else restored_report) == report
         finally:
             reopened.close()
-    print('全新 wheel 安装 → 资料与因子证据 → 真实 HTTP/独立 spawn 任务 → 蓝白报告 → 样本评估/成对复跑 → 私密备份恢复 → 重复迁移检查：通过。')
+    print('全新 wheel 安装 → 来源卡与因子库真实研究 → 真实 HTTP/独立 spawn 任务 → 蓝白报告 → 样本评估/成对复跑 → 私密备份恢复 → 重复迁移检查：通过。')
     return 0
 
 

@@ -1275,6 +1275,40 @@
       "source_sha256": null,
       "derivation": "FINATHINK_ORIGINAL",
       "rights_ref": "rights-quant-knowledge-paths"
+    },
+    {
+      "resource_id": "factor-library-sources",
+      "path": "factors/library.json",
+      "sha256": "a604e01f462a4092f1b16e9b272b316ce3b81b07f52c07a5ee9b8bbca92b69ad",
+      "byte_size": 279087,
+      "availability": "PACKAGED",
+      "kind": "metadata",
+      "author": "Finahinking contributors",
+      "license_id": "MIT",
+      "license_ref": "finathink-license",
+      "version": "1.0.0",
+      "source_url": null,
+      "source_path": null,
+      "source_sha256": null,
+      "derivation": "ATTRIBUTED_SOURCE_EXCERPTS",
+      "rights_ref": "rights-factor-library-sources"
+    },
+    {
+      "resource_id": "factor-library-formulas",
+      "path": "factors/formulas.json",
+      "sha256": "7360415be4e1bb378bee9092aade53a805067c268004de97c8fd28eed8fe1b40",
+      "byte_size": 288061,
+      "availability": "PACKAGED",
+      "kind": "metadata",
+      "author": "Finahinking contributors",
+      "license_id": "MIT",
+      "license_ref": "finathink-license",
+      "version": "1.0.0",
+      "source_url": null,
+      "source_path": null,
+      "source_sha256": null,
+      "derivation": "FINATHINK_ORIGINAL",
+      "rights_ref": "rights-factor-library-formulas"
     }
   ],
   "rights_reviews": [
@@ -2316,6 +2350,80 @@
       "reviewed_by": "Finathink Phase 22 editorial file review",
       "reviewed_on": "2026-11-01",
       "rationale": "Finathink原创中文解释、手算示例与学习路径；外部源码仅以固定提交和行范围引用，未移植可执行代码。按MIT发布，仅覆盖指定字节。",
+      "source_url": null,
+      "source_path": null,
+      "source_sha256": null
+    },
+    {
+      "review_id": "rights-factor-library-sources",
+      "resource_id": "factor-library-sources",
+      "resource_sha256": "a604e01f462a4092f1b16e9b272b316ce3b81b07f52c07a5ee9b8bbca92b69ad",
+      "license_id": "MIT",
+      "license_refs": [
+        {
+          "resource_id": "finathink-license",
+          "sha256": "8f005100947b20fd54ad3d7c5dd501d303a627fd1c738f75f95f5f7b66040015"
+        },
+        {
+          "resource_id": "upstream-license",
+          "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+        },
+        {
+          "resource_id": "quantaxis-license",
+          "sha256": "96ebf515d25a58bbd8be4543a5c198e576db52738f26c82270ececb1dc273318"
+        },
+        {
+          "resource_id": "qlib-license",
+          "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+        },
+        {
+          "resource_id": "pyanomaly-license",
+          "sha256": "84dc4ddcfd08d382bbe4ac775ebee4da7e40280b8aba4f841884f0234303f6f4"
+        }
+      ],
+      "notice_refs": [],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase24 authored content review",
+      "reviewed_on": "2026-11-01",
+      "rationale": "中文解释与受控DSL为独立编写；来源卡含有署名的短原式源码摘录，保留四个上游完整MIT许可、版权及DeepSeek研究教育附注。逐卡绑定固定提交、文件和行号。仅授权这些内容字节的发布，不批准金融用途。",
+      "source_url": null,
+      "source_path": null,
+      "source_sha256": null
+    },
+    {
+      "review_id": "rights-factor-library-formulas",
+      "resource_id": "factor-library-formulas",
+      "resource_sha256": "7360415be4e1bb378bee9092aade53a805067c268004de97c8fd28eed8fe1b40",
+      "license_id": "MIT",
+      "license_refs": [
+        {
+          "resource_id": "finathink-license",
+          "sha256": "8f005100947b20fd54ad3d7c5dd501d303a627fd1c738f75f95f5f7b66040015"
+        },
+        {
+          "resource_id": "upstream-license",
+          "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+        },
+        {
+          "resource_id": "quantaxis-license",
+          "sha256": "96ebf515d25a58bbd8be4543a5c198e576db52738f26c82270ececb1dc273318"
+        },
+        {
+          "resource_id": "qlib-license",
+          "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+        },
+        {
+          "resource_id": "pyanomaly-license",
+          "sha256": "84dc4ddcfd08d382bbe4ac775ebee4da7e40280b8aba4f841884f0234303f6f4"
+        }
+      ],
+      "notice_refs": [],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase24 authored content review",
+      "reviewed_on": "2026-11-01",
+      "rationale": "中文解释与受控DSL为独立编写；来源卡含有署名的短原式源码摘录，保留四个上游完整MIT许可、版权及DeepSeek研究教育附注。逐卡绑定固定提交、文件和行号。仅授权这些内容字节的发布，不批准金融用途。",
       "source_url": null,
       "source_path": null,
       "source_sha256": null

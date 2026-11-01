@@ -16,6 +16,7 @@ def factor_workspace_page(csrf):
 <section data-experiment-workspace data-study-state="EMPTY">
 <header class="overview-header"><div><p class="eyebrow">FACTOR RESEARCH / PAPER-ONLY</p><h1>因子实验</h1><p class="lede">先固定问题、样本与成本，再验证候选；冻结后只查看一次测试集。</p></div></header>
 <p class="field-help">旧实验入口有 {len(research_recipes())} 个受控配方；工程复现不代表盈利。附加字段配方需走类型化研究入口，不使用成交量代替真实换手率。</p>
+<p><a href="/research/factor-library">打开跨家族因子定义库，准备真实后台研究 →</a></p>
 <details id="factor-directory"><summary>查看来源与本地定义目录</summary><ul>{directory}</ul></details>
 <input type="hidden" data-study-csrf value="{html.escape(csrf, quote=True)}">
 <p data-study-status role="status" aria-live="polite">正在读取本地目录和快照…</p>

@@ -260,7 +260,7 @@ class FactorSpec:
 
         for name in ("factor_id", "version", "formula", "units", "implementation_ref"):
             value = getattr(self, name)
-            if not isinstance(value, str) or not value.strip() or len(value) > 512 or _unsafe_public_text(value):
+            if not isinstance(value, str) or not value.strip() or len(value) > 512 or (_unsafe_public_text(value) and not (name == "units" and isinstance(self.implementation_ref, str) and self.implementation_ref.startswith("library:"))):
                 raise ValueError("factor definition requires bounded non-sensitive metadata")
         for name in ("required_fields", "source_resource_ids"):
             values = getattr(self, name)
@@ -268,15 +268,22 @@ class FactorSpec:
                     or any(not isinstance(value, str) or not value or len(value) > 160 or _unsafe_public_text(value) for value in values)):
                 raise ValueError("factor definition collections must be immutable text references")
             object.__setattr__(self, name, tuple(sorted(set(values))))
-        if (type(self.window) is not int or not 1 <= self.window <= 252 or self.direction not in {"HIGHER", "LOWER"}
+        if (type(self.window) is not int or not 1 <= self.window <= 252 or self.direction not in ({"RESEARCH"} if self.implementation_ref.startswith("library:") else {"HIGHER", "LOWER"})
                 or self.frequency != "daily" or self.availability != "available-at-or-before-signal"
                 or self.missing_policy != "propagate"):
             raise ValueError("unsupported factor timing or missing-value semantics")
         if (not isinstance(self.implementation_fingerprint, str)
                 or not re.fullmatch(r"[0-9a-f]{64}", self.implementation_fingerprint)
-                or not re.fullmatch(r"(?:recipe|feature):[A-Za-z0-9_.:-]+@[A-Za-z0-9_.:-]+", self.implementation_ref)):
+                or not re.fullmatch(r"(?:recipe|feature|library):[A-Za-z0-9_.:-]+@[A-Za-z0-9_.:-]+", self.implementation_ref)):
             raise ValueError("factor definition requires a versioned implementation binding")
-        parsed = parse_factor_expression(self.formula, self.required_fields)
+        if self.implementation_ref.startswith("library:"):
+            from .factor_library import _unit_dimensions, parse_library_expression
+            _unit_dimensions(self.units)
+            if not self.implementation_ref.endswith("@1.0.0") or self.version != "1.0.0":
+                raise ValueError("unknown library semantics version")
+            parsed = parse_library_expression(self.formula, self.required_fields)
+        else:
+            parsed = parse_factor_expression(self.formula, self.required_fields)
         if parsed.fields != self.required_fields:
             raise ValueError("factor definition fields disagree with its formula")
         object.__setattr__(self, "formula", parsed.expression)

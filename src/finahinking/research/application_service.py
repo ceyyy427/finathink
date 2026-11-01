@@ -657,6 +657,20 @@ class ResearchApplicationService:
         self.queue.cancel(job_id)
         return self.get_job(job_id)
 
+    def create_library_factor_study(self, values):
+        from .factor_library_workbench import prepare_library_study
+        from .snapshot_tools import local_research_policy
+
+        if not isinstance(values, dict):
+            raise TypeError("library study submission must be an object")
+        key = _ref(values.get("idempotency_key"), "idempotency_key")
+        spec = prepare_library_study(values, self.snapshots, policy_fingerprint=stable_digest(local_research_policy()))
+        study_id = "study-" + stable_digest({"scope": self.scope_id, "key": key})[:24]
+        study = self.factor_studies.create(study_id, spec, validation_key=key)
+        job = self._submit_factor_job(study, "validation", key)
+        self.factor_studies.set_job(study_id, "validation", job["job_id"])
+        return self.factor_study(study_id)
+
     def create_factor_study(self, values):
         from .factor_workbench import prepare_study
         from .snapshot_tools import local_research_policy
@@ -730,7 +744,7 @@ class ResearchApplicationService:
             if payload is not None and (payload.get("study_id") != study_id or payload.get("spec_ref") != study["spec_ref"]):
                 raise ValueError("factor study result belongs to another charter")
             if job["status"] in {"completed", "failed", "cancelled"}:
-                computed = payload is not None and payload.get("validation_run", {}).get("status") not in {
+                computed = payload is not None and payload.get("library_validation", {}).get("status", "COMPLETE") == "COMPLETE" and payload.get("validation_run", {}).get("status") not in {
                     "BLOCKED_DATA", "COMPLETE_WITH_BLOCKS", "BLOCKED_CONTROL", "SEMANTIC_REJECTION", "EXECUTION_ERROR"}
                 self.factor_studies.complete(study_id, phase, job_id, succeeded=job["status"] == "completed" and computed)
             jobs[f"{phase}_job"] = job
