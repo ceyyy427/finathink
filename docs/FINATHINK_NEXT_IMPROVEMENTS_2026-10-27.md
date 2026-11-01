@@ -58,3 +58,9 @@ Phase 18 已经 [PR #19](https://github.com/ceyyy427/finathink/pull/19) 合并�
 Phase 19 已通过 [PR #20](https://github.com/ceyyy427/finathink/pull/20) 合并。Phase 20 接通固定样本门槛、结算重建、不可变评估、显式探索确认和父/新政策成对复跑；轻量游标与短时成功缓存由本机基线验证，维护页显示实际保存的阶段耗时及未知资源。
 
 使用见[样本评估和本地维护指南](LEARNING_RELIABILITY_MAINTENANCE_GUIDE.md)，工程与发布门禁见[Phase 20验收](reviews/2026-10-31-finathink-phase20-review.md)。窗口分离与描述性区间不等于真实市场统计独立或盈利证明。
+
+## Phase 21–28 内容与研究扩展规划（2026-10-31）
+
+Phase 20 已经 [PR #21](https://github.com/ceyyy427/finathink/pull/21) 合并。下一轮以扩充研究内容为主：来源接入→量化知识库→PIT面板与算子→十类因子→验证与反证→策略/风险/研究池→自然语言闭环→研究工作台。
+
+见 [完整规划书与八份实施计划](FINATHINK_QUANT_KNOWLEDGE_ROADMAP_2026-10-31.md)。已下载 QUANTAXIS、DeepSeek HARNESS Quant、Qlib、Alphalens Reloaded、Pyanomaly、RD-Agent 和 bt；具体阅读文件及迁移方向见 [源码学习记录](research/2026-10-31-open-source-quant-study.md)。这一轮已完成下载、研究和规划，生产功能仍按各阶段验收后更新状态。
