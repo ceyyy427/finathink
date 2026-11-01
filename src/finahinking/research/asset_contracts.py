@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
+from datetime import date
 
 
 class AssetLoadError(ValueError):
@@ -30,6 +32,73 @@ class ResourceRef:
     source_path: str | None = None
     source_sha256: str | None = None
     derivation: str = "ORIGINAL"
+    rights_ref: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class RightsMaterial:
+    resource_id: str
+    sha256: str
+
+    def __post_init__(self):
+        if (not isinstance(self.resource_id, str) or not self.resource_id
+                or len(self.resource_id) > 160 or not isinstance(self.sha256, str)
+                or not re.fullmatch(r"[0-9a-f]{64}", self.sha256)):
+            raise ValueError("invalid rights material")
+
+
+@dataclass(frozen=True, slots=True)
+class FileRightsReview:
+    review_id: str
+    resource_id: str
+    resource_sha256: str
+    license_id: str
+    license_refs: tuple[RightsMaterial, ...]
+    notice_refs: tuple[RightsMaterial, ...]
+    decision: str
+    scope: str
+    reviewed_by: str
+    reviewed_on: str
+    rationale: str
+    source_url: str | None = None
+    source_path: str | None = None
+    source_sha256: str | None = None
+
+    def __post_init__(self):
+        for name in ("review_id", "resource_id", "license_id", "reviewed_by", "rationale"):
+            value = getattr(self, name)
+            if (not isinstance(value, str) or not value.strip() or len(value) > 2048
+                    or any(ord(c) < 32 for c in value)):
+                raise ValueError("invalid rights review text")
+        if self.scope != "FILE_BYTES_ONLY" or self.decision not in {
+            "DISTRIBUTION_APPROVED", "REFERENCE_ONLY", "BLOCKED",
+        }:
+            raise ValueError("invalid rights decision scope")
+        if (not isinstance(self.reviewed_on, str)
+                or date.fromisoformat(self.reviewed_on).isoformat() != self.reviewed_on):
+            raise ValueError("invalid review date")
+        if not isinstance(self.resource_sha256, str) or not re.fullmatch(
+            r"[0-9a-f]{64}", self.resource_sha256
+        ):
+            raise ValueError("invalid reviewed hash")
+        for name in ("source_url", "source_path", "source_sha256"):
+            value = getattr(self, name)
+            if value is not None and (not isinstance(value, str) or not value
+                                      or len(value) > 2048):
+                raise ValueError("invalid reviewed provenance")
+        if self.source_sha256 is not None and not re.fullmatch(r"[0-9a-f]{64}", self.source_sha256):
+            raise ValueError("invalid reviewed source hash")
+        for name in ("license_refs", "notice_refs"):
+            values = getattr(self, name)
+            if not isinstance(values, (list, tuple)) or len(values) > 64:
+                raise ValueError("invalid rights references")
+            items = tuple(v if isinstance(v, RightsMaterial) else RightsMaterial(**v)
+                          for v in values)
+            if len({v.resource_id for v in items}) != len(items):
+                raise ValueError("duplicate rights reference")
+            object.__setattr__(self, name, items)
+        if not self.license_refs:
+            raise ValueError("review requires license evidence")
 
 
 @dataclass(frozen=True, slots=True)

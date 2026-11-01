@@ -1,0 +1,726 @@
+{
+  "schema_version": "quant-resource-reconciliation.v1",
+  "baseline_commit": "f40d515a5f8ef6e5c7ddf49fcd6c36ae61581863",
+  "capture_date": "2026-10-31",
+  "resources": [
+    {
+      "resource_id": "finathink-license",
+      "previous_sha256": "8f005100947b20fd54ad3d7c5dd501d303a627fd1c738f75f95f5f7b66040015",
+      "previous_availability": "PACKAGED",
+      "previous_version": "1.0.0",
+      "previous_path": "provenance/licenses/finathink-MIT.txt",
+      "disposition": "PACKAGED_PRESERVED",
+      "reason": "保留既有资源ID、版本、路径与内容摘要；在v2清单中增加逐文件权利记录。",
+      "evidence_refs": [
+        "resource:finathink-license"
+      ]
+    },
+    {
+      "resource_id": "upstream-license",
+      "previous_sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4",
+      "previous_availability": "PACKAGED",
+      "previous_version": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+      "previous_path": "provenance/licenses/deepseek-harness-quant-MIT.txt",
+      "disposition": "PACKAGED_PRESERVED",
+      "reason": "保留既有资源ID、版本、路径与内容摘要；在v2清单中增加逐文件权利记录。",
+      "evidence_refs": [
+        "resource:upstream-license"
+      ]
+    },
+    {
+      "resource_id": "skill-index",
+      "previous_sha256": "b33e24d9b2db6e5f5a79343c76fc6eae69af6b560308ca71a3970f3564c1af68",
+      "previous_availability": "PACKAGED",
+      "previous_version": "1.0.0",
+      "previous_path": "skills/index.json",
+      "disposition": "PACKAGED_PRESERVED",
+      "reason": "保留既有资源ID、版本、路径与内容摘要；在v2清单中增加逐文件权利记录。",
+      "evidence_refs": [
+        "resource:skill-index"
+      ]
+    },
+    {
+      "resource_id": "factor-validation-v1",
+      "previous_sha256": "bf8c97334395ac10083ba6ad1b3e4354119b5248657a8a386786b6a3a281915e",
+      "previous_availability": "PACKAGED",
+      "previous_version": "1.0.0",
+      "previous_path": "policies/factor-validation.v1.json",
+      "disposition": "PACKAGED_PRESERVED",
+      "reason": "保留既有资源ID、版本、路径与内容摘要；在v2清单中增加逐文件权利记录。",
+      "evidence_refs": [
+        "resource:factor-validation-v1"
+      ]
+    },
+    {
+      "resource_id": "method-factor-mining-workflow",
+      "previous_sha256": "178c922147250aacc30130f85bb8d0ed6af44b1c245fcbc9c54a41adfa92bb8b",
+      "previous_availability": "PACKAGED",
+      "previous_version": "1.0.0",
+      "previous_path": "skills/factor-mining-workflow/SKILL.md",
+      "disposition": "PACKAGED_PRESERVED",
+      "reason": "保留既有资源ID、版本、路径与内容摘要；在v2清单中增加逐文件权利记录。",
+      "evidence_refs": [
+        "resource:method-factor-mining-workflow"
+      ]
+    },
+    {
+      "resource_id": "reference-factor-mining-workflow",
+      "previous_sha256": "baca5668df3f9616100c2cb9a953595daf31fc972d6c9a85a74b0c9755b2ce59",
+      "previous_availability": "PACKAGED",
+      "previous_version": "1.0.0",
+      "previous_path": "skills/factor-mining-workflow/references/context.md",
+      "disposition": "PACKAGED_PRESERVED",
+      "reason": "保留既有资源ID、版本、路径与内容摘要；在v2清单中增加逐文件权利记录。",
+      "evidence_refs": [
+        "resource:reference-factor-mining-workflow"
+      ]
+    },
+    {
+      "resource_id": "method-alpha-gpt-factor-mining",
+      "previous_sha256": "008f874d879abaedc3e9c5f0fe3caebb861adf56a81a1216618288af7b45af6d",
+      "previous_availability": "PACKAGED",
+      "previous_version": "1.0.0",
+      "previous_path": "skills/alpha-gpt-factor-mining/SKILL.md",
+      "disposition": "PACKAGED_PRESERVED",
+      "reason": "保留既有资源ID、版本、路径与内容摘要；在v2清单中增加逐文件权利记录。",
+      "evidence_refs": [
+        "resource:method-alpha-gpt-factor-mining"
+      ]
+    },
+    {
+      "resource_id": "reference-alpha-gpt-factor-mining",
+      "previous_sha256": "a8bde255b81c3406031964968d2a80d714b79866143feb05c672649c0602cd98",
+      "previous_availability": "PACKAGED",
+      "previous_version": "1.0.0",
+      "previous_path": "skills/alpha-gpt-factor-mining/references/context.md",
+      "disposition": "PACKAGED_PRESERVED",
+      "reason": "保留既有资源ID、版本、路径与内容摘要；在v2清单中增加逐文件权利记录。",
+      "evidence_refs": [
+        "resource:reference-alpha-gpt-factor-mining"
+      ]
+    },
+    {
+      "resource_id": "method-alpha-gpt-researcher",
+      "previous_sha256": "beaa9b278cd7c97518d85fd43f99b635e8296fa7a2750433281a16822888310c",
+      "previous_availability": "PACKAGED",
+      "previous_version": "1.0.0",
+      "previous_path": "skills/alpha-gpt-researcher/SKILL.md",
+      "disposition": "PACKAGED_PRESERVED",
+      "reason": "保留既有资源ID、版本、路径与内容摘要；在v2清单中增加逐文件权利记录。",
+      "evidence_refs": [
+        "resource:method-alpha-gpt-researcher"
+      ]
+    },
+    {
+      "resource_id": "reference-alpha-gpt-researcher",
+      "previous_sha256": "b7ed74b030d8a2945cfd705877748c80a1ff932239e9e62b7c0934d701fbbede",
+      "previous_availability": "PACKAGED",
+      "previous_version": "1.0.0",
+      "previous_path": "skills/alpha-gpt-researcher/references/context.md",
+      "disposition": "PACKAGED_PRESERVED",
+      "reason": "保留既有资源ID、版本、路径与内容摘要；在v2清单中增加逐文件权利记录。",
+      "evidence_refs": [
+        "resource:reference-alpha-gpt-researcher"
+      ]
+    },
+    {
+      "resource_id": "method-backtest-acceptance",
+      "previous_sha256": "51a994038dba4cce2ccd9b0aae8cc6ca14a0cb620e1de2502fe7dc612d4ece8c",
+      "previous_availability": "PACKAGED",
+      "previous_version": "1.0.0",
+      "previous_path": "skills/backtest-acceptance/SKILL.md",
+      "disposition": "PACKAGED_PRESERVED",
+      "reason": "保留既有资源ID、版本、路径与内容摘要；在v2清单中增加逐文件权利记录。",
+      "evidence_refs": [
+        "resource:method-backtest-acceptance"
+      ]
+    },
+    {
+      "resource_id": "reference-backtest-acceptance",
+      "previous_sha256": "856eec7db372434c22fb633414244b335af0898509935c956d84c3eba7790799",
+      "previous_availability": "PACKAGED",
+      "previous_version": "1.0.0",
+      "previous_path": "skills/backtest-acceptance/references/context.md",
+      "disposition": "PACKAGED_PRESERVED",
+      "reason": "保留既有资源ID、版本、路径与内容摘要；在v2清单中增加逐文件权利记录。",
+      "evidence_refs": [
+        "resource:reference-backtest-acceptance"
+      ]
+    },
+    {
+      "resource_id": "method-niu-san-distillation",
+      "previous_sha256": "86a64bc85ec2823f8416170891e989fde76a1dd7649f019b5ca084d6c325dce8",
+      "previous_availability": "PACKAGED",
+      "previous_version": "1.0.0",
+      "previous_path": "skills/niu-san-distillation/SKILL.md",
+      "disposition": "PACKAGED_PRESERVED",
+      "reason": "保留既有资源ID、版本、路径与内容摘要；在v2清单中增加逐文件权利记录。",
+      "evidence_refs": [
+        "resource:method-niu-san-distillation"
+      ]
+    },
+    {
+      "resource_id": "reference-niu-san-distillation",
+      "previous_sha256": "af29a9bbbcbfa9e7d35c4b6b54cb92cabf6292fe78228658d406ea568527ef89",
+      "previous_availability": "PACKAGED",
+      "previous_version": "1.0.0",
+      "previous_path": "skills/niu-san-distillation/references/context.md",
+      "disposition": "PACKAGED_PRESERVED",
+      "reason": "保留既有资源ID、版本、路径与内容摘要；在v2清单中增加逐文件权利记录。",
+      "evidence_refs": [
+        "resource:reference-niu-san-distillation"
+      ]
+    },
+    {
+      "resource_id": "method-niu-san-linyuan",
+      "previous_sha256": "befe8009c5fd0de7c97ced052b3ea8e02b7d564164ce6241b08efd6d0c75b4e5",
+      "previous_availability": "PACKAGED",
+      "previous_version": "1.0.0",
+      "previous_path": "skills/niu-san-linyuan/SKILL.md",
+      "disposition": "PACKAGED_PRESERVED",
+      "reason": "保留既有资源ID、版本、路径与内容摘要；在v2清单中增加逐文件权利记录。",
+      "evidence_refs": [
+        "resource:method-niu-san-linyuan"
+      ]
+    },
+    {
+      "resource_id": "reference-niu-san-linyuan",
+      "previous_sha256": "cbe148055185e11df3fb0199166354eb2dc4c8d15318ff9cdd27060b5689b94f",
+      "previous_availability": "PACKAGED",
+      "previous_version": "1.0.0",
+      "previous_path": "skills/niu-san-linyuan/references/context.md",
+      "disposition": "PACKAGED_PRESERVED",
+      "reason": "保留既有资源ID、版本、路径与内容摘要；在v2清单中增加逐文件权利记录。",
+      "evidence_refs": [
+        "resource:reference-niu-san-linyuan"
+      ]
+    },
+    {
+      "resource_id": "method-niu-san-chenxiaoqun",
+      "previous_sha256": "6fb822066903c298d10c7294d8af3a74982ae4d012adb65c9e7af7e992cb1ba2",
+      "previous_availability": "PACKAGED",
+      "previous_version": "1.0.0",
+      "previous_path": "skills/niu-san-chenxiaoqun/SKILL.md",
+      "disposition": "PACKAGED_PRESERVED",
+      "reason": "保留既有资源ID、版本、路径与内容摘要；在v2清单中增加逐文件权利记录。",
+      "evidence_refs": [
+        "resource:method-niu-san-chenxiaoqun"
+      ]
+    },
+    {
+      "resource_id": "reference-niu-san-chenxiaoqun",
+      "previous_sha256": "1e4f68c334501ed4609869b8ee645a90713a2317a7cff3fe0eb5e75442206941",
+      "previous_availability": "PACKAGED",
+      "previous_version": "1.0.0",
+      "previous_path": "skills/niu-san-chenxiaoqun/references/context.md",
+      "disposition": "PACKAGED_PRESERVED",
+      "reason": "保留既有资源ID、版本、路径与内容摘要；在v2清单中增加逐文件权利记录。",
+      "evidence_refs": [
+        "resource:reference-niu-san-chenxiaoqun"
+      ]
+    },
+    {
+      "resource_id": "method-niu-san-zhangmengzhu",
+      "previous_sha256": "685dbc09fb8f0e4f263bb0b13dcd8f5f7f84f726963b20a37ee52582b96bb8b9",
+      "previous_availability": "PACKAGED",
+      "previous_version": "1.0.0",
+      "previous_path": "skills/niu-san-zhangmengzhu/SKILL.md",
+      "disposition": "PACKAGED_PRESERVED",
+      "reason": "保留既有资源ID、版本、路径与内容摘要；在v2清单中增加逐文件权利记录。",
+      "evidence_refs": [
+        "resource:method-niu-san-zhangmengzhu"
+      ]
+    },
+    {
+      "resource_id": "reference-niu-san-zhangmengzhu",
+      "previous_sha256": "0f1dba891dce02de2bb95b6b5a55ca9879f524e7c2013054729a057bb216c2aa",
+      "previous_availability": "PACKAGED",
+      "previous_version": "1.0.0",
+      "previous_path": "skills/niu-san-zhangmengzhu/references/context.md",
+      "disposition": "PACKAGED_PRESERVED",
+      "reason": "保留既有资源ID、版本、路径与内容摘要；在v2清单中增加逐文件权利记录。",
+      "evidence_refs": [
+        "resource:reference-niu-san-zhangmengzhu"
+      ]
+    },
+    {
+      "resource_id": "method-niu-san-zhaolaoge",
+      "previous_sha256": "766189de079321ca4e797017dacd1ced10bfac00b1402a53a99a77a407de8c4c",
+      "previous_availability": "PACKAGED",
+      "previous_version": "1.0.0",
+      "previous_path": "skills/niu-san-zhaolaoge/SKILL.md",
+      "disposition": "PACKAGED_PRESERVED",
+      "reason": "保留既有资源ID、版本、路径与内容摘要；在v2清单中增加逐文件权利记录。",
+      "evidence_refs": [
+        "resource:method-niu-san-zhaolaoge"
+      ]
+    },
+    {
+      "resource_id": "reference-niu-san-zhaolaoge",
+      "previous_sha256": "f3b950b1e25889979699f5e9a6fde1e55cea9ca4253f7b95a77a9dd15c51fc90",
+      "previous_availability": "PACKAGED",
+      "previous_version": "1.0.0",
+      "previous_path": "skills/niu-san-zhaolaoge/references/context.md",
+      "disposition": "PACKAGED_PRESERVED",
+      "reason": "保留既有资源ID、版本、路径与内容摘要；在v2清单中增加逐文件权利记录。",
+      "evidence_refs": [
+        "resource:reference-niu-san-zhaolaoge"
+      ]
+    },
+    {
+      "resource_id": "method-niu-san-chaoguyangjia",
+      "previous_sha256": "8a16ac92ddd7921775c932976a618194189b7379d8fed0ea17393cc7a65f539d",
+      "previous_availability": "PACKAGED",
+      "previous_version": "1.0.0",
+      "previous_path": "skills/niu-san-chaoguyangjia/SKILL.md",
+      "disposition": "PACKAGED_PRESERVED",
+      "reason": "保留既有资源ID、版本、路径与内容摘要；在v2清单中增加逐文件权利记录。",
+      "evidence_refs": [
+        "resource:method-niu-san-chaoguyangjia"
+      ]
+    },
+    {
+      "resource_id": "reference-niu-san-chaoguyangjia",
+      "previous_sha256": "659e43dac870bb2e62f9d627e34401210149758f61079cd54f1e9b1e93e8ced2",
+      "previous_availability": "PACKAGED",
+      "previous_version": "1.0.0",
+      "previous_path": "skills/niu-san-chaoguyangjia/references/context.md",
+      "disposition": "PACKAGED_PRESERVED",
+      "reason": "保留既有资源ID、版本、路径与内容摘要；在v2清单中增加逐文件权利记录。",
+      "evidence_refs": [
+        "resource:reference-niu-san-chaoguyangjia"
+      ]
+    },
+    {
+      "resource_id": "method-niu-san-fengliu",
+      "previous_sha256": "6790e77ca42dd345b41a3091e04a69b32a9479abc52c04e346b94fed385fd396",
+      "previous_availability": "PACKAGED",
+      "previous_version": "1.0.0",
+      "previous_path": "skills/niu-san-fengliu/SKILL.md",
+      "disposition": "PACKAGED_PRESERVED",
+      "reason": "保留既有资源ID、版本、路径与内容摘要；在v2清单中增加逐文件权利记录。",
+      "evidence_refs": [
+        "resource:method-niu-san-fengliu"
+      ]
+    },
+    {
+      "resource_id": "reference-niu-san-fengliu",
+      "previous_sha256": "1ce02e4fddfa9f131347d1eabc7409096fb833f484f8edca6a4f14d437b801b1",
+      "previous_availability": "PACKAGED",
+      "previous_version": "1.0.0",
+      "previous_path": "skills/niu-san-fengliu/references/context.md",
+      "disposition": "PACKAGED_PRESERVED",
+      "reason": "保留既有资源ID、版本、路径与内容摘要；在v2清单中增加逐文件权利记录。",
+      "evidence_refs": [
+        "resource:reference-niu-san-fengliu"
+      ]
+    },
+    {
+      "resource_id": "method-github-maintainer",
+      "previous_sha256": "b0cbcce00bb05ff97e94a73c89f727a3c643aeb58be1619679991b0f07b69b5e",
+      "previous_availability": "PACKAGED",
+      "previous_version": "1.0.0",
+      "previous_path": "skills/github-maintainer/SKILL.md",
+      "disposition": "PACKAGED_PRESERVED",
+      "reason": "保留既有资源ID、版本、路径与内容摘要；在v2清单中增加逐文件权利记录。",
+      "evidence_refs": [
+        "resource:method-github-maintainer"
+      ]
+    },
+    {
+      "resource_id": "reference-github-maintainer",
+      "previous_sha256": "41bbae90ded6bf4a0de95e31d42b90fc3a1e7985a1c8353f4cdb0d9de421e0f7",
+      "previous_availability": "PACKAGED",
+      "previous_version": "1.0.0",
+      "previous_path": "skills/github-maintainer/references/context.md",
+      "disposition": "PACKAGED_PRESERVED",
+      "reason": "保留既有资源ID、版本、路径与内容摘要；在v2清单中增加逐文件权利记录。",
+      "evidence_refs": [
+        "resource:reference-github-maintainer"
+      ]
+    },
+    {
+      "resource_id": "source-factor-mining-workflow",
+      "previous_sha256": "ff9dbbe90669d044bb5c0aac3c9c6e1b8793a1e3d127d4db974c7a20f40e950d",
+      "previous_availability": "UPSTREAM_ONLY",
+      "previous_version": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+      "previous_path": null,
+      "disposition": "UPSTREAM_REFERENCE_PRESERVED",
+      "reason": "固定提交中已定位并核对原文摘要；继续作为来源引用，已有本地适配/解释通过原ID使用。原始Skill文本不作为可执行权限导入。",
+      "evidence_refs": [
+        "resource:source-factor-mining-workflow",
+        "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/factor-mining-workflow/SKILL.md"
+      ]
+    },
+    {
+      "resource_id": "source-alpha-gpt-factor-mining",
+      "previous_sha256": "113cf7283383e69893a6ad2a2ca062044f901914b4827f869229f63a2fc9a58d",
+      "previous_availability": "UPSTREAM_ONLY",
+      "previous_version": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+      "previous_path": null,
+      "disposition": "UPSTREAM_REFERENCE_PRESERVED",
+      "reason": "固定提交中已定位并核对原文摘要；继续作为来源引用，已有本地适配/解释通过原ID使用。原始Skill文本不作为可执行权限导入。",
+      "evidence_refs": [
+        "resource:source-alpha-gpt-factor-mining",
+        "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/alpha-gpt-factor-mining/SKILL.md"
+      ]
+    },
+    {
+      "resource_id": "source-alpha-gpt-researcher",
+      "previous_sha256": "9403291d6ee0f101eea3017e24a207f3e2fe371eaed44cee7bd64a556ba71afc",
+      "previous_availability": "UPSTREAM_ONLY",
+      "previous_version": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+      "previous_path": null,
+      "disposition": "UPSTREAM_REFERENCE_PRESERVED",
+      "reason": "固定提交中已定位并核对原文摘要；继续作为来源引用，已有本地适配/解释通过原ID使用。原始Skill文本不作为可执行权限导入。",
+      "evidence_refs": [
+        "resource:source-alpha-gpt-researcher",
+        "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/alpha-gpt-researcher/SKILL.md"
+      ]
+    },
+    {
+      "resource_id": "source-backtest-acceptance",
+      "previous_sha256": "d8b43220c53faeb856f0ec65041ad202f01f9a41402ea2c8dbe3b2320db44603",
+      "previous_availability": "UPSTREAM_ONLY",
+      "previous_version": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+      "previous_path": null,
+      "disposition": "UPSTREAM_REFERENCE_PRESERVED",
+      "reason": "固定提交中已定位并核对原文摘要；继续作为来源引用，已有本地适配/解释通过原ID使用。原始Skill文本不作为可执行权限导入。",
+      "evidence_refs": [
+        "resource:source-backtest-acceptance",
+        "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/backtest-acceptance/SKILL.md"
+      ]
+    },
+    {
+      "resource_id": "source-niu-san-distillation",
+      "previous_sha256": "986f5d5e105838603c2e93afbfec20166b0e4ba9c9a77dc7c2caf5e91b0a84ca",
+      "previous_availability": "UPSTREAM_ONLY",
+      "previous_version": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+      "previous_path": null,
+      "disposition": "UPSTREAM_REFERENCE_PRESERVED",
+      "reason": "固定提交中已定位并核对原文摘要；继续作为来源引用，已有本地适配/解释通过原ID使用。原始Skill文本不作为可执行权限导入。",
+      "evidence_refs": [
+        "resource:source-niu-san-distillation",
+        "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/niu-san-distillation/SKILL.md"
+      ]
+    },
+    {
+      "resource_id": "source-niu-san-linyuan",
+      "previous_sha256": "877b2462d77cbda63a30f3d55507ae5f68b842ab6edf639aab7446b1df6cddce",
+      "previous_availability": "UPSTREAM_ONLY",
+      "previous_version": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+      "previous_path": null,
+      "disposition": "UPSTREAM_REFERENCE_PRESERVED",
+      "reason": "固定提交中已定位并核对原文摘要；继续作为来源引用，已有本地适配/解释通过原ID使用。原始Skill文本不作为可执行权限导入。",
+      "evidence_refs": [
+        "resource:source-niu-san-linyuan",
+        "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/niu-san-linyuan/SKILL.md"
+      ]
+    },
+    {
+      "resource_id": "source-niu-san-chenxiaoqun",
+      "previous_sha256": "3dc0792bceb5c2d8a4dfe88007eb4bbc4533fd78cc708cb274c1ed563b12b64f",
+      "previous_availability": "UPSTREAM_ONLY",
+      "previous_version": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+      "previous_path": null,
+      "disposition": "UPSTREAM_REFERENCE_PRESERVED",
+      "reason": "固定提交中已定位并核对原文摘要；继续作为来源引用，已有本地适配/解释通过原ID使用。原始Skill文本不作为可执行权限导入。",
+      "evidence_refs": [
+        "resource:source-niu-san-chenxiaoqun",
+        "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/niu-san-chenxiaoqun/SKILL.md"
+      ]
+    },
+    {
+      "resource_id": "source-niu-san-zhangmengzhu",
+      "previous_sha256": "39fb8773d2baada6c4304d7f471e2dcd8e9a53c9cd8639c79e7354c2b4ff6955",
+      "previous_availability": "UPSTREAM_ONLY",
+      "previous_version": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+      "previous_path": null,
+      "disposition": "UPSTREAM_REFERENCE_PRESERVED",
+      "reason": "固定提交中已定位并核对原文摘要；继续作为来源引用，已有本地适配/解释通过原ID使用。原始Skill文本不作为可执行权限导入。",
+      "evidence_refs": [
+        "resource:source-niu-san-zhangmengzhu",
+        "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/niu-san-zhangmengzhu/SKILL.md"
+      ]
+    },
+    {
+      "resource_id": "source-niu-san-zhaolaoge",
+      "previous_sha256": "cfe5fd3b81719f64008704baf85a4efd86773ea725780e650c1cc321b58e202e",
+      "previous_availability": "UPSTREAM_ONLY",
+      "previous_version": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+      "previous_path": null,
+      "disposition": "UPSTREAM_REFERENCE_PRESERVED",
+      "reason": "固定提交中已定位并核对原文摘要；继续作为来源引用，已有本地适配/解释通过原ID使用。原始Skill文本不作为可执行权限导入。",
+      "evidence_refs": [
+        "resource:source-niu-san-zhaolaoge",
+        "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/niu-san-zhaolaoge/SKILL.md"
+      ]
+    },
+    {
+      "resource_id": "source-niu-san-chaoguyangjia",
+      "previous_sha256": "c37196392fa5314ca85227140932a82689f4e83a8cffe2b1612e1fb3cf718707",
+      "previous_availability": "UPSTREAM_ONLY",
+      "previous_version": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+      "previous_path": null,
+      "disposition": "UPSTREAM_REFERENCE_PRESERVED",
+      "reason": "固定提交中已定位并核对原文摘要；继续作为来源引用，已有本地适配/解释通过原ID使用。原始Skill文本不作为可执行权限导入。",
+      "evidence_refs": [
+        "resource:source-niu-san-chaoguyangjia",
+        "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/niu-san-chaoguyangjia/SKILL.md"
+      ]
+    },
+    {
+      "resource_id": "source-niu-san-fengliu",
+      "previous_sha256": "6421ebd742d028e6a05eb16dff3b6fae43a266c0e9f124e09b8cf76e95e15d67",
+      "previous_availability": "UPSTREAM_ONLY",
+      "previous_version": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+      "previous_path": null,
+      "disposition": "UPSTREAM_REFERENCE_PRESERVED",
+      "reason": "固定提交中已定位并核对原文摘要；继续作为来源引用，已有本地适配/解释通过原ID使用。原始Skill文本不作为可执行权限导入。",
+      "evidence_refs": [
+        "resource:source-niu-san-fengliu",
+        "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/niu-san-fengliu/SKILL.md"
+      ]
+    },
+    {
+      "resource_id": "source-github-maintainer",
+      "previous_sha256": "6cb5bc64ba95ee5c8f3c3251aee1158a7a4dfe2b01616bb136b17a3f52e9e8e9",
+      "previous_availability": "UPSTREAM_ONLY",
+      "previous_version": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+      "previous_path": null,
+      "disposition": "UPSTREAM_REFERENCE_PRESERVED",
+      "reason": "固定提交中已定位并核对原文摘要；继续作为来源引用，已有本地适配/解释通过原ID使用。原始Skill文本不作为可执行权限导入。",
+      "evidence_refs": [
+        "resource:source-github-maintainer",
+        "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/github-maintainer/SKILL.md"
+      ]
+    },
+    {
+      "resource_id": "upstream-factor-handbook",
+      "previous_sha256": null,
+      "previous_availability": "MISSING",
+      "previous_version": "unknown",
+      "previous_path": null,
+      "disposition": "MISSING_EXPLICIT",
+      "reason": "原始完整报告不在当前固定源码树；现有摘要不能替代原报告，继续明确显示缺失。",
+      "evidence_refs": [
+        "resource:upstream-factor-handbook",
+        "source:deepseek-harness-quant@9f72ab7e64799aecfc79cf3b913359acea1dd9b9"
+      ]
+    },
+    {
+      "resource_id": "upstream-falsification-report",
+      "previous_sha256": null,
+      "previous_availability": "MISSING",
+      "previous_version": "unknown",
+      "previous_path": null,
+      "disposition": "MISSING_EXPLICIT",
+      "reason": "原始完整报告不在当前固定源码树；现有摘要不能替代原报告，继续明确显示缺失。",
+      "evidence_refs": [
+        "resource:upstream-falsification-report",
+        "source:deepseek-harness-quant@9f72ab7e64799aecfc79cf3b913359acea1dd9b9"
+      ]
+    },
+    {
+      "resource_id": "source-trial-findings",
+      "previous_sha256": "7a72cab845615a0845e39096ddf47c6c041164dd576c3d02db6c6a987130d0f8",
+      "previous_availability": "UPSTREAM_ONLY",
+      "previous_version": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+      "previous_path": null,
+      "disposition": "UPSTREAM_REFERENCE_PRESERVED",
+      "reason": "固定提交中已定位并核对摘要；原始实现/试验摘要保留来源身份，与本地公式及原始市场证据分开。",
+      "evidence_refs": [
+        "resource:source-trial-findings",
+        "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/alpha-gpt-factor-mining/references/trial-findings.md"
+      ]
+    },
+    {
+      "resource_id": "source-fscore-partial",
+      "previous_sha256": "eae2e652d64af5486c61c47f77fc3afec7562766eabbd8960b31955bb509bcf3",
+      "previous_availability": "UPSTREAM_ONLY",
+      "previous_version": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+      "previous_path": null,
+      "disposition": "UPSTREAM_REFERENCE_PRESERVED",
+      "reason": "固定提交中已定位并核对摘要；原始实现/试验摘要保留来源身份，与本地公式及原始市场证据分开。",
+      "evidence_refs": [
+        "resource:source-fscore-partial",
+        "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/factors/fscore.py"
+      ]
+    },
+    {
+      "resource_id": "source-sue-simplified",
+      "previous_sha256": "d43ecc2a960ed3a3560a11875c98124cdd3e6947eddfc126dcc967ea2edab43b",
+      "previous_availability": "UPSTREAM_ONLY",
+      "previous_version": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+      "previous_path": null,
+      "disposition": "UPSTREAM_REFERENCE_PRESERVED",
+      "reason": "固定提交中已定位并核对摘要；原始实现/试验摘要保留来源身份，与本地公式及原始市场证据分开。",
+      "evidence_refs": [
+        "resource:source-sue-simplified",
+        "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/factors/fundamental.py"
+      ]
+    },
+    {
+      "resource_id": "upstream-trial-full-report",
+      "previous_sha256": null,
+      "previous_availability": "MISSING",
+      "previous_version": "unknown",
+      "previous_path": null,
+      "disposition": "MISSING_EXPLICIT",
+      "reason": "原始完整报告不在当前固定源码树；现有摘要不能替代原报告，继续明确显示缺失。",
+      "evidence_refs": [
+        "resource:upstream-trial-full-report",
+        "source:deepseek-harness-quant@9f72ab7e64799aecfc79cf3b913359acea1dd9b9"
+      ]
+    },
+    {
+      "resource_id": "upstream-bars-dataset",
+      "previous_sha256": null,
+      "previous_availability": "MISSING",
+      "previous_version": "unknown",
+      "previous_path": null,
+      "disposition": "MISSING_EXPLICIT",
+      "reason": "原始数据库、股票池或复权/财务快照未随项目提供；源码说明不构成数据来源与许可证据，继续明确显示缺失。",
+      "evidence_refs": [
+        "resource:upstream-bars-dataset",
+        "source:deepseek-harness-quant@9f72ab7e64799aecfc79cf3b913359acea1dd9b9"
+      ]
+    },
+    {
+      "resource_id": "upstream-finance-quality-dataset",
+      "previous_sha256": null,
+      "previous_availability": "MISSING",
+      "previous_version": "unknown",
+      "previous_path": null,
+      "disposition": "MISSING_EXPLICIT",
+      "reason": "原始数据库、股票池或复权/财务快照未随项目提供；源码说明不构成数据来源与许可证据，继续明确显示缺失。",
+      "evidence_refs": [
+        "resource:upstream-finance-quality-dataset",
+        "source:deepseek-harness-quant@9f72ab7e64799aecfc79cf3b913359acea1dd9b9"
+      ]
+    },
+    {
+      "resource_id": "upstream-finance-dataset",
+      "previous_sha256": null,
+      "previous_availability": "MISSING",
+      "previous_version": "unknown",
+      "previous_path": null,
+      "disposition": "MISSING_EXPLICIT",
+      "reason": "原始数据库、股票池或复权/财务快照未随项目提供；源码说明不构成数据来源与许可证据，继续明确显示缺失。",
+      "evidence_refs": [
+        "resource:upstream-finance-dataset",
+        "source:deepseek-harness-quant@9f72ab7e64799aecfc79cf3b913359acea1dd9b9"
+      ]
+    },
+    {
+      "resource_id": "source-definitions",
+      "previous_sha256": "3a392d70a999ca8be7bcbed9018af7677cfb41868c582367c81ea411d6c383a2",
+      "previous_availability": "PACKAGED",
+      "previous_version": "1.2.0",
+      "previous_path": "factors/source-definitions.json",
+      "disposition": "PACKAGED_PRESERVED",
+      "reason": "保留既有资源ID、版本、路径与内容摘要；在v2清单中增加逐文件权利记录。",
+      "evidence_refs": [
+        "resource:source-definitions"
+      ]
+    },
+    {
+      "resource_id": "source-claims",
+      "previous_sha256": "fc0d7a6e2aa60b2ba7eb605074849239074fe52020eabcdbc0fdb411671e1b55",
+      "previous_availability": "PACKAGED",
+      "previous_version": "1.0.0",
+      "previous_path": "evidence/source-claims.jsonl",
+      "disposition": "PACKAGED_PRESERVED",
+      "reason": "保留既有资源ID、版本、路径与内容摘要；在v2清单中增加逐文件权利记录。",
+      "evidence_refs": [
+        "resource:source-claims"
+      ]
+    },
+    {
+      "resource_id": "lessons",
+      "previous_sha256": "8fa3927892fc0b3005451025fb41e59009a6aea79e815996dd67cb2baf71f72e",
+      "previous_availability": "PACKAGED",
+      "previous_version": "1.0.0",
+      "previous_path": "lessons/falsifications.jsonl",
+      "disposition": "PACKAGED_PRESERVED",
+      "reason": "保留既有资源ID、版本、路径与内容摘要；在v2清单中增加逐文件权利记录。",
+      "evidence_refs": [
+        "resource:lessons"
+      ]
+    }
+  ],
+  "unresolved_definitions": [
+    {
+      "definition_id": "dshq-limup-ex-5",
+      "name": "limup_ex_5",
+      "status": "UNRESOLVED",
+      "reason": "原效果主张未绑定完整原式、输入快照与版本；家族映射或同名实现不能证明是该主张的原定义。",
+      "evidence_refs": [
+        "source-github-maintainer"
+      ]
+    },
+    {
+      "definition_id": "dshq-limup-ex-ret-20",
+      "name": "limup_ex_ret_20",
+      "status": "UNRESOLVED",
+      "reason": "原效果主张未绑定完整原式、输入快照与版本；家族映射或同名实现不能证明是该主张的原定义。",
+      "evidence_refs": [
+        "source-github-maintainer"
+      ]
+    },
+    {
+      "definition_id": "dshq-open-prem-20",
+      "name": "open_prem_20",
+      "status": "UNRESOLVED",
+      "reason": "原效果主张未绑定完整原式、输入快照与版本；家族映射或同名实现不能证明是该主张的原定义。",
+      "evidence_refs": [
+        "source-github-maintainer"
+      ]
+    },
+    {
+      "definition_id": "dshq-lhb-jg-cnt-20",
+      "name": "lhb_jg_cnt_20",
+      "status": "UNRESOLVED",
+      "reason": "原效果主张未绑定完整原式、输入快照与版本；家族映射或同名实现不能证明是该主张的原定义。",
+      "evidence_refs": [
+        "source-github-maintainer"
+      ]
+    },
+    {
+      "definition_id": "dshq-turn-mid-prox",
+      "name": "turn_mid_prox",
+      "status": "UNRESOLVED",
+      "reason": "找到backtest_pv_consensus.py中的有符号中位差变体；其注释“接近中位”与未取绝对值的实现存在解释差异，且未绑定原效果版本，保持原定义待补。",
+      "evidence_refs": [
+        "source-github-maintainer"
+      ]
+    },
+    {
+      "definition_id": "dshq-bp",
+      "name": "bp",
+      "status": "UNRESOLVED",
+      "reason": "原效果主张未绑定完整原式、输入快照与版本；家族映射或同名实现不能证明是该主张的原定义。",
+      "evidence_refs": [
+        "source-github-maintainer"
+      ]
+    },
+    {
+      "definition_id": "dshq-f-score",
+      "name": "f_score",
+      "status": "UNRESOLVED",
+      "reason": "已单列available-items部分项实现；其可用项求和不自动等同原f_score主张的完整九项定义。",
+      "evidence_refs": [
+        "source-github-maintainer"
+      ]
+    },
+    {
+      "definition_id": "dshq-sue",
+      "name": "sue",
+      "status": "UNRESOLVED",
+      "reason": "已单列profit-YoY简化实现；缺原SUE标准化规则与样本绑定，不用简化实现覆盖原定义。",
+      "evidence_refs": [
+        "source-github-maintainer"
+      ]
+    }
+  ]
+}

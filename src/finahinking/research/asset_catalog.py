@@ -13,6 +13,7 @@ from .asset_contracts import (
     AssetInventory,
     AssetLoadError,
     EvidenceClaim,
+    FileRightsReview,
     LessonRecord,
     ResourceRef,
     SkillDescriptor,
@@ -27,7 +28,8 @@ class ResearchAssetCatalog:
     def __init__(self, root):
         self._root = root
         manifest = self._json(self._read_path("provenance/upstream-lock.json", 524288), "manifest")
-        if manifest.get("schema_version") != "research-assets.v1":
+        self._schema = manifest.get("schema_version")
+        if self._schema not in {"research-assets.v1", "research-assets.v2"}:
             raise AssetLoadError("INVALID_MANIFEST", "manifest")
         self._resources = {}
         try:
@@ -35,7 +37,7 @@ class ResearchAssetCatalog:
                 if not self._text_fields(
                     item, ("resource_id", "availability", "kind", "author", "version"),
                     ("path", "sha256", "license_id", "license_ref", "source_url",
-                     "source_path", "source_sha256", "derivation"),
+                     "source_path", "source_sha256", "derivation", "rights_ref"),
                 ):
                     raise AssetLoadError("INVALID_MANIFEST", "manifest")
                 if item.get("byte_size") is not None and (
@@ -58,7 +60,27 @@ class ResearchAssetCatalog:
                 self._resources[ref.resource_id] = ref
         except (KeyError, TypeError) as exc:
             raise AssetLoadError("INVALID_MANIFEST", "manifest") from exc
+        self._rights = self._load_rights(manifest)
         self._skills = self._load_skills()
+
+    def _load_rights(self, manifest):
+        if self._schema == "research-assets.v1":
+            if manifest.get("rights_reviews") or any(r.rights_ref for r in self._resources.values()):
+                raise AssetLoadError("INVALID_RIGHTS", "manifest")
+            return {}
+        reviews = manifest.get("rights_reviews")
+        if not isinstance(reviews, list) or len(reviews) > 4096:
+            raise AssetLoadError("INVALID_RIGHTS", "manifest")
+        result = {}
+        try:
+            for payload in reviews:
+                review = FileRightsReview(**payload)
+                if review.review_id in result:
+                    raise ValueError("duplicate review")
+                result[review.review_id] = review
+        except (TypeError, ValueError, KeyError) as exc:
+            raise AssetLoadError("INVALID_RIGHTS", "manifest") from exc
+        return result
 
     @classmethod
     def packaged(cls) -> ResearchAssetCatalog:
@@ -119,6 +141,85 @@ class ResearchAssetCatalog:
         except (KeyError, TypeError) as exc:
             raise AssetLoadError("UNKNOWN_RESOURCE", str(resource_id)) from exc
 
+    def resources(self) -> tuple[ResourceRef, ...]:
+        return tuple(self._resources[key] for key in sorted(self._resources))
+
+    def source_intake_summary(self):
+        doc = self._json(self.read_text("source-intake-summary"), "source-intake-summary")
+        sources = doc.get("sources")
+        if (doc.get("schema_version") != "source-intake-summary.v1"
+                or not isinstance(sources, list) or len(sources) > 100):
+            raise AssetLoadError("INVALID_SOURCE_SUMMARY", "source-intake-summary")
+        seen = set()
+        for item in sources:
+            if not self._text_fields(item, ("source_id", "title", "repository", "commit",
+                                           "capture_date", "license_observed", "license_resource_id")):
+                raise AssetLoadError("INVALID_SOURCE_SUMMARY", "source-intake-summary")
+            if (item["source_id"].lower() in seen
+                    or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}", item["source_id"])
+                    or item.get("source_status") != "VERIFIED"
+                    or not re.fullmatch(r"[0-9a-f]{40}", item["commit"])
+                    or any(type(item.get(k)) is not int or item[k] < 0 for k in (
+                        "tracked_file_count", "verified_artifact_count", "module_count"))
+                    or not isinstance(item.get("modules"), list)
+                    or len(item["modules"]) != item["module_count"]):
+                raise AssetLoadError("INVALID_SOURCE_SUMMARY", "source-intake-summary")
+            seen.add(item["source_id"].lower())
+            references = item.get("reference_resource_ids")
+            if (not isinstance(references, list) or len(references) > 64
+                    or not all(isinstance(r, str) and r for r in references)):
+                raise AssetLoadError("INVALID_SOURCE_SUMMARY", "source-intake-summary")
+            for module in item["modules"]:
+                if (not self._text_fields(module, ("name", "disposition"))
+                        or type(module.get("phase")) is not int or not 21 <= module["phase"] <= 28
+                        or module["disposition"] not in {"ADAPTED", "VALIDATION_PENDING",
+                            "REFERENCE_ONLY", "EVIDENCE_MISSING", "OUT_OF_SCOPE"}):
+                    raise AssetLoadError("INVALID_SOURCE_SUMMARY", "source-intake-summary")
+            for rid in [item["license_resource_id"], *references]:
+                self.read_text(rid)
+        return doc
+
+    def _check_rights(self, ref):
+        if self._schema == "research-assets.v1":
+            # Historical v1 catalogs keep their MIT-only read contract.
+            if ref.license_id != "MIT" or not ref.license_ref or not ref.author:
+                raise AssetLoadError("LICENSE_MISSING", ref.resource_id)
+            license_ref = self.get_resource(ref.license_ref)
+            if license_ref.kind != "license":
+                raise AssetLoadError("LICENSE_MISSING", ref.resource_id)
+            self._checked_bytes(license_ref, 65536)
+            return
+        pending, seen = [ref], set()
+        while pending:
+            current = pending.pop()
+            if current.resource_id in seen:
+                continue
+            seen.add(current.resource_id)
+            review = self._approved_review(current)
+            for materials, kind in ((review.license_refs, "license"),
+                                    (review.notice_refs, "notice")):
+                for material in materials:
+                    reference = self.get_resource(material.resource_id)
+                    if reference.kind != kind or reference.sha256 != material.sha256:
+                        raise AssetLoadError("RIGHTS_EVIDENCE_MISMATCH", current.resource_id)
+                    self._checked_bytes(reference, 65536)
+                    pending.append(reference)
+
+    def _approved_review(self, ref):
+        review = self._rights.get(ref.rights_ref)
+        if (review is None or review.decision != "DISTRIBUTION_APPROVED"
+                or review.resource_id != ref.resource_id or review.resource_sha256 != ref.sha256
+                or review.license_id != ref.license_id or ref.license_id not in {"MIT", "Apache-2.0"}
+                or ref.license_ref not in {m.resource_id for m in review.license_refs}
+                or any(getattr(review, name) != getattr(ref, name)
+                       for name in ("source_url", "source_path", "source_sha256"))):
+            raise AssetLoadError("RIGHTS_NOT_APPROVED", ref.resource_id)
+        # Finathink also retains an explicit attribution for Apache sources without
+        # an upstream NOTICE. It is labelled as ours, never fabricated as upstream.
+        if ref.license_id == "Apache-2.0" and not review.notice_refs:
+            raise AssetLoadError("NOTICE_MISSING", ref.resource_id)
+        return review
+
     def _checked_bytes(self, ref, max_bytes):
         if ref.availability != "PACKAGED":
             code = "LICENSE_MISSING" if ref.availability == "UNLICENSED" else "MISSING_RESOURCE"
@@ -133,12 +234,7 @@ class ResearchAssetCatalog:
             raise AssetLoadError("INVALID_LIMIT", str(resource_id))
         ref = self.get_resource(resource_id)
         if ref.availability == "PACKAGED":
-            if ref.license_id != "MIT" or not ref.license_ref or not ref.author:
-                raise AssetLoadError("LICENSE_MISSING", resource_id)
-            license_ref = self.get_resource(ref.license_ref)
-            if license_ref.kind != "license":
-                raise AssetLoadError("LICENSE_MISSING", resource_id)
-            self._checked_bytes(license_ref, 65536)
+            self._check_rights(ref)
         raw = self._checked_bytes(ref, max_bytes)
         try:
             return raw.decode("utf-8")

@@ -42,6 +42,13 @@ inventory = catalog.inventory()
 assert inventory.skill_count == 12
 assert inventory.claim_count >= 14 and inventory.lesson_count >= 6
 assert inventory.locally_reproduced_claim_count == 0
+assert len(catalog.source_intake_summary()['sources']) == 7
+assert 'Copyright 2017 Quantopian, Inc.' in catalog.read_text('alphalens-performance-reference')
+assert 'not presented as an upstream NOTICE' in catalog.read_text('alphalens-attribution')
+assert catalog.get_resource('alphalens-performance-reference').license_id == 'Apache-2.0'
+for ref in catalog.resources():
+    if ref.availability == 'PACKAGED':
+        assert ref.rights_ref and catalog.read_text(ref.resource_id)
 print('installed research assets verified')
 """
     result = subprocess.run([str(python), "-I", "-c", probe], cwd=tmp_path,

@@ -1,5 +1,5 @@
 {
-  "schema_version": "research-assets.v1",
+  "schema_version": "research-assets.v2",
   "upstreams": [
     {
       "repository": "yuanwang589-dev/deepseek-harness-quant",
@@ -135,6 +135,96 @@
         "one-click-deploy"
       ],
       "scope": "Reference-only audit, no upstream code imported or executed"
+    },
+    {
+      "repository": "yutiansut/QUANTAXIS",
+      "commit": "232aa7ac9869966108f02a8fff85f1f7b09a9ce2",
+      "url": "https://github.com/yutiansut/QUANTAXIS",
+      "author": "yutiansut/QUANTAXIS contributors",
+      "license_id": "MIT",
+      "license_ref": "quantaxis-license",
+      "capture_date": "2026-10-31",
+      "file_audit": [
+        {
+          "path": "LICENSE",
+          "sha256": "96ebf515d25a58bbd8be4543a5c198e576db52738f26c82270ececb1dc273318"
+        }
+      ]
+    },
+    {
+      "repository": "microsoft/qlib",
+      "commit": "54355232463878d2eebb91fe0ee5fa7fa1f5976c",
+      "url": "https://github.com/microsoft/qlib",
+      "author": "Microsoft Corporation and Qlib contributors",
+      "license_id": "MIT",
+      "license_ref": "qlib-license",
+      "capture_date": "2026-10-31",
+      "file_audit": [
+        {
+          "path": "LICENSE",
+          "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+        }
+      ]
+    },
+    {
+      "repository": "stefan-jansen/alphalens-reloaded",
+      "commit": "60755d1cc7d9d36a4c70c8344cbdb168fe99df24",
+      "url": "https://github.com/stefan-jansen/alphalens-reloaded",
+      "author": "Quantopian, Inc.; Stefan Jansen and Alphalens contributors",
+      "license_id": "Apache-2.0",
+      "license_ref": "alphalens-reloaded-license",
+      "capture_date": "2026-10-31",
+      "file_audit": [
+        {
+          "path": "LICENSE",
+          "sha256": "2b651c2d29c644d1c73417cd96e6cfa506d6de102ed96fc3de96d676e089cf29"
+        }
+      ]
+    },
+    {
+      "repository": "chulwoohan/pyanomaly",
+      "commit": "59758c913a4146bbfb9d3c056668ccdc5231c8c8",
+      "url": "https://github.com/chulwoohan/pyanomaly",
+      "author": "Chulwoo Han and Jongho Kang",
+      "license_id": "MIT",
+      "license_ref": "pyanomaly-license",
+      "capture_date": "2026-10-31",
+      "file_audit": [
+        {
+          "path": "LICENSE.txt",
+          "sha256": "84dc4ddcfd08d382bbe4ac775ebee4da7e40280b8aba4f841884f0234303f6f4"
+        }
+      ]
+    },
+    {
+      "repository": "microsoft/RD-Agent",
+      "commit": "484776c211e4fbbeef03e0ec00d6bbee7362a4f4",
+      "url": "https://github.com/microsoft/RD-Agent",
+      "author": "Microsoft Corporation and RD-Agent contributors",
+      "license_id": "MIT",
+      "license_ref": "rd-agent-license",
+      "capture_date": "2026-10-31",
+      "file_audit": [
+        {
+          "path": "LICENSE",
+          "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+        }
+      ]
+    },
+    {
+      "repository": "pmorissette/bt",
+      "commit": "4ae4090266300c0185f418aca18e28e649509a33",
+      "url": "https://github.com/pmorissette/bt",
+      "author": "Philippe Morissette and bt contributors",
+      "license_id": "MIT",
+      "license_ref": "bt-license",
+      "capture_date": "2026-10-31",
+      "file_audit": [
+        {
+          "path": "LICENSE",
+          "sha256": "8711471566d722d55eca3f09196f342b2ee2960616e68127ec2a17b39ff99949"
+        }
+      ]
     }
   ],
   "resources": [
@@ -152,7 +242,8 @@
       "source_url": null,
       "source_path": "LICENSE",
       "source_sha256": null,
-      "derivation": "LICENSE_COPY"
+      "derivation": "LICENSE_COPY",
+      "rights_ref": "rights-finathink-license"
     },
     {
       "resource_id": "upstream-license",
@@ -168,7 +259,8 @@
       "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/LICENSE",
       "source_path": "LICENSE",
       "source_sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4",
-      "derivation": "LICENSE_COPY"
+      "derivation": "LICENSE_COPY",
+      "rights_ref": "rights-upstream-license"
     },
     {
       "resource_id": "skill-index",
@@ -184,7 +276,8 @@
       "source_url": null,
       "source_path": null,
       "source_sha256": null,
-      "derivation": "FINATHINK_ORIGINAL"
+      "derivation": "FINATHINK_ORIGINAL",
+      "rights_ref": "rights-skill-index"
     },
     {
       "resource_id": "factor-validation-v1",
@@ -200,7 +293,8 @@
       "source_url": null,
       "source_path": null,
       "source_sha256": null,
-      "derivation": "FINATHINK_ORIGINAL"
+      "derivation": "FINATHINK_ORIGINAL",
+      "rights_ref": "rights-factor-validation-v1"
     },
     {
       "resource_id": "method-factor-mining-workflow",
@@ -216,7 +310,8 @@
       "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/factor-mining-workflow/SKILL.md",
       "source_path": "assets/skills/factor-mining-workflow/SKILL.md",
       "source_sha256": "ff9dbbe90669d044bb5c0aac3c9c6e1b8793a1e3d127d4db974c7a20f40e950d",
-      "derivation": "FINATHINK_ADAPTATION"
+      "derivation": "FINATHINK_ADAPTATION",
+      "rights_ref": "rights-method-factor-mining-workflow"
     },
     {
       "resource_id": "reference-factor-mining-workflow",
@@ -232,7 +327,8 @@
       "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/factor-mining-workflow/SKILL.md",
       "source_path": "assets/skills/factor-mining-workflow/SKILL.md",
       "source_sha256": "ff9dbbe90669d044bb5c0aac3c9c6e1b8793a1e3d127d4db974c7a20f40e950d",
-      "derivation": "FINATHINK_ADAPTATION"
+      "derivation": "FINATHINK_ADAPTATION",
+      "rights_ref": "rights-reference-factor-mining-workflow"
     },
     {
       "resource_id": "method-alpha-gpt-factor-mining",
@@ -248,7 +344,8 @@
       "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/alpha-gpt-factor-mining/SKILL.md",
       "source_path": "assets/skills/alpha-gpt-factor-mining/SKILL.md",
       "source_sha256": "113cf7283383e69893a6ad2a2ca062044f901914b4827f869229f63a2fc9a58d",
-      "derivation": "FINATHINK_ADAPTATION"
+      "derivation": "FINATHINK_ADAPTATION",
+      "rights_ref": "rights-method-alpha-gpt-factor-mining"
     },
     {
       "resource_id": "reference-alpha-gpt-factor-mining",
@@ -264,7 +361,8 @@
       "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/alpha-gpt-factor-mining/SKILL.md",
       "source_path": "assets/skills/alpha-gpt-factor-mining/SKILL.md",
       "source_sha256": "113cf7283383e69893a6ad2a2ca062044f901914b4827f869229f63a2fc9a58d",
-      "derivation": "FINATHINK_ADAPTATION"
+      "derivation": "FINATHINK_ADAPTATION",
+      "rights_ref": "rights-reference-alpha-gpt-factor-mining"
     },
     {
       "resource_id": "method-alpha-gpt-researcher",
@@ -280,7 +378,8 @@
       "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/alpha-gpt-researcher/SKILL.md",
       "source_path": "assets/skills/alpha-gpt-researcher/SKILL.md",
       "source_sha256": "9403291d6ee0f101eea3017e24a207f3e2fe371eaed44cee7bd64a556ba71afc",
-      "derivation": "FINATHINK_ADAPTATION"
+      "derivation": "FINATHINK_ADAPTATION",
+      "rights_ref": "rights-method-alpha-gpt-researcher"
     },
     {
       "resource_id": "reference-alpha-gpt-researcher",
@@ -296,7 +395,8 @@
       "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/alpha-gpt-researcher/SKILL.md",
       "source_path": "assets/skills/alpha-gpt-researcher/SKILL.md",
       "source_sha256": "9403291d6ee0f101eea3017e24a207f3e2fe371eaed44cee7bd64a556ba71afc",
-      "derivation": "FINATHINK_ADAPTATION"
+      "derivation": "FINATHINK_ADAPTATION",
+      "rights_ref": "rights-reference-alpha-gpt-researcher"
     },
     {
       "resource_id": "method-backtest-acceptance",
@@ -312,7 +412,8 @@
       "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/backtest-acceptance/SKILL.md",
       "source_path": "assets/skills/backtest-acceptance/SKILL.md",
       "source_sha256": "d8b43220c53faeb856f0ec65041ad202f01f9a41402ea2c8dbe3b2320db44603",
-      "derivation": "FINATHINK_ADAPTATION"
+      "derivation": "FINATHINK_ADAPTATION",
+      "rights_ref": "rights-method-backtest-acceptance"
     },
     {
       "resource_id": "reference-backtest-acceptance",
@@ -328,7 +429,8 @@
       "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/backtest-acceptance/SKILL.md",
       "source_path": "assets/skills/backtest-acceptance/SKILL.md",
       "source_sha256": "d8b43220c53faeb856f0ec65041ad202f01f9a41402ea2c8dbe3b2320db44603",
-      "derivation": "FINATHINK_ADAPTATION"
+      "derivation": "FINATHINK_ADAPTATION",
+      "rights_ref": "rights-reference-backtest-acceptance"
     },
     {
       "resource_id": "method-niu-san-distillation",
@@ -344,7 +446,8 @@
       "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/niu-san-distillation/SKILL.md",
       "source_path": "assets/skills/niu-san-distillation/SKILL.md",
       "source_sha256": "986f5d5e105838603c2e93afbfec20166b0e4ba9c9a77dc7c2caf5e91b0a84ca",
-      "derivation": "FINATHINK_ADAPTATION"
+      "derivation": "FINATHINK_ADAPTATION",
+      "rights_ref": "rights-method-niu-san-distillation"
     },
     {
       "resource_id": "reference-niu-san-distillation",
@@ -360,7 +463,8 @@
       "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/niu-san-distillation/SKILL.md",
       "source_path": "assets/skills/niu-san-distillation/SKILL.md",
       "source_sha256": "986f5d5e105838603c2e93afbfec20166b0e4ba9c9a77dc7c2caf5e91b0a84ca",
-      "derivation": "FINATHINK_ADAPTATION"
+      "derivation": "FINATHINK_ADAPTATION",
+      "rights_ref": "rights-reference-niu-san-distillation"
     },
     {
       "resource_id": "method-niu-san-linyuan",
@@ -376,7 +480,8 @@
       "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/niu-san-linyuan/SKILL.md",
       "source_path": "assets/skills/niu-san-linyuan/SKILL.md",
       "source_sha256": "877b2462d77cbda63a30f3d55507ae5f68b842ab6edf639aab7446b1df6cddce",
-      "derivation": "FINATHINK_ADAPTATION"
+      "derivation": "FINATHINK_ADAPTATION",
+      "rights_ref": "rights-method-niu-san-linyuan"
     },
     {
       "resource_id": "reference-niu-san-linyuan",
@@ -392,7 +497,8 @@
       "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/niu-san-linyuan/SKILL.md",
       "source_path": "assets/skills/niu-san-linyuan/SKILL.md",
       "source_sha256": "877b2462d77cbda63a30f3d55507ae5f68b842ab6edf639aab7446b1df6cddce",
-      "derivation": "FINATHINK_ADAPTATION"
+      "derivation": "FINATHINK_ADAPTATION",
+      "rights_ref": "rights-reference-niu-san-linyuan"
     },
     {
       "resource_id": "method-niu-san-chenxiaoqun",
@@ -408,7 +514,8 @@
       "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/niu-san-chenxiaoqun/SKILL.md",
       "source_path": "assets/skills/niu-san-chenxiaoqun/SKILL.md",
       "source_sha256": "3dc0792bceb5c2d8a4dfe88007eb4bbc4533fd78cc708cb274c1ed563b12b64f",
-      "derivation": "FINATHINK_ADAPTATION"
+      "derivation": "FINATHINK_ADAPTATION",
+      "rights_ref": "rights-method-niu-san-chenxiaoqun"
     },
     {
       "resource_id": "reference-niu-san-chenxiaoqun",
@@ -424,7 +531,8 @@
       "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/niu-san-chenxiaoqun/SKILL.md",
       "source_path": "assets/skills/niu-san-chenxiaoqun/SKILL.md",
       "source_sha256": "3dc0792bceb5c2d8a4dfe88007eb4bbc4533fd78cc708cb274c1ed563b12b64f",
-      "derivation": "FINATHINK_ADAPTATION"
+      "derivation": "FINATHINK_ADAPTATION",
+      "rights_ref": "rights-reference-niu-san-chenxiaoqun"
     },
     {
       "resource_id": "method-niu-san-zhangmengzhu",
@@ -440,7 +548,8 @@
       "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/niu-san-zhangmengzhu/SKILL.md",
       "source_path": "assets/skills/niu-san-zhangmengzhu/SKILL.md",
       "source_sha256": "39fb8773d2baada6c4304d7f471e2dcd8e9a53c9cd8639c79e7354c2b4ff6955",
-      "derivation": "FINATHINK_ADAPTATION"
+      "derivation": "FINATHINK_ADAPTATION",
+      "rights_ref": "rights-method-niu-san-zhangmengzhu"
     },
     {
       "resource_id": "reference-niu-san-zhangmengzhu",
@@ -456,7 +565,8 @@
       "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/niu-san-zhangmengzhu/SKILL.md",
       "source_path": "assets/skills/niu-san-zhangmengzhu/SKILL.md",
       "source_sha256": "39fb8773d2baada6c4304d7f471e2dcd8e9a53c9cd8639c79e7354c2b4ff6955",
-      "derivation": "FINATHINK_ADAPTATION"
+      "derivation": "FINATHINK_ADAPTATION",
+      "rights_ref": "rights-reference-niu-san-zhangmengzhu"
     },
     {
       "resource_id": "method-niu-san-zhaolaoge",
@@ -472,7 +582,8 @@
       "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/niu-san-zhaolaoge/SKILL.md",
       "source_path": "assets/skills/niu-san-zhaolaoge/SKILL.md",
       "source_sha256": "cfe5fd3b81719f64008704baf85a4efd86773ea725780e650c1cc321b58e202e",
-      "derivation": "FINATHINK_ADAPTATION"
+      "derivation": "FINATHINK_ADAPTATION",
+      "rights_ref": "rights-method-niu-san-zhaolaoge"
     },
     {
       "resource_id": "reference-niu-san-zhaolaoge",
@@ -488,7 +599,8 @@
       "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/niu-san-zhaolaoge/SKILL.md",
       "source_path": "assets/skills/niu-san-zhaolaoge/SKILL.md",
       "source_sha256": "cfe5fd3b81719f64008704baf85a4efd86773ea725780e650c1cc321b58e202e",
-      "derivation": "FINATHINK_ADAPTATION"
+      "derivation": "FINATHINK_ADAPTATION",
+      "rights_ref": "rights-reference-niu-san-zhaolaoge"
     },
     {
       "resource_id": "method-niu-san-chaoguyangjia",
@@ -504,7 +616,8 @@
       "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/niu-san-chaoguyangjia/SKILL.md",
       "source_path": "assets/skills/niu-san-chaoguyangjia/SKILL.md",
       "source_sha256": "c37196392fa5314ca85227140932a82689f4e83a8cffe2b1612e1fb3cf718707",
-      "derivation": "FINATHINK_ADAPTATION"
+      "derivation": "FINATHINK_ADAPTATION",
+      "rights_ref": "rights-method-niu-san-chaoguyangjia"
     },
     {
       "resource_id": "reference-niu-san-chaoguyangjia",
@@ -520,7 +633,8 @@
       "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/niu-san-chaoguyangjia/SKILL.md",
       "source_path": "assets/skills/niu-san-chaoguyangjia/SKILL.md",
       "source_sha256": "c37196392fa5314ca85227140932a82689f4e83a8cffe2b1612e1fb3cf718707",
-      "derivation": "FINATHINK_ADAPTATION"
+      "derivation": "FINATHINK_ADAPTATION",
+      "rights_ref": "rights-reference-niu-san-chaoguyangjia"
     },
     {
       "resource_id": "method-niu-san-fengliu",
@@ -536,7 +650,8 @@
       "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/niu-san-fengliu/SKILL.md",
       "source_path": "assets/skills/niu-san-fengliu/SKILL.md",
       "source_sha256": "6421ebd742d028e6a05eb16dff3b6fae43a266c0e9f124e09b8cf76e95e15d67",
-      "derivation": "FINATHINK_ADAPTATION"
+      "derivation": "FINATHINK_ADAPTATION",
+      "rights_ref": "rights-method-niu-san-fengliu"
     },
     {
       "resource_id": "reference-niu-san-fengliu",
@@ -552,7 +667,8 @@
       "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/niu-san-fengliu/SKILL.md",
       "source_path": "assets/skills/niu-san-fengliu/SKILL.md",
       "source_sha256": "6421ebd742d028e6a05eb16dff3b6fae43a266c0e9f124e09b8cf76e95e15d67",
-      "derivation": "FINATHINK_ADAPTATION"
+      "derivation": "FINATHINK_ADAPTATION",
+      "rights_ref": "rights-reference-niu-san-fengliu"
     },
     {
       "resource_id": "method-github-maintainer",
@@ -568,7 +684,8 @@
       "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/github-maintainer/SKILL.md",
       "source_path": "assets/skills/github-maintainer/SKILL.md",
       "source_sha256": "6cb5bc64ba95ee5c8f3c3251aee1158a7a4dfe2b01616bb136b17a3f52e9e8e9",
-      "derivation": "FINATHINK_ADAPTATION"
+      "derivation": "FINATHINK_ADAPTATION",
+      "rights_ref": "rights-method-github-maintainer"
     },
     {
       "resource_id": "reference-github-maintainer",
@@ -584,7 +701,8 @@
       "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/github-maintainer/SKILL.md",
       "source_path": "assets/skills/github-maintainer/SKILL.md",
       "source_sha256": "6cb5bc64ba95ee5c8f3c3251aee1158a7a4dfe2b01616bb136b17a3f52e9e8e9",
-      "derivation": "FINATHINK_ADAPTATION"
+      "derivation": "FINATHINK_ADAPTATION",
+      "rights_ref": "rights-reference-github-maintainer"
     },
     {
       "resource_id": "source-factor-mining-workflow",
@@ -915,7 +1033,8 @@
       "license_id": "MIT",
       "license_ref": "finathink-license",
       "version": "1.2.0",
-      "derivation": "FINATHINK_ADAPTATION"
+      "derivation": "FINATHINK_ADAPTATION",
+      "rights_ref": "rights-source-definitions"
     },
     {
       "resource_id": "source-claims",
@@ -928,7 +1047,8 @@
       "license_id": "MIT",
       "license_ref": "finathink-license",
       "version": "1.0.0",
-      "derivation": "FINATHINK_ADAPTATION"
+      "derivation": "FINATHINK_ADAPTATION",
+      "rights_ref": "rights-source-claims"
     },
     {
       "resource_id": "lessons",
@@ -941,7 +1061,1150 @@
       "license_id": "MIT",
       "license_ref": "finathink-license",
       "version": "1.0.0",
-      "derivation": "FINATHINK_ADAPTATION"
+      "derivation": "FINATHINK_ADAPTATION",
+      "rights_ref": "rights-lessons"
+    },
+    {
+      "resource_id": "quantaxis-license",
+      "path": "provenance/licenses/QUANTAXIS-MIT.txt",
+      "sha256": "96ebf515d25a58bbd8be4543a5c198e576db52738f26c82270ececb1dc273318",
+      "byte_size": 1091,
+      "availability": "PACKAGED",
+      "kind": "license",
+      "author": "yutiansut/QUANTAXIS contributors",
+      "license_id": "MIT",
+      "license_ref": "quantaxis-license",
+      "version": "232aa7ac9869966108f02a8fff85f1f7b09a9ce2",
+      "derivation": "LICENSE_COPY",
+      "source_url": "https://github.com/yutiansut/QUANTAXIS/blob/232aa7ac9869966108f02a8fff85f1f7b09a9ce2/LICENSE",
+      "source_path": "LICENSE",
+      "source_sha256": "96ebf515d25a58bbd8be4543a5c198e576db52738f26c82270ececb1dc273318",
+      "rights_ref": "rights-quantaxis-license"
+    },
+    {
+      "resource_id": "qlib-license",
+      "path": "provenance/licenses/qlib-MIT.txt",
+      "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383",
+      "byte_size": 1141,
+      "availability": "PACKAGED",
+      "kind": "license",
+      "author": "Microsoft Corporation and Qlib contributors",
+      "license_id": "MIT",
+      "license_ref": "qlib-license",
+      "version": "54355232463878d2eebb91fe0ee5fa7fa1f5976c",
+      "derivation": "LICENSE_COPY",
+      "source_url": "https://github.com/microsoft/qlib/blob/54355232463878d2eebb91fe0ee5fa7fa1f5976c/LICENSE",
+      "source_path": "LICENSE",
+      "source_sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383",
+      "rights_ref": "rights-qlib-license"
+    },
+    {
+      "resource_id": "alphalens-reloaded-license",
+      "path": "provenance/licenses/alphalens-reloaded-Apache-2.0.txt",
+      "sha256": "2b651c2d29c644d1c73417cd96e6cfa506d6de102ed96fc3de96d676e089cf29",
+      "byte_size": 11346,
+      "availability": "PACKAGED",
+      "kind": "license",
+      "author": "Quantopian, Inc.; Stefan Jansen and Alphalens contributors",
+      "license_id": "Apache-2.0",
+      "license_ref": "alphalens-reloaded-license",
+      "version": "60755d1cc7d9d36a4c70c8344cbdb168fe99df24",
+      "derivation": "LICENSE_COPY",
+      "source_url": "https://github.com/stefan-jansen/alphalens-reloaded/blob/60755d1cc7d9d36a4c70c8344cbdb168fe99df24/LICENSE",
+      "source_path": "LICENSE",
+      "source_sha256": "2b651c2d29c644d1c73417cd96e6cfa506d6de102ed96fc3de96d676e089cf29",
+      "rights_ref": "rights-alphalens-reloaded-license"
+    },
+    {
+      "resource_id": "pyanomaly-license",
+      "path": "provenance/licenses/pyanomaly-MIT.txt",
+      "sha256": "84dc4ddcfd08d382bbe4ac775ebee4da7e40280b8aba4f841884f0234303f6f4",
+      "byte_size": 1070,
+      "availability": "PACKAGED",
+      "kind": "license",
+      "author": "Chulwoo Han and Jongho Kang",
+      "license_id": "MIT",
+      "license_ref": "pyanomaly-license",
+      "version": "59758c913a4146bbfb9d3c056668ccdc5231c8c8",
+      "derivation": "LICENSE_COPY",
+      "source_url": "https://github.com/chulwoohan/pyanomaly/blob/59758c913a4146bbfb9d3c056668ccdc5231c8c8/LICENSE.txt",
+      "source_path": "LICENSE.txt",
+      "source_sha256": "84dc4ddcfd08d382bbe4ac775ebee4da7e40280b8aba4f841884f0234303f6f4",
+      "rights_ref": "rights-pyanomaly-license"
+    },
+    {
+      "resource_id": "rd-agent-license",
+      "path": "provenance/licenses/RD-Agent-MIT.txt",
+      "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383",
+      "byte_size": 1141,
+      "availability": "PACKAGED",
+      "kind": "license",
+      "author": "Microsoft Corporation and RD-Agent contributors",
+      "license_id": "MIT",
+      "license_ref": "rd-agent-license",
+      "version": "484776c211e4fbbeef03e0ec00d6bbee7362a4f4",
+      "derivation": "LICENSE_COPY",
+      "source_url": "https://github.com/microsoft/RD-Agent/blob/484776c211e4fbbeef03e0ec00d6bbee7362a4f4/LICENSE",
+      "source_path": "LICENSE",
+      "source_sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383",
+      "rights_ref": "rights-rd-agent-license"
+    },
+    {
+      "resource_id": "bt-license",
+      "path": "provenance/licenses/bt-MIT.txt",
+      "sha256": "8711471566d722d55eca3f09196f342b2ee2960616e68127ec2a17b39ff99949",
+      "byte_size": 1086,
+      "availability": "PACKAGED",
+      "kind": "license",
+      "author": "Philippe Morissette and bt contributors",
+      "license_id": "MIT",
+      "license_ref": "bt-license",
+      "version": "4ae4090266300c0185f418aca18e28e649509a33",
+      "derivation": "LICENSE_COPY",
+      "source_url": "https://github.com/pmorissette/bt/blob/4ae4090266300c0185f418aca18e28e649509a33/LICENSE",
+      "source_path": "LICENSE",
+      "source_sha256": "8711471566d722d55eca3f09196f342b2ee2960616e68127ec2a17b39ff99949",
+      "rights_ref": "rights-bt-license"
+    },
+    {
+      "resource_id": "alphalens-attribution",
+      "path": "provenance/licenses/alphalens-ATTRIBUTION.txt",
+      "sha256": "7c8a65e49d4400ee3d6ec7bdf5a6a95242214be3f5d5dd4388dc2ff89da2f46f",
+      "byte_size": 772,
+      "availability": "PACKAGED",
+      "kind": "notice",
+      "author": "Finahinking contributors",
+      "license_id": "MIT",
+      "license_ref": "finathink-license",
+      "version": "1.0.0",
+      "derivation": "FINATHINK_ORIGINAL",
+      "rights_ref": "rights-alphalens-attribution"
+    },
+    {
+      "resource_id": "alphalens-performance-reference",
+      "path": "references/alphalens/performance.py.txt",
+      "sha256": "dc4c7c661b19a61b434f67cd5015a986f5aea85fd319e08a3d7fb04469203d25",
+      "byte_size": 45534,
+      "availability": "PACKAGED",
+      "kind": "source-code",
+      "author": "Quantopian, Inc.; Stefan Jansen and Alphalens contributors",
+      "license_id": "Apache-2.0",
+      "license_ref": "alphalens-reloaded-license",
+      "version": "60755d1cc7d9d36a4c70c8344cbdb168fe99df24",
+      "derivation": "SOURCE_COPY",
+      "source_url": "https://github.com/stefan-jansen/alphalens-reloaded/blob/60755d1cc7d9d36a4c70c8344cbdb168fe99df24/src/alphalens/performance.py",
+      "source_path": "src/alphalens/performance.py",
+      "source_sha256": "dc4c7c661b19a61b434f67cd5015a986f5aea85fd319e08a3d7fb04469203d25",
+      "rights_ref": "rights-alphalens-performance-reference"
+    },
+    {
+      "resource_id": "resource-reconciliation",
+      "path": "provenance/resource-reconciliation.v1.json",
+      "sha256": "7c77a355a3398f6452fc0559ffa9aee18ca5cff68dc5dee1acd3c450ac307576",
+      "byte_size": 34590,
+      "availability": "PACKAGED",
+      "kind": "reference-data",
+      "author": "Finahinking contributors",
+      "license_id": "MIT",
+      "license_ref": "finathink-license",
+      "version": "1.0.0",
+      "derivation": "FINATHINK_ORIGINAL",
+      "rights_ref": "rights-resource-reconciliation"
+    },
+    {
+      "resource_id": "source-intake-summary",
+      "path": "provenance/source-intake-summary.v1.json",
+      "sha256": "e6f4cbd4a73bcbbdd21e57814d0d2a9945afaaad454cf7a70dc816fd2fa52998",
+      "byte_size": 25279,
+      "availability": "PACKAGED",
+      "kind": "reference-data",
+      "author": "Finahinking contributors",
+      "license_id": "MIT",
+      "license_ref": "finathink-license",
+      "version": "1.0.0",
+      "derivation": "FINATHINK_ORIGINAL",
+      "rights_ref": "rights-source-intake-summary"
+    }
+  ],
+  "rights_reviews": [
+    {
+      "review_id": "rights-finathink-license",
+      "resource_id": "finathink-license",
+      "resource_sha256": "8f005100947b20fd54ad3d7c5dd501d303a627fd1c738f75f95f5f7b66040015",
+      "license_id": "MIT",
+      "license_refs": [
+        {
+          "resource_id": "finathink-license",
+          "sha256": "8f005100947b20fd54ad3d7c5dd501d303a627fd1c738f75f95f5f7b66040015"
+        }
+      ],
+      "notice_refs": [],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase 21 file review",
+      "reviewed_on": "2026-10-31",
+      "rationale": "逐文件核对内容及许可；Apache参考保留原版权头、完整许可证与Finathink署名说明。此决定仅覆盖指定字节。",
+      "source_url": null,
+      "source_path": "LICENSE",
+      "source_sha256": null
+    },
+    {
+      "review_id": "rights-upstream-license",
+      "resource_id": "upstream-license",
+      "resource_sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4",
+      "license_id": "MIT",
+      "license_refs": [
+        {
+          "resource_id": "upstream-license",
+          "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+        }
+      ],
+      "notice_refs": [],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase 21 file review",
+      "reviewed_on": "2026-10-31",
+      "rationale": "逐文件核对来源、版权、许可与通知，批准此内容摘要的资料分发；不授予代码执行或投资用途。DeepSeek来源完整保留附注。",
+      "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/LICENSE",
+      "source_path": "LICENSE",
+      "source_sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+    },
+    {
+      "review_id": "rights-skill-index",
+      "resource_id": "skill-index",
+      "resource_sha256": "b33e24d9b2db6e5f5a79343c76fc6eae69af6b560308ca71a3970f3564c1af68",
+      "license_id": "MIT",
+      "license_refs": [
+        {
+          "resource_id": "finathink-license",
+          "sha256": "8f005100947b20fd54ad3d7c5dd501d303a627fd1c738f75f95f5f7b66040015"
+        }
+      ],
+      "notice_refs": [],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase 21 file review",
+      "reviewed_on": "2026-10-31",
+      "rationale": "逐文件核对内容及许可；Apache参考保留原版权头、完整许可证与Finathink署名说明。此决定仅覆盖指定字节。",
+      "source_url": null,
+      "source_path": null,
+      "source_sha256": null
+    },
+    {
+      "review_id": "rights-factor-validation-v1",
+      "resource_id": "factor-validation-v1",
+      "resource_sha256": "bf8c97334395ac10083ba6ad1b3e4354119b5248657a8a386786b6a3a281915e",
+      "license_id": "MIT",
+      "license_refs": [
+        {
+          "resource_id": "finathink-license",
+          "sha256": "8f005100947b20fd54ad3d7c5dd501d303a627fd1c738f75f95f5f7b66040015"
+        }
+      ],
+      "notice_refs": [],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase 21 file review",
+      "reviewed_on": "2026-10-31",
+      "rationale": "逐文件核对内容及许可；Apache参考保留原版权头、完整许可证与Finathink署名说明。此决定仅覆盖指定字节。",
+      "source_url": null,
+      "source_path": null,
+      "source_sha256": null
+    },
+    {
+      "review_id": "rights-method-factor-mining-workflow",
+      "resource_id": "method-factor-mining-workflow",
+      "resource_sha256": "178c922147250aacc30130f85bb8d0ed6af44b1c245fcbc9c54a41adfa92bb8b",
+      "license_id": "MIT",
+      "license_refs": [
+        {
+          "resource_id": "finathink-license",
+          "sha256": "8f005100947b20fd54ad3d7c5dd501d303a627fd1c738f75f95f5f7b66040015"
+        },
+        {
+          "resource_id": "upstream-license",
+          "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+        }
+      ],
+      "notice_refs": [],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase 21 file review",
+      "reviewed_on": "2026-10-31",
+      "rationale": "逐文件核对来源、版权、许可与通知，批准此内容摘要的资料分发；不授予代码执行或投资用途。DeepSeek来源完整保留附注。",
+      "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/factor-mining-workflow/SKILL.md",
+      "source_path": "assets/skills/factor-mining-workflow/SKILL.md",
+      "source_sha256": "ff9dbbe90669d044bb5c0aac3c9c6e1b8793a1e3d127d4db974c7a20f40e950d"
+    },
+    {
+      "review_id": "rights-reference-factor-mining-workflow",
+      "resource_id": "reference-factor-mining-workflow",
+      "resource_sha256": "baca5668df3f9616100c2cb9a953595daf31fc972d6c9a85a74b0c9755b2ce59",
+      "license_id": "MIT",
+      "license_refs": [
+        {
+          "resource_id": "finathink-license",
+          "sha256": "8f005100947b20fd54ad3d7c5dd501d303a627fd1c738f75f95f5f7b66040015"
+        },
+        {
+          "resource_id": "upstream-license",
+          "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+        }
+      ],
+      "notice_refs": [],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase 21 file review",
+      "reviewed_on": "2026-10-31",
+      "rationale": "逐文件核对来源、版权、许可与通知，批准此内容摘要的资料分发；不授予代码执行或投资用途。DeepSeek来源完整保留附注。",
+      "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/factor-mining-workflow/SKILL.md",
+      "source_path": "assets/skills/factor-mining-workflow/SKILL.md",
+      "source_sha256": "ff9dbbe90669d044bb5c0aac3c9c6e1b8793a1e3d127d4db974c7a20f40e950d"
+    },
+    {
+      "review_id": "rights-method-alpha-gpt-factor-mining",
+      "resource_id": "method-alpha-gpt-factor-mining",
+      "resource_sha256": "008f874d879abaedc3e9c5f0fe3caebb861adf56a81a1216618288af7b45af6d",
+      "license_id": "MIT",
+      "license_refs": [
+        {
+          "resource_id": "finathink-license",
+          "sha256": "8f005100947b20fd54ad3d7c5dd501d303a627fd1c738f75f95f5f7b66040015"
+        },
+        {
+          "resource_id": "upstream-license",
+          "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+        }
+      ],
+      "notice_refs": [],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase 21 file review",
+      "reviewed_on": "2026-10-31",
+      "rationale": "逐文件核对来源、版权、许可与通知，批准此内容摘要的资料分发；不授予代码执行或投资用途。DeepSeek来源完整保留附注。",
+      "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/alpha-gpt-factor-mining/SKILL.md",
+      "source_path": "assets/skills/alpha-gpt-factor-mining/SKILL.md",
+      "source_sha256": "113cf7283383e69893a6ad2a2ca062044f901914b4827f869229f63a2fc9a58d"
+    },
+    {
+      "review_id": "rights-reference-alpha-gpt-factor-mining",
+      "resource_id": "reference-alpha-gpt-factor-mining",
+      "resource_sha256": "a8bde255b81c3406031964968d2a80d714b79866143feb05c672649c0602cd98",
+      "license_id": "MIT",
+      "license_refs": [
+        {
+          "resource_id": "finathink-license",
+          "sha256": "8f005100947b20fd54ad3d7c5dd501d303a627fd1c738f75f95f5f7b66040015"
+        },
+        {
+          "resource_id": "upstream-license",
+          "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+        }
+      ],
+      "notice_refs": [],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase 21 file review",
+      "reviewed_on": "2026-10-31",
+      "rationale": "逐文件核对来源、版权、许可与通知，批准此内容摘要的资料分发；不授予代码执行或投资用途。DeepSeek来源完整保留附注。",
+      "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/alpha-gpt-factor-mining/SKILL.md",
+      "source_path": "assets/skills/alpha-gpt-factor-mining/SKILL.md",
+      "source_sha256": "113cf7283383e69893a6ad2a2ca062044f901914b4827f869229f63a2fc9a58d"
+    },
+    {
+      "review_id": "rights-method-alpha-gpt-researcher",
+      "resource_id": "method-alpha-gpt-researcher",
+      "resource_sha256": "beaa9b278cd7c97518d85fd43f99b635e8296fa7a2750433281a16822888310c",
+      "license_id": "MIT",
+      "license_refs": [
+        {
+          "resource_id": "finathink-license",
+          "sha256": "8f005100947b20fd54ad3d7c5dd501d303a627fd1c738f75f95f5f7b66040015"
+        },
+        {
+          "resource_id": "upstream-license",
+          "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+        }
+      ],
+      "notice_refs": [],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase 21 file review",
+      "reviewed_on": "2026-10-31",
+      "rationale": "逐文件核对来源、版权、许可与通知，批准此内容摘要的资料分发；不授予代码执行或投资用途。DeepSeek来源完整保留附注。",
+      "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/alpha-gpt-researcher/SKILL.md",
+      "source_path": "assets/skills/alpha-gpt-researcher/SKILL.md",
+      "source_sha256": "9403291d6ee0f101eea3017e24a207f3e2fe371eaed44cee7bd64a556ba71afc"
+    },
+    {
+      "review_id": "rights-reference-alpha-gpt-researcher",
+      "resource_id": "reference-alpha-gpt-researcher",
+      "resource_sha256": "b7ed74b030d8a2945cfd705877748c80a1ff932239e9e62b7c0934d701fbbede",
+      "license_id": "MIT",
+      "license_refs": [
+        {
+          "resource_id": "finathink-license",
+          "sha256": "8f005100947b20fd54ad3d7c5dd501d303a627fd1c738f75f95f5f7b66040015"
+        },
+        {
+          "resource_id": "upstream-license",
+          "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+        }
+      ],
+      "notice_refs": [],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase 21 file review",
+      "reviewed_on": "2026-10-31",
+      "rationale": "逐文件核对来源、版权、许可与通知，批准此内容摘要的资料分发；不授予代码执行或投资用途。DeepSeek来源完整保留附注。",
+      "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/alpha-gpt-researcher/SKILL.md",
+      "source_path": "assets/skills/alpha-gpt-researcher/SKILL.md",
+      "source_sha256": "9403291d6ee0f101eea3017e24a207f3e2fe371eaed44cee7bd64a556ba71afc"
+    },
+    {
+      "review_id": "rights-method-backtest-acceptance",
+      "resource_id": "method-backtest-acceptance",
+      "resource_sha256": "51a994038dba4cce2ccd9b0aae8cc6ca14a0cb620e1de2502fe7dc612d4ece8c",
+      "license_id": "MIT",
+      "license_refs": [
+        {
+          "resource_id": "finathink-license",
+          "sha256": "8f005100947b20fd54ad3d7c5dd501d303a627fd1c738f75f95f5f7b66040015"
+        },
+        {
+          "resource_id": "upstream-license",
+          "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+        }
+      ],
+      "notice_refs": [],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase 21 file review",
+      "reviewed_on": "2026-10-31",
+      "rationale": "逐文件核对来源、版权、许可与通知，批准此内容摘要的资料分发；不授予代码执行或投资用途。DeepSeek来源完整保留附注。",
+      "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/backtest-acceptance/SKILL.md",
+      "source_path": "assets/skills/backtest-acceptance/SKILL.md",
+      "source_sha256": "d8b43220c53faeb856f0ec65041ad202f01f9a41402ea2c8dbe3b2320db44603"
+    },
+    {
+      "review_id": "rights-reference-backtest-acceptance",
+      "resource_id": "reference-backtest-acceptance",
+      "resource_sha256": "856eec7db372434c22fb633414244b335af0898509935c956d84c3eba7790799",
+      "license_id": "MIT",
+      "license_refs": [
+        {
+          "resource_id": "finathink-license",
+          "sha256": "8f005100947b20fd54ad3d7c5dd501d303a627fd1c738f75f95f5f7b66040015"
+        },
+        {
+          "resource_id": "upstream-license",
+          "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+        }
+      ],
+      "notice_refs": [],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase 21 file review",
+      "reviewed_on": "2026-10-31",
+      "rationale": "逐文件核对来源、版权、许可与通知，批准此内容摘要的资料分发；不授予代码执行或投资用途。DeepSeek来源完整保留附注。",
+      "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/backtest-acceptance/SKILL.md",
+      "source_path": "assets/skills/backtest-acceptance/SKILL.md",
+      "source_sha256": "d8b43220c53faeb856f0ec65041ad202f01f9a41402ea2c8dbe3b2320db44603"
+    },
+    {
+      "review_id": "rights-method-niu-san-distillation",
+      "resource_id": "method-niu-san-distillation",
+      "resource_sha256": "86a64bc85ec2823f8416170891e989fde76a1dd7649f019b5ca084d6c325dce8",
+      "license_id": "MIT",
+      "license_refs": [
+        {
+          "resource_id": "finathink-license",
+          "sha256": "8f005100947b20fd54ad3d7c5dd501d303a627fd1c738f75f95f5f7b66040015"
+        },
+        {
+          "resource_id": "upstream-license",
+          "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+        }
+      ],
+      "notice_refs": [],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase 21 file review",
+      "reviewed_on": "2026-10-31",
+      "rationale": "逐文件核对来源、版权、许可与通知，批准此内容摘要的资料分发；不授予代码执行或投资用途。DeepSeek来源完整保留附注。",
+      "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/niu-san-distillation/SKILL.md",
+      "source_path": "assets/skills/niu-san-distillation/SKILL.md",
+      "source_sha256": "986f5d5e105838603c2e93afbfec20166b0e4ba9c9a77dc7c2caf5e91b0a84ca"
+    },
+    {
+      "review_id": "rights-reference-niu-san-distillation",
+      "resource_id": "reference-niu-san-distillation",
+      "resource_sha256": "af29a9bbbcbfa9e7d35c4b6b54cb92cabf6292fe78228658d406ea568527ef89",
+      "license_id": "MIT",
+      "license_refs": [
+        {
+          "resource_id": "finathink-license",
+          "sha256": "8f005100947b20fd54ad3d7c5dd501d303a627fd1c738f75f95f5f7b66040015"
+        },
+        {
+          "resource_id": "upstream-license",
+          "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+        }
+      ],
+      "notice_refs": [],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase 21 file review",
+      "reviewed_on": "2026-10-31",
+      "rationale": "逐文件核对来源、版权、许可与通知，批准此内容摘要的资料分发；不授予代码执行或投资用途。DeepSeek来源完整保留附注。",
+      "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/niu-san-distillation/SKILL.md",
+      "source_path": "assets/skills/niu-san-distillation/SKILL.md",
+      "source_sha256": "986f5d5e105838603c2e93afbfec20166b0e4ba9c9a77dc7c2caf5e91b0a84ca"
+    },
+    {
+      "review_id": "rights-method-niu-san-linyuan",
+      "resource_id": "method-niu-san-linyuan",
+      "resource_sha256": "befe8009c5fd0de7c97ced052b3ea8e02b7d564164ce6241b08efd6d0c75b4e5",
+      "license_id": "MIT",
+      "license_refs": [
+        {
+          "resource_id": "finathink-license",
+          "sha256": "8f005100947b20fd54ad3d7c5dd501d303a627fd1c738f75f95f5f7b66040015"
+        },
+        {
+          "resource_id": "upstream-license",
+          "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+        }
+      ],
+      "notice_refs": [],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase 21 file review",
+      "reviewed_on": "2026-10-31",
+      "rationale": "逐文件核对来源、版权、许可与通知，批准此内容摘要的资料分发；不授予代码执行或投资用途。DeepSeek来源完整保留附注。",
+      "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/niu-san-linyuan/SKILL.md",
+      "source_path": "assets/skills/niu-san-linyuan/SKILL.md",
+      "source_sha256": "877b2462d77cbda63a30f3d55507ae5f68b842ab6edf639aab7446b1df6cddce"
+    },
+    {
+      "review_id": "rights-reference-niu-san-linyuan",
+      "resource_id": "reference-niu-san-linyuan",
+      "resource_sha256": "cbe148055185e11df3fb0199166354eb2dc4c8d15318ff9cdd27060b5689b94f",
+      "license_id": "MIT",
+      "license_refs": [
+        {
+          "resource_id": "finathink-license",
+          "sha256": "8f005100947b20fd54ad3d7c5dd501d303a627fd1c738f75f95f5f7b66040015"
+        },
+        {
+          "resource_id": "upstream-license",
+          "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+        }
+      ],
+      "notice_refs": [],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase 21 file review",
+      "reviewed_on": "2026-10-31",
+      "rationale": "逐文件核对来源、版权、许可与通知，批准此内容摘要的资料分发；不授予代码执行或投资用途。DeepSeek来源完整保留附注。",
+      "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/niu-san-linyuan/SKILL.md",
+      "source_path": "assets/skills/niu-san-linyuan/SKILL.md",
+      "source_sha256": "877b2462d77cbda63a30f3d55507ae5f68b842ab6edf639aab7446b1df6cddce"
+    },
+    {
+      "review_id": "rights-method-niu-san-chenxiaoqun",
+      "resource_id": "method-niu-san-chenxiaoqun",
+      "resource_sha256": "6fb822066903c298d10c7294d8af3a74982ae4d012adb65c9e7af7e992cb1ba2",
+      "license_id": "MIT",
+      "license_refs": [
+        {
+          "resource_id": "finathink-license",
+          "sha256": "8f005100947b20fd54ad3d7c5dd501d303a627fd1c738f75f95f5f7b66040015"
+        },
+        {
+          "resource_id": "upstream-license",
+          "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+        }
+      ],
+      "notice_refs": [],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase 21 file review",
+      "reviewed_on": "2026-10-31",
+      "rationale": "逐文件核对来源、版权、许可与通知，批准此内容摘要的资料分发；不授予代码执行或投资用途。DeepSeek来源完整保留附注。",
+      "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/niu-san-chenxiaoqun/SKILL.md",
+      "source_path": "assets/skills/niu-san-chenxiaoqun/SKILL.md",
+      "source_sha256": "3dc0792bceb5c2d8a4dfe88007eb4bbc4533fd78cc708cb274c1ed563b12b64f"
+    },
+    {
+      "review_id": "rights-reference-niu-san-chenxiaoqun",
+      "resource_id": "reference-niu-san-chenxiaoqun",
+      "resource_sha256": "1e4f68c334501ed4609869b8ee645a90713a2317a7cff3fe0eb5e75442206941",
+      "license_id": "MIT",
+      "license_refs": [
+        {
+          "resource_id": "finathink-license",
+          "sha256": "8f005100947b20fd54ad3d7c5dd501d303a627fd1c738f75f95f5f7b66040015"
+        },
+        {
+          "resource_id": "upstream-license",
+          "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+        }
+      ],
+      "notice_refs": [],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase 21 file review",
+      "reviewed_on": "2026-10-31",
+      "rationale": "逐文件核对来源、版权、许可与通知，批准此内容摘要的资料分发；不授予代码执行或投资用途。DeepSeek来源完整保留附注。",
+      "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/niu-san-chenxiaoqun/SKILL.md",
+      "source_path": "assets/skills/niu-san-chenxiaoqun/SKILL.md",
+      "source_sha256": "3dc0792bceb5c2d8a4dfe88007eb4bbc4533fd78cc708cb274c1ed563b12b64f"
+    },
+    {
+      "review_id": "rights-method-niu-san-zhangmengzhu",
+      "resource_id": "method-niu-san-zhangmengzhu",
+      "resource_sha256": "685dbc09fb8f0e4f263bb0b13dcd8f5f7f84f726963b20a37ee52582b96bb8b9",
+      "license_id": "MIT",
+      "license_refs": [
+        {
+          "resource_id": "finathink-license",
+          "sha256": "8f005100947b20fd54ad3d7c5dd501d303a627fd1c738f75f95f5f7b66040015"
+        },
+        {
+          "resource_id": "upstream-license",
+          "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+        }
+      ],
+      "notice_refs": [],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase 21 file review",
+      "reviewed_on": "2026-10-31",
+      "rationale": "逐文件核对来源、版权、许可与通知，批准此内容摘要的资料分发；不授予代码执行或投资用途。DeepSeek来源完整保留附注。",
+      "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/niu-san-zhangmengzhu/SKILL.md",
+      "source_path": "assets/skills/niu-san-zhangmengzhu/SKILL.md",
+      "source_sha256": "39fb8773d2baada6c4304d7f471e2dcd8e9a53c9cd8639c79e7354c2b4ff6955"
+    },
+    {
+      "review_id": "rights-reference-niu-san-zhangmengzhu",
+      "resource_id": "reference-niu-san-zhangmengzhu",
+      "resource_sha256": "0f1dba891dce02de2bb95b6b5a55ca9879f524e7c2013054729a057bb216c2aa",
+      "license_id": "MIT",
+      "license_refs": [
+        {
+          "resource_id": "finathink-license",
+          "sha256": "8f005100947b20fd54ad3d7c5dd501d303a627fd1c738f75f95f5f7b66040015"
+        },
+        {
+          "resource_id": "upstream-license",
+          "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+        }
+      ],
+      "notice_refs": [],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase 21 file review",
+      "reviewed_on": "2026-10-31",
+      "rationale": "逐文件核对来源、版权、许可与通知，批准此内容摘要的资料分发；不授予代码执行或投资用途。DeepSeek来源完整保留附注。",
+      "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/niu-san-zhangmengzhu/SKILL.md",
+      "source_path": "assets/skills/niu-san-zhangmengzhu/SKILL.md",
+      "source_sha256": "39fb8773d2baada6c4304d7f471e2dcd8e9a53c9cd8639c79e7354c2b4ff6955"
+    },
+    {
+      "review_id": "rights-method-niu-san-zhaolaoge",
+      "resource_id": "method-niu-san-zhaolaoge",
+      "resource_sha256": "766189de079321ca4e797017dacd1ced10bfac00b1402a53a99a77a407de8c4c",
+      "license_id": "MIT",
+      "license_refs": [
+        {
+          "resource_id": "finathink-license",
+          "sha256": "8f005100947b20fd54ad3d7c5dd501d303a627fd1c738f75f95f5f7b66040015"
+        },
+        {
+          "resource_id": "upstream-license",
+          "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+        }
+      ],
+      "notice_refs": [],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase 21 file review",
+      "reviewed_on": "2026-10-31",
+      "rationale": "逐文件核对来源、版权、许可与通知，批准此内容摘要的资料分发；不授予代码执行或投资用途。DeepSeek来源完整保留附注。",
+      "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/niu-san-zhaolaoge/SKILL.md",
+      "source_path": "assets/skills/niu-san-zhaolaoge/SKILL.md",
+      "source_sha256": "cfe5fd3b81719f64008704baf85a4efd86773ea725780e650c1cc321b58e202e"
+    },
+    {
+      "review_id": "rights-reference-niu-san-zhaolaoge",
+      "resource_id": "reference-niu-san-zhaolaoge",
+      "resource_sha256": "f3b950b1e25889979699f5e9a6fde1e55cea9ca4253f7b95a77a9dd15c51fc90",
+      "license_id": "MIT",
+      "license_refs": [
+        {
+          "resource_id": "finathink-license",
+          "sha256": "8f005100947b20fd54ad3d7c5dd501d303a627fd1c738f75f95f5f7b66040015"
+        },
+        {
+          "resource_id": "upstream-license",
+          "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+        }
+      ],
+      "notice_refs": [],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase 21 file review",
+      "reviewed_on": "2026-10-31",
+      "rationale": "逐文件核对来源、版权、许可与通知，批准此内容摘要的资料分发；不授予代码执行或投资用途。DeepSeek来源完整保留附注。",
+      "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/niu-san-zhaolaoge/SKILL.md",
+      "source_path": "assets/skills/niu-san-zhaolaoge/SKILL.md",
+      "source_sha256": "cfe5fd3b81719f64008704baf85a4efd86773ea725780e650c1cc321b58e202e"
+    },
+    {
+      "review_id": "rights-method-niu-san-chaoguyangjia",
+      "resource_id": "method-niu-san-chaoguyangjia",
+      "resource_sha256": "8a16ac92ddd7921775c932976a618194189b7379d8fed0ea17393cc7a65f539d",
+      "license_id": "MIT",
+      "license_refs": [
+        {
+          "resource_id": "finathink-license",
+          "sha256": "8f005100947b20fd54ad3d7c5dd501d303a627fd1c738f75f95f5f7b66040015"
+        },
+        {
+          "resource_id": "upstream-license",
+          "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+        }
+      ],
+      "notice_refs": [],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase 21 file review",
+      "reviewed_on": "2026-10-31",
+      "rationale": "逐文件核对来源、版权、许可与通知，批准此内容摘要的资料分发；不授予代码执行或投资用途。DeepSeek来源完整保留附注。",
+      "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/niu-san-chaoguyangjia/SKILL.md",
+      "source_path": "assets/skills/niu-san-chaoguyangjia/SKILL.md",
+      "source_sha256": "c37196392fa5314ca85227140932a82689f4e83a8cffe2b1612e1fb3cf718707"
+    },
+    {
+      "review_id": "rights-reference-niu-san-chaoguyangjia",
+      "resource_id": "reference-niu-san-chaoguyangjia",
+      "resource_sha256": "659e43dac870bb2e62f9d627e34401210149758f61079cd54f1e9b1e93e8ced2",
+      "license_id": "MIT",
+      "license_refs": [
+        {
+          "resource_id": "finathink-license",
+          "sha256": "8f005100947b20fd54ad3d7c5dd501d303a627fd1c738f75f95f5f7b66040015"
+        },
+        {
+          "resource_id": "upstream-license",
+          "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+        }
+      ],
+      "notice_refs": [],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase 21 file review",
+      "reviewed_on": "2026-10-31",
+      "rationale": "逐文件核对来源、版权、许可与通知，批准此内容摘要的资料分发；不授予代码执行或投资用途。DeepSeek来源完整保留附注。",
+      "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/niu-san-chaoguyangjia/SKILL.md",
+      "source_path": "assets/skills/niu-san-chaoguyangjia/SKILL.md",
+      "source_sha256": "c37196392fa5314ca85227140932a82689f4e83a8cffe2b1612e1fb3cf718707"
+    },
+    {
+      "review_id": "rights-method-niu-san-fengliu",
+      "resource_id": "method-niu-san-fengliu",
+      "resource_sha256": "6790e77ca42dd345b41a3091e04a69b32a9479abc52c04e346b94fed385fd396",
+      "license_id": "MIT",
+      "license_refs": [
+        {
+          "resource_id": "finathink-license",
+          "sha256": "8f005100947b20fd54ad3d7c5dd501d303a627fd1c738f75f95f5f7b66040015"
+        },
+        {
+          "resource_id": "upstream-license",
+          "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+        }
+      ],
+      "notice_refs": [],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase 21 file review",
+      "reviewed_on": "2026-10-31",
+      "rationale": "逐文件核对来源、版权、许可与通知，批准此内容摘要的资料分发；不授予代码执行或投资用途。DeepSeek来源完整保留附注。",
+      "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/niu-san-fengliu/SKILL.md",
+      "source_path": "assets/skills/niu-san-fengliu/SKILL.md",
+      "source_sha256": "6421ebd742d028e6a05eb16dff3b6fae43a266c0e9f124e09b8cf76e95e15d67"
+    },
+    {
+      "review_id": "rights-reference-niu-san-fengliu",
+      "resource_id": "reference-niu-san-fengliu",
+      "resource_sha256": "1ce02e4fddfa9f131347d1eabc7409096fb833f484f8edca6a4f14d437b801b1",
+      "license_id": "MIT",
+      "license_refs": [
+        {
+          "resource_id": "finathink-license",
+          "sha256": "8f005100947b20fd54ad3d7c5dd501d303a627fd1c738f75f95f5f7b66040015"
+        },
+        {
+          "resource_id": "upstream-license",
+          "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+        }
+      ],
+      "notice_refs": [],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase 21 file review",
+      "reviewed_on": "2026-10-31",
+      "rationale": "逐文件核对来源、版权、许可与通知，批准此内容摘要的资料分发；不授予代码执行或投资用途。DeepSeek来源完整保留附注。",
+      "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/niu-san-fengliu/SKILL.md",
+      "source_path": "assets/skills/niu-san-fengliu/SKILL.md",
+      "source_sha256": "6421ebd742d028e6a05eb16dff3b6fae43a266c0e9f124e09b8cf76e95e15d67"
+    },
+    {
+      "review_id": "rights-method-github-maintainer",
+      "resource_id": "method-github-maintainer",
+      "resource_sha256": "b0cbcce00bb05ff97e94a73c89f727a3c643aeb58be1619679991b0f07b69b5e",
+      "license_id": "MIT",
+      "license_refs": [
+        {
+          "resource_id": "finathink-license",
+          "sha256": "8f005100947b20fd54ad3d7c5dd501d303a627fd1c738f75f95f5f7b66040015"
+        },
+        {
+          "resource_id": "upstream-license",
+          "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+        }
+      ],
+      "notice_refs": [],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase 21 file review",
+      "reviewed_on": "2026-10-31",
+      "rationale": "逐文件核对来源、版权、许可与通知，批准此内容摘要的资料分发；不授予代码执行或投资用途。DeepSeek来源完整保留附注。",
+      "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/github-maintainer/SKILL.md",
+      "source_path": "assets/skills/github-maintainer/SKILL.md",
+      "source_sha256": "6cb5bc64ba95ee5c8f3c3251aee1158a7a4dfe2b01616bb136b17a3f52e9e8e9"
+    },
+    {
+      "review_id": "rights-reference-github-maintainer",
+      "resource_id": "reference-github-maintainer",
+      "resource_sha256": "41bbae90ded6bf4a0de95e31d42b90fc3a1e7985a1c8353f4cdb0d9de421e0f7",
+      "license_id": "MIT",
+      "license_refs": [
+        {
+          "resource_id": "finathink-license",
+          "sha256": "8f005100947b20fd54ad3d7c5dd501d303a627fd1c738f75f95f5f7b66040015"
+        },
+        {
+          "resource_id": "upstream-license",
+          "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+        }
+      ],
+      "notice_refs": [],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase 21 file review",
+      "reviewed_on": "2026-10-31",
+      "rationale": "逐文件核对来源、版权、许可与通知，批准此内容摘要的资料分发；不授予代码执行或投资用途。DeepSeek来源完整保留附注。",
+      "source_url": "https://github.com/yuanwang589-dev/deepseek-harness-quant/blob/9f72ab7e64799aecfc79cf3b913359acea1dd9b9/assets/skills/github-maintainer/SKILL.md",
+      "source_path": "assets/skills/github-maintainer/SKILL.md",
+      "source_sha256": "6cb5bc64ba95ee5c8f3c3251aee1158a7a4dfe2b01616bb136b17a3f52e9e8e9"
+    },
+    {
+      "review_id": "rights-source-definitions",
+      "resource_id": "source-definitions",
+      "resource_sha256": "3a392d70a999ca8be7bcbed9018af7677cfb41868c582367c81ea411d6c383a2",
+      "license_id": "MIT",
+      "license_refs": [
+        {
+          "resource_id": "finathink-license",
+          "sha256": "8f005100947b20fd54ad3d7c5dd501d303a627fd1c738f75f95f5f7b66040015"
+        },
+        {
+          "resource_id": "upstream-license",
+          "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+        }
+      ],
+      "notice_refs": [],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase 21 file review",
+      "reviewed_on": "2026-10-31",
+      "rationale": "逐文件核对来源、版权、许可与通知，批准此内容摘要的资料分发；不授予代码执行或投资用途。DeepSeek来源完整保留附注。",
+      "source_url": null,
+      "source_path": null,
+      "source_sha256": null
+    },
+    {
+      "review_id": "rights-source-claims",
+      "resource_id": "source-claims",
+      "resource_sha256": "fc0d7a6e2aa60b2ba7eb605074849239074fe52020eabcdbc0fdb411671e1b55",
+      "license_id": "MIT",
+      "license_refs": [
+        {
+          "resource_id": "finathink-license",
+          "sha256": "8f005100947b20fd54ad3d7c5dd501d303a627fd1c738f75f95f5f7b66040015"
+        },
+        {
+          "resource_id": "upstream-license",
+          "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+        }
+      ],
+      "notice_refs": [],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase 21 file review",
+      "reviewed_on": "2026-10-31",
+      "rationale": "逐文件核对来源、版权、许可与通知，批准此内容摘要的资料分发；不授予代码执行或投资用途。DeepSeek来源完整保留附注。",
+      "source_url": null,
+      "source_path": null,
+      "source_sha256": null
+    },
+    {
+      "review_id": "rights-lessons",
+      "resource_id": "lessons",
+      "resource_sha256": "8fa3927892fc0b3005451025fb41e59009a6aea79e815996dd67cb2baf71f72e",
+      "license_id": "MIT",
+      "license_refs": [
+        {
+          "resource_id": "finathink-license",
+          "sha256": "8f005100947b20fd54ad3d7c5dd501d303a627fd1c738f75f95f5f7b66040015"
+        },
+        {
+          "resource_id": "upstream-license",
+          "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4"
+        }
+      ],
+      "notice_refs": [],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase 21 file review",
+      "reviewed_on": "2026-10-31",
+      "rationale": "逐文件核对来源、版权、许可与通知，批准此内容摘要的资料分发；不授予代码执行或投资用途。DeepSeek来源完整保留附注。",
+      "source_url": null,
+      "source_path": null,
+      "source_sha256": null
+    },
+    {
+      "review_id": "rights-quantaxis-license",
+      "resource_id": "quantaxis-license",
+      "resource_sha256": "96ebf515d25a58bbd8be4543a5c198e576db52738f26c82270ececb1dc273318",
+      "license_id": "MIT",
+      "license_refs": [
+        {
+          "resource_id": "quantaxis-license",
+          "sha256": "96ebf515d25a58bbd8be4543a5c198e576db52738f26c82270ececb1dc273318"
+        }
+      ],
+      "notice_refs": [],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase 21 file review",
+      "reviewed_on": "2026-10-31",
+      "rationale": "逐文件核对内容及许可；Apache参考保留原版权头、完整许可证与Finathink署名说明。此决定仅覆盖指定字节。",
+      "source_url": "https://github.com/yutiansut/QUANTAXIS/blob/232aa7ac9869966108f02a8fff85f1f7b09a9ce2/LICENSE",
+      "source_path": "LICENSE",
+      "source_sha256": "96ebf515d25a58bbd8be4543a5c198e576db52738f26c82270ececb1dc273318"
+    },
+    {
+      "review_id": "rights-qlib-license",
+      "resource_id": "qlib-license",
+      "resource_sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383",
+      "license_id": "MIT",
+      "license_refs": [
+        {
+          "resource_id": "qlib-license",
+          "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+        }
+      ],
+      "notice_refs": [],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase 21 file review",
+      "reviewed_on": "2026-10-31",
+      "rationale": "逐文件核对内容及许可；Apache参考保留原版权头、完整许可证与Finathink署名说明。此决定仅覆盖指定字节。",
+      "source_url": "https://github.com/microsoft/qlib/blob/54355232463878d2eebb91fe0ee5fa7fa1f5976c/LICENSE",
+      "source_path": "LICENSE",
+      "source_sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+    },
+    {
+      "review_id": "rights-alphalens-reloaded-license",
+      "resource_id": "alphalens-reloaded-license",
+      "resource_sha256": "2b651c2d29c644d1c73417cd96e6cfa506d6de102ed96fc3de96d676e089cf29",
+      "license_id": "Apache-2.0",
+      "license_refs": [
+        {
+          "resource_id": "alphalens-reloaded-license",
+          "sha256": "2b651c2d29c644d1c73417cd96e6cfa506d6de102ed96fc3de96d676e089cf29"
+        }
+      ],
+      "notice_refs": [
+        {
+          "resource_id": "alphalens-attribution",
+          "sha256": "7c8a65e49d4400ee3d6ec7bdf5a6a95242214be3f5d5dd4388dc2ff89da2f46f"
+        }
+      ],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase 21 file review",
+      "reviewed_on": "2026-10-31",
+      "rationale": "逐文件核对内容及许可；Apache参考保留原版权头、完整许可证与Finathink署名说明。此决定仅覆盖指定字节。",
+      "source_url": "https://github.com/stefan-jansen/alphalens-reloaded/blob/60755d1cc7d9d36a4c70c8344cbdb168fe99df24/LICENSE",
+      "source_path": "LICENSE",
+      "source_sha256": "2b651c2d29c644d1c73417cd96e6cfa506d6de102ed96fc3de96d676e089cf29"
+    },
+    {
+      "review_id": "rights-pyanomaly-license",
+      "resource_id": "pyanomaly-license",
+      "resource_sha256": "84dc4ddcfd08d382bbe4ac775ebee4da7e40280b8aba4f841884f0234303f6f4",
+      "license_id": "MIT",
+      "license_refs": [
+        {
+          "resource_id": "pyanomaly-license",
+          "sha256": "84dc4ddcfd08d382bbe4ac775ebee4da7e40280b8aba4f841884f0234303f6f4"
+        }
+      ],
+      "notice_refs": [],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase 21 file review",
+      "reviewed_on": "2026-10-31",
+      "rationale": "逐文件核对内容及许可；Apache参考保留原版权头、完整许可证与Finathink署名说明。此决定仅覆盖指定字节。",
+      "source_url": "https://github.com/chulwoohan/pyanomaly/blob/59758c913a4146bbfb9d3c056668ccdc5231c8c8/LICENSE.txt",
+      "source_path": "LICENSE.txt",
+      "source_sha256": "84dc4ddcfd08d382bbe4ac775ebee4da7e40280b8aba4f841884f0234303f6f4"
+    },
+    {
+      "review_id": "rights-rd-agent-license",
+      "resource_id": "rd-agent-license",
+      "resource_sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383",
+      "license_id": "MIT",
+      "license_refs": [
+        {
+          "resource_id": "rd-agent-license",
+          "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+        }
+      ],
+      "notice_refs": [],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase 21 file review",
+      "reviewed_on": "2026-10-31",
+      "rationale": "逐文件核对内容及许可；Apache参考保留原版权头、完整许可证与Finathink署名说明。此决定仅覆盖指定字节。",
+      "source_url": "https://github.com/microsoft/RD-Agent/blob/484776c211e4fbbeef03e0ec00d6bbee7362a4f4/LICENSE",
+      "source_path": "LICENSE",
+      "source_sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+    },
+    {
+      "review_id": "rights-bt-license",
+      "resource_id": "bt-license",
+      "resource_sha256": "8711471566d722d55eca3f09196f342b2ee2960616e68127ec2a17b39ff99949",
+      "license_id": "MIT",
+      "license_refs": [
+        {
+          "resource_id": "bt-license",
+          "sha256": "8711471566d722d55eca3f09196f342b2ee2960616e68127ec2a17b39ff99949"
+        }
+      ],
+      "notice_refs": [],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase 21 file review",
+      "reviewed_on": "2026-10-31",
+      "rationale": "逐文件核对内容及许可；Apache参考保留原版权头、完整许可证与Finathink署名说明。此决定仅覆盖指定字节。",
+      "source_url": "https://github.com/pmorissette/bt/blob/4ae4090266300c0185f418aca18e28e649509a33/LICENSE",
+      "source_path": "LICENSE",
+      "source_sha256": "8711471566d722d55eca3f09196f342b2ee2960616e68127ec2a17b39ff99949"
+    },
+    {
+      "review_id": "rights-alphalens-attribution",
+      "resource_id": "alphalens-attribution",
+      "resource_sha256": "7c8a65e49d4400ee3d6ec7bdf5a6a95242214be3f5d5dd4388dc2ff89da2f46f",
+      "license_id": "MIT",
+      "license_refs": [
+        {
+          "resource_id": "finathink-license",
+          "sha256": "8f005100947b20fd54ad3d7c5dd501d303a627fd1c738f75f95f5f7b66040015"
+        }
+      ],
+      "notice_refs": [],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase 21 file review",
+      "reviewed_on": "2026-10-31",
+      "rationale": "逐文件核对内容及许可；Apache参考保留原版权头、完整许可证与Finathink署名说明。此决定仅覆盖指定字节。",
+      "source_url": null,
+      "source_path": null,
+      "source_sha256": null
+    },
+    {
+      "review_id": "rights-alphalens-performance-reference",
+      "resource_id": "alphalens-performance-reference",
+      "resource_sha256": "dc4c7c661b19a61b434f67cd5015a986f5aea85fd319e08a3d7fb04469203d25",
+      "license_id": "Apache-2.0",
+      "license_refs": [
+        {
+          "resource_id": "alphalens-reloaded-license",
+          "sha256": "2b651c2d29c644d1c73417cd96e6cfa506d6de102ed96fc3de96d676e089cf29"
+        }
+      ],
+      "notice_refs": [
+        {
+          "resource_id": "alphalens-attribution",
+          "sha256": "7c8a65e49d4400ee3d6ec7bdf5a6a95242214be3f5d5dd4388dc2ff89da2f46f"
+        }
+      ],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase 21 file review",
+      "reviewed_on": "2026-10-31",
+      "rationale": "逐文件核对内容及许可；Apache参考保留原版权头、完整许可证与Finathink署名说明。此决定仅覆盖指定字节。",
+      "source_url": "https://github.com/stefan-jansen/alphalens-reloaded/blob/60755d1cc7d9d36a4c70c8344cbdb168fe99df24/src/alphalens/performance.py",
+      "source_path": "src/alphalens/performance.py",
+      "source_sha256": "dc4c7c661b19a61b434f67cd5015a986f5aea85fd319e08a3d7fb04469203d25"
+    },
+    {
+      "review_id": "rights-resource-reconciliation",
+      "resource_id": "resource-reconciliation",
+      "resource_sha256": "7c77a355a3398f6452fc0559ffa9aee18ca5cff68dc5dee1acd3c450ac307576",
+      "license_id": "MIT",
+      "license_refs": [
+        {
+          "resource_id": "finathink-license",
+          "sha256": "8f005100947b20fd54ad3d7c5dd501d303a627fd1c738f75f95f5f7b66040015"
+        }
+      ],
+      "notice_refs": [],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase 21 file review",
+      "reviewed_on": "2026-10-31",
+      "rationale": "逐文件核对内容及许可；Apache参考保留原版权头、完整许可证与Finathink署名说明。此决定仅覆盖指定字节。",
+      "source_url": null,
+      "source_path": null,
+      "source_sha256": null
+    },
+    {
+      "review_id": "rights-source-intake-summary",
+      "resource_id": "source-intake-summary",
+      "resource_sha256": "e6f4cbd4a73bcbbdd21e57814d0d2a9945afaaad454cf7a70dc816fd2fa52998",
+      "license_id": "MIT",
+      "license_refs": [
+        {
+          "resource_id": "finathink-license",
+          "sha256": "8f005100947b20fd54ad3d7c5dd501d303a627fd1c738f75f95f5f7b66040015"
+        }
+      ],
+      "notice_refs": [],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase 21 file review",
+      "reviewed_on": "2026-10-31",
+      "rationale": "逐文件核对内容及许可；Apache参考保留原版权头、完整许可证与Finathink署名说明。此决定仅覆盖指定字节。",
+      "source_url": null,
+      "source_path": null,
+      "source_sha256": null
     }
   ]
 }
