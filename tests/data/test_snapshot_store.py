@@ -125,7 +125,8 @@ def test_listed_snapshots_are_verified_and_returned_as_independent_values(tmp_pa
     assert store.load(ref).provenance["source"] == "fixture-market"
 
 
-def test_api_capture_explicitly_fetches_and_saves_only_normalized_prices(tmp_path):
+@pytest.mark.parametrize("adjustment", ["UNKNOWN", "RAW"])
+def test_api_capture_explicitly_fetches_and_saves_only_normalized_prices(tmp_path, adjustment):
     import json
 
     from finahinking.data.connection_settings import InMemoryDataCredentialStore
@@ -141,8 +142,9 @@ def test_api_capture_explicitly_fetches_and_saves_only_normalized_prices(tmp_pat
     config = DataConnectionConfig("my-feed", "User feed", "https://example.test/prices", None, "no_auth", {key: key for key in record})
     connector = JsonApiConnector(config, InMemoryDataCredentialStore(), Transport(), resolver=lambda host, port: ("93.184.216.34",))
     store = SnapshotStore(tmp_path)
-    ref = connector.capture(DataRequest("prices", ("AAA",)), store)
+    ref = connector.capture(DataRequest("prices", ("AAA",)), store, adjustment=adjustment)
     saved = store.load(ref)
     assert saved.observations[0].close == 102
     assert saved.provenance["connection_id"] == "my-feed"
+    assert saved.provenance["adjustment"] == adjustment
     assert "https://example.test" not in saved.to_json()

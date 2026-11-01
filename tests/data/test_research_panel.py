@@ -184,3 +184,40 @@ def test_new_api_field_mapping_and_strict_units():
     record['t'] = '2026-01-02'
     with pytest.raises(ValueError, match='时区'):
         normalize_records([record], {'instrument':'id','timestamp':'t','available_at':'a','nav':'nav'}, 'panel_fields')
+
+
+def test_legacy_expiry_does_not_revive_prior_classification():
+    from finahinking.data.research_fields import ResearchFieldAttachment
+    snap, rules, contract, build = fixture()
+    rows = [{'instrument':'AAA','timestamp':contract.observed_at[0], 'available_at':contract.observed_at[0], 'industry':'alpha'},
+            {'instrument':'AAA','timestamp':contract.observed_at[1], 'available_at':contract.observed_at[1],
+             'effective_until':contract.observed_at[2], 'industry':'beta'}]
+    attachment = ResearchFieldAttachment(snap.fingerprint, 'CN', {'industry':'historical_classification'}, rows)
+    panel = build(snap, [rules, attachment], contract)
+    actual = panel.frame.xs('AAA', level='instrument').industry
+    assert actual.iloc[:2].tolist() == ['alpha','beta']
+    assert actual.iloc[2:].isna().all()
+
+
+def test_snapshot_units_and_ambiguous_records_are_rejected():
+    snap, rules, contract, build = fixture()
+    with pytest.raises(ValueError, match='冲突'):
+        build(snap, [rules, api()[2](snap.fingerprint, rules.units, rules.records, 'Another source')], contract)
+    declared = replace(snap, provenance={'adjustment':'RAW', 'units':{'price_currency':'USD','volume_unit':'shares'}})
+    values = contract.to_dict(); values.pop('fingerprint'); values.pop('schema_version'); values['snapshot_ref']=declared.fingerprint
+    with pytest.raises(ValueError, match='单位'):
+        build(declared, [], api()[1](**values))
+
+
+def test_all_nine_field_packs_preserve_declared_units_and_source():
+    snap, rules, contract, build = fixture()
+    fields = {'cash_dividend':('CNY_per_share',.1), 'net_profit':('CNY', 100), 'industry':('historical_classification','tech'),
+              'institutional_net_buy':('CNY',10), 'news_count':('count',2), 'nav':('CNY_per_share',1.2),
+              'holdings_scope':('declared_basket','top10'), 'holdings_weight':('ratio',.5), 'policy_rate':('ratio',.03)}
+    rows = [{'instrument':'AAA','timestamp':contract.observed_at[0], 'available_at':contract.observed_at[0], **{k:v[1] for k,v in fields.items()}}]
+    att = api()[2](snap.fingerprint, {k:v[0] for k,v in fields.items()}, rows, 'Synthetic nine-pack input')
+    panel = build(snap, [rules, att], contract)
+    for field, (unit, value) in fields.items():
+        assert panel.audit['units'][field] == unit
+        assert panel.frame.loc[(pd.Timestamp(contract.observed_at[0]),'AAA'), field] == value
+    assert len({name for name in api()[0]}) == 9

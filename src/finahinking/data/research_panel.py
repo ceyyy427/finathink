@@ -82,7 +82,7 @@ def build_research_panel(snapshot, field_attachments, contract: PanelContract):
                     raise ValueError('跨附件字段修订冲突')
                 seen.add(identity)
                 streams.setdefault((row['instrument'], field), []).append(
-                    (observed, available, row[field], att.fingerprint))
+                    (observed, available, row[field], att.fingerprint, panel_time(row['effective_until']) if row.get('effective_until') else None))
     if len(seen) > 100000:
         raise ValueError('面板字段记录总量超限')
     globals_ = []
@@ -97,7 +97,9 @@ def build_research_panel(snapshot, field_attachments, contract: PanelContract):
         declared_units.update({name: declared_units['price_currency'] for name in ('open','high','low','close','amount')})
     if 'volume_unit' in declared_units:
         declared_units['volume'] = declared_units['volume_unit']
-    if any(name in units and units[name] != unit for name, unit in declared_units.items()):
+    if any(name in units and unit == 'UNKNOWN' for name, unit in declared_units.items()):
+        globals_.append('currency：快照单位未知，请重新声明并获取快照')
+    if any(name in units and unit != 'UNKNOWN' and units[name] != unit for name, unit in declared_units.items()):
         raise ValueError('面板单位与快照声明不一致')
     native = {}
     for obs in snapshot.observations:
@@ -129,12 +131,12 @@ def build_research_panel(snapshot, field_attachments, contract: PanelContract):
                     else:
                         row[name] = getattr(obs, name)
                 continue
-            candidates = [(t, a, v, ref) for t, a, v, ref in streams.get((asset, name), ())
+            candidates = [(t, a, v, ref, expiry) for t, a, v, ref, expiry in streams.get((asset, name), ())
                           if a is not None and t <= cutoff and a <= cutoff
                           and (FIELD_DEFINITIONS[name][3] == 'asof' or t == time)]
             if candidates:
                 chosen = max(candidates, key=lambda x: (x[0], x[1]))
-                row[name] = chosen[2]
+                row[name] = chosen[2] if chosen[4] is None or time < chosen[4] else None
                 selections.append({'observed_at': time.isoformat(), 'instrument': asset, 'field': name,
                     'source_observed_at': chosen[0].isoformat(), 'available_at': chosen[1].isoformat(), 'attachment_ref': chosen[3]})
         for ref_key, fields in _RULE_REFS.items():

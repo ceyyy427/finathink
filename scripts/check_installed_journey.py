@@ -56,6 +56,32 @@ def learning_journey(app, get, post, template_ref):
     return assessment['assessment_id'], pair['pair_id']
 
 
+def panel_journey(app, post):
+    from finahinking.data.panel_contracts import PanelContract, PanelFieldAttachment
+    from finahinking.p8_2.contracts import DatasetSnapshot, MarketObservation
+
+    times = [f"2026-01-0{d}T16:00:00Z" for d in (2,3,4)]
+    observations = tuple(MarketObservation(a,t,v,v,v,v,100,available_at=t,suspended=False)
+                         for a, values in (("AAA",(1,2,3)),("BBB",(5,6,7))) for t,v in zip(times,values))
+    snap = DatasetSnapshot("installed-panel", observations, provenance={"adjustment":"RAW"})
+    app.research_service.snapshots.save(snap)
+    units = {"is_session":"boolean", "in_universe":"boolean", "trade_allowed":"boolean",
+             "lot_size":"shares", "settlement_days":"sessions", "split_factor":"ratio"}
+    records = [{"instrument":a,"timestamp":t,"available_at":t,"is_session":True,"in_universe":True,
+                "trade_allowed":True,"lot_size":1,"settlement_days":0,"split_factor":1}
+               for a in snap.instruments for t in times]
+    fields = PanelFieldAttachment(snap.fingerprint, units, records, "Installed synthetic panel")
+    ref = post("/api/research/panels/fields", {"attachment":fields.to_dict()})["attachment_ref"]
+    contract = PanelContract(snap.fingerprint, snap.instruments, times, {"close":"CNY"}, "installed-panel",
+                            {a:"CNY" for a in snap.instruments}, {a:"UTC" for a in snap.instruments},
+                            ref, ref, ref, ref)
+    inputs = {"contract":contract.to_dict(), "attachment_refs":[ref], "expressions":["ts_return(close,1)"]}
+    result = post("/api/research/panels/evaluate", inputs)
+    assert result["status"] == "READY" and result["execution_permission"] is False
+    assert result["results"][0]["records"][-2]["value"] == .5
+    assert result == post("/api/research/panels/evaluate", inputs)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--state-root', required=True, type=Path)
@@ -133,6 +159,7 @@ def main():
         finally:
             portable.close()
         assessment_id, pair_id = learning_journey(app, get, post, snapshot['snapshot_ref'])
+        panel_journey(app, post)
     finally:
         server.shutdown()
         server.server_close()

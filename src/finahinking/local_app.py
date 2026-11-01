@@ -1407,7 +1407,7 @@ class LocalApplication:
             return 422, "application/json", {"error": "因子输入或证据绑定无效，请重新读取定义和范围。"}
 
     def _research_jobs_route(self, method, clean, body, query):
-        if not (clean in {"/api/research/readiness", "/api/research/jobs", "/api/research/experiments", "/api/research/learning"} or clean.startswith(("/api/research/jobs/", "/api/research/snapshots", "/api/research/experiments/", "/api/research/learning/"))):
+        if not (clean in {"/api/research/readiness", "/api/research/jobs", "/api/research/experiments", "/api/research/learning"} or clean.startswith(("/api/research/panels/", "/api/research/jobs/", "/api/research/snapshots", "/api/research/experiments/", "/api/research/learning/"))):
             return None
         content_type = "application/json"
         if method not in {"GET", "POST"}:
@@ -1419,6 +1419,23 @@ class LocalApplication:
         values = {key: value for key, value in (body or {}).items() if key != "_csrf"} if isinstance(body, Mapping) else {}
         try:
             service = self.research_service
+            if clean.startswith("/api/research/panels/"):
+                if method != "POST":
+                    return 405, content_type, {"error": "请显式提交面板研究输入。"}
+                if clean == "/api/research/panels/fields":
+                    from .data.panel_contracts import PanelFieldAttachment
+                    from .data.research_fields import ResearchFieldStore
+
+                    if set(values) != {"attachment"}:
+                        raise ValueError("字段保存只接受不可变面板附件")
+                    attachment = PanelFieldAttachment.from_dict(values["attachment"])
+                    ref = ResearchFieldStore(service.snapshots).save(attachment)
+                    return 201, content_type, {"attachment_ref": ref, "snapshot_ref": attachment.snapshot_ref}
+                if clean == "/api/research/panels/evaluate":
+                    from .research.panel_research import evaluate_panel_request
+
+                    return 200, content_type, evaluate_panel_request(service.snapshots, values)
+                return 404, content_type, {"error": "未找到面板研究接口。"}
             if clean == "/api/research/readiness":
                 return (200, content_type, service.readiness(values)) if method == "POST" else (405, content_type, {"error": "请显式提交输入检查。"})
             if clean.startswith("/api/research/jobs/"):
@@ -1506,7 +1523,7 @@ class LocalApplication:
                 service.snapshots.save(snapshot)
                 return 201, content_type, self._snapshot_summary(snapshot)
             if clean == "/api/research/snapshots/capture" and method == "POST":
-                if set(values) - {"connection_id", "instrument", "start", "end", "as_of", "price_currency", "volume_unit", "asset_classes"}:
+                if set(values) - {"connection_id", "instrument", "start", "end", "as_of", "price_currency", "volume_unit", "asset_classes", "adjustment"}:
                     raise ValueError("unsupported capture fields")
                 config = self._data_connections.get(values["connection_id"])
                 if not isinstance(values.get("instrument"), str):
@@ -1516,7 +1533,7 @@ class LocalApplication:
                 classes = values.get("asset_classes") or {}
                 if isinstance(classes, str):
                     classes = json.loads(classes)
-                reference = JsonApiConnector(config, self._data_connections.credentials, self._data_transport).capture(request, service.snapshots, units=units, asset_classes=classes)
+                reference = JsonApiConnector(config, self._data_connections.credentials, self._data_transport).capture(request, service.snapshots, units=units, asset_classes=classes, adjustment=values.get("adjustment", "UNKNOWN"))
                 return 201, content_type, self._snapshot_summary(service.snapshots.load(reference))
             return 405, content_type, {"error": "use an explicit snapshot preparation endpoint"}
         except FileNotFoundError:

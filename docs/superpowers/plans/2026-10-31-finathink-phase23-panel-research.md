@@ -98,11 +98,11 @@ python3 -m pytest tests/data/test_research_panel.py tests/data/test_research_fie
 
 **执行步骤：**
 
-- [ ] 读取上述现有文件及前置阶段产物；确认共享合同。新文件如有等价现成实现，先记录证据并合并复用，不能创建第二套事实源。
-- [ ] 写上述失败用例及独立预期；执行以下命令，确认因目标行为缺失而失败，保存具体失败，不把环境/导入拼写错误当作有效红灯。
-- [ ] 时序16项为lag、return、diff、sum、mean、std、min、max、rank、corr、cov、slope、linear_decay、argmin、argmax、zscore；截面8项为rank、zscore、winsorize、demean、neutralize、group_rank、group_zscore、group_demean。冻结ddof、窗口边界及单位合同；不允许任意Python/SQL执行。
-- [ ] 重跑同一用例并确认通过；执行受影响的旧入口回归，记录实际HTTP/worker或安装路径的证据及限制。
-- [ ] 更新本阶段完成清单、内容数量和接口说明，定向暂存本任务文件并提交；不要包含其他工作区的修改。
+- [x] 读取上述现有文件及前置阶段产物；确认共享合同。新文件如有等价现成实现，先记录证据并合并复用，不能创建第二套事实源。
+- [x] 写上述失败用例及独立预期；执行以下命令，确认因目标行为缺失而失败，保存具体失败，不把环境/导入拼写错误当作有效红灯。
+- [x] 时序16项为lag、return、diff、sum、mean、std、min、max、rank、corr、cov、slope、linear_decay、argmin、argmax、zscore；截面8项为rank、zscore、winsorize、demean、neutralize、group_rank、group_zscore、group_demean。冻结ddof、窗口边界及单位合同；不允许任意Python/SQL执行。
+- [x] 重跑同一用例并确认通过；执行受影响的旧入口回归，记录实际HTTP/worker或安装路径的证据及限制。
+- [x] 更新本阶段完成清单、内容数量和接口说明，定向暂存本任务文件并提交；不要包含其他工作区的修改。
 
 **命令（仓库根目录执行）：**
 
