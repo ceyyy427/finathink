@@ -148,7 +148,11 @@ class PanelFieldAttachment(JsonContract):
                 val, kind = row[name], FIELD_DEFINITIONS[name][1]
                 if val is not None:
                     if kind == 'number':
-                        if isinstance(val, bool) or not isinstance(val, (int, float)) or not math.isfinite(val):
+                        try:
+                            finite = math.isfinite(val)
+                        except (TypeError, ValueError, OverflowError):
+                            finite = False
+                        if isinstance(val, bool) or not isinstance(val, (int, float)) or not finite:
                             raise ValueError('数值必须有限且单位明确')
                         if name in {'split_factor', 'lot_size'} and val <= 0:
                             raise ValueError('拆分比例和最小交易单位必须为正数')

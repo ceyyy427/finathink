@@ -34,7 +34,9 @@ def evaluate_panel_request(snapshot_store, request):
         results.append({'expression': item.expression, 'metadata': series.attrs, 'records': records})
     payload = {'schema_version': 'panel-research.v1', 'semantics_version': SEMANTICS_VERSION,
                'panel_fingerprint': panel.fingerprint, 'contract': contract.to_dict(), 'audit': panel.audit,
-               'status': panel.status, 'results': results, 'production_write': False,
+               'panel_status': panel.status,
+               'status': 'NEEDS_DATA' if panel.status == 'NEEDS_DATA' or any(r['metadata']['status'] == 'NEEDS_DATA' for r in results) else 'READY',
+               'results': results, 'production_write': False,
                'execution_permission': False}
     if len(_json(payload).encode()) > 4 * 1024 * 1024:
         raise ValueError('面板结果超过导出预算，请缩小范围')

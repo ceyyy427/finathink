@@ -70,3 +70,19 @@ def test_cost_limit_is_total_work_not_only_individual_window():
     from finahinking.factors.panel_operators import parse_panel_expression
     with pytest.raises(ValueError, match='预算'):
         parse_panel_expression('ts_mean(ts_mean(ts_mean(close,252,252),252,252),252,252)', ['close'], row_count=10000)
+
+
+def test_review_training_cannot_fit_boolean_permissions():
+    from finahinking.data.panel_contracts import PanelContract
+    from finahinking.data.research_panel import ResearchPanel
+    from finahinking.factors.panel_operators import fit_panel_standardizer
+    from tests.data.test_research_panel import fixture
+    snap, rules, contract, build = fixture()
+    panel = build(snap, [rules], contract)
+    frame = panel.frame
+    frame.loc[frame.index[3], 'trade_allowed'] = False
+    values = contract.to_dict(); values.pop('fingerprint'); values.pop('schema_version')
+    values['field_units']['trade_allowed'] = 'boolean'
+    altered = ResearchPanel(frame, panel.audit, PanelContract(**values), panel.fingerprint)
+    with pytest.raises(ValueError, match='数值'):
+        fit_panel_standardizer(altered, 'trade_allowed', fit_start=contract.observed_at[0], fit_end=contract.observed_at[-1])

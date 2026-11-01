@@ -66,7 +66,7 @@ w 为含当前会话的向后窗口，m 为明确给定的最小有效样本数�
 1. 通过既有用户 API 捕获并保存快照，明确价格、数量、复权口径。
 2. 构造字段附件并调用 `POST /api/research/panels/fields`，请求为 `{"attachment": <完整附件>}`，取得不可变引用。
 3. 显式提交 `POST /api/research/panels/evaluate`，包含 contract、attachment_refs、expressions 数组。例如同时比较 `ts_rank(close,20,20)` 与 `cs_rank(close,10)`。
-4. 返回 panel-research.v1：合同、面板指纹、audit、各表达式数值/单位/语义版本/诊断和总结果指纹。JSON 空值表示不可计算，状态 NEEDS_DATA 带补齐原因。
+4. 返回 panel-research.v1：合同、面板指纹、audit、各表达式数值/单位/语义版本/诊断和总结果指纹。JSON 空值表示不可计算，panel_status 单独表示数据面板就绪度；任何表达式无法计算时，顶层 status 为 NEEDS_DATA 并保留算子诊断。
 
 两个 POST 均使用现有本地来源检查和 `_csrf`；GET 不执行研究。`SnapshotStore.build_panel` 从持久快照和字段引用重建；`evaluate_panel_request` 是 HTTP 与 worker 可调用的同一入口。当前接口为有限的确定性面板计算，不自动新建队列、改动策略政策或授权成交；结果明确 execution_permission=false。长期因子验证和组合工作沿用各自已审核流程。
 

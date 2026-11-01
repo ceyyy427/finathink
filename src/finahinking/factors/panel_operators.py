@@ -258,7 +258,7 @@ def evaluate_panel(expression, panel):
 
 def _training_data(panel, field, start, end):
     frame = _validate_panel(panel)
-    if field not in panel.contract.field_units or not pd.api.types.is_numeric_dtype(frame[field]):
+    if field not in panel.contract.field_units or panel.contract.field_units[field] == 'boolean' or not pd.api.types.is_numeric_dtype(frame[field]) or pd.api.types.is_bool_dtype(frame[field]):
         raise ValueError('拟合字段需要明确数值单位')
     start, end = panel_time(start), panel_time(end)
     times = frame.index.get_level_values(0)

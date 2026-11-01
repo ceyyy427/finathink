@@ -221,3 +221,34 @@ def test_all_nine_field_packs_preserve_declared_units_and_source():
         assert panel.audit['units'][field] == unit
         assert panel.frame.loc[(pd.Timestamp(contract.observed_at[0]),'AAA'), field] == value
     assert len({name for name in api()[0]}) == 9
+
+
+@pytest.mark.parametrize('field,unit,value', [
+    ('is_session','boolean',True), ('trade_allowed','boolean',False),
+    ('event_type','event_category','earnings'), ('holdings_scope','declared_basket','top10'),
+    ('policy_regime','policy_category','expansion'),
+])
+def test_review_api_mapping_preserves_boolean_and_text_packs(field, unit, value):
+    from finahinking.data.field_mapping import normalize_records
+    snap, _, _, _ = fixture()
+    record = {'instrument':'AAA', 'timestamp':'2026-01-02T16:00Z', 'available_at':'2026-01-02T16:00Z', field:value}
+    batch = normalize_records([record], {k:k for k in record}, 'panel_fields')
+    assert batch.to_panel_attachment(snap.fingerprint, units={field:unit}).records[0][field] == value
+
+
+def test_review_large_integer_is_controlled_validation_error():
+    snap, _, _, _ = fixture()
+    with pytest.raises(ValueError, match='数值'):
+        financial(snap, [{'instrument':'AAA', 'timestamp':'2026-01-02T16:00Z',
+                          'available_at':'2026-01-02T16:00Z','net_profit':10**1000}])
+
+
+def test_api_explicit_unknown_availability_remains_unknown():
+    from finahinking.data.field_mapping import normalize_records
+    snap, rules, contract, build = fixture()
+    row = {'instrument':'AAA', 'timestamp':'2026-01-02T16:00Z', 'available_at':None, 'net_profit':10}
+    batch = normalize_records([row], {k:k for k in row}, 'panel_fields')
+    assert batch.pit_available == 'UNKNOWN'
+    fields = batch.to_panel_attachment(snap.fingerprint, units={'net_profit':'CNY'})
+    assert fields.records[0]['available_at'] is None
+    assert build(snap, [rules, fields], contract).frame.net_profit.isna().all()

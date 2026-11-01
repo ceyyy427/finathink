@@ -75,3 +75,18 @@ def test_existing_spawn_rebuilds_panel_and_keeps_result_identity(tmp_path, monke
     assert messages[-1].kind == 'RESULT', messages[-1]
     output = json.loads((tmp_path/'panel-output.json').read_text())
     assert output == evaluate_panel_request(SnapshotStore(tmp_path/'snapshots'), payload)
+
+
+def test_review_result_readiness_includes_degenerate_operator(tmp_path):
+    from finahinking.data.panel_contracts import PanelContract
+    store = SnapshotStore(tmp_path/'snapshots')
+    payload, _ = request_for(store)
+    values = payload['contract'].copy(); values.pop('fingerprint'); values.pop('schema_version')
+    values['field_units'] = {'close':'CNY', 'volume':'shares'}
+    payload['contract'] = PanelContract(**values).to_dict()
+    payload['expressions'] = ['cs_neutralize(close,volume,3)']
+    result = evaluate_panel_request(store, payload)
+    assert result['status'] == 'NEEDS_DATA'
+    assert result['panel_status'] == 'READY'
+    assert result['results'][0]['metadata']['diagnostics'] == ['DEGENERATE_EXPOSURE']
+    assert all(row['value'] is None for row in result['results'][0]['records'])
