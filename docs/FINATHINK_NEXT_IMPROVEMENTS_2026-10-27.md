@@ -64,3 +64,5 @@ Phase 19 已通过 [PR #20](https://github.com/ceyyy427/finathink/pull/20) 合�
 Phase 20 已经 [PR #21](https://github.com/ceyyy427/finathink/pull/21) 合并。下一轮以扩充研究内容为主：来源接入→量化知识库→PIT面板与算子→十类因子→验证与反证→策略/风险/研究池→自然语言闭环→研究工作台。
 
 见 [完整规划书与八份实施计划](FINATHINK_QUANT_KNOWLEDGE_ROADMAP_2026-10-31.md)。已下载 QUANTAXIS、DeepSeek HARNESS Quant、Qlib、Alphalens Reloaded、Pyanomaly、RD-Agent 和 bt；具体阅读文件及迁移方向见 [源码学习记录](research/2026-10-31-open-source-quant-study.md)。这一轮已完成下载、研究和规划，生产功能仍按各阶段验收后更新状态。
+
+Phase21的来源审计、逐文件权利和旧资源对账现已实现，新增只读“开源来源”页。见[使用指南](SOURCE_INTAKE_GUIDE.md)与[验收记录](reviews/2026-10-31-finathink-phase21-review.md)。后续内容建设从Phase22统一知识库继续。
