@@ -59,7 +59,7 @@ class FactorStudyStore:
         with self.queue._connect() as db:
             return [self._decode(row) for row in db.execute("SELECT * FROM factor_studies WHERE scope_id=? ORDER BY rowid DESC LIMIT ?", (self.scope_id, limit)).fetchall()]
 
-    def create(self, study_id, spec, *, validation_key=None):
+    def create(self, study_id, spec, *, validation_key=None, suite_registration=False):
         study_id = _ref(study_id, "study_id")
         validation_key = _ref(validation_key or study_id, "validation_key")
         if not isinstance(spec, dict) or not re.fullmatch(r"[0-9a-f]{64}", spec.get("snapshot_ref", "")):
@@ -70,6 +70,7 @@ class FactorStudyStore:
             row = self._decode(self._row(db, study_id))
             if row["spec_ref"] != reference or row["validation_key"] != validation_key:
                 raise ValueError("immutable study idempotency conflict")
+            if suite_registration:self.register_suite(row,connection=db)
         return self.get(study_id)
 
     def set_job(self, study_id, phase, job_id):
@@ -133,7 +134,7 @@ class FactorStudyStore:
                 start, end = [pd.Timestamp(value) for value in row["spec"]["test_period"]]
                 if any(pd.isna(value) or value.tzinfo is None for value in (start, end)) or start >= end:
                     raise ValueError("test period requires ordered timezone-aware boundaries")
-                instruments = row["spec"].get("panel_contract", {}).get("instrument_ids", [row["spec"]["instrument"]])
+                instruments = row["spec"].get("instrument_ids", row["spec"].get("panel_contract", {}).get("instrument_ids", [row["spec"]["instrument"]]))
                 instrument = row["spec"]["instrument"]
                 # A panel holdout consumes each asset, including overlap with legacy studies.
                 for asset in instruments:
@@ -158,3 +159,43 @@ class FactorStudyStore:
                 raise ValueError("review requires a completed test and is immutable")
             db.execute("UPDATE factor_studies SET state='REVIEWED',review_decision=?,reviewer_id=? WHERE scope_id=? AND study_id=?", (decision, reviewer_id, self.scope_id, study_id))
             return self._decode(self._row(db, study_id))
+
+    def register_suite(self, study, *, connection=None):
+        spec=study['spec']
+        with (nullcontext(connection) if connection is not None else self.queue._connect()) as db:
+            if connection is None:db.execute("BEGIN IMMEDIATE")
+            db.execute("CREATE TABLE IF NOT EXISTS factor_suite_family (scope_id TEXT,family_ref TEXT,factor_id TEXT,factor_ref TEXT,owner_study_id TEXT,PRIMARY KEY(scope_id,family_ref,factor_id))")
+            if 'owner_study_id' not in {r['name'] for r in db.execute('PRAGMA table_info(factor_suite_family)')}:
+                db.execute('ALTER TABLE factor_suite_family ADD COLUMN owner_study_id TEXT')
+            db.execute("CREATE TABLE IF NOT EXISTS factor_suite_trials (scope_id TEXT,study_id TEXT,phase TEXT,factor_id TEXT,state TEXT,result_ref TEXT,PRIMARY KEY(scope_id,study_id,phase,factor_id))")
+            db.execute("CREATE TABLE IF NOT EXISTS factor_suite_events (event_id INTEGER PRIMARY KEY,scope_id TEXT,study_id TEXT,phase TEXT,factor_id TEXT,state TEXT,result_ref TEXT)")
+            for factor in spec['declared_family']:
+                db.execute("INSERT OR IGNORE INTO factor_suite_family(scope_id,family_ref,factor_id,factor_ref) VALUES (?,?,?,?)",(self.scope_id,spec['family_ref'],factor['factor_id'],stable_digest(factor)))
+                row=db.execute("SELECT factor_ref FROM factor_suite_family WHERE scope_id=? AND family_ref=? AND factor_id=?",(self.scope_id,spec['family_ref'],factor['factor_id'])).fetchone()
+                if row['factor_ref']!=stable_digest(factor):raise ValueError('试验家族定义改变')
+            for factor in spec['factors']:
+                owner=db.execute('SELECT owner_study_id FROM factor_suite_family WHERE scope_id=? AND family_ref=? AND factor_id=?',(self.scope_id,spec['family_ref'],factor['factor_id'])).fetchone()['owner_study_id']
+                if owner not in {None,study['study_id']}:raise ValueError('同一试验家族的因子已有研究归属，请使用原幂等研究')
+                db.execute('UPDATE factor_suite_family SET owner_study_id=? WHERE scope_id=? AND family_ref=? AND factor_id=?',(study['study_id'],self.scope_id,spec['family_ref'],factor['factor_id']))
+                db.execute("INSERT OR IGNORE INTO factor_suite_trials VALUES (?,?,?,?,'REGISTERED',NULL)",(self.scope_id,study['study_id'],'validation',factor['factor_id']))
+
+    def suite_trial_state(self,study_id,phase,factor_id,state,*,result_ref=None):
+        allowed={'RUNNING','PASS','FALSIFIED','NEEDS_DATA','EXECUTION_FAILED','CANCELLED'}
+        if state not in allowed or phase not in {'validation','test'}:raise ValueError('试验状态无效')
+        study=self.get(study_id)
+        if factor_id not in {f['factor_id'] for f in study['spec']['factors']}:raise ValueError('未登记试验')
+        with self.queue._connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            db.execute("INSERT OR IGNORE INTO factor_suite_trials VALUES (?,?,?,?,'REGISTERED',NULL)",(self.scope_id,study_id,phase,factor_id))
+            old=db.execute("SELECT * FROM factor_suite_trials WHERE scope_id=? AND study_id=? AND phase=? AND factor_id=?",(self.scope_id,study_id,phase,factor_id)).fetchone()
+            if old['state']==state and old['result_ref']==result_ref:return
+            if old['state'] in {'PASS','FALSIFIED','NEEDS_DATA','EXECUTION_FAILED'}:
+                if state=='RUNNING':return  # a worker retry recomputes the immutable record
+                if old['state']!=state or old['result_ref']!=result_ref:raise ValueError('试验结果不能重写')
+            db.execute("UPDATE factor_suite_trials SET state=?,result_ref=? WHERE scope_id=? AND study_id=? AND phase=? AND factor_id=?",(state,result_ref,self.scope_id,study_id,phase,factor_id))
+            db.execute("INSERT INTO factor_suite_events(scope_id,study_id,phase,factor_id,state,result_ref) VALUES (?,?,?,?,?,?)",(self.scope_id,study_id,phase,factor_id,state,result_ref))
+
+    def suite_trials(self,study_id):
+        self.get(study_id)
+        with self.queue._connect() as db:
+            return [dict(r) for r in db.execute("SELECT phase,factor_id,state,result_ref FROM factor_suite_trials WHERE scope_id=? AND study_id=? ORDER BY phase,factor_id",(self.scope_id,study_id))]

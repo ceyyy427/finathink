@@ -1309,6 +1309,23 @@
       "source_sha256": null,
       "derivation": "FINATHINK_ORIGINAL",
       "rights_ref": "rights-factor-library-formulas"
+    },
+    {
+      "resource_id": "factor-counterexamples",
+      "path": "knowledge/counterexamples.json",
+      "sha256": "c404e17e5c9aa136e1a26a8df9ab99ef18b04615715abe2efac009053d48ea98",
+      "byte_size": 19416,
+      "availability": "PACKAGED",
+      "kind": "metadata",
+      "author": "Finahinking contributors",
+      "license_id": "MIT",
+      "license_ref": "finathink-license",
+      "version": "1.0.0",
+      "source_url": null,
+      "source_path": null,
+      "source_sha256": null,
+      "derivation": "FINATHINK_ORIGINAL",
+      "rights_ref": "rights-factor-counterexamples"
     }
   ],
   "rights_reviews": [
@@ -2424,6 +2441,27 @@
       "reviewed_by": "Finathink Phase24 authored content review",
       "reviewed_on": "2026-11-01",
       "rationale": "中文解释与受控DSL为独立编写；来源卡含有署名的短原式源码摘录，保留四个上游完整MIT许可、版权及DeepSeek研究教育附注。逐卡绑定固定提交、文件和行号。仅授权这些内容字节的发布，不批准金融用途。",
+      "source_url": null,
+      "source_path": null,
+      "source_sha256": null
+    },
+    {
+      "review_id": "rights-factor-counterexamples",
+      "resource_id": "factor-counterexamples",
+      "resource_sha256": "c404e17e5c9aa136e1a26a8df9ab99ef18b04615715abe2efac009053d48ea98",
+      "license_id": "MIT",
+      "license_refs": [
+        {
+          "resource_id": "finathink-license",
+          "sha256": "8f005100947b20fd54ad3d7c5dd501d303a627fd1c738f75f95f5f7b66040015"
+        }
+      ],
+      "notice_refs": [],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase25 authored counterexample content review",
+      "reviewed_on": "2026-11-01",
+      "rationale": "原创中文反例、有限合成输入规范、断言和修正说明；未复制上游执行代码。许可仅覆盖此内容字节，不授予金融用途。",
       "source_url": null,
       "source_path": null,
       "source_sha256": null

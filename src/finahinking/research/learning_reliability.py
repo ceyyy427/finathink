@@ -40,6 +40,8 @@ def _number(value):
 
 
 def _reason(row, scope, start, cutoff):
+    if row.get("record_kind") == "FACTOR_TRIAL" or row.get("research_evidence") is not None:
+        return "RESEARCH_NOT_SETTLED"
     if not row.get("verified"):
         return row.get("exclusion_reason", "UNVERIFIED")
     if row.get("scope") != scope:

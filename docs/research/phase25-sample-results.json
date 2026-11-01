@@ -1,0 +1,812 @@
+{
+  "producer_components_sha256": {
+    "src/finahinking/research/factor_validation_sample.py": "1faa164c11c24044a9fc4a45685c37e14dea097e78450c0e9b75264bd4f420c0",
+    "src/finahinking/research/factor_study_suite.py": "d74f9dce3fa62d942f97432dad522fd5797d43a68352bccfa4c31be4db7f66b3",
+    "src/finahinking/research/application_service.py": "23f9b7ac05bfbcc1e6d6d5aa762c13f95b4b372f9bee3e81ab0d9947d3e4feac",
+    "src/finahinking/research/factor_library.py": "d115740777e4eb43ad8f64752c592ba8b25c755c3b2683eb4fcc9121fb4b4a40",
+    "src/finahinking/quant/evaluation/robustness.py": "d53bd0bebfa5095518bd2c40c0f75a866c2c57b5a75196e838738108b8b89094"
+  },
+  "reader_validation": {
+    "version": "published-report-integrity-gate.v1",
+    "component_sha256": {
+      "src/finahinking/research/application_service.py": "3657d3747887a98c640cbf18322029cc8e725fb5a289b7d3e7d89547dcc34af3",
+      "src/finahinking/research/research_evidence.py": "75d03f0cd4b02271dadb8c847552a1e29976059b839bff9df60284de136eb446"
+    },
+    "status": "COMPLETE",
+    "evidence_fingerprint": "75ab7c1298c3e6ff75c812281478e03c95d951c6f4b06d0800a9f29bc1b12747",
+    "record_count": 80,
+    "blocked_records": 0
+  },
+  "schema_version": "phase25-fixed-sample-verification.v1",
+  "sample_spec": {
+    "schema_version": "factor-validation-sample.v1",
+    "seed": 2501,
+    "assets": 64,
+    "observations": 756,
+    "start": "2021-01-04",
+    "calendar": "business-day observations; synthetic, no exchange calendar",
+    "generator": "integer-modular-v2",
+    "data_mode": "SAMPLE",
+    "price_basis": "RAW",
+    "variant": "baseline"
+  },
+  "sample_fingerprint": "078a70a17f23d89d412921e2a9b9c39f12ca58eb0f53880f4024ae2ffe1d8bf3",
+  "sample_content_digest": "cd079368df992b8fda42151afc2a62863546d1b2b71b3f2ad19d8962494c4f1b",
+  "assets": 64,
+  "observations": 756,
+  "registered_attempts": 80,
+  "status_counts": {
+    "PASS": 24,
+    "FALSIFIED": 38,
+    "NEEDS_DATA": 18,
+    "EXECUTION_FAILED": 0
+  },
+  "data_mode": "SAMPLE",
+  "financial_falsification": false,
+  "family": {
+    "family_ref": "77f03d2c46f3a9129c8981e51c40beb050a3cd00ce5f75541b6abfa366612f85",
+    "registered_count": 80,
+    "published_count": 80,
+    "invalid_reports": 0,
+    "holm": {
+      "lib-etf-macro-beta": 1.0,
+      "lib-etf-macro-correlation": 1.0,
+      "lib-etf-macro-social-finance-trend": 0.2109375,
+      "lib-etf-macro-term-spread": 1.0,
+      "lib-event-composite-issuance": 0.078125,
+      "lib-event-debt-finance": 0.078125,
+      "lib-event-equity-finance": 0.078125,
+      "lib-event-share-issuance": null,
+      "lib-growth-abnormal-capex": 1.0,
+      "lib-growth-asset-growth": null,
+      "lib-growth-capex-growth": null,
+      "lib-growth-current-operating-assets": null,
+      "lib-growth-current-operating-liabilities": null,
+      "lib-growth-financial-liabilities": null,
+      "lib-growth-inventory-investment": null,
+      "lib-growth-long-investment": null,
+      "lib-growth-net-financial-assets": null,
+      "lib-growth-net-noncurrent-operating": null,
+      "lib-growth-noncurrent-operating-assets": null,
+      "lib-growth-noncurrent-operating-liabilities": null,
+      "lib-growth-rd-capital": 0.078125,
+      "lib-growth-sales-growth": null,
+      "lib-growth-short-investment": null,
+      "lib-growth-working-capital": null,
+      "lib-industry-book-market": 0.078125,
+      "lib-industry-cashflow-market": 0.078125,
+      "lib-industry-employment-growth": null,
+      "lib-industry-size": 0.078125,
+      "lib-liquidity-amihud": 0.078125,
+      "lib-liquidity-change-volume-correlation": 0.078125,
+      "lib-liquidity-dollar-volume": 1.0,
+      "lib-liquidity-price-volume-correlation": 0.078125,
+      "lib-liquidity-turnover": 1.0,
+      "lib-liquidity-turnover-volatility": 1.0,
+      "lib-quality-accrual-assets": 0.078125,
+      "lib-quality-accrual-profit": 0.078125,
+      "lib-quality-asset-turnover": 0.078125,
+      "lib-quality-cash-assets": 0.078125,
+      "lib-quality-cash-profit-assets": 0.078125,
+      "lib-quality-current-ratio": 0.078125,
+      "lib-quality-depreciation-ppe": 0.078125,
+      "lib-quality-enterprise-turnover": 0.078125,
+      "lib-quality-gross-profit-assets": 0.078125,
+      "lib-quality-operating-leverage": 0.078125,
+      "lib-quality-operating-margin": 0.078125,
+      "lib-quality-quick-ratio": 0.078125,
+      "lib-quality-rd-sales": 0.078125,
+      "lib-quality-receivables-turnover": 0.078125,
+      "lib-quality-return-enterprise": 0.078125,
+      "lib-quality-roe": 0.078125,
+      "lib-reversal-boll-lower": 0.078125,
+      "lib-reversal-cci": 0.078125,
+      "lib-reversal-rsi": 0.078125,
+      "lib-reversal-williams": 0.078125,
+      "lib-trend-aroon-spread": 0.078125,
+      "lib-trend-body": 1.0,
+      "lib-trend-close-location": 1.0,
+      "lib-trend-lower-shadow": 0.078125,
+      "lib-trend-ma-spread": 0.078125,
+      "lib-trend-roc": 0.078125,
+      "lib-trend-slope": 0.078125,
+      "lib-trend-upper-shadow": 0.078125,
+      "lib-value-assets-market": 0.078125,
+      "lib-value-book-market": 0.078125,
+      "lib-value-cashflow-yield": 0.078125,
+      "lib-value-debt-market": 0.078125,
+      "lib-value-earnings-yield": 0.078125,
+      "lib-value-enterprise-book-market": 0.078125,
+      "lib-value-enterprise-ebitda-yield": 0.078125,
+      "lib-value-free-cashflow-yield": 0.078125,
+      "lib-value-netdebt-market": 0.078125,
+      "lib-value-payout-yield": 0.078125,
+      "lib-value-rd-yield": 0.078125,
+      "lib-value-sales-yield": 0.078125,
+      "lib-volatility-atr": 0.078125,
+      "lib-volatility-intraday-range": 1.0,
+      "lib-volatility-maximum-return": 0.078125,
+      "lib-volatility-price-dispersion": 0.078125,
+      "lib-volatility-return-std": 0.078125,
+      "lib-volatility-volume-weighted-move": 0.078125
+    },
+    "selection_status": "COMPLETE",
+    "production_write": false
+  },
+  "records": [
+    {
+      "record_id": "study-823fed46b334c2e28da52b7c:validation:lib-etf-macro-beta",
+      "factor_id": "lib-etf-macro-beta",
+      "status": "FALSIFIED",
+      "fingerprint": "594cbfc0220cc5d18fa70b33f61b5679e614190329550ff0470f49412e3c47a6",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-823fed46b334c2e28da52b7c:validation:lib-etf-macro-correlation",
+      "factor_id": "lib-etf-macro-correlation",
+      "status": "FALSIFIED",
+      "fingerprint": "4c40b18a084447fbddb9633c39c292d2b0f01baa30c4ff90ac4b4833adbf5d20",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-823fed46b334c2e28da52b7c:validation:lib-etf-macro-social-finance-trend",
+      "factor_id": "lib-etf-macro-social-finance-trend",
+      "status": "NEEDS_DATA",
+      "fingerprint": "6f4d52c01acbe5fea5e84bdcc938ab49eba74340fb84fd1c2c1b47f416586144",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-823fed46b334c2e28da52b7c:validation:lib-etf-macro-term-spread",
+      "factor_id": "lib-etf-macro-term-spread",
+      "status": "FALSIFIED",
+      "fingerprint": "bcdb9339060befde0a0e70196efbe9894b71a2e3e0184cdf32d836d25ea4a2d2",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-823fed46b334c2e28da52b7c:validation:lib-event-composite-issuance",
+      "factor_id": "lib-event-composite-issuance",
+      "status": "PASS",
+      "fingerprint": "6529d1993e4d288618d66c9093ba5474289ecf0f8a2d7119d2e5c61a0fd6c78c",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-823fed46b334c2e28da52b7c:validation:lib-event-debt-finance",
+      "factor_id": "lib-event-debt-finance",
+      "status": "FALSIFIED",
+      "fingerprint": "83c13bf2f8fe41e8cea2bf2a9822c66fe31324f7e3159fe5d3d25f586130bdd3",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-823fed46b334c2e28da52b7c:validation:lib-event-equity-finance",
+      "factor_id": "lib-event-equity-finance",
+      "status": "FALSIFIED",
+      "fingerprint": "f3259a2c8185c8fafed47e3ca1ea72090cc324618159f718af605af27bfef0b7",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-823fed46b334c2e28da52b7c:validation:lib-event-share-issuance",
+      "factor_id": "lib-event-share-issuance",
+      "status": "NEEDS_DATA",
+      "fingerprint": "6729641761dd867a8b579de7ce4aecf1afb4616eafc72a784a1664b68dfc8120",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-823fed46b334c2e28da52b7c:validation:lib-growth-abnormal-capex",
+      "factor_id": "lib-growth-abnormal-capex",
+      "status": "NEEDS_DATA",
+      "fingerprint": "acad7c3e4d4becf06c798b7fb1ca07a47c63ad1e833d20e2ef62ab9ff6c63a8c",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-823fed46b334c2e28da52b7c:validation:lib-growth-asset-growth",
+      "factor_id": "lib-growth-asset-growth",
+      "status": "NEEDS_DATA",
+      "fingerprint": "9245084d507ede0353d6ec7aa1a58c8fd06d07c689605b66ac472340e001324a",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-823fed46b334c2e28da52b7c:validation:lib-growth-capex-growth",
+      "factor_id": "lib-growth-capex-growth",
+      "status": "NEEDS_DATA",
+      "fingerprint": "6f3e569e2c03d0b85153dccf061a60a461d645491a9f37e20548a1617ee908e1",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-823fed46b334c2e28da52b7c:validation:lib-growth-current-operating-assets",
+      "factor_id": "lib-growth-current-operating-assets",
+      "status": "NEEDS_DATA",
+      "fingerprint": "506197e2282325f942a81b687be87c32d886f2aa4763efc7f5d11dca8c16f4b6",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-823fed46b334c2e28da52b7c:validation:lib-growth-current-operating-liabilities",
+      "factor_id": "lib-growth-current-operating-liabilities",
+      "status": "NEEDS_DATA",
+      "fingerprint": "f027de56bb9a823c557b7fa467d2333abf1714dd8ef0155f39b36c32943eb7ae",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-823fed46b334c2e28da52b7c:validation:lib-growth-financial-liabilities",
+      "factor_id": "lib-growth-financial-liabilities",
+      "status": "NEEDS_DATA",
+      "fingerprint": "91bdb4203bf36b3bc4bd46128bfd0731f18304427030eb9e1e1c46de10756c13",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-823fed46b334c2e28da52b7c:validation:lib-growth-inventory-investment",
+      "factor_id": "lib-growth-inventory-investment",
+      "status": "NEEDS_DATA",
+      "fingerprint": "968927a1781c746d8c2780359ea7ad9cde3adf0cbfb3b41ec08942b57b678d99",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-823fed46b334c2e28da52b7c:validation:lib-growth-long-investment",
+      "factor_id": "lib-growth-long-investment",
+      "status": "NEEDS_DATA",
+      "fingerprint": "0dafac4f7eb573f91684491d32138fccf7c319619b63099709023559ca491bbd",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-823fed46b334c2e28da52b7c:validation:lib-growth-net-financial-assets",
+      "factor_id": "lib-growth-net-financial-assets",
+      "status": "NEEDS_DATA",
+      "fingerprint": "5c6cb5087c540a6797e74a5a956b76a63635833fb438d61609a4b454ac2d6ff0",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-823fed46b334c2e28da52b7c:validation:lib-growth-net-noncurrent-operating",
+      "factor_id": "lib-growth-net-noncurrent-operating",
+      "status": "NEEDS_DATA",
+      "fingerprint": "761408ffa19516b067735dfc91e354e6c7dc89d0a474f872d71e7abe3d354bed",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-823fed46b334c2e28da52b7c:validation:lib-growth-noncurrent-operating-assets",
+      "factor_id": "lib-growth-noncurrent-operating-assets",
+      "status": "NEEDS_DATA",
+      "fingerprint": "2544dacc8bf66d74f77117b8761cdfe6f7c2d40042c67e5631f2b16ea7dc2227",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-823fed46b334c2e28da52b7c:validation:lib-growth-noncurrent-operating-liabilities",
+      "factor_id": "lib-growth-noncurrent-operating-liabilities",
+      "status": "NEEDS_DATA",
+      "fingerprint": "f50d8f6108d89d5c0d2b7ddf7b858802bdc1e6aa63cd776002859ac3565fda16",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-d207a7bd69161a7a98525c11:validation:lib-growth-rd-capital",
+      "factor_id": "lib-growth-rd-capital",
+      "status": "PASS",
+      "fingerprint": "434ba11e8e91b081db16b6a0ca4dd48ddad5f6debe67b1fbeb95b308c5cfbd95",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-d207a7bd69161a7a98525c11:validation:lib-growth-sales-growth",
+      "factor_id": "lib-growth-sales-growth",
+      "status": "NEEDS_DATA",
+      "fingerprint": "d441b641d8d738b7b1bd9ab116282838621ddfbdb91ac493f4314aa075d441f7",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-d207a7bd69161a7a98525c11:validation:lib-growth-short-investment",
+      "factor_id": "lib-growth-short-investment",
+      "status": "NEEDS_DATA",
+      "fingerprint": "0edb55b80d7e56918f49a9216950f2ff91c7e53906e106a85bda0166c7c09d3a",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-d207a7bd69161a7a98525c11:validation:lib-growth-working-capital",
+      "factor_id": "lib-growth-working-capital",
+      "status": "NEEDS_DATA",
+      "fingerprint": "42ad09accca9a915781c38c4b645b796f8da0fabde70bde5253d7aa4a8bc0f81",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-d207a7bd69161a7a98525c11:validation:lib-industry-book-market",
+      "factor_id": "lib-industry-book-market",
+      "status": "PASS",
+      "fingerprint": "c3bbb23282994e1c43b3ecbad56e05d784887d48f373b216348a208001b99aa5",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-d207a7bd69161a7a98525c11:validation:lib-industry-cashflow-market",
+      "factor_id": "lib-industry-cashflow-market",
+      "status": "PASS",
+      "fingerprint": "bba6362c233b7241c87e341aeda52cc6c63ed3518d44123ad87883046c001b39",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-d207a7bd69161a7a98525c11:validation:lib-industry-employment-growth",
+      "factor_id": "lib-industry-employment-growth",
+      "status": "NEEDS_DATA",
+      "fingerprint": "f3a388be2429d59e1350b0cad111d1e0863bad74e3f6c61761b34d934b38e726",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-d207a7bd69161a7a98525c11:validation:lib-industry-size",
+      "factor_id": "lib-industry-size",
+      "status": "FALSIFIED",
+      "fingerprint": "503ccd1d13b00387806b5733a39c4ffe778fff380cd28bc694d89300d750b1fc",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-d207a7bd69161a7a98525c11:validation:lib-liquidity-amihud",
+      "factor_id": "lib-liquidity-amihud",
+      "status": "PASS",
+      "fingerprint": "36c7be51f0f4963c55fcd1608dfadf9dcbe9e3aaf067493556f9ef2d3abee4b8",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-d207a7bd69161a7a98525c11:validation:lib-liquidity-change-volume-correlation",
+      "factor_id": "lib-liquidity-change-volume-correlation",
+      "status": "FALSIFIED",
+      "fingerprint": "e886ccdfc793cde02fc6c58d33eed846ba139117491e675eec56a76259974889",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-d207a7bd69161a7a98525c11:validation:lib-liquidity-dollar-volume",
+      "factor_id": "lib-liquidity-dollar-volume",
+      "status": "FALSIFIED",
+      "fingerprint": "3874004215bc448acb5fbaf9f1b889f075bbea7c60d316046e16ef8476cab55e",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-d207a7bd69161a7a98525c11:validation:lib-liquidity-price-volume-correlation",
+      "factor_id": "lib-liquidity-price-volume-correlation",
+      "status": "PASS",
+      "fingerprint": "9ae05f543c496ce68e78d0549923d463cc2da12cec8dc370af45b60db11c3561",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-d207a7bd69161a7a98525c11:validation:lib-liquidity-turnover",
+      "factor_id": "lib-liquidity-turnover",
+      "status": "FALSIFIED",
+      "fingerprint": "a8dbd2e0aa071ed643e2c20c3e28716f01efbdff8a9c87389fc255fc2c5f84af",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-d207a7bd69161a7a98525c11:validation:lib-liquidity-turnover-volatility",
+      "factor_id": "lib-liquidity-turnover-volatility",
+      "status": "FALSIFIED",
+      "fingerprint": "3571a6b62f53c56d31d0f522503857998d10b1ac7c38a1f8b968753da66a99b2",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-d207a7bd69161a7a98525c11:validation:lib-quality-accrual-assets",
+      "factor_id": "lib-quality-accrual-assets",
+      "status": "FALSIFIED",
+      "fingerprint": "918dd31c1162a6c7ddb464b63ddc86d301929aed133e16ded6ce36b0dc93ee2d",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-d207a7bd69161a7a98525c11:validation:lib-quality-accrual-profit",
+      "factor_id": "lib-quality-accrual-profit",
+      "status": "FALSIFIED",
+      "fingerprint": "1301c1bc9bf18a0993f061db7fe812c8dc6b7d5183b18906c5910f4dc99528fc",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-d207a7bd69161a7a98525c11:validation:lib-quality-asset-turnover",
+      "factor_id": "lib-quality-asset-turnover",
+      "status": "PASS",
+      "fingerprint": "3556129858b870ac4d1699e77cf6b3949c209d5b1abbe72368bec299ca5326e0",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-d207a7bd69161a7a98525c11:validation:lib-quality-cash-assets",
+      "factor_id": "lib-quality-cash-assets",
+      "status": "PASS",
+      "fingerprint": "1574b379580161ee5dbf7221117fa62d52ea5b0e9b771ff7bfb663247b5b47eb",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-d207a7bd69161a7a98525c11:validation:lib-quality-cash-profit-assets",
+      "factor_id": "lib-quality-cash-profit-assets",
+      "status": "PASS",
+      "fingerprint": "f504c7b087ae0ae5d89aa271a8de98c3f0702cf7547f2c1cafa8685f65175a77",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-d207a7bd69161a7a98525c11:validation:lib-quality-current-ratio",
+      "factor_id": "lib-quality-current-ratio",
+      "status": "FALSIFIED",
+      "fingerprint": "7a1c69694405d2e0dedd1d01c524f008d85d499c0deb4f219bd6f9aa5c11cc13",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-0d1d0ac27de0367d372e4d16:validation:lib-quality-depreciation-ppe",
+      "factor_id": "lib-quality-depreciation-ppe",
+      "status": "FALSIFIED",
+      "fingerprint": "71fddcea1497690ce09f16c4ece6197998331b9473088c561b5e8e846d33cad9",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-0d1d0ac27de0367d372e4d16:validation:lib-quality-enterprise-turnover",
+      "factor_id": "lib-quality-enterprise-turnover",
+      "status": "PASS",
+      "fingerprint": "dfd5ed8b6c5d577244134f7b5bf1e0936158ee60f3b9882332ae079a38925417",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-0d1d0ac27de0367d372e4d16:validation:lib-quality-gross-profit-assets",
+      "factor_id": "lib-quality-gross-profit-assets",
+      "status": "FALSIFIED",
+      "fingerprint": "8b49703fb53b84d40bab60aa3a24ea6df7b6689f5d0a93aa9dd4f10ae0388562",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-0d1d0ac27de0367d372e4d16:validation:lib-quality-operating-leverage",
+      "factor_id": "lib-quality-operating-leverage",
+      "status": "PASS",
+      "fingerprint": "4509f036cf4917aa6672e54f5079d30dcc290b17e2664769f27a7a511a1bf25e",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-0d1d0ac27de0367d372e4d16:validation:lib-quality-operating-margin",
+      "factor_id": "lib-quality-operating-margin",
+      "status": "FALSIFIED",
+      "fingerprint": "576d5f38661db176d37caebb01b7363d7d6919f3f5c9b21d1f1213b3ca9df9a4",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-0d1d0ac27de0367d372e4d16:validation:lib-quality-quick-ratio",
+      "factor_id": "lib-quality-quick-ratio",
+      "status": "PASS",
+      "fingerprint": "410781367c22c6032ec57504f822250e8c82c39a3f501c11b1dbf21aee58b3b7",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-0d1d0ac27de0367d372e4d16:validation:lib-quality-rd-sales",
+      "factor_id": "lib-quality-rd-sales",
+      "status": "FALSIFIED",
+      "fingerprint": "8624390a6f8b1780aacd9b7b335253b473a150e35e0af57e809b53e09dd402c7",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-0d1d0ac27de0367d372e4d16:validation:lib-quality-receivables-turnover",
+      "factor_id": "lib-quality-receivables-turnover",
+      "status": "PASS",
+      "fingerprint": "8e10bad8cadb181097cd6844ee6b07b2de9f4385331d5974dd80fa798e79c5f3",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-0d1d0ac27de0367d372e4d16:validation:lib-quality-return-enterprise",
+      "factor_id": "lib-quality-return-enterprise",
+      "status": "PASS",
+      "fingerprint": "597fc1ff860ee3c48f0c0503dd791ef1bc1a047dbd688fca8ffbe53bf497803a",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-0d1d0ac27de0367d372e4d16:validation:lib-quality-roe",
+      "factor_id": "lib-quality-roe",
+      "status": "FALSIFIED",
+      "fingerprint": "145060184e2a75b6725465c21fe786ee7e840bc8baabc252bcf70b45da3842c5",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-0d1d0ac27de0367d372e4d16:validation:lib-reversal-boll-lower",
+      "factor_id": "lib-reversal-boll-lower",
+      "status": "PASS",
+      "fingerprint": "68b6348f682c6d33e1d5f39c6a6d91a7c755ed11e201dbb3c249680fb9504cab",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-0d1d0ac27de0367d372e4d16:validation:lib-reversal-cci",
+      "factor_id": "lib-reversal-cci",
+      "status": "PASS",
+      "fingerprint": "fa12bebce041ce491a855f36e5d5fbecb694b2c7ce0f0aabb8d78be33960de83",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-0d1d0ac27de0367d372e4d16:validation:lib-reversal-rsi",
+      "factor_id": "lib-reversal-rsi",
+      "status": "PASS",
+      "fingerprint": "c272a1c8304bb30ff8ad369d7a3789d2c77690cd4529e211bcada41ba2aa9b9f",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-0d1d0ac27de0367d372e4d16:validation:lib-reversal-williams",
+      "factor_id": "lib-reversal-williams",
+      "status": "PASS",
+      "fingerprint": "95b1a510f54cfc439c5ddbe115d8d9ed8c4d4a9bf9274978531f90047720d698",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-0d1d0ac27de0367d372e4d16:validation:lib-trend-aroon-spread",
+      "factor_id": "lib-trend-aroon-spread",
+      "status": "PASS",
+      "fingerprint": "ecf5915ba4ea27a3e0f0f67517154ec203b518dc34931ad865cfe230a20747fe",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-0d1d0ac27de0367d372e4d16:validation:lib-trend-body",
+      "factor_id": "lib-trend-body",
+      "status": "FALSIFIED",
+      "fingerprint": "6dc696841f367365148e22cdf2a5b99798b0c20f2fd7278d6819b58ac802e818",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-0d1d0ac27de0367d372e4d16:validation:lib-trend-close-location",
+      "factor_id": "lib-trend-close-location",
+      "status": "FALSIFIED",
+      "fingerprint": "040926ad44cc1d8123d203568ca361a72005577e01dacbedb92a8a53c786c55e",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-0d1d0ac27de0367d372e4d16:validation:lib-trend-lower-shadow",
+      "factor_id": "lib-trend-lower-shadow",
+      "status": "FALSIFIED",
+      "fingerprint": "bb6d0fb355dc68782eafef64821d05b2c953371bcb9044a9e90766c7809ce0a0",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-0d1d0ac27de0367d372e4d16:validation:lib-trend-ma-spread",
+      "factor_id": "lib-trend-ma-spread",
+      "status": "FALSIFIED",
+      "fingerprint": "b99cdc581eca9d94825898ce47da0e5e7073a0b750320d76f41320aad8e58030",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-0d1d0ac27de0367d372e4d16:validation:lib-trend-roc",
+      "factor_id": "lib-trend-roc",
+      "status": "PASS",
+      "fingerprint": "817c02cd615127024ccca19e4c1eaa842271194d8b2aeb9b960c448dc2cc6a6b",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-7488104db9e8703e62598b3e:validation:lib-trend-slope",
+      "factor_id": "lib-trend-slope",
+      "status": "PASS",
+      "fingerprint": "a45afea494ccdd9557b63c72aff9c697b7f0e9db25a9269de9ff1122cb5f014a",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-7488104db9e8703e62598b3e:validation:lib-trend-upper-shadow",
+      "factor_id": "lib-trend-upper-shadow",
+      "status": "FALSIFIED",
+      "fingerprint": "79a17bee641d511fbe256ebf355e431d88c96ea73a9e05f3bb78aabd7e88707f",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-7488104db9e8703e62598b3e:validation:lib-value-assets-market",
+      "factor_id": "lib-value-assets-market",
+      "status": "FALSIFIED",
+      "fingerprint": "11567e823acf0ca4fbfcd0234b82ac04e7453952c6c1a77a79332ee4aea818ad",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-7488104db9e8703e62598b3e:validation:lib-value-book-market",
+      "factor_id": "lib-value-book-market",
+      "status": "FALSIFIED",
+      "fingerprint": "e44cd16c8fb93ec3ed0984043559e9c454e64edb091410aa8f6ef819bea1f071",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-7488104db9e8703e62598b3e:validation:lib-value-cashflow-yield",
+      "factor_id": "lib-value-cashflow-yield",
+      "status": "FALSIFIED",
+      "fingerprint": "096522dbfa1fa0614da171263be1c24cbcc29551fc638f0bd78153a6d589dc82",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-7488104db9e8703e62598b3e:validation:lib-value-debt-market",
+      "factor_id": "lib-value-debt-market",
+      "status": "FALSIFIED",
+      "fingerprint": "94d523e2c296c9d2a904124784db8d2b41e518b2c297bf90181dd8ca16f100e8",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-7488104db9e8703e62598b3e:validation:lib-value-earnings-yield",
+      "factor_id": "lib-value-earnings-yield",
+      "status": "FALSIFIED",
+      "fingerprint": "0fe06ad97724180cdc03bdefd2a47c519bddd8a4652aee0646a0a137c08460ca",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-7488104db9e8703e62598b3e:validation:lib-value-enterprise-book-market",
+      "factor_id": "lib-value-enterprise-book-market",
+      "status": "FALSIFIED",
+      "fingerprint": "fc746ca152da71d43b5374e943db15426ad3257ab11eea5d49253361ee2f3ad1",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-7488104db9e8703e62598b3e:validation:lib-value-enterprise-ebitda-yield",
+      "factor_id": "lib-value-enterprise-ebitda-yield",
+      "status": "FALSIFIED",
+      "fingerprint": "50b41c619b587b96ac7d6f71e70b694409d7a2d0063759a2ff35baebc4a2c2b6",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-7488104db9e8703e62598b3e:validation:lib-value-free-cashflow-yield",
+      "factor_id": "lib-value-free-cashflow-yield",
+      "status": "FALSIFIED",
+      "fingerprint": "c55dcc67cf9a1e6d4513b83d9874f5675661e75f1d766bb4bc0498f78782bbc6",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-7488104db9e8703e62598b3e:validation:lib-value-netdebt-market",
+      "factor_id": "lib-value-netdebt-market",
+      "status": "FALSIFIED",
+      "fingerprint": "2280e48704e20ae2391994b3ec49f5f6d9355a1b3d83356058a9e409efc725e3",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-7488104db9e8703e62598b3e:validation:lib-value-payout-yield",
+      "factor_id": "lib-value-payout-yield",
+      "status": "FALSIFIED",
+      "fingerprint": "2638c9885a90580931302e901c672d759b59d082d4494a0ae05613613bbb1b6c",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-7488104db9e8703e62598b3e:validation:lib-value-rd-yield",
+      "factor_id": "lib-value-rd-yield",
+      "status": "FALSIFIED",
+      "fingerprint": "e1e15ae60eb411301036c39ad3dcbe6100c76bff40b082f59e981eea50523cf3",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-7488104db9e8703e62598b3e:validation:lib-value-sales-yield",
+      "factor_id": "lib-value-sales-yield",
+      "status": "FALSIFIED",
+      "fingerprint": "c705d294183e4e6650bcdf0a7653173d37d1a935e17fb1bbbbc3450aadacf394",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-7488104db9e8703e62598b3e:validation:lib-volatility-atr",
+      "factor_id": "lib-volatility-atr",
+      "status": "FALSIFIED",
+      "fingerprint": "af82323c5ade7854d1ec3f6b8956965ca120b6e545a20837433e532a07ce0f5e",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-7488104db9e8703e62598b3e:validation:lib-volatility-intraday-range",
+      "factor_id": "lib-volatility-intraday-range",
+      "status": "FALSIFIED",
+      "fingerprint": "adfd83c5432e818c4f572c93f525591b68c77c931ec9720f8a88c16135365b08",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-7488104db9e8703e62598b3e:validation:lib-volatility-maximum-return",
+      "factor_id": "lib-volatility-maximum-return",
+      "status": "PASS",
+      "fingerprint": "a051c01843c229e7b68fd8de78c01612e5d8770e10dcbcd07667cc639b6cbda0",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-7488104db9e8703e62598b3e:validation:lib-volatility-price-dispersion",
+      "factor_id": "lib-volatility-price-dispersion",
+      "status": "PASS",
+      "fingerprint": "ee8d710dbb806581a99f8584a6cf1badeffe8e0fe25f45a9b23b3ef0bb2076e3",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-7488104db9e8703e62598b3e:validation:lib-volatility-return-std",
+      "factor_id": "lib-volatility-return-std",
+      "status": "PASS",
+      "fingerprint": "141ce6f54ecade928bdfe618e6c398c9a8b7c4dc15518b7fd3b294835632ae05",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    },
+    {
+      "record_id": "study-7488104db9e8703e62598b3e:validation:lib-volatility-volume-weighted-move",
+      "factor_id": "lib-volatility-volume-weighted-move",
+      "status": "FALSIFIED",
+      "fingerprint": "ae1d72396a43153ab09a49a1b19f0eac3a27b6683de80d58ea039223dc4fbc1f",
+      "data_mode": "SAMPLE",
+      "financial_falsification": false
+    }
+  ],
+  "manifests": [
+    {
+      "study_id": "study-823fed46b334c2e28da52b7c",
+      "spec_ref": "74ef51a2b20daea4d6e5fb5c12861bf2ba603acd6245c1c8404f6e5534bcfa43",
+      "job_id": "job-05afe013766a24d7f23642d79c800448",
+      "run_id": "research-db60cd34f1a836ed2b74a0ab",
+      "manifest_ref": "8bbe71e78b99f19a1998b75316559f64bae6c0511a18f49e9576883b429cf2ae",
+      "report_status": "AVAILABLE"
+    },
+    {
+      "study_id": "study-d207a7bd69161a7a98525c11",
+      "spec_ref": "8f96fb166774bd0b304f39387c0f11664987df25ff5c6fcdbbbe7963eea81b8f",
+      "job_id": "job-e2a19cef51c62f6c177264fd072e109f",
+      "run_id": "research-d31ca5c27d61d029e1e214ab",
+      "manifest_ref": "bda74fb40ef5bf73ced441ded1fefb9dc94e5953828e4b2b2b984579347a99ab",
+      "report_status": "AVAILABLE"
+    },
+    {
+      "study_id": "study-0d1d0ac27de0367d372e4d16",
+      "spec_ref": "f09df5d275d5bb3a7eb6dad1d0f28a891bd6232a93279ca203348c685d1acde8",
+      "job_id": "job-abfd413cc77352ac06de34dc4859f36e",
+      "run_id": "research-609d36925c3692cd2558d789",
+      "manifest_ref": "27f253f88db25c1e4d85098c14d0fb05c0d6f3bc07fe2afa4d4e5df2cc19a50d",
+      "report_status": "AVAILABLE"
+    },
+    {
+      "study_id": "study-7488104db9e8703e62598b3e",
+      "spec_ref": "a2330b77ee46a32e27fb7a6a8802b137b64c1c67a85bccde8206a902b9f291f8",
+      "job_id": "job-4aa4c9bedd9600aa4c74b82bf7164266",
+      "run_id": "research-e0702c5be0670f0d508a3f44",
+      "manifest_ref": "5db6ab98bf73bf94e456f748f5d71f78ca57fcdb8e4bb9d26a5ace64daeadc02",
+      "report_status": "AVAILABLE"
+    }
+  ]
+}

@@ -377,6 +377,11 @@ def render_status_wall_html(model: Mapping[str, Any], *, title: str = "Finathink
         rows = "".join(f'<tr><th scope="row">{esc(item.get("experiment_id"))}</th><td>{esc(item.get("parameters", {}).get("window"))}</td><td>{esc(item.get("failure_reason") or item.get("metrics", {}).get("information_coefficient"))}</td><td>{esc(item.get("metrics", {}).get("sample_size"))}</td></tr>' for item in factor_study.get("summaries", []))
         test = factor_study.get("test_evaluation") or {}
         evidence_html += f'<section aria-labelledby="factor-study"><h2 id="factor-study">因子研究实验 · PAPER-ONLY</h2><p>章程 {esc(factor_study.get("study_id"))} · 快照 {esc(factor_study.get("snapshot_ref"))}</p><p>验证排名不使用测试指标。测试状态 {esc(test.get("oos_status", "HIDDEN"))}；PASS 表示证据可计算，不代表盈利。审核不自动写入生产因子库。</p><table><thead><tr><th>候选</th><th>窗口</th><th>验证 IC / 失败原因</th><th>样本</th></tr></thead><tbody>{rows}</tbody></table></section>'
+        suite = factor_study.get("suite_validation")
+        if isinstance(suite, Mapping):
+            trials = suite.get("trials", [])
+            rows = "".join(f'<tr><th scope="row">{esc(r.get("factor_id"))}</th><td>{esc(r.get("status"))}</td><td>{esc(((r.get("metrics") or {}).get("metrics") or {}).get("mean_ic"))}</td><td>{esc(((r.get("metrics") or {}).get("metrics") or {}).get("mean_net_top_return"))}</td><td>{esc(r.get("failure_reason"))}</td></tr>' for r in trials)
+            evidence_html += f'<section aria-labelledby="factor-suite"><h2 id="factor-suite">因子检验与稳健性评分卡</h2><p>数据模式 {esc(suite.get("data_mode"))} · 阶段 {esc(suite.get("phase"))} · 成交账本 {esc(suite.get("execution_ledger_status"))}</p><p>分层收益为滞后信号诊断，费用按每次买卖计量；合成样例只验证工程行为。PASS与FALSIFIED属于预登记研究条件，金融用途需独立审核。</p><table><thead><tr><th>因子</th><th>状态</th><th>截面IC</th><th>平均净分层收益</th><th>原因</th></tr></thead><tbody>{rows}</tbody></table><details><summary>完整评分、样本数、范围和反证摘要</summary><pre>{esc(json.dumps(suite, ensure_ascii=False, sort_keys=True))}</pre></details></section>'
         library = factor_study.get("library_validation")
         if isinstance(library, Mapping):
             details = {key: library.get(key) for key in ("factor_spec", "formula_fingerprint", "panel_fingerprint", "policy_fingerprint", "validation_policy_fingerprint", "source_card_ids", "status", "missing_reason", "evaluations", "backtest", "use_status")}

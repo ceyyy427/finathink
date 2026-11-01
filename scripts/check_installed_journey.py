@@ -82,6 +82,29 @@ def panel_journey(app, post):
     assert result == post("/api/research/panels/evaluate", inputs)
 
 
+def suite_journey(app, get, post):
+    from finahinking.research.factor_validation_sample import SAMPLE_SPEC
+    from finahinking.research.research_evidence import PackagedCounterexamples
+
+    assert len(PackagedCounterexamples().records) >= 20
+    assert '因子检验与评分卡' in get('/research/factor-suites').decode()
+    spec = {**SAMPLE_SPEC, 'assets':8, 'observations':80}
+    study = post('/api/research/factor-suites', {'idempotency_key':'installed-suite',
+        'family_key':'installed-suite', 'factor_ids':['lib-trend-roc'], 'sample_spec':spec,
+        'question':'核对已安装版本的因子评分与独立报告'})
+    deadline = time.monotonic()+60
+    while study['state'] in {'DECLARED','VALIDATING'} and time.monotonic()<deadline:
+        time.sleep(.1)
+        study = json.loads(get('/api/research/factor-suites?study='+study['study_id']))
+    assert study['state']=='VALIDATED', study
+    trial = study['validation']['suite_validation']['trials'][0]
+    assert trial['status'] in {'PASS','FALSIFIED'} and trial['data_mode']=='SAMPLE'
+    assert trial['financial_falsification'] is False
+    assert '因子检验与稳健性评分卡' in get(study['validation_job']['report_url']).decode()
+    assert '评分、有效样本与计算范围' in get('/research/factor-suites?study='+study['study_id']).decode()
+    return study['study_id']
+
+
 def library_journey(app, get, post):
     import math
 
@@ -205,6 +228,7 @@ def main():
         assessment_id, pair_id = learning_journey(app, get, post, snapshot['snapshot_ref'])
         panel_journey(app, post)
         library_study_id = library_journey(app, get, post)
+        suite_study_id = suite_journey(app, get, post)
     finally:
         server.shutdown()
         server.server_close()
@@ -223,6 +247,10 @@ def main():
             assert reopened.route('GET', '/api/research/learning/pairs/'+pair_id)[2]['status'] == 'AVAILABLE'
             restored_diagnostic = reopened.route('GET', '/api/diagnostics/interfaces/' + diagnostic['receipt_id'])
             assert restored_diagnostic[0] == 200 and restored_diagnostic[2] == diagnostic
+            restored_suite = reopened.research_service.factor_study(suite_study_id)
+            assert restored_suite['state'] == 'VALIDATED'
+            assert restored_suite['validation']['suite_validation']['trials'][0]['data_mode'] == 'SAMPLE'
+            assert restored_suite['validation_job']['report_status'] == 'AVAILABLE'
             restored_library = reopened.research_service.factor_study(library_study_id)
             assert restored_library['state'] == 'VALIDATED'
             assert restored_library['validation_job']['report_status'] == 'AVAILABLE'

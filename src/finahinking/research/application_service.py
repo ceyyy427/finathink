@@ -657,6 +657,62 @@ class ResearchApplicationService:
         self.queue.cancel(job_id)
         return self.get_job(job_id)
 
+    def create_factor_suite(self, values):
+        from .factor_study_suite import prepare_suite
+        from .snapshot_tools import local_research_policy
+        key=_ref(values.get('idempotency_key'),'idempotency_key')
+        spec=prepare_suite(values,self.snapshots,policy_fingerprint=stable_digest(local_research_policy()))
+        study_id='study-'+stable_digest({'scope':self.scope_id,'key':key})[:24]
+        study=self.factor_studies.create(study_id,spec,validation_key=key,suite_registration=True)
+        job=self._submit_factor_job(study,'validation',key)
+        self.factor_studies.set_job(study_id,'validation',job['job_id'])
+        return self.factor_study(study_id)
+
+    def factor_suite_catalogue(self):
+        from .research_evidence import PackagedCounterexamples
+        service=self
+        class Catalogue:
+            def __init__(self):self.counterexamples=PackagedCounterexamples()
+            def load_record(self,record_id):
+                if record_id.startswith('counterexample:'):return self.counterexamples.load_record(record_id)
+                study_id,phase,factor_id=record_id.split(':')
+                if phase not in {'validation','test'}:raise KeyError('未知试验阶段')
+                study=service.factor_study(study_id)
+                if study.get(phase+'_job',{}).get('report_status')!='AVAILABLE':
+                    raise ValueError('研究报告缺失或损坏，不能升级证据')
+                payload=study.get('validation' if phase=='validation' else 'test_result')
+                if not payload:raise KeyError('未发布的试验记录')
+                record=next((r for r in payload['suite_validation']['trials'] if r['record_id']==record_id and r['factor_id']==factor_id),None)
+                if record is None:raise KeyError('没有匹配的已发布试验')
+                return record
+        return Catalogue()
+
+    def factor_suite_family(self,family_ref):
+        from finahinking.quant.evaluation.robustness import adjust_pvalues
+        # Project only published report facts. The SQL table is pre-registration,
+        # not an independently editable success flag.
+        with self.queue._connect() as db:
+            family=[dict(r) for r in db.execute('SELECT factor_id,factor_ref FROM factor_suite_family WHERE scope_id=? AND family_ref=? ORDER BY factor_id',(self.scope_id,family_ref))]
+            ids=[r['study_id'] for r in db.execute("SELECT study_id FROM factor_studies WHERE scope_id=? AND json_extract(spec,'$.family_ref')=?",(self.scope_id,family_ref))]
+        records={};invalid_reports=0
+        for study_id in ids:
+            try:study=self.factor_study(study_id)
+            except (ValueError,KeyError):
+                invalid_reports+=1
+                continue
+            if not study.get('validation'):continue
+            if study.get('validation_job',{}).get('report_status')!='AVAILABLE':
+                invalid_reports+=1
+                continue
+            for row in study['validation']['suite_validation']['trials']:
+                records.setdefault(row['factor_id'],row)
+        values=[records.get(r['factor_id'],{}).get('metrics',{}).get('pvalue') if records.get(r['factor_id'],{}).get('metrics') else None for r in family]
+        return {'family_ref':family_ref,'registered_count':len(family),'published_count':len(records),'invalid_reports':invalid_reports,
+            'trial_refs':[{'record_id':r['record_id'],'digest':r['fingerprint']} for r in records.values()],
+            'holm':dict(zip([r['factor_id'] for r in family],adjust_pvalues(values))),
+            'selection_status':'COMPLETE' if len(records)==len(family) else 'INCOMPLETE_WITH_UNKNOWN_ATTEMPTS',
+            'production_write':False}
+
     def create_library_factor_study(self, values):
         from .factor_library_workbench import prepare_library_study
         from .snapshot_tools import local_research_policy
@@ -749,6 +805,13 @@ class ResearchApplicationService:
                 self.factor_studies.complete(study_id, phase, job_id, succeeded=job["status"] == "completed" and computed)
             jobs[f"{phase}_job"] = job
             results["validation" if phase == "validation" else "test_result"] = payload
+        if study['spec'].get('version')=='factor-workbench.suite.v1':
+            for phase in ('validation','test'):
+                job=jobs.get(phase+'_job')
+                if job and job['status'] in {'failed','cancelled'}:
+                    for trial in self.factor_studies.suite_trials(study_id):
+                        if trial['phase']==phase and trial['state'] in {'REGISTERED','RUNNING'}:
+                            self.factor_studies.suite_trial_state(study_id,phase,trial['factor_id'],'CANCELLED' if job['status']=='cancelled' else 'EXECUTION_FAILED')
         return {**self.factor_studies.get(study_id), **jobs, **results}
 
     def factor_evidence(self, factor_ref, *, use_scope=None, run_refs=()):
@@ -846,6 +909,9 @@ class ResearchApplicationService:
             raise ValueError("review requires a verified final-test report")
         if decision == "APPROVE_FOR_RESEARCH" and study["test_result"]["test_summary"]["failure_reason"] is not None:
             raise ValueError("failed final-test evidence cannot be approved")
+        suite=study['test_result'].get('suite_validation')
+        if decision=='APPROVE_FOR_RESEARCH' and suite is not None and (len(suite['trials'])!=1 or suite['trials'][0]['status']!='PASS'):
+            raise ValueError('只有最终测试PASS的批量研究可以通过研究审核')
         validation_run = study["test_result"].get("validation_run")
         if decision == "APPROVE_FOR_RESEARCH" and validation_run is not None:
             archived = next(row for row in validation_run["steps"] if row["stage_id"] == "archive_decision")

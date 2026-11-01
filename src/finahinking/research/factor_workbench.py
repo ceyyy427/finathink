@@ -90,6 +90,9 @@ def _summary(record, spec, spec_ref, *, phase="VALIDATION", evaluation=None):
 
 def compute_study(snapshot, study, *, phase, validation=None, research_fields_store=None, study_store=None):
     spec = study["spec"]
+    if spec["version"] == "factor-workbench.suite.v1":
+        from .factor_study_suite import compute_suite
+        return compute_suite(snapshot,study,phase=phase,validation=validation,research_fields_store=research_fields_store,study_store=study_store)
     if spec["version"] == "factor-workbench.library.v1":
         from .factor_library_workbench import compute_library_study
         return compute_library_study(snapshot, study, phase=phase, validation=validation,
