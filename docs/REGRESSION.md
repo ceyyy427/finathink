@@ -62,3 +62,5 @@
 | 所有间接下游 | `FINATHINK_REQUIRE_BROWSER=1 python3 -m pytest -q`；`python3 -m ruff check src tests scripts`；`npm --prefix frontend run build`；`npm --prefix frontend test`；`npm --prefix frontend run perf` | 最终生产源码冻结后运行完整门禁；新增浏览器测试加入CI |
 
 命令在本任务已授权的隔离工作树执行；测试数据为本地合成数据，安装只获取公开依赖。实际结果和限制在Phase24验收记录中按执行事实填写，不以预计数量或文档存在代替通过证据。
+
+Phase24最终本地门禁：冻结源码 `f8e293b` 的全量回归2320 passed、1 optional statsmodels skip，含强制浏览器及全新安装；上述传播命令覆盖的模块均在完整套件内通过。独立审查复核269项通过，前端71项、build/perf、Ruff、治理及发布检查退出码0，详见[验收](reviews/2026-10-31-finathink-phase24-review.md)。
