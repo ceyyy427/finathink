@@ -1,0 +1,2889 @@
+{
+  "schema_version": "quant-source-audits.v1",
+  "capture_date": "2026-10-31",
+  "sources": [
+    {
+      "schema_version": "source-audit.v1",
+      "source_id": "QUANTAXIS",
+      "repository": "https://github.com/yutiansut/QUANTAXIS",
+      "commit": "232aa7ac9869966108f02a8fff85f1f7b09a9ce2",
+      "capture_date": "2026-10-31",
+      "status": "VERIFIED",
+      "execution_policy": "SOURCE_TEXT_ONLY",
+      "rights_status": "REVIEW_REQUIRED",
+      "verification_scope": "COMMITTED_INVENTORY_AND_LOCKED_ARTIFACTS",
+      "license_observed": "MIT",
+      "tracked_file_count": 573,
+      "modules": [
+        {
+          "module": ".github",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            ".github/FUNDING.yml"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": ".gitignore",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            ".gitignore"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": ".pylintrc",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            ".pylintrc"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": ".style.yapf",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            ".style.yapf"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "Cargo.lock",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "Cargo.lock"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "Cargo.toml",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "Cargo.toml"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "LICENSE",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "保留完整许可文本；根许可不能代替逐文件权利裁定",
+          "target": "src/finahinking/research/asset_rights.py",
+          "phase": 21,
+          "source_paths": [
+            "LICENSE"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "PULL_REQUEST_TEMPLATE.md",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "PULL_REQUEST_TEMPLATE.md"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "QUANTAXIS/QAAnalysis",
+          "disposition": "VALIDATION_PENDING",
+          "reason": "收益、风险和统计分析的独立数值对照",
+          "target": "src/finahinking/quant/evaluation/metrics.py",
+          "phase": 25,
+          "source_paths": [
+            "QUANTAXIS/QAAnalysis/QAAnalysis_block.py"
+          ],
+          "dependencies": [
+            "numpy",
+            "pandas"
+          ]
+        },
+        {
+          "module": "QUANTAXIS/QACmd",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "命令结构仅参考，资料读取不启动上游CLI",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "QUANTAXIS/QACmd/__init__.py"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "QUANTAXIS/QAData",
+          "disposition": "VALIDATION_PENDING",
+          "reason": "多资产面板、索引、复权和时间语义",
+          "target": "src/finahinking/data/research_panel.py",
+          "phase": 23,
+          "source_paths": [
+            "QUANTAXIS/QAData/QADataStruct.py",
+            "QUANTAXIS/QAData/data_fq.py"
+          ],
+          "dependencies": [
+            "pandas"
+          ]
+        },
+        {
+          "module": "QUANTAXIS/QADataBridge",
+          "disposition": "VALIDATION_PENDING",
+          "reason": "列式数据交换候选，测得瓶颈后单独验证",
+          "target": "src/finahinking/data/research_panel.py",
+          "phase": 23,
+          "source_paths": [
+            "QUANTAXIS/QADataBridge/arrow_converter.py"
+          ],
+          "dependencies": [
+            "pyarrow optional"
+          ]
+        },
+        {
+          "module": "QUANTAXIS/QAEngine",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "借鉴事件分工，复用现有Supervisor而不增加调度器",
+          "target": "src/finahinking/research/workflow.py",
+          "phase": 27,
+          "source_paths": [
+            "QUANTAXIS/QAEngine/QAAsyncSchedule.py"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "QUANTAXIS/QAFactor",
+          "disposition": "VALIDATION_PENDING",
+          "reason": "因子版本与评价分离，提取算法时解除数据库耦合",
+          "target": "src/finahinking/research/factor_validation.py",
+          "phase": 25,
+          "source_paths": [
+            "QUANTAXIS/QAFactor/readme.md",
+            "QUANTAXIS/QAFactor/feature.py",
+            "QUANTAXIS/QAFactor/featureAnalysis.py",
+            "QUANTAXIS/QAFactor/featurebacktest.py"
+          ],
+          "dependencies": [
+            "clickhouse_driver",
+            "qaenv",
+            "statsmodels",
+            "alphalens"
+          ]
+        },
+        {
+          "module": "QUANTAXIS/QAFetch",
+          "disposition": "VALIDATION_PENDING",
+          "reason": "参考输入及缓存合同，用户仍经通用API提供数据",
+          "target": "src/finahinking/data/research_fields.py",
+          "phase": 23,
+          "source_paths": [
+            "QUANTAXIS/QAFetch/Fetcher.py"
+          ],
+          "dependencies": [
+            "vendor-specific SDKs are not product dependencies"
+          ]
+        },
+        {
+          "module": "QUANTAXIS/QAIndicator",
+          "disposition": "VALIDATION_PENDING",
+          "reason": "滚动与技术指标，冻结初值、窗口、ddof和缺失规则",
+          "target": "src/finahinking/factors/panel_operators.py",
+          "phase": 24,
+          "source_paths": [
+            "QUANTAXIS/QAIndicator/base.py",
+            "QUANTAXIS/QAIndicator/indicators.py"
+          ],
+          "dependencies": [
+            "numpy",
+            "pandas"
+          ]
+        },
+        {
+          "module": "QUANTAXIS/QAMarket",
+          "disposition": "VALIDATION_PENDING",
+          "reason": "市场参数、账户状态与纸面执行规则",
+          "target": "src/finahinking/research/portfolio_runtime.py",
+          "phase": 26,
+          "source_paths": [
+            "QUANTAXIS/QAMarket/market_preset.py"
+          ],
+          "dependencies": [
+            "versioned user trade rules"
+          ]
+        },
+        {
+          "module": "QUANTAXIS/QAPubSub",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "事件传递模式仅作研究，保持本地任务运行时",
+          "target": "src/finahinking/research/workflow.py",
+          "phase": 27,
+          "source_paths": [
+            "QUANTAXIS/QAPubSub/__init__.py"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "QUANTAXIS/QARSBridge",
+          "disposition": "VALIDATION_PENDING",
+          "reason": "Rust桥接隔离基准候选，未验证上游加速声明",
+          "target": "src/finahinking/quant/evaluation/metrics.py",
+          "phase": 25,
+          "source_paths": [
+            "QUANTAXIS/QARSBridge/qars_backtest.py"
+          ],
+          "dependencies": [
+            "qars3"
+          ]
+        },
+        {
+          "module": "QUANTAXIS/QASU",
+          "disposition": "VALIDATION_PENDING",
+          "reason": "参考导入版本/落盘边界，不接管供应商下载任务",
+          "target": "src/finahinking/data/snapshot_store.py",
+          "phase": 23,
+          "source_paths": [
+            "QUANTAXIS/QASU/__init__.py"
+          ],
+          "dependencies": [
+            "vendor-specific SDKs are not product dependencies"
+          ]
+        },
+        {
+          "module": "QUANTAXIS/QASchedule",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "参考任务生命周期，现有持久队列继续为执行权威",
+          "target": "src/finahinking/research/workflow.py",
+          "phase": 27,
+          "source_paths": [
+            "QUANTAXIS/QASchedule/__init__.py"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "QUANTAXIS/QASetting",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置隔离和依赖识别，上游账号配置仅作材料",
+          "target": "src/finahinking/research/source_contracts.py",
+          "phase": 21,
+          "source_paths": [
+            "QUANTAXIS/QASetting/QALocalize.py"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "QUANTAXIS/QAStrategy",
+          "disposition": "VALIDATION_PENDING",
+          "reason": "策略生命周期、选择与调仓接口",
+          "target": "src/finahinking/research/strategy_catalog.py",
+          "phase": 26,
+          "source_paths": [
+            "QUANTAXIS/QAStrategy/qafactorbase.py"
+          ],
+          "dependencies": [
+            "market rules",
+            "paper ledger"
+          ]
+        },
+        {
+          "module": "QUANTAXIS/QAUtil",
+          "disposition": "VALIDATION_PENDING",
+          "reason": "日期、市场和转换工具按时间语义独立适配",
+          "target": "src/finahinking/data/research_panel.py",
+          "phase": 23,
+          "source_paths": [
+            "QUANTAXIS/QAUtil/Parallelism.py"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "QUANTAXIS/QAWebServer",
+          "disposition": "VALIDATION_PENDING",
+          "reason": "服务边界参考，保留本地HTTP工作台和既有授权",
+          "target": "src/finahinking/local_app.py",
+          "phase": 28,
+          "source_paths": [
+            "QUANTAXIS/QAWebServer/__init__.py"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "QUANTAXIS/QIFI",
+          "disposition": "VALIDATION_PENDING",
+          "reason": "账户、委托、成交、持仓的统一状态及对账",
+          "target": "src/finahinking/research/portfolio_runtime.py",
+          "phase": 26,
+          "source_paths": [
+            "QUANTAXIS/QIFI/QifiAccount.py"
+          ],
+          "dependencies": [
+            "paper ledger"
+          ]
+        },
+        {
+          "module": "QUANTAXIS/__init__.py",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "自动导入及桥接检测只审读，不执行模块初始化",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "QUANTAXIS/__init__.py"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "QUANTAXIS/__main__.py",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "上游入口仅审读，不继承启动权限",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "QUANTAXIS/__main__.py"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "README.md",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "说明/示例作为引用材料，具体主张需绑定来源与反例",
+          "target": "src/finahinking/research/knowledge_index.py",
+          "phase": 22,
+          "source_paths": [
+            "README.md"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "STU",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "说明/示例作为引用材料，具体主张需绑定来源与反例",
+          "target": "src/finahinking/research/knowledge_index.py",
+          "phase": 22,
+          "source_paths": [
+            "STU/P0_Head.md"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "UPGRADE_PLAN.md",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "说明/示例作为引用材料，具体主张需绑定来源与反例",
+          "target": "src/finahinking/research/knowledge_index.py",
+          "phase": 22,
+          "source_paths": [
+            "UPGRADE_PLAN.md"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "_config.yml",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "_config.yml"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "book.toml",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "book.toml"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "config",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "config/QA.sh"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "dev",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "dev/QACache/__init__.py"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "doc",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "说明/示例作为引用材料，具体主张需绑定来源与反例",
+          "target": "src/finahinking/research/knowledge_index.py",
+          "phase": 22,
+          "source_paths": [
+            "doc/MDBOOK_GUIDE.md"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "docker",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "docker/ctpbee-base/Dockerfile"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "examples",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "说明/示例作为引用材料，具体主张需绑定来源与反例",
+          "target": "src/finahinking/research/knowledge_index.py",
+          "phase": 22,
+          "source_paths": [
+            "examples/factoranalysis.py"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "install_afterrequirements.txt",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "install_afterrequirements.txt"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "qabook",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "说明/示例作为引用材料，具体主张需绑定来源与反例",
+          "target": "src/finahinking/research/knowledge_index.py",
+          "phase": 22,
+          "source_paths": [
+            "qabook/README.md"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "qalogo.png",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "qalogo.png"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "qapro-rs",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "qapro-rs/Cargo.lock"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "requirements.txt",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "requirements.txt"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "scripts",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "scripts/benchmark_databridge.py"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "setup.py",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "setup.py"
+          ],
+          "dependencies": []
+        }
+      ],
+      "artifacts": [
+        {
+          "path": "LICENSE",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "96ebf515d25a58bbd8be4543a5c198e576db52738f26c82270ececb1dc273318",
+          "byte_size": 1091,
+          "git_blob": "91ca45828dec857ef531ea92925843a827c5a688",
+          "embedded_rights": [
+            "Copyright (c) 2016-2021 yutiansut/QUANTAXIS",
+            "The above copyright notice and this permission notice shall be included in all",
+            "AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER"
+          ]
+        },
+        {
+          "path": "QUANTAXIS/QAData/QADataStruct.py",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "820abdc3eee3e345e91cd126061da9f01fb339e6bec7bfdf145e132105da8688",
+          "byte_size": 45259,
+          "git_blob": "d77cb39a0c9e2e2d490346e6ba08ecd72ee8f757",
+          "embedded_rights": [
+            "# Copyright (c) 2016-2021 yutiansut/QUANTAXIS",
+            "# The above copyright notice and this permission notice shall be included in all",
+            "# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER"
+          ]
+        },
+        {
+          "path": "QUANTAXIS/QAData/data_fq.py",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "8ea6b152a4eff20bffba2216ae8dc88edbb3f0f11b0a220abb19c574cf459eff",
+          "byte_size": 9120,
+          "git_blob": "2da760c9195dde83896e43e6994543803c86c367",
+          "embedded_rights": [
+            "# Copyright (c) 2016-2021 yutiansut/QUANTAXIS",
+            "# The above copyright notice and this permission notice shall be included in all",
+            "# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER"
+          ]
+        },
+        {
+          "path": "QUANTAXIS/QADataBridge/arrow_converter.py",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "878b72824f32444570362f39065ceb30c8ed10fbea293003e6d47d1ae8b43173",
+          "byte_size": 10338,
+          "git_blob": "2f1323bd046126d6b71031e2a1c78f03f0da24fe",
+          "embedded_rights": []
+        },
+        {
+          "path": "QUANTAXIS/QAFactor/feature.py",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "7f09f09aeb2a7e5f150325ccedcd6a747908e60696fdc5271f34c48995b86922",
+          "byte_size": 4269,
+          "git_blob": "df70212b1887178558bc3e1c6bec935a314a8e2d",
+          "embedded_rights": []
+        },
+        {
+          "path": "QUANTAXIS/QAFactor/featureAnalysis.py",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "319e5842a4d56834f3114b8f4f7ecb98cb2125f057c16247364a796e85a3f8ec",
+          "byte_size": 7609,
+          "git_blob": "278ad377c5477bbf62fd567c7cf5f7c2513b0d84",
+          "embedded_rights": []
+        },
+        {
+          "path": "QUANTAXIS/QAFactor/featurebacktest.py",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "389a3052cbedc7ecbcc3c9a0b29dd2946862b0f45fb09a927c3e6bd55d98edfc",
+          "byte_size": 6467,
+          "git_blob": "dba95e25ca54fac74565da6df90ffba51b5ac602",
+          "embedded_rights": []
+        },
+        {
+          "path": "QUANTAXIS/QAFactor/readme.md",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "5d1416ffd7f98e27dcfe1ad40b0cf7c20bab100b05701ae7f1dd824b34b299bb",
+          "byte_size": 1184,
+          "git_blob": "552c29755c042c14d8c8b2487ca0403378e5a656",
+          "embedded_rights": []
+        },
+        {
+          "path": "QUANTAXIS/QAIndicator/base.py",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "fbbb3debfa0d061eb4d6e56acf783dea18a144f56ffc191769df075cf38c4737",
+          "byte_size": 8762,
+          "git_blob": "ca068e5a4e7eb7ea259d3ba0d938f27c6c2ec320",
+          "embedded_rights": [
+            "# Copyright (c) 2016-2021 yutiansut/QUANTAXIS",
+            "# The above copyright notice and this permission notice shall be included in all",
+            "# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER"
+          ]
+        },
+        {
+          "path": "QUANTAXIS/QAIndicator/indicators.py",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "94995068dbe73fdeddfea69bd51c0df52af6fc4567c5c432a265c2e3f9363ff5",
+          "byte_size": 17336,
+          "git_blob": "198ca366ef3aa545ca5a2b8ff5a05c8e63fca50f",
+          "embedded_rights": [
+            "# Copyright (c) 2016-2021 yutiansut/QUANTAXIS",
+            "# The above copyright notice and this permission notice shall be included in all",
+            "# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER"
+          ]
+        },
+        {
+          "path": "QUANTAXIS/QAMarket/market_preset.py",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "d789ed62fd173ce2102f87c22ec6e7c155f6c07180e383ff49965fbed70bf8fd",
+          "byte_size": 42998,
+          "git_blob": "cbadc6f58636ba477ea7860b061ba6064d7b37cc",
+          "embedded_rights": []
+        },
+        {
+          "path": "QUANTAXIS/QARSBridge/qars_backtest.py",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "8a0ea51bb7d857750edd458939b9a2bac869ab04d900f10d3cfc1428d3282872",
+          "byte_size": 5212,
+          "git_blob": "dcb59cf1152b43761551db5841284d4f10a1218b",
+          "embedded_rights": []
+        },
+        {
+          "path": "QUANTAXIS/QAStrategy/qafactorbase.py",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "byte_size": 0,
+          "git_blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+          "embedded_rights": []
+        },
+        {
+          "path": "QUANTAXIS/QIFI/QifiAccount.py",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "8b1cae0450d7c3cf9fb4f112191724096f09c84fd6d9c11662d2f13020166a9d",
+          "byte_size": 37689,
+          "git_blob": "76a24aa79257b9c3d7d9013769d1b39ab2721895",
+          "embedded_rights": []
+        },
+        {
+          "path": "README.md",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "7aad3664aedbba1bfdd6002d805c00cad2cdf3d219e98d095981a24bd4f189b6",
+          "byte_size": 16996,
+          "git_blob": "976f69f0915a192fa2d8ecbc96d542a7a84549ab",
+          "embedded_rights": []
+        }
+      ],
+      "license_artifacts": [
+        {
+          "path": "LICENSE",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "96ebf515d25a58bbd8be4543a5c198e576db52738f26c82270ececb1dc273318",
+          "byte_size": 1091,
+          "git_blob": "91ca45828dec857ef531ea92925843a827c5a688",
+          "embedded_rights": [
+            "Copyright (c) 2016-2021 yutiansut/QUANTAXIS",
+            "The above copyright notice and this permission notice shall be included in all",
+            "AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER"
+          ]
+        }
+      ],
+      "errors": []
+    },
+    {
+      "schema_version": "source-audit.v1",
+      "source_id": "deepseek-harness-quant",
+      "repository": "https://github.com/yuanwang589-dev/deepseek-harness-quant",
+      "commit": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+      "capture_date": "2026-10-31",
+      "status": "VERIFIED",
+      "execution_policy": "SOURCE_TEXT_ONLY",
+      "rights_status": "REVIEW_REQUIRED",
+      "verification_scope": "COMMITTED_INVENTORY_AND_LOCKED_ARTIFACTS",
+      "license_observed": "MIT_WITH_RESEARCH_NOTE",
+      "tracked_file_count": 411,
+      "modules": [
+        {
+          "module": ".gitignore",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            ".gitignore"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "AGENTS.md",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "AGENTS.md"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "CHANGELOG.md",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "CHANGELOG.md"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "LICENSE",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "保留完整许可文本；根许可不能代替逐文件权利裁定",
+          "target": "src/finahinking/research/asset_rights.py",
+          "phase": 21,
+          "source_paths": [
+            "LICENSE"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "README.md",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "说明/示例作为引用材料，具体主张需绑定来源与反例",
+          "target": "src/finahinking/research/knowledge_index.py",
+          "phase": 22,
+          "source_paths": [
+            "README.md"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "VERSION",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "VERSION"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "assets",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "方法和参考资料按现有ID与内容指纹接入；Skill作为数据",
+          "target": "src/finahinking/research/asset_catalog.py",
+          "phase": 22,
+          "source_paths": [
+            "assets/skills/factor-mining-workflow/SKILL.md"
+          ],
+          "dependencies": [
+            "asset rights"
+          ]
+        },
+        {
+          "module": "backtest",
+          "disposition": "VALIDATION_PENDING",
+          "reason": "策略注册、费用和结果组织，逐项对账后适配",
+          "target": "src/finahinking/research/strategy_runner.py",
+          "phase": 26,
+          "source_paths": [
+            "backtest/bt_engine.py",
+            "backtest/bt_runner.py"
+          ],
+          "dependencies": [
+            "user snapshots"
+          ]
+        },
+        {
+          "module": "config",
+          "disposition": "VALIDATION_PENDING",
+          "reason": "字段与策略参数结构参考，凭据由现有安全存储管理",
+          "target": "src/finahinking/data/research_fields.py",
+          "phase": 23,
+          "source_paths": [
+            "config/etf_pool.yaml.example"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "data",
+          "disposition": "VALIDATION_PENDING",
+          "reason": "清洗、缓存和输入合同，用户自备数据经通用接口",
+          "target": "src/finahinking/data/research_panel.py",
+          "phase": 23,
+          "source_paths": [
+            "data/__init__.py"
+          ],
+          "dependencies": [
+            "user data permissions"
+          ]
+        },
+        {
+          "module": "deck",
+          "disposition": "VALIDATION_PENDING",
+          "reason": "研究成果库、术语、决策卡与证据串联的信息架构",
+          "target": "src/finahinking/research/knowledge_workspace_page.py",
+          "phase": 28,
+          "source_paths": [
+            "deck/dashboard_research_lib.html"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "dev_auto.py",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "自修改/自动维护入口只作材料，无本地执行权限",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "dev_auto.py"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "docs",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "资产盘点、流程及主张逐项溯源，不把收益声明当验证",
+          "target": "src/finahinking/research/knowledge_index.py",
+          "phase": 22,
+          "source_paths": [
+            "docs/资产盘点.md",
+            "docs/架构.md"
+          ],
+          "dependencies": [
+            "source evidence"
+          ]
+        },
+        {
+          "module": "etf",
+          "disposition": "VALIDATION_PENDING",
+          "reason": "ETF映射、同窗口暴露和流动性配置研究",
+          "target": "src/finahinking/research/strategy_catalog.py",
+          "phase": 26,
+          "source_paths": [
+            "etf/etf_map.py"
+          ],
+          "dependencies": [
+            "as-of ETF holdings"
+          ]
+        },
+        {
+          "module": "factors",
+          "disposition": "VALIDATION_PENDING",
+          "reason": "价量、财务、行为、动态因子池及Pitch；独立公式去重",
+          "target": "src/finahinking/research/factor_library.py",
+          "phase": 24,
+          "source_paths": [
+            "factors/factor_engine.py",
+            "factors/classic_indicators.py",
+            "factors/pool/registry.py",
+            "factors/pool/lifecycle.py",
+            "factors/opportunities/pitch_track.py"
+          ],
+          "dependencies": [
+            "PIT data",
+            "original formula provenance"
+          ]
+        },
+        {
+          "module": "harness",
+          "disposition": "VALIDATION_PENDING",
+          "reason": "模型/工具分离及有界反馈，使用现有授权与worker",
+          "target": "src/finahinking/research/discovery_runtime.py",
+          "phase": 27,
+          "source_paths": [
+            "harness/package.json"
+          ],
+          "dependencies": [
+            "typed tool contracts"
+          ]
+        },
+        {
+          "module": "launcher.py",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "启动编排仅审读，平台使用既有启动与worker",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "launcher.py"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "main.py",
+          "disposition": "VALIDATION_PENDING",
+          "reason": "顶层工作流参考，不复制DeepSeek专属凭据机制",
+          "target": "src/finahinking/research/discovery_runtime.py",
+          "phase": 27,
+          "source_paths": [
+            "main.py"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "pattern",
+          "disposition": "VALIDATION_PENDING",
+          "reason": "形态假设和失效条件，逐公式验证而非照搬买卖信号",
+          "target": "src/finahinking/research/factor_library.py",
+          "phase": 24,
+          "source_paths": [
+            "pattern/__init__.py"
+          ],
+          "dependencies": [
+            "OHLCV"
+          ]
+        },
+        {
+          "module": "requirements.txt",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "requirements.txt"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "risk",
+          "disposition": "VALIDATION_PENDING",
+          "reason": "数据、财务异常、流动性及压力规则的解释与边界",
+          "target": "src/finahinking/research/risk_runtime.py",
+          "phase": 26,
+          "source_paths": [
+            "risk/beneish_full.py",
+            "risk/data_audit.py",
+            "risk/pitch_review.py"
+          ],
+          "dependencies": [
+            "financial disclosures",
+            "trade rules"
+          ]
+        },
+        {
+          "module": "scripts",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "脚本静态盘点，不执行上游安装、联网或交易操作",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "scripts/bench_lp.py"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "setup_api.cmd",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "setup_api.cmd"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "strategy",
+          "disposition": "VALIDATION_PENDING",
+          "reason": "观察/候选/决策漏斗、规则策略、方向和止损研究",
+          "target": "src/finahinking/research/strategy_catalog.py",
+          "phase": 26,
+          "source_paths": [
+            "strategy/pool_layers.py",
+            "strategy/pitch_v2.py"
+          ],
+          "dependencies": [
+            "policy versions"
+          ]
+        },
+        {
+          "module": "ui_v2",
+          "disposition": "VALIDATION_PENDING",
+          "reason": "建设中入口逐页功能验证，沿用当前蓝白AppShell",
+          "target": "src/finahinking/research/knowledge_workspace_page.py",
+          "phase": 28,
+          "source_paths": [
+            "ui_v2/index.html"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "validation",
+          "disposition": "VALIDATION_PENDING",
+          "reason": "八维评价、试验设计和反证，按本地样本合同计算",
+          "target": "src/finahinking/research/factor_validation.py",
+          "phase": 25,
+          "source_paths": [
+            "validation/factor_evaluator.py",
+            "validation/walk_forward.py"
+          ],
+          "dependencies": [
+            "cross-section coverage"
+          ]
+        },
+        {
+          "module": "启动.cmd",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "启动.cmd"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "接入API.cmd",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "接入API.cmd"
+          ],
+          "dependencies": []
+        }
+      ],
+      "artifacts": [
+        {
+          "path": "LICENSE",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4",
+          "byte_size": 1576,
+          "git_blob": "6f0100c1f9050aac6975298e5b3c0b89e729f520",
+          "embedded_rights": [
+            "Copyright (c) 2026 DeepSeek HARNESS Quant (DSHQuant)",
+            "The above copyright notice and this permission notice shall be included in all",
+            "AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER"
+          ]
+        },
+        {
+          "path": "README.md",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "0b1e12fa96ea1a0934eb5cb0a88d4cec6a6fa1a7a6b1ebc536a936e104eef11c",
+          "byte_size": 5925,
+          "git_blob": "76953d94ecf2f2d9e73f67c8a04674bac9335e28",
+          "embedded_rights": []
+        },
+        {
+          "path": "assets/skills/factor-mining-workflow/SKILL.md",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "ff9dbbe90669d044bb5c0aac3c9c6e1b8793a1e3d127d4db974c7a20f40e950d",
+          "byte_size": 11470,
+          "git_blob": "657795801df2269ba76346ed1410895c32fa6343",
+          "embedded_rights": []
+        },
+        {
+          "path": "backtest/bt_engine.py",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "bd135a1c897fed9f0baaa1865edcd58fda0e2ee507298d6a0ad1b82744101351",
+          "byte_size": 18526,
+          "git_blob": "4c5d864f6be930a90111a8f21827390e64212bb4",
+          "embedded_rights": []
+        },
+        {
+          "path": "backtest/bt_runner.py",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "35b2a7e297bb0836ecc3a58ec785f6cc2289ba2fd37d50b650753a02614fcce1",
+          "byte_size": 19120,
+          "git_blob": "60cafa313031bd1bdd71877b09825537e6e7402d",
+          "embedded_rights": []
+        },
+        {
+          "path": "deck/dashboard_research_lib.html",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "9b8b3c3da241ace6c445ac3324f5f7308eb8ca72b1b3a412c6014baccea5c2ce",
+          "byte_size": 70938,
+          "git_blob": "05d5daaa91bbaea0573e1cd77eabe5c174b1dc7b",
+          "embedded_rights": []
+        },
+        {
+          "path": "docs/架构.md",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "9c56c2029790a5f51485e7daabc0f220b783815ab2a3603fe9af421be6b498c1",
+          "byte_size": 3586,
+          "git_blob": "db0a8fa2a058bd8040a8257340cde5b88eb98c71",
+          "embedded_rights": []
+        },
+        {
+          "path": "docs/资产盘点.md",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "64b26157d4250d67e02169b8b0b071ed78a04dd4cfa7a98a28fb88188e84357a",
+          "byte_size": 19945,
+          "git_blob": "60e6fa65c635fdd80fbeb066f6f98a5dd7ebd602",
+          "embedded_rights": []
+        },
+        {
+          "path": "etf/etf_map.py",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "cacefdb73a9b88e733c894a01aa1c4aa0563d53377a9a1f667b2f1d300910f1a",
+          "byte_size": 15909,
+          "git_blob": "c66bc3a4113f8c33dbdd1d8c4d4a3487fb33e61e",
+          "embedded_rights": []
+        },
+        {
+          "path": "factors/classic_indicators.py",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "2d6901559c44ee7edd96d25aa42fbdd176851f9eaf5e1b4959a45802cac97110",
+          "byte_size": 7452,
+          "git_blob": "37a727766719990769b40e92af6a81373b91169e",
+          "embedded_rights": []
+        },
+        {
+          "path": "factors/factor_engine.py",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "a526b0c89a6154db5f2cabfc56f70a6f087591f43f5353092c16226fe0f3781e",
+          "byte_size": 6436,
+          "git_blob": "bb979298168798abe43275398ab959ea37230a43",
+          "embedded_rights": []
+        },
+        {
+          "path": "factors/opportunities/pitch_track.py",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "59c149ee2af82df533678343d23c0e45fa38ad51c18b391a350cff4adb2c4552",
+          "byte_size": 39723,
+          "git_blob": "2d80fdf6d89d4f9d20a08a44d00d922db467cc27",
+          "embedded_rights": []
+        },
+        {
+          "path": "factors/pool/lifecycle.py",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "1d93b6510d20260c7eba01bf0fae0142cbf56b557b989a40ec6f47c2e31b7c65",
+          "byte_size": 7889,
+          "git_blob": "8f1715e34cdbacb34d265ab361847c2bad6c342e",
+          "embedded_rights": []
+        },
+        {
+          "path": "factors/pool/registry.py",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "3b387ef64cbe7ff22516823c7d598d448775f12318eca70ab21df3f2f31d189e",
+          "byte_size": 8482,
+          "git_blob": "427c2e74b36028319827eec47a08d2e68fcbd94f",
+          "embedded_rights": []
+        },
+        {
+          "path": "harness/package.json",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "b9d3e779f1c75308b4aa7160882e3c74fd58989d37878418274b45f01c899a72",
+          "byte_size": 186,
+          "git_blob": "014d07ac0cc2b56f817520b57f183b599f51b94c",
+          "embedded_rights": []
+        },
+        {
+          "path": "risk/beneish_full.py",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "9f1d4f71d02cdb3a45061909955cc266ab8d4e75eb33deac8dd56927be65c0cc",
+          "byte_size": 10917,
+          "git_blob": "0f7d77794390e6b81199ca69126a6e16927de8b3",
+          "embedded_rights": []
+        },
+        {
+          "path": "risk/data_audit.py",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "e9952017cdfac9aea433b07a0d433fb6ce06d2316f8bd98546adb017b441f7bc",
+          "byte_size": 25392,
+          "git_blob": "23354faf7ae7279435c61f95ed438f972ad0096d",
+          "embedded_rights": []
+        },
+        {
+          "path": "risk/pitch_review.py",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "8852cd141a9d4b2f71ce08607b95b6a3750d4bace1549dfedbce23cd48e85013",
+          "byte_size": 11181,
+          "git_blob": "527d0f13e577e9f21ba5235bb7dc0f01dfaa2b15",
+          "embedded_rights": []
+        },
+        {
+          "path": "strategy/pitch_v2.py",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "a094d64378d1a8f0bb95fb87df1ac06a33406910f9758586b1b8d8547723dcd8",
+          "byte_size": 9036,
+          "git_blob": "62811b8e2faabcd84737946bf80d3c5f46357c23",
+          "embedded_rights": []
+        },
+        {
+          "path": "strategy/pool_layers.py",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "888dc95a8a8b9053a09d7253353730775ddd063beeae5a02a63ade6aa1f57a75",
+          "byte_size": 6513,
+          "git_blob": "0094f9a62bd41ff121ed650adc7841ef8bd88d0b",
+          "embedded_rights": []
+        },
+        {
+          "path": "ui_v2/index.html",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "e2b008d4ad9525058501841ada44c4d22558f4ba7d798c573ae6a3e32446138c",
+          "byte_size": 4126,
+          "git_blob": "0e9a461f88c85eea8a659e41a9129eaf3a0b6b6b",
+          "embedded_rights": []
+        },
+        {
+          "path": "validation/factor_evaluator.py",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "12340eb1312583460e000abe7af98a96e772b4f301d713f40fb566c5368a52b3",
+          "byte_size": 16802,
+          "git_blob": "a0b629431872c4aa54e999dd309bfb4f1d6fbff4",
+          "embedded_rights": []
+        },
+        {
+          "path": "validation/walk_forward.py",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "550adf19c7a13ee4e5909a4273ebb09513da0df62b568ee40d274a247c0c1d42",
+          "byte_size": 8924,
+          "git_blob": "4aa36a955b8d643937ded00be0b35146b564d164",
+          "embedded_rights": []
+        }
+      ],
+      "license_artifacts": [
+        {
+          "path": "LICENSE",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "423beebd76cc3b1b060c5ed5992d961fa282263c7f93aa01ae25d7f9a41072b4",
+          "byte_size": 1576,
+          "git_blob": "6f0100c1f9050aac6975298e5b3c0b89e729f520",
+          "embedded_rights": [
+            "Copyright (c) 2026 DeepSeek HARNESS Quant (DSHQuant)",
+            "The above copyright notice and this permission notice shall be included in all",
+            "AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER"
+          ]
+        }
+      ],
+      "errors": []
+    },
+    {
+      "schema_version": "source-audit.v1",
+      "source_id": "qlib",
+      "repository": "https://github.com/microsoft/qlib",
+      "commit": "54355232463878d2eebb91fe0ee5fa7fa1f5976c",
+      "capture_date": "2026-10-31",
+      "status": "VERIFIED",
+      "execution_policy": "SOURCE_TEXT_ONLY",
+      "rights_status": "REVIEW_REQUIRED",
+      "verification_scope": "COMMITTED_INVENTORY_AND_LOCKED_ARTIFACTS",
+      "license_observed": "MIT",
+      "tracked_file_count": 643,
+      "modules": [
+        {
+          "module": ".commitlintrc.js",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            ".commitlintrc.js"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": ".deepsource.toml",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            ".deepsource.toml"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": ".dockerignore",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            ".dockerignore"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": ".github",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            ".github/ISSUE_TEMPLATE/bug-report.md"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": ".gitignore",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            ".gitignore"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": ".mypy.ini",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            ".mypy.ini"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": ".pre-commit-config.yaml",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            ".pre-commit-config.yaml"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": ".pylintrc",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            ".pylintrc"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": ".readthedocs.yaml",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            ".readthedocs.yaml"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "CHANGELOG.md",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "CHANGELOG.md"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "CHANGES.rst",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "CHANGES.rst"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "CODE_OF_CONDUCT.md",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "CODE_OF_CONDUCT.md"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "Dockerfile",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "Dockerfile"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "LICENSE",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "保留完整许可文本；根许可不能代替逐文件权利裁定",
+          "target": "src/finahinking/research/asset_rights.py",
+          "phase": 21,
+          "source_paths": [
+            "LICENSE"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "MANIFEST.in",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "MANIFEST.in"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "Makefile",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "Makefile"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "README.md",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "说明/示例作为引用材料，具体主张需绑定来源与反例",
+          "target": "src/finahinking/research/knowledge_index.py",
+          "phase": 22,
+          "source_paths": [
+            "README.md"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "SECURITY.md",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "SECURITY.md"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "build_docker_image.sh",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "build_docker_image.sh"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "docs",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "说明/示例作为引用材料，具体主张需绑定来源与反例",
+          "target": "src/finahinking/research/knowledge_index.py",
+          "phase": 22,
+          "source_paths": [
+            "docs/FAQ/FAQ.rst"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "examples",
+          "disposition": "VALIDATION_PENDING",
+          "reason": "Alpha158/360配置；列数与独立公式数分别统计",
+          "target": "src/finahinking/research/factor_library.py",
+          "phase": 24,
+          "source_paths": [
+            "examples/README.md"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "package-lock.json",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "package-lock.json"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "package.json",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "package.json"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "pyproject.toml",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "pyproject.toml"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "qlib",
+          "disposition": "VALIDATION_PENDING",
+          "reason": "训练期处理器、特征定义和实验合同",
+          "target": "src/finahinking/factors/panel_operators.py",
+          "phase": 23,
+          "source_paths": [
+            "qlib/contrib/data/handler.py",
+            "qlib/contrib/data/loader.py",
+            "qlib/data/dataset/processor.py",
+            "qlib/workflow/record_temp.py"
+          ],
+          "dependencies": [
+            "pandas",
+            "numpy"
+          ]
+        },
+        {
+          "module": "scripts",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "scripts/README.md"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "setup.py",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "setup.py"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "tests",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "学习独立预期和边界样例，不能把上游测试当本地验收",
+          "target": "src/finahinking/quant/evaluation/metrics.py",
+          "phase": 25,
+          "source_paths": [
+            "tests/backtest/test_file_strategy.py"
+          ],
+          "dependencies": []
+        }
+      ],
+      "artifacts": [
+        {
+          "path": "LICENSE",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383",
+          "byte_size": 1141,
+          "git_blob": "9e841e7a26e4eb057b24511e7b92d42b257a80e5",
+          "embedded_rights": [
+            "Copyright (c) Microsoft Corporation.",
+            "The above copyright notice and this permission notice shall be included in all",
+            "AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER"
+          ]
+        },
+        {
+          "path": "qlib/contrib/data/handler.py",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "b621481c6009c39066c67c71390fd2bea635f56daf9f2c4e38817eff268e3232",
+          "byte_size": 5092,
+          "git_blob": "2fe5258daa7eeaf6b308e662a9003563bd8e5c19",
+          "embedded_rights": [
+            "# Copyright (c) Microsoft Corporation."
+          ]
+        },
+        {
+          "path": "qlib/contrib/data/loader.py",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "814b7f7ab3d418ae3c87ce352220080b239eba2670eac9e38376b794be4075cb",
+          "byte_size": 16080,
+          "git_blob": "4d11f3a34cc1d12728723956c8e9324556eee8e3",
+          "embedded_rights": []
+        },
+        {
+          "path": "qlib/data/dataset/processor.py",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "424af44e81c99467171c2d0b7978fb9f95d3b4c8b743a535ff4fe45d708cf517",
+          "byte_size": 14534,
+          "git_blob": "d05dbe381c5bcb245c25c8d1ed26128ed5d5dc35",
+          "embedded_rights": [
+            "# Copyright (c) Microsoft Corporation."
+          ]
+        },
+        {
+          "path": "qlib/workflow/record_temp.py",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "80eacd668e6f8475995ff67f115766c4c241a469b03419fa82a4bb41482e13de",
+          "byte_size": 28460,
+          "git_blob": "a123f3d48c2c4ee6ad071cfffb11e1ef70947673",
+          "embedded_rights": [
+            "#  Copyright (c) Microsoft Corporation."
+          ]
+        }
+      ],
+      "license_artifacts": [
+        {
+          "path": "LICENSE",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383",
+          "byte_size": 1141,
+          "git_blob": "9e841e7a26e4eb057b24511e7b92d42b257a80e5",
+          "embedded_rights": [
+            "Copyright (c) Microsoft Corporation.",
+            "The above copyright notice and this permission notice shall be included in all",
+            "AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER"
+          ]
+        }
+      ],
+      "errors": []
+    },
+    {
+      "schema_version": "source-audit.v1",
+      "source_id": "alphalens-reloaded",
+      "repository": "https://github.com/stefan-jansen/alphalens-reloaded",
+      "commit": "60755d1cc7d9d36a4c70c8344cbdb168fe99df24",
+      "capture_date": "2026-10-31",
+      "status": "VERIFIED",
+      "execution_policy": "SOURCE_TEXT_ONLY",
+      "rights_status": "REVIEW_REQUIRED",
+      "verification_scope": "COMMITTED_INVENTORY_AND_LOCKED_ARTIFACTS",
+      "license_observed": "Apache-2.0",
+      "tracked_file_count": 50,
+      "modules": [
+        {
+          "module": ".flake8",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            ".flake8"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": ".gitattributes",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            ".gitattributes"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": ".github",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            ".github/ISSUE_TEMPLATE.md"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": ".gitignore",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            ".gitignore"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "CONTRIBUTING.md",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "CONTRIBUTING.md"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "LICENSE",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "保留完整许可文本；根许可不能代替逐文件权利裁定",
+          "target": "src/finahinking/research/asset_rights.py",
+          "phase": 21,
+          "source_paths": [
+            "LICENSE"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "MANIFEST.in",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "MANIFEST.in"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "README.md",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "说明/示例作为引用材料，具体主张需绑定来源与反例",
+          "target": "src/finahinking/research/knowledge_index.py",
+          "phase": 22,
+          "source_paths": [
+            "README.md"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "build_and_deploy_docs.sh",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "build_and_deploy_docs.sh"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "conda",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "conda/recipe/meta.yaml"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "docs",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "说明/示例作为引用材料，具体主张需绑定来源与反例",
+          "target": "src/finahinking/research/knowledge_index.py",
+          "phase": 22,
+          "source_paths": [
+            "docs/Makefile"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "pyproject.toml",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "pyproject.toml"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "src",
+          "disposition": "VALIDATION_PENDING",
+          "reason": "IC、分层、换手、自相关的隔离独立对照",
+          "target": "src/finahinking/quant/evaluation/metrics.py",
+          "phase": 25,
+          "source_paths": [
+            "src/alphalens/performance.py",
+            "src/alphalens/utils.py",
+            "src/alphalens/tears.py"
+          ],
+          "dependencies": [
+            "Apache-2.0 notices",
+            "isolated environment"
+          ]
+        },
+        {
+          "module": "tests",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "学习独立预期和边界样例，不能把上游测试当本地验收",
+          "target": "src/finahinking/quant/evaluation/metrics.py",
+          "phase": 25,
+          "source_paths": [
+            "tests/__init__.py"
+          ],
+          "dependencies": []
+        }
+      ],
+      "artifacts": [
+        {
+          "path": "LICENSE",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "2b651c2d29c644d1c73417cd96e6cfa506d6de102ed96fc3de96d676e089cf29",
+          "byte_size": 11346,
+          "git_blob": "99d6c89b3ff1b8d91a14d3167df1ed45dc0268f5",
+          "embedded_rights": [
+            "\"Licensor\" shall mean the copyright owner or entity authorized by",
+            "the copyright owner that is granting the License.",
+            "copyright notice that is included in or attached to the work",
+            "submitted to Licensor for inclusion in the Work by the copyright owner",
+            "the copyright owner. For the purposes of this definition, \"submitted\"",
+            "designated in writing by the copyright owner as \"Not a Contribution.\"",
+            "2. Grant of Copyright License. Subject to the terms and conditions of",
+            "copyright license to reproduce, prepare Derivative Works of,",
+            "that You distribute, all copyright, patent, trademark, and",
+            "You may add Your own copyright statement to Your modifications and"
+          ]
+        },
+        {
+          "path": "src/alphalens/performance.py",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "dc4c7c661b19a61b434f67cd5015a986f5aea85fd319e08a3d7fb04469203d25",
+          "byte_size": 45534,
+          "git_blob": "ef0a91d1d23086e4deb2628271f8297ac5b78151",
+          "embedded_rights": [
+            "# Copyright 2017 Quantopian, Inc."
+          ]
+        },
+        {
+          "path": "src/alphalens/tears.py",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "924638a485ccf668d582781d67f0a761ba1d92c8681c990e444518200f64f572",
+          "byte_size": 23996,
+          "git_blob": "9653758bbb17bd49636cc9d2ba31bd8db297ddd4",
+          "embedded_rights": [
+            "# Copyright 2017 Quantopian, Inc."
+          ]
+        },
+        {
+          "path": "src/alphalens/utils.py",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "093e9eb62d2c9cd7d4cf93ffb64998064ec7c67092f496e3b52f118187ed33da",
+          "byte_size": 42680,
+          "git_blob": "09c8572470d7127729fbc7d98005f75495fa2d42",
+          "embedded_rights": [
+            "# Copyright 2018 Quantopian, Inc."
+          ]
+        }
+      ],
+      "license_artifacts": [
+        {
+          "path": "LICENSE",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "2b651c2d29c644d1c73417cd96e6cfa506d6de102ed96fc3de96d676e089cf29",
+          "byte_size": 11346,
+          "git_blob": "99d6c89b3ff1b8d91a14d3167df1ed45dc0268f5",
+          "embedded_rights": [
+            "\"Licensor\" shall mean the copyright owner or entity authorized by",
+            "the copyright owner that is granting the License.",
+            "copyright notice that is included in or attached to the work",
+            "submitted to Licensor for inclusion in the Work by the copyright owner",
+            "the copyright owner. For the purposes of this definition, \"submitted\"",
+            "designated in writing by the copyright owner as \"Not a Contribution.\"",
+            "2. Grant of Copyright License. Subject to the terms and conditions of",
+            "copyright license to reproduce, prepare Derivative Works of,",
+            "that You distribute, all copyright, patent, trademark, and",
+            "You may add Your own copyright statement to Your modifications and"
+          ]
+        }
+      ],
+      "errors": []
+    },
+    {
+      "schema_version": "source-audit.v1",
+      "source_id": "pyanomaly",
+      "repository": "https://github.com/chulwoohan/pyanomaly",
+      "commit": "59758c913a4146bbfb9d3c056668ccdc5231c8c8",
+      "capture_date": "2026-10-31",
+      "status": "VERIFIED",
+      "execution_policy": "SOURCE_TEXT_ONLY",
+      "rights_status": "REVIEW_REQUIRED",
+      "verification_scope": "COMMITTED_INVENTORY_AND_LOCKED_ARTIFACTS",
+      "license_observed": "MIT",
+      "tracked_file_count": 129,
+      "modules": [
+        {
+          "module": ".gitignore",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            ".gitignore"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": ".readthedocs.yaml",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            ".readthedocs.yaml"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "LICENSE.txt",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "保留完整许可文本；根许可不能代替逐文件权利裁定",
+          "target": "src/finahinking/research/asset_rights.py",
+          "phase": 21,
+          "source_paths": [
+            "LICENSE.txt"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "README.rst",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "说明/示例作为引用材料，具体主张需绑定来源与反例",
+          "target": "src/finahinking/research/knowledge_index.py",
+          "phase": 22,
+          "source_paths": [
+            "README.rst"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "docs",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "说明/示例作为引用材料，具体主张需绑定来源与反例",
+          "target": "src/finahinking/research/knowledge_index.py",
+          "phase": 22,
+          "source_paths": [
+            "docs/Makefile"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "examples",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "说明/示例作为引用材料，具体主张需绑定来源与反例",
+          "target": "src/finahinking/research/knowledge_index.py",
+          "phase": 22,
+          "source_paths": [
+            "examples/__init__.py"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "mapping.xlsx",
+          "disposition": "VALIDATION_PENDING",
+          "reason": "来源术语与特征对应表，仅在文件级审核后转录",
+          "target": "src/finahinking/research/factor_library.py",
+          "phase": 24,
+          "source_paths": [
+            "mapping.xlsx"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "pyanomaly",
+          "disposition": "VALIDATION_PENDING",
+          "reason": "财务、应计、盈利、投资等原始字段与公式",
+          "target": "src/finahinking/research/factor_library.py",
+          "phase": 24,
+          "source_paths": [
+            "pyanomaly/characteristics.py",
+            "pyanomaly/factors.py",
+            "pyanomaly/panel.py",
+            "pyanomaly/portfolio.py",
+            "pyanomaly/tcost.py"
+          ],
+          "dependencies": [
+            "user financial fields"
+          ]
+        },
+        {
+          "module": "pyproject.toml",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "pyproject.toml"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "setup.bat",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "setup.bat"
+          ],
+          "dependencies": []
+        }
+      ],
+      "artifacts": [
+        {
+          "path": "LICENSE.txt",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE.txt"
+          ],
+          "sha256": "84dc4ddcfd08d382bbe4ac775ebee4da7e40280b8aba4f841884f0234303f6f4",
+          "byte_size": 1070,
+          "git_blob": "27bdfb8a22aa8ea0b4c97e4e836c8bedb6425e2c",
+          "embedded_rights": [
+            "Copyright (c) 2024 Chulwoo Han and Jongho Kang",
+            "The above copyright notice and this permission notice shall be included in all",
+            "AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER"
+          ]
+        },
+        {
+          "path": "pyanomaly/characteristics.py",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE.txt"
+          ],
+          "sha256": "c9ad1d14b61fae774d1a7446609971225fb0a709f0e0da7dc998d7aead32bc20",
+          "byte_size": 137823,
+          "git_blob": "473abca7d55d3791550523846605f74e1c068ba2",
+          "embedded_rights": []
+        },
+        {
+          "path": "pyanomaly/factors.py",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE.txt"
+          ],
+          "sha256": "7d0f671ceb12b63b3878b7ba16b431eabb862209cb96407f829fa7a92ea45fd5",
+          "byte_size": 21144,
+          "git_blob": "9f0bc8cbf1e59f6a96da9cfc13449895731af210",
+          "embedded_rights": []
+        },
+        {
+          "path": "pyanomaly/panel.py",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE.txt"
+          ],
+          "sha256": "bfde5914994f6445880f2a495e42efc33d3271e6a382e9999eb67affc3b1b2fc",
+          "byte_size": 51601,
+          "git_blob": "8c495df01c2e34ca8850233cebbd5083e6963919",
+          "embedded_rights": []
+        },
+        {
+          "path": "pyanomaly/portfolio.py",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE.txt"
+          ],
+          "sha256": "bcabae2c9899e8861140900c23fef37a6e04729dffb668475c0df670a5df503c",
+          "byte_size": 32826,
+          "git_blob": "c7037d9661828bb7c18ebc1ee553a4dab738c4a4",
+          "embedded_rights": []
+        },
+        {
+          "path": "pyanomaly/tcost.py",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE.txt"
+          ],
+          "sha256": "b6f92dcda38e8921ca3e27683c503b38f570ba9ded5ac7304a5f335f6b54157a",
+          "byte_size": 10017,
+          "git_blob": "0d3fbca0fc2cf4a027c050d4e1c0fd69077fc4f6",
+          "embedded_rights": []
+        }
+      ],
+      "license_artifacts": [
+        {
+          "path": "LICENSE.txt",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE.txt"
+          ],
+          "sha256": "84dc4ddcfd08d382bbe4ac775ebee4da7e40280b8aba4f841884f0234303f6f4",
+          "byte_size": 1070,
+          "git_blob": "27bdfb8a22aa8ea0b4c97e4e836c8bedb6425e2c",
+          "embedded_rights": [
+            "Copyright (c) 2024 Chulwoo Han and Jongho Kang",
+            "The above copyright notice and this permission notice shall be included in all",
+            "AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER"
+          ]
+        }
+      ],
+      "errors": []
+    },
+    {
+      "schema_version": "source-audit.v1",
+      "source_id": "RD-Agent",
+      "repository": "https://github.com/microsoft/RD-Agent",
+      "commit": "484776c211e4fbbeef03e0ec00d6bbee7362a4f4",
+      "capture_date": "2026-10-31",
+      "status": "VERIFIED",
+      "execution_policy": "SOURCE_TEXT_ONLY",
+      "rights_status": "REVIEW_REQUIRED",
+      "verification_scope": "COMMITTED_INVENTORY_AND_LOCKED_ARTIFACTS",
+      "license_observed": "MIT",
+      "tracked_file_count": 920,
+      "modules": [
+        {
+          "module": ".bumpversion.cfg",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            ".bumpversion.cfg"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": ".commitlintrc.js",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            ".commitlintrc.js"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": ".devcontainer",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            ".devcontainer/Dockerfile"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": ".env.example",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            ".env.example"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": ".github",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            ".github/FUNDING.yml"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": ".gitignore",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            ".gitignore"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": ".readthedocs.yaml",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            ".readthedocs.yaml"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": ".streamlit",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            ".streamlit/config.toml"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "CHANGELOG.md",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "CHANGELOG.md"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "CODE_OF_CONDUCT.md",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "CODE_OF_CONDUCT.md"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "CONTRIBUTING.md",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "CONTRIBUTING.md"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "LICENSE",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "保留完整许可文本；根许可不能代替逐文件权利裁定",
+          "target": "src/finahinking/research/asset_rights.py",
+          "phase": 21,
+          "source_paths": [
+            "LICENSE"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "Makefile",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "Makefile"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "README.md",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "说明/示例作为引用材料，具体主张需绑定来源与反例",
+          "target": "src/finahinking/research/knowledge_index.py",
+          "phase": 22,
+          "source_paths": [
+            "README.md"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "SECURITY.md",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "SECURITY.md"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "SUPPORT.md",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "SUPPORT.md"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "TODO.md",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "TODO.md"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "constraints",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "constraints/3.10.txt"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "docs",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "说明/示例作为引用材料，具体主张需绑定来源与反例",
+          "target": "src/finahinking/research/knowledge_index.py",
+          "phase": 22,
+          "source_paths": [
+            "docs/Makefile"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "pyproject.toml",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "pyproject.toml"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "rdagent",
+          "disposition": "VALIDATION_PENDING",
+          "reason": "假设、反馈和知识检索结构；执行改为已有受控DSL",
+          "target": "src/finahinking/research/discovery_planner.py",
+          "phase": 27,
+          "source_paths": [
+            "rdagent/scenarios/qlib/proposal/factor_proposal.py",
+            "rdagent/scenarios/qlib/experiment/factor_experiment.py",
+            "rdagent/components/knowledge_management/graph.py",
+            "rdagent/components/knowledge_management/vector_base.py"
+          ],
+          "dependencies": [
+            "bounded context"
+          ]
+        },
+        {
+          "module": "requirements",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "requirements/docs.txt"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "requirements.txt",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "requirements.txt"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "test",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "学习独立预期和边界样例，不能把上游测试当本地验收",
+          "target": "src/finahinking/quant/evaluation/metrics.py",
+          "phase": 25,
+          "source_paths": [
+            "test/core/test_serialization.py"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "web",
+          "disposition": "VALIDATION_PENDING",
+          "reason": "研究状态与证据展示参考",
+          "target": "src/finahinking/research/knowledge_workspace_page.py",
+          "phase": 28,
+          "source_paths": [
+            "web/.gitignore"
+          ],
+          "dependencies": []
+        }
+      ],
+      "artifacts": [
+        {
+          "path": "LICENSE",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383",
+          "byte_size": 1141,
+          "git_blob": "9e841e7a26e4eb057b24511e7b92d42b257a80e5",
+          "embedded_rights": [
+            "Copyright (c) Microsoft Corporation.",
+            "The above copyright notice and this permission notice shall be included in all",
+            "AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER"
+          ]
+        },
+        {
+          "path": "rdagent/components/knowledge_management/graph.py",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "de316b949525afedf1e844018a9e4e7124a863e332bb27680e11b14680064c8a",
+          "byte_size": 16244,
+          "git_blob": "0173937b5166ef7a77f0687f65563acf3c84a549",
+          "embedded_rights": []
+        },
+        {
+          "path": "rdagent/components/knowledge_management/vector_base.py",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "c4d3dac98430c3a700d1ca014d4345a03eba411a904c185b3d0dab990f3ce6d3",
+          "byte_size": 6456,
+          "git_blob": "277c8ed06fd2d84aa1ee243e6a14707f1f1c2efe",
+          "embedded_rights": []
+        },
+        {
+          "path": "rdagent/scenarios/qlib/experiment/factor_experiment.py",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "451bc9a4b01c73f5d8d30d071c0e54f27f87d001898dbed853e7264b5332af79",
+          "byte_size": 3884,
+          "git_blob": "3fecf60ef23de457ea3ee7b03beadf407b22f95b",
+          "embedded_rights": []
+        },
+        {
+          "path": "rdagent/scenarios/qlib/proposal/factor_proposal.py",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "8da980804f48a7850a978f481d5731523d5604971b2f21f2e363ae766c005c51",
+          "byte_size": 5824,
+          "git_blob": "5ce9b70de02a2a40e46b8028799c2cf0a3b8290f",
+          "embedded_rights": []
+        }
+      ],
+      "license_artifacts": [
+        {
+          "path": "LICENSE",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383",
+          "byte_size": 1141,
+          "git_blob": "9e841e7a26e4eb057b24511e7b92d42b257a80e5",
+          "embedded_rights": [
+            "Copyright (c) Microsoft Corporation.",
+            "The above copyright notice and this permission notice shall be included in all",
+            "AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER"
+          ]
+        }
+      ],
+      "errors": []
+    },
+    {
+      "schema_version": "source-audit.v1",
+      "source_id": "bt",
+      "repository": "https://github.com/pmorissette/bt",
+      "commit": "4ae4090266300c0185f418aca18e28e649509a33",
+      "capture_date": "2026-10-31",
+      "status": "VERIFIED",
+      "execution_policy": "SOURCE_TEXT_ONLY",
+      "rights_status": "REVIEW_REQUIRED",
+      "verification_scope": "COMMITTED_INVENTORY_AND_LOCKED_ARTIFACTS",
+      "license_observed": "MIT",
+      "tracked_file_count": 160,
+      "modules": [
+        {
+          "module": ".copier-answers.yaml",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            ".copier-answers.yaml"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": ".gitattributes",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            ".gitattributes"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": ".github",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            ".github/dependabot.yaml"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": ".gitignore",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            ".gitignore"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "LICENSE",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "保留完整许可文本；根许可不能代替逐文件权利裁定",
+          "target": "src/finahinking/research/asset_rights.py",
+          "phase": 21,
+          "source_paths": [
+            "LICENSE"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "Makefile",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "Makefile"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "README.md",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "说明/示例作为引用材料，具体主张需绑定来源与反例",
+          "target": "src/finahinking/research/knowledge_index.py",
+          "phase": 22,
+          "source_paths": [
+            "README.md"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "benchmarks",
+          "disposition": "VALIDATION_PENDING",
+          "reason": "记录基准条件，性能数字需独立测量",
+          "target": "src/finahinking/quant/evaluation/metrics.py",
+          "phase": 25,
+          "source_paths": [
+            "benchmarks/test_backtest.py"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "bt",
+          "disposition": "VALIDATION_PENDING",
+          "reason": "选择、权重和再平衡可组合策略",
+          "target": "src/finahinking/research/strategy_catalog.py",
+          "phase": 26,
+          "source_paths": [
+            "bt/algos.py",
+            "bt/core.py",
+            "bt/backtest.py"
+          ],
+          "dependencies": [
+            "paper ledger"
+          ]
+        },
+        {
+          "module": "docs",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "说明/示例作为引用材料，具体主张需绑定来源与反例",
+          "target": "src/finahinking/research/knowledge_index.py",
+          "phase": 22,
+          "source_paths": [
+            "docs/development.md"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "examples",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "说明/示例作为引用材料，具体主张需绑定来源与反例",
+          "target": "src/finahinking/research/knowledge_index.py",
+          "phase": 22,
+          "source_paths": [
+            "examples/ERC.ipynb"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "pyproject.toml",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "配置、构建、脚本或项目辅助资产逐项保留来源；不自动执行或加入产品",
+          "target": "src/finahinking/research/source_intake.py",
+          "phase": 21,
+          "source_paths": [
+            "pyproject.toml"
+          ],
+          "dependencies": []
+        },
+        {
+          "module": "tests",
+          "disposition": "REFERENCE_ONLY",
+          "reason": "学习独立预期和边界样例，不能把上游测试当本地验收",
+          "target": "src/finahinking/quant/evaluation/metrics.py",
+          "phase": 25,
+          "source_paths": [
+            "tests/__init__.py"
+          ],
+          "dependencies": []
+        }
+      ],
+      "artifacts": [
+        {
+          "path": "LICENSE",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "8711471566d722d55eca3f09196f342b2ee2960616e68127ec2a17b39ff99949",
+          "byte_size": 1086,
+          "git_blob": "73da17e081f72c9360ae1a9cb071776f44a2453b",
+          "embedded_rights": [
+            "Copyright (c) 2015 Philippe Morissette",
+            "The above copyright notice and this permission notice shall be included in all",
+            "AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER"
+          ]
+        },
+        {
+          "path": "bt/algos.py",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "81b79443e7dc36356293a22bf4c237a76267d77bcfbaeb90e3a5df374425f2ee",
+          "byte_size": 120687,
+          "git_blob": "46ea8f5a84b55339d620e1cfc4f47808e90f7c6a",
+          "embedded_rights": []
+        },
+        {
+          "path": "bt/backtest.py",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "ce5fda01fd1a077b891a87711235f1a6b49d2cd0db173034d546bf1a509976fa",
+          "byte_size": 39744,
+          "git_blob": "052e5e2b25359dad4647e64158e1506777d20dbb",
+          "embedded_rights": []
+        },
+        {
+          "path": "bt/core.py",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "9d74efb71035f15b62ab4c24720b552d3ba2b467d7f9d130b48bdb62d454d9ad",
+          "byte_size": 93877,
+          "git_blob": "f53c3dace5ee989fca0d9f089ebd9163b745ae69",
+          "embedded_rights": []
+        }
+      ],
+      "license_artifacts": [
+        {
+          "path": "LICENSE",
+          "status": "VERIFIED",
+          "license_candidates": [
+            "LICENSE"
+          ],
+          "sha256": "8711471566d722d55eca3f09196f342b2ee2960616e68127ec2a17b39ff99949",
+          "byte_size": 1086,
+          "git_blob": "73da17e081f72c9360ae1a9cb071776f44a2453b",
+          "embedded_rights": [
+            "Copyright (c) 2015 Philippe Morissette",
+            "The above copyright notice and this permission notice shall be included in all",
+            "AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER"
+          ]
+        }
+      ],
+      "errors": []
+    }
+  ]
+}
