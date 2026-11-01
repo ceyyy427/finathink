@@ -183,7 +183,9 @@ class ResearchFieldStore:
             raise ValueError("research field instrument is outside its snapshot")
 
     def save(self, attachment):
-        if not isinstance(attachment, ResearchFieldAttachment):
+        from .panel_contracts import PanelFieldAttachment
+
+        if not isinstance(attachment, (ResearchFieldAttachment, PanelFieldAttachment)):
             raise TypeError("typed research attachment required")
         self._bound_snapshot(attachment)
         destination = self._path(attachment.fingerprint)
@@ -214,7 +216,11 @@ class ResearchFieldStore:
                 encoded = handle.read(MAX_FIELD_BYTES + 1)
             if len(encoded) > MAX_FIELD_BYTES:
                 raise ValueError("research field size limit exceeded")
-            result = ResearchFieldAttachment.from_dict(json.loads(encoded))
+            payload = json.loads(encoded)
+            from .panel_contracts import PanelFieldAttachment
+
+            kind = PanelFieldAttachment if isinstance(payload, dict) and payload.get('schema_version') == PanelFieldAttachment.VERSION else ResearchFieldAttachment
+            result = kind.from_dict(payload)
             if result.fingerprint != fingerprint:
                 raise ValueError("research field reference integrity mismatch")
             self._bound_snapshot(result)

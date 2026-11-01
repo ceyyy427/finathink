@@ -7,10 +7,14 @@ from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from typing import Any
 
+from .panel_contracts import FIELD_DEFINITIONS, panel_time
 from .research_fields import DATE_RESEARCH_FIELDS, NUMERIC_RESEARCH_FIELDS, TEXT_RESEARCH_FIELDS
 from .user_api_contracts import DataBatch, fingerprint_records
 
 _NUMERIC_FIELDS = frozenset({"open", "high", "low", "close", "volume", "amount", "value"}) | NUMERIC_RESEARCH_FIELDS
+_PANEL_NUMERIC = frozenset(name for name, spec in FIELD_DEFINITIONS.items() if spec[1] == "number")
+_PANEL_BOOLEAN = frozenset(name for name, spec in FIELD_DEFINITIONS.items() if spec[1] == "boolean")
+_NUMERIC_FIELDS |= _PANEL_NUMERIC
 _ALLOWED_FIELDS = frozenset({"instrument", "timestamp", "available_at", "as_of", "industry", "suspended", "market", "exchange", *_NUMERIC_FIELDS}) | TEXT_RESEARCH_FIELDS | DATE_RESEARCH_FIELDS
 
 
@@ -76,11 +80,11 @@ def normalize_records(
                 continue
             value = raw[source]
             if canonical in {"timestamp", "available_at", "as_of"} | DATE_RESEARCH_FIELDS:
-                converted = _timestamp(value)
+                converted = panel_time(value).isoformat() if dataset_kind == "panel_fields" else _timestamp(value)
                 if converted is None:
                     quality.append(f"record {index}: invalid {canonical}")
                     continue
-            elif canonical == "suspended":
+            elif canonical in _PANEL_BOOLEAN:
                 if not isinstance(value, bool):
                     raise ValueError("suspended mapping requires an explicit boolean")
                 converted = value
@@ -103,7 +107,7 @@ def normalize_records(
             quality.append(f"record {index}: missing close")
         if "instrument" in item and "timestamp" in item:
             key = (str(item["instrument"]), str(item["timestamp"]))
-            if dataset_kind == "research_fields":
+            if dataset_kind in {"research_fields", "panel_fields"}:
                 key = (*key, str(item.get("available_at", "")))
             if key in seen:
                 quality.append(f"record {index}: duplicate instrument/timestamp")

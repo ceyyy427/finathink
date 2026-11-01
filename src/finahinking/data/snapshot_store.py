@@ -23,6 +23,18 @@ class SnapshotStore:
             raise ValueError("snapshot fingerprint must be a SHA-256 reference")
         return self.root / f"{fingerprint}.json"
 
+    def build_panel(self, contract, attachment_refs=()):
+        """Rebuild a panel from verified, immutable local artifacts."""
+        from .panel_contracts import PanelContract
+        from .research_fields import ResearchFieldStore
+        from .research_panel import build_research_panel
+
+        typed = contract if isinstance(contract, PanelContract) else PanelContract.from_dict(contract)
+        if not isinstance(attachment_refs, (tuple, list)) or len(attachment_refs) > 32:
+            raise ValueError("面板附件引用数量无效")
+        fields = ResearchFieldStore(self)
+        return build_research_panel(self.load(typed.snapshot_ref), [fields.load(ref) for ref in attachment_refs], typed)
+
     def load(self, fingerprint: str) -> DatasetSnapshot:
         path = self._path(fingerprint)
         if path.is_symlink():

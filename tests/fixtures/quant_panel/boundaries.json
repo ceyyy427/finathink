@@ -1,0 +1,19 @@
+{
+  "schema_version": "panel-boundaries.v1",
+  "source": "Finathink independent synthetic boundary cases; no market performance claim",
+  "cases": [
+    {"id":"cross-asset","mode":"base","asset":"BBB","field":"close","expected":[10,20,30,40]},
+    {"id":"late-announcement","mode":"financial","records":[{"instrument":"AAA","timestamp":"2025-12-31T00:00:00Z","available_at":"2026-01-03T16:00:00Z","net_profit":10}],"asset":"AAA","field":"net_profit","expected":[null,10,10,10]},
+    {"id":"revision","mode":"financial","records":[{"instrument":"AAA","timestamp":"2025-12-31T00:00:00Z","available_at":"2026-01-03T16:00:00Z","net_profit":10},{"instrument":"AAA","timestamp":"2025-12-31T00:00:00Z","available_at":"2026-01-05T16:00:00Z","net_profit":99}],"asset":"AAA","field":"net_profit","expected":[null,10,10,99]},
+    {"id":"unknown-availability","mode":"financial","records":[{"instrument":"AAA","timestamp":"2025-12-31T00:00:00Z","available_at":null,"net_profit":10}],"asset":"AAA","field":"net_profit","expected":[null,null,null,null]},
+    {"id":"future-split","mode":"rule","record":{"instrument":"AAA","timestamp":"2026-01-05T16:00:00Z","available_at":"2026-01-05T16:00:00Z","split_factor":2},"asset":"AAA","field":"split_factor","expected":[1,1,1,2]},
+    {"id":"delisting","mode":"rule","record":{"instrument":"AAA","timestamp":"2026-01-05T16:00:00Z","available_at":"2026-01-05T16:00:00Z","in_universe":false},"asset":"AAA","field":"in_universe","expected":[true,true,true,false]},
+    {"id":"suspension","mode":"suspended","asset":"AAA","field":"execution_eligible","expected":[false,false,false,false]},
+    {"id":"unknown-trade-rule","mode":"unknown_rule","asset":"AAA","field":"execution_eligible","expected":[false,false,false,false]},
+    {"id":"currency-mismatch","mode":"currency","asset":"AAA","field":"close","expected":[null,null,null,null]},
+    {"id":"calendar-closed","mode":"calendar","asset":"AAA","field":"is_session","expected":[true,false,true,true]},
+    {"id":"missing-field","mode":"base","asset":"AAA","field":"net_profit","expected":[null,null,null,null]},
+    {"id":"explicit-timezone","mode":"timezone","asset":"AAA","field":"close","expected":[1,3,2,4]},
+    {"id":"unknown-price-basis","mode":"adjustment","asset":"AAA","field":"execution_eligible","expected":[false,false,false,false]}
+  ]
+}
