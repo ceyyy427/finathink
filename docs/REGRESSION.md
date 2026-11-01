@@ -77,3 +77,5 @@ Phase24最终本地门禁：冻结源码 `f8e293b` 的全量回归2320 passed、
 | 发布与间接下游 | `FINATHINK_REQUIRE_BROWSER=1 python3 -m pytest -q`；`python3 -m ruff check src tests scripts`；前端build/test/perf | 冻结源码后完整运行，覆盖实际HTTP/worker/安装和浏览器 |
 
 以上命令在已授权工作树内执行；合成研究不访问用户模型或数据账号。隔离Alphalens对照环境只下载公开依赖，不加入应用默认运行依赖。实际退出码与证据在Phase25验收记录中填写。
+
+Phase25最终门禁：冻结实现`bbf9d84`的完整回归2407 passed、1 optional statsmodels skip，覆盖上述所有传播模块、强制浏览器与全新安装。独立审查修复窄复核8项+5项通过；前端71项、build/perf、Ruff、治理、依赖与发布检查退出码0，见[阶段验收](reviews/2026-10-31-finathink-phase25-review.md)。
