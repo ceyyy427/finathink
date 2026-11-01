@@ -1,0 +1,2619 @@
+{
+  "schema_version": "factor-library-numerics.v1",
+  "reference_method": "Frozen scalar arithmetic authored independently of production DSL. Inputs are synthetic; values do not establish market efficacy.",
+  "times": [
+    "2026-01-02T16:00:00Z",
+    "2026-01-03T16:00:00Z",
+    "2026-01-04T16:00:00Z",
+    "2026-01-05T16:00:00Z",
+    "2026-01-06T16:00:00Z",
+    "2026-01-07T16:00:00Z",
+    "2026-01-08T16:00:00Z",
+    "2026-01-09T16:00:00Z"
+  ],
+  "units": {
+    "total_assets": "CNY",
+    "book_equity": "CNY",
+    "net_profit": "CNY",
+    "market_cap": "CNY",
+    "revenue": "CNY",
+    "operating_cash_flow": "CNY",
+    "capital_expenditure": "CNY",
+    "research_expense": "CNY",
+    "total_debt": "CNY",
+    "cash": "CNY",
+    "enterprise_book_value": "CNY",
+    "dividends": "CNY",
+    "share_repurchases": "CNY",
+    "share_issuance": "CNY",
+    "ebitda": "CNY",
+    "ebit": "CNY",
+    "gross_profit": "CNY",
+    "operating_expense": "CNY",
+    "operating_accruals": "CNY",
+    "current_assets": "CNY",
+    "current_liabilities": "CNY",
+    "inventory": "CNY",
+    "receivables": "CNY",
+    "ppe": "CNY",
+    "depreciation": "CNY",
+    "long_term_investment": "CNY",
+    "short_term_investment": "CNY",
+    "total_liabilities": "CNY",
+    "long_term_debt": "CNY",
+    "short_term_debt": "CNY",
+    "preferred_stock": "CNY",
+    "debt_issuance": "CNY",
+    "debt_repayment": "CNY",
+    "short_term_debt_change": "CNY",
+    "employees": "count",
+    "shares_outstanding": "shares",
+    "close": "CNY",
+    "open": "CNY",
+    "high": "CNY",
+    "low": "CNY",
+    "amount": "CNY",
+    "social_finance": "CNY",
+    "volume": "shares",
+    "turnover_rate": "ratio_free_float",
+    "total_return": "ratio",
+    "strategy_return": "ratio",
+    "benchmark_return": "ratio",
+    "bond_yield_long": "ratio",
+    "bond_yield_short": "ratio",
+    "industry": "historical_classification"
+  },
+  "input": {
+    "AAA": {
+      "close": [
+        10,
+        11,
+        9,
+        12,
+        10,
+        13,
+        11,
+        14
+      ],
+      "open": [
+        9,
+        10,
+        10,
+        11,
+        11,
+        12,
+        12,
+        13
+      ],
+      "high": [
+        12,
+        13,
+        12,
+        14,
+        13,
+        15,
+        14,
+        17
+      ],
+      "low": [
+        8,
+        9,
+        7,
+        10,
+        8,
+        10,
+        9,
+        11
+      ],
+      "volume": [
+        100,
+        120,
+        90,
+        140,
+        110,
+        160,
+        130,
+        180
+      ],
+      "amount": [
+        1000,
+        1320,
+        810,
+        1680,
+        1100,
+        2080,
+        1430,
+        2520
+      ],
+      "turnover_rate": [
+        0.01,
+        0.012,
+        0.009,
+        0.014,
+        0.011,
+        0.016,
+        0.013,
+        0.018
+      ],
+      "total_return": [
+        0.01,
+        0.105,
+        -0.17,
+        0.34,
+        -0.16,
+        0.305,
+        -0.15,
+        0.28
+      ],
+      "strategy_return": [
+        0.01,
+        -0.02,
+        0.03,
+        0.01,
+        -0.01,
+        0.04,
+        -0.02,
+        0.03
+      ],
+      "benchmark_return": [
+        0.005,
+        -0.01,
+        0.02,
+        0.015,
+        -0.02,
+        0.025,
+        -0.015,
+        0.02
+      ],
+      "bond_yield_long": [
+        0.04,
+        0.041,
+        0.039,
+        0.042,
+        0.04,
+        0.038,
+        0.037,
+        0.039
+      ],
+      "bond_yield_short": [
+        0.025,
+        0.026,
+        0.028,
+        0.027,
+        0.026,
+        0.025,
+        0.024,
+        0.026
+      ],
+      "social_finance": [
+        100,
+        120,
+        90,
+        140,
+        110,
+        160,
+        130,
+        180
+      ],
+      "industry": [
+        "IND-A",
+        "IND-A",
+        "IND-A",
+        "IND-A",
+        "IND-A",
+        "IND-A",
+        "IND-A",
+        "IND-A"
+      ],
+      "total_assets": [
+        1000,
+        1002,
+        1006,
+        1012,
+        1020,
+        1030,
+        1042,
+        1056
+      ],
+      "book_equity": [
+        400,
+        403,
+        408,
+        415,
+        424,
+        435,
+        448,
+        463
+      ],
+      "net_profit": [
+        50,
+        54,
+        60,
+        68,
+        78,
+        90,
+        104,
+        120
+      ],
+      "market_cap": [
+        1200,
+        1205,
+        1212,
+        1221,
+        1232,
+        1245,
+        1260,
+        1277
+      ],
+      "revenue": [
+        600,
+        606,
+        614,
+        624,
+        636,
+        650,
+        666,
+        684
+      ],
+      "operating_cash_flow": [
+        70,
+        72,
+        76,
+        82,
+        90,
+        100,
+        112,
+        126
+      ],
+      "capital_expenditure": [
+        30,
+        33,
+        38,
+        45,
+        54,
+        65,
+        78,
+        93
+      ],
+      "research_expense": [
+        12,
+        16,
+        22,
+        30,
+        40,
+        52,
+        66,
+        82
+      ],
+      "total_debt": [
+        250,
+        255,
+        262,
+        271,
+        282,
+        295,
+        310,
+        327
+      ],
+      "cash": [
+        90,
+        96,
+        104,
+        114,
+        126,
+        140,
+        156,
+        174
+      ],
+      "enterprise_book_value": [
+        650,
+        652,
+        656,
+        662,
+        670,
+        680,
+        692,
+        706
+      ],
+      "dividends": [
+        10,
+        13,
+        18,
+        25,
+        34,
+        45,
+        58,
+        73
+      ],
+      "share_repurchases": [
+        8,
+        12,
+        18,
+        26,
+        36,
+        48,
+        62,
+        78
+      ],
+      "share_issuance": [
+        20,
+        25,
+        32,
+        41,
+        52,
+        65,
+        80,
+        97
+      ],
+      "ebitda": [
+        110,
+        116,
+        124,
+        134,
+        146,
+        160,
+        176,
+        194
+      ],
+      "ebit": [
+        85,
+        87,
+        91,
+        97,
+        105,
+        115,
+        127,
+        141
+      ],
+      "gross_profit": [
+        220,
+        223,
+        228,
+        235,
+        244,
+        255,
+        268,
+        283
+      ],
+      "operating_expense": [
+        330,
+        334,
+        340,
+        348,
+        358,
+        370,
+        384,
+        400
+      ],
+      "operating_accruals": [
+        -20,
+        -25,
+        -32,
+        -41,
+        -52,
+        -65,
+        -80,
+        -97
+      ],
+      "current_assets": [
+        320,
+        326,
+        334,
+        344,
+        356,
+        370,
+        386,
+        404
+      ],
+      "current_liabilities": [
+        160,
+        162,
+        166,
+        172,
+        180,
+        190,
+        202,
+        216
+      ],
+      "inventory": [
+        75,
+        78,
+        83,
+        90,
+        99,
+        110,
+        123,
+        138
+      ],
+      "receivables": [
+        95,
+        99,
+        105,
+        113,
+        123,
+        135,
+        149,
+        165
+      ],
+      "ppe": [
+        280,
+        285,
+        292,
+        301,
+        312,
+        325,
+        340,
+        357
+      ],
+      "depreciation": [
+        25,
+        31,
+        39,
+        49,
+        61,
+        75,
+        91,
+        109
+      ],
+      "long_term_investment": [
+        80,
+        82,
+        86,
+        92,
+        100,
+        110,
+        122,
+        136
+      ],
+      "short_term_investment": [
+        40,
+        43,
+        48,
+        55,
+        64,
+        75,
+        88,
+        103
+      ],
+      "total_liabilities": [
+        500,
+        504,
+        510,
+        518,
+        528,
+        540,
+        554,
+        570
+      ],
+      "long_term_debt": [
+        180,
+        185,
+        192,
+        201,
+        212,
+        225,
+        240,
+        257
+      ],
+      "short_term_debt": [
+        70,
+        76,
+        84,
+        94,
+        106,
+        120,
+        136,
+        154
+      ],
+      "preferred_stock": [
+        25,
+        27,
+        31,
+        37,
+        45,
+        55,
+        67,
+        81
+      ],
+      "debt_issuance": [
+        45,
+        48,
+        53,
+        60,
+        69,
+        80,
+        93,
+        108
+      ],
+      "debt_repayment": [
+        25,
+        29,
+        35,
+        43,
+        53,
+        65,
+        79,
+        95
+      ],
+      "short_term_debt_change": [
+        5,
+        10,
+        17,
+        26,
+        37,
+        50,
+        65,
+        82
+      ],
+      "employees": [
+        100,
+        106,
+        114,
+        124,
+        136,
+        150,
+        166,
+        184
+      ],
+      "shares_outstanding": [
+        100,
+        102,
+        106,
+        112,
+        120,
+        130,
+        142,
+        156
+      ]
+    },
+    "BBB": {
+      "close": [
+        20,
+        22,
+        18,
+        24,
+        20,
+        26,
+        22,
+        28
+      ],
+      "open": [
+        18,
+        20,
+        20,
+        22,
+        22,
+        24,
+        24,
+        26
+      ],
+      "high": [
+        24,
+        26,
+        24,
+        28,
+        26,
+        30,
+        28,
+        34
+      ],
+      "low": [
+        16,
+        18,
+        14,
+        20,
+        16,
+        20,
+        18,
+        22
+      ],
+      "volume": [
+        135.0,
+        162.03,
+        121.56000000000002,
+        189.0,
+        148.53,
+        216.06,
+        175.5,
+        243.03000000000003
+      ],
+      "amount": [
+        1450.0,
+        1914.06,
+        1174.62,
+        2436.0,
+        1595.06,
+        3016.12,
+        2073.5,
+        3654.06
+      ],
+      "turnover_rate": [
+        0.0125,
+        0.105,
+        0.19125,
+        0.0175,
+        0.10375,
+        0.19999999999999998,
+        0.01625,
+        0.11249999999999999
+      ],
+      "total_return": [
+        0.013500000000000002,
+        0.26175000000000004,
+        0.010499999999999954,
+        0.4590000000000001,
+        -0.09600000000000003,
+        0.65175,
+        -0.2025,
+        0.49800000000000005
+      ],
+      "strategy_return": [
+        0.014499999999999999,
+        0.0010000000000000009,
+        0.1035,
+        0.014499999999999999,
+        0.0155,
+        0.118,
+        -0.028999999999999998,
+        0.0735
+      ],
+      "benchmark_return": [
+        0.00625,
+        0.0475,
+        0.145,
+        0.01875,
+        0.034999999999999996,
+        0.15125,
+        -0.01875,
+        0.08499999999999999
+      ],
+      "bond_yield_long": [
+        0.054000000000000006,
+        0.14535,
+        0.23265,
+        0.05670000000000001,
+        0.14400000000000002,
+        0.2313,
+        0.04995,
+        0.14265
+      ],
+      "bond_yield_short": [
+        0.03625,
+        0.1577,
+        0.28059999999999996,
+        0.03915,
+        0.1577,
+        0.27625,
+        0.0348,
+        0.1577
+      ],
+      "social_finance": [
+        125.0,
+        150.03,
+        112.56,
+        175.0,
+        137.53,
+        200.06,
+        162.5,
+        225.03
+      ],
+      "industry": [
+        "IND-A",
+        "IND-A",
+        "IND-A",
+        "IND-A",
+        "IND-A",
+        "IND-A",
+        "IND-A",
+        "IND-A"
+      ],
+      "total_assets": [
+        1450.0,
+        1452.9899999999998,
+        1458.88,
+        1467.3999999999999,
+        1479.09,
+        1493.68,
+        1510.8999999999999,
+        1531.29
+      ],
+      "book_equity": [
+        500.0,
+        503.87,
+        510.24,
+        518.75,
+        530.12,
+        543.99,
+        560.0,
+        578.87
+      ],
+      "net_profit": [
+        67.5,
+        72.93,
+        81.06,
+        91.80000000000001,
+        105.33000000000001,
+        121.56000000000002,
+        140.4,
+        162.03
+      ],
+      "market_cap": [
+        1740.0,
+        1747.31,
+        1757.5199999999998,
+        1770.45,
+        1786.4599999999998,
+        1805.37,
+        1827.0,
+        1851.7099999999998
+      ],
+      "revenue": [
+        750.0,
+        757.59,
+        767.68,
+        780.0,
+        795.09,
+        812.68,
+        832.5,
+        855.09
+      ],
+      "operating_cash_flow": [
+        94.5,
+        97.32000000000001,
+        102.84,
+        110.7,
+        121.62000000000002,
+        135.24,
+        151.20000000000002,
+        170.22000000000003
+      ],
+      "capital_expenditure": [
+        43.5,
+        47.88,
+        55.160000000000004,
+        65.25,
+        78.33,
+        94.31,
+        113.1,
+        134.88
+      ],
+      "research_expense": [
+        15.0,
+        20.06,
+        27.62,
+        37.5,
+        50.06,
+        65.12,
+        82.5,
+        102.56
+      ],
+      "total_debt": [
+        337.5,
+        344.34,
+        353.88000000000005,
+        365.85,
+        380.79,
+        398.43,
+        418.5,
+        441.54
+      ],
+      "cash": [
+        130.5,
+        139.32,
+        151.04,
+        165.29999999999998,
+        182.82,
+        203.24,
+        226.2,
+        252.42
+      ],
+      "enterprise_book_value": [
+        812.5,
+        815.03,
+        820.06,
+        827.5,
+        837.53,
+        850.06,
+        865.0,
+        882.53
+      ],
+      "dividends": [
+        13.5,
+        17.61,
+        24.42,
+        33.75,
+        45.96000000000001,
+        60.870000000000005,
+        78.30000000000001,
+        98.61000000000001
+      ],
+      "share_repurchases": [
+        11.6,
+        17.49,
+        26.279999999999998,
+        37.699999999999996,
+        52.29,
+        69.78,
+        89.89999999999999,
+        113.19
+      ],
+      "share_issuance": [
+        25.0,
+        31.37,
+        40.24,
+        51.25,
+        65.12,
+        81.49,
+        100.0,
+        121.37
+      ],
+      "ebitda": [
+        148.5,
+        156.63000000000002,
+        167.46,
+        180.9,
+        197.13000000000002,
+        216.06,
+        237.60000000000002,
+        261.93
+      ],
+      "ebit": [
+        123.25,
+        126.21,
+        132.07,
+        140.65,
+        152.31,
+        166.87,
+        184.15,
+        204.51
+      ],
+      "gross_profit": [
+        275.0,
+        278.84,
+        285.18,
+        293.75,
+        305.09,
+        318.93,
+        335.0,
+        353.84
+      ],
+      "operating_expense": [
+        445.50000000000006,
+        451.02000000000004,
+        459.24000000000007,
+        469.8,
+        483.42,
+        499.74000000000007,
+        518.4000000000001,
+        540.12
+      ],
+      "operating_accruals": [
+        -29.0,
+        -36.22,
+        -46.339999999999996,
+        -59.449999999999996,
+        -75.36999999999999,
+        -94.19,
+        -116.0,
+        -140.62
+      ],
+      "current_assets": [
+        400.0,
+        407.56,
+        417.62,
+        430.0,
+        445.06,
+        462.62,
+        482.5,
+        505.06
+      ],
+      "current_liabilities": [
+        216.0,
+        218.79000000000002,
+        224.28000000000003,
+        232.20000000000002,
+        243.09000000000003,
+        256.68,
+        272.70000000000005,
+        291.69
+      ],
+      "inventory": [
+        108.75,
+        113.22,
+        120.58999999999999,
+        130.5,
+        143.67,
+        159.74,
+        178.35,
+        200.22
+      ],
+      "receivables": [
+        118.75,
+        123.78,
+        131.31,
+        141.25,
+        153.78,
+        168.81,
+        186.25,
+        206.28
+      ],
+      "ppe": [
+        378.0,
+        384.81,
+        394.32000000000005,
+        406.35,
+        421.26000000000005,
+        438.87000000000006,
+        459.00000000000006,
+        482.01000000000005
+      ],
+      "depreciation": [
+        36.25,
+        45.04,
+        56.73,
+        71.05,
+        88.54,
+        108.93,
+        131.95,
+        158.14
+      ],
+      "long_term_investment": [
+        100.0,
+        102.62,
+        107.74,
+        115.0,
+        125.12,
+        137.74,
+        152.5,
+        170.12
+      ],
+      "short_term_investment": [
+        54.0,
+        58.080000000000005,
+        64.86000000000001,
+        74.25,
+        86.43,
+        101.31,
+        118.80000000000001,
+        139.08
+      ],
+      "total_liabilities": [
+        725.0,
+        730.8599999999999,
+        739.62,
+        751.1,
+        765.66,
+        783.12,
+        803.3,
+        826.56
+      ],
+      "long_term_debt": [
+        225.0,
+        231.34,
+        240.18,
+        251.25,
+        265.09,
+        281.43,
+        300.0,
+        321.34
+      ],
+      "short_term_debt": [
+        94.5,
+        102.72000000000001,
+        113.64,
+        126.9,
+        143.22000000000003,
+        162.24,
+        183.60000000000002,
+        208.02
+      ],
+      "preferred_stock": [
+        36.25,
+        39.18,
+        45.01,
+        53.65,
+        65.28,
+        79.81,
+        97.14999999999999,
+        117.48
+      ],
+      "debt_issuance": [
+        56.25,
+        60.06,
+        66.37,
+        75.0,
+        86.31,
+        100.12,
+        116.25,
+        135.06
+      ],
+      "debt_repayment": [
+        33.75,
+        39.24000000000001,
+        47.43,
+        58.050000000000004,
+        71.64000000000001,
+        87.93,
+        106.65,
+        128.34
+      ],
+      "short_term_debt_change": [
+        7.25,
+        14.62,
+        24.889999999999997,
+        37.699999999999996,
+        53.769999999999996,
+        72.74,
+        94.25,
+        119.02
+      ],
+      "employees": [
+        125.0,
+        132.53,
+        142.56,
+        155.0,
+        170.03,
+        187.56,
+        207.5,
+        230.03
+      ],
+      "shares_outstanding": [
+        135.0,
+        137.76000000000002,
+        143.22000000000003,
+        151.20000000000002,
+        162.06,
+        175.62,
+        191.70000000000002,
+        210.66000000000003
+      ]
+    },
+    "CCC": {
+      "close": [
+        30,
+        33,
+        27,
+        36,
+        30,
+        39,
+        33,
+        42
+      ],
+      "open": [
+        27,
+        30,
+        30,
+        33,
+        33,
+        36,
+        36,
+        39
+      ],
+      "high": [
+        36,
+        39,
+        36,
+        42,
+        39,
+        45,
+        42,
+        51
+      ],
+      "low": [
+        24,
+        27,
+        21,
+        30,
+        24,
+        30,
+        27,
+        33
+      ],
+      "volume": [
+        65.0,
+        78.02,
+        58.5,
+        91.02,
+        71.5,
+        104.02,
+        84.5,
+        117.02
+      ],
+      "amount": [
+        720.0,
+        950.42,
+        583.1999999999999,
+        1209.62,
+        792.0,
+        1497.62,
+        1029.6,
+        1814.4199999999998
+      ],
+      "turnover_rate": [
+        0.0079,
+        0.02948,
+        0.00711,
+        0.03106,
+        0.00869,
+        0.03264,
+        0.01027,
+        0.03422
+      ],
+      "total_return": [
+        0.008600000000000002,
+        0.11030000000000001,
+        -0.14620000000000002,
+        0.31240000000000007,
+        -0.13760000000000003,
+        0.28230000000000005,
+        -0.129,
+        0.26080000000000003
+      ],
+      "strategy_return": [
+        0.006500000000000001,
+        0.006999999999999999,
+        0.0195,
+        0.026500000000000003,
+        -0.006500000000000001,
+        0.046,
+        -0.013000000000000001,
+        0.0395
+      ],
+      "benchmark_return": [
+        0.0036,
+        0.0128,
+        0.0144,
+        0.0308,
+        -0.0144,
+        0.038,
+        -0.010799999999999999,
+        0.0344
+      ],
+      "bond_yield_long": [
+        0.0316,
+        0.052390000000000006,
+        0.03081,
+        0.053180000000000005,
+        0.0316,
+        0.05002,
+        0.02923,
+        0.05081
+      ],
+      "bond_yield_short": [
+        0.021500000000000005,
+        0.04236,
+        0.024080000000000004,
+        0.04322,
+        0.02236,
+        0.04150000000000001,
+        0.020640000000000002,
+        0.04236
+      ],
+      "social_finance": [
+        65.0,
+        78.02,
+        58.5,
+        91.02,
+        71.5,
+        104.02,
+        84.5,
+        117.02
+      ],
+      "industry": [
+        "IND-B",
+        "IND-B",
+        "IND-B",
+        "IND-B",
+        "IND-B",
+        "IND-B",
+        "IND-B",
+        "IND-B"
+      ],
+      "total_assets": [
+        790.0,
+        791.6,
+        794.74,
+        799.5,
+        805.8000000000001,
+        813.72,
+        823.1800000000001,
+        834.26
+      ],
+      "book_equity": [
+        344.00000000000006,
+        346.6,
+        350.88000000000005,
+        356.92,
+        364.64000000000004,
+        374.12,
+        385.28000000000003,
+        398.20000000000005
+      ],
+      "net_profit": [
+        32.5,
+        35.120000000000005,
+        39.0,
+        44.220000000000006,
+        50.7,
+        58.52,
+        67.60000000000001,
+        78.02
+      ],
+      "market_cap": [
+        864.0,
+        867.62,
+        872.64,
+        879.14,
+        887.04,
+        896.42,
+        907.1999999999999,
+        919.4599999999999
+      ],
+      "revenue": [
+        474.0,
+        478.76,
+        485.06,
+        492.98,
+        502.44,
+        513.52,
+        526.14,
+        540.38
+      ],
+      "operating_cash_flow": [
+        60.20000000000001,
+        61.94000000000001,
+        65.36000000000001,
+        70.54,
+        77.4,
+        86.02000000000001,
+        96.32000000000001,
+        108.38000000000001
+      ],
+      "capital_expenditure": [
+        19.5,
+        21.47,
+        24.7,
+        29.27,
+        35.1,
+        42.27,
+        50.7,
+        60.470000000000006
+      ],
+      "research_expense": [
+        8.64,
+        11.54,
+        15.84,
+        21.619999999999997,
+        28.799999999999997,
+        37.46,
+        47.519999999999996,
+        59.06
+      ],
+      "total_debt": [
+        197.5,
+        201.47000000000003,
+        206.98000000000002,
+        214.11,
+        222.78,
+        233.07000000000002,
+        244.9,
+        258.34999999999997
+      ],
+      "cash": [
+        77.4,
+        82.58,
+        89.44000000000001,
+        98.06,
+        108.36000000000001,
+        120.42000000000002,
+        134.16000000000003,
+        149.66000000000003
+      ],
+      "enterprise_book_value": [
+        422.5,
+        423.82,
+        426.40000000000003,
+        430.32,
+        435.5,
+        442.02,
+        449.8,
+        458.92
+      ],
+      "dividends": [
+        7.199999999999999,
+        9.379999999999999,
+        12.959999999999999,
+        18.02,
+        24.48,
+        32.42,
+        41.76,
+        52.58
+      ],
+      "share_repurchases": [
+        6.32,
+        9.5,
+        14.22,
+        20.56,
+        28.44,
+        37.940000000000005,
+        48.980000000000004,
+        61.64000000000001
+      ],
+      "share_issuance": [
+        17.200000000000003,
+        21.520000000000003,
+        27.520000000000003,
+        35.28000000000001,
+        44.720000000000006,
+        55.92000000000001,
+        68.80000000000001,
+        83.44000000000001
+      ],
+      "ebitda": [
+        71.5,
+        75.42,
+        80.60000000000001,
+        87.12,
+        94.9,
+        104.02,
+        114.4,
+        126.12
+      ],
+      "ebit": [
+        61.199999999999996,
+        62.660000000000004,
+        65.52,
+        69.86,
+        75.6,
+        82.82,
+        91.44,
+        101.53999999999999
+      ],
+      "gross_profit": [
+        173.8,
+        176.19000000000003,
+        180.12,
+        185.67000000000002,
+        192.76000000000002,
+        201.47000000000003,
+        211.72,
+        223.59000000000003
+      ],
+      "operating_expense": [
+        283.8,
+        287.26,
+        292.40000000000003,
+        299.3,
+        307.88000000000005,
+        318.22,
+        330.24,
+        344.02000000000004
+      ],
+      "operating_accruals": [
+        -13.0,
+        -16.23,
+        -20.8,
+        -26.630000000000003,
+        -33.800000000000004,
+        -42.23,
+        -52.0,
+        -63.03
+      ],
+      "current_assets": [
+        230.39999999999998,
+        234.74,
+        240.48,
+        247.7,
+        256.32,
+        266.41999999999996,
+        277.92,
+        290.9
+      ],
+      "current_liabilities": [
+        126.4,
+        128.0,
+        131.14000000000001,
+        135.9,
+        142.20000000000002,
+        150.12,
+        159.58,
+        170.66000000000003
+      ],
+      "inventory": [
+        64.50000000000001,
+        67.10000000000001,
+        71.38000000000001,
+        77.42,
+        85.14000000000001,
+        94.62,
+        105.78000000000002,
+        118.7
+      ],
+      "receivables": [
+        61.75,
+        64.37,
+        68.25,
+        73.47,
+        79.95,
+        87.77,
+        96.85000000000001,
+        107.27
+      ],
+      "ppe": [
+        201.6,
+        205.22,
+        210.23999999999998,
+        216.74,
+        224.64,
+        234.02,
+        244.79999999999998,
+        257.05999999999995
+      ],
+      "depreciation": [
+        19.75,
+        24.51,
+        30.810000000000002,
+        38.730000000000004,
+        48.190000000000005,
+        59.27,
+        71.89,
+        86.13
+      ],
+      "long_term_investment": [
+        68.80000000000001,
+        70.54,
+        73.96000000000001,
+        79.14,
+        86.00000000000001,
+        94.62,
+        104.92000000000002,
+        116.98
+      ],
+      "short_term_investment": [
+        26.0,
+        27.97,
+        31.200000000000003,
+        35.77,
+        41.6,
+        48.77,
+        57.2,
+        66.97
+      ],
+      "total_liabilities": [
+        360.0,
+        362.9,
+        367.2,
+        372.97999999999996,
+        380.15999999999997,
+        388.82,
+        398.88,
+        410.41999999999996
+      ],
+      "long_term_debt": [
+        142.20000000000002,
+        146.17000000000002,
+        151.68,
+        158.81000000000003,
+        167.48000000000002,
+        177.77,
+        189.60000000000002,
+        203.05
+      ],
+      "short_term_debt": [
+        60.20000000000001,
+        65.38000000000001,
+        72.24000000000001,
+        80.86,
+        91.16000000000001,
+        103.22000000000001,
+        116.96000000000001,
+        132.46000000000004
+      ],
+      "preferred_stock": [
+        16.25,
+        17.57,
+        20.150000000000002,
+        24.07,
+        29.25,
+        35.77,
+        43.550000000000004,
+        52.67
+      ],
+      "debt_issuance": [
+        32.4,
+        34.580000000000005,
+        38.16,
+        43.22,
+        49.68,
+        57.62,
+        66.96,
+        77.77999999999999
+      ],
+      "debt_repayment": [
+        19.75,
+        22.93,
+        27.650000000000002,
+        33.99,
+        41.870000000000005,
+        51.370000000000005,
+        62.410000000000004,
+        75.07
+      ],
+      "short_term_debt_change": [
+        4.300000000000001,
+        8.620000000000001,
+        14.620000000000001,
+        22.380000000000003,
+        31.820000000000004,
+        43.02000000000001,
+        55.900000000000006,
+        70.54
+      ],
+      "employees": [
+        65.0,
+        68.92,
+        74.10000000000001,
+        80.62,
+        88.4,
+        97.52,
+        107.9,
+        119.62
+      ],
+      "shares_outstanding": [
+        72.0,
+        73.46,
+        76.32,
+        80.66,
+        86.39999999999999,
+        93.61999999999999,
+        102.24,
+        112.33999999999999
+      ]
+    }
+  },
+  "cases": [
+    {
+      "factor_id": "lib-trend-roc",
+      "expected": 0.2727272727272727,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "14/11-1",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "deepseek-harness-quant-roc"
+      ]
+    },
+    {
+      "factor_id": "lib-trend-ma-spread",
+      "expected": 0.10144927536231885,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "mean(13,11,14)/mean(9,12,10,13,11,14)-1",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "deepseek-harness-quant-ma-bull"
+      ]
+    },
+    {
+      "factor_id": "lib-trend-slope",
+      "expected": 0.03571428571428571,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "OLS slope([13,11,14])=0.5; 0.5/14",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "qlib-get-feature-config-beta"
+      ]
+    },
+    {
+      "factor_id": "lib-trend-body",
+      "expected": 0.07692307692307693,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "(14-13)/13",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "qlib-get-feature-config-kmid"
+      ]
+    },
+    {
+      "factor_id": "lib-trend-upper-shadow",
+      "expected": 0.23076923076923078,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "(17-max(13,14))/13",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "qlib-get-feature-config-kup"
+      ]
+    },
+    {
+      "factor_id": "lib-trend-lower-shadow",
+      "expected": 0.15384615384615385,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "(min(13,14)-11)/13",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "qlib-get-feature-config-klow"
+      ]
+    },
+    {
+      "factor_id": "lib-trend-close-location",
+      "expected": 0.0,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "(2*14-17-11)/13",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "qlib-get-feature-config-ksft"
+      ]
+    },
+    {
+      "factor_id": "lib-trend-aroon-spread",
+      "expected": 0.3333333333333333,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "argmax([15,14,17])=2,argmin([10,9,11])=1; (2-1)/3",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "qlib-get-feature-config-imxd"
+      ]
+    },
+    {
+      "factor_id": "lib-reversal-rsi",
+      "expected": 75.0,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "最近差分[3,-2,3]；gain=2,loss=2/3；100-100/(1+3)=75",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "deepseek-harness-quant-rsi"
+      ]
+    },
+    {
+      "factor_id": "lib-reversal-boll-lower",
+      "expected": 0.3762962683638409,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "14/(mean([13,11,14])-2*pstdev([13,11,14]))-1",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "deepseek-harness-quant-boll-lower-dev"
+      ]
+    },
+    {
+      "factor_id": "lib-reversal-williams",
+      "expected": -37.5,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "-100*(17-14)/(17-9)=-37.5",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "deepseek-harness-quant-wr"
+      ]
+    },
+    {
+      "factor_id": "lib-reversal-cci",
+      "expected": 109.09090909090914,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "TP=(H+L+C)/3；最近三个abs(TP_t-mean(TP[t-2:t]))再求均值；当前偏离除以0.015倍该尺度",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "deepseek-harness-quant-cci"
+      ]
+    },
+    {
+      "factor_id": "lib-volatility-return-std",
+      "expected": 0.20781536176574145,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "pstdev([13/10-1,11/13-1,14/11-1])",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-retvol"
+      ]
+    },
+    {
+      "factor_id": "lib-volatility-maximum-return",
+      "expected": 0.30000000000000004,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "max([0.3,-2/13,3/11])=0.3",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-rmax1-21d"
+      ]
+    },
+    {
+      "factor_id": "lib-volatility-intraday-range",
+      "expected": 0.46153846153846156,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "(17-11)/13",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "qlib-get-feature-config-klen"
+      ]
+    },
+    {
+      "factor_id": "lib-volatility-atr",
+      "expected": 5.333333333333333,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "TR最后三项[5,5,6]，平均16/3",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "quantaxis-qa-indicator-atr"
+      ]
+    },
+    {
+      "factor_id": "lib-volatility-price-dispersion",
+      "expected": 0.0890870806374748,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "pstdev([13,11,14])/14",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "qlib-get-feature-config-std"
+      ]
+    },
+    {
+      "factor_id": "lib-volatility-volume-weighted-move",
+      "expected": 0.34495823037420775,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "先算abs([0.3,-2/13,3/11])*[160,130,180]，再取总体标准差/均值",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "qlib-get-feature-config-wvma"
+      ]
+    },
+    {
+      "factor_id": "lib-liquidity-amihud",
+      "expected": 0.00012001353347507193,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "mean(abs([0.3,-2/13,3/11])/[2080,1430,2520])",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-ami-126d",
+        "pyanomaly-crspd-roll-126d"
+      ]
+    },
+    {
+      "factor_id": "lib-liquidity-turnover",
+      "expected": 0.015666666666666666,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "mean([.016,.013,.018])",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-turnover-126d",
+        "pyanomaly-crspd-roll-126d"
+      ]
+    },
+    {
+      "factor_id": "lib-liquidity-turnover-volatility",
+      "expected": 0.002054804667656325,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "pstdev([.016,.013,.018])",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-std-turn"
+      ]
+    },
+    {
+      "factor_id": "lib-liquidity-dollar-volume",
+      "expected": 2010.0,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "(2080+1430+2520)/3",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-dolvol-126d",
+        "pyanomaly-crspd-roll-126d"
+      ]
+    },
+    {
+      "factor_id": "lib-liquidity-price-volume-correlation",
+      "expected": 0.9994781386463157,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "corr([13,11,14],log([161,131,181]))，直接用标量总体协方差/标准差",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "qlib-get-feature-config-corr"
+      ]
+    },
+    {
+      "factor_id": "lib-liquidity-change-volume-correlation",
+      "expected": 0.9994601398146475,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "corr([13/10,11/13,14/11],log([160/110+1,130/160+1,180/130+1]))",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "qlib-get-feature-config-cord"
+      ]
+    },
+    {
+      "factor_id": "lib-value-book-market",
+      "expected": 0.36256851996867656,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "book_equity=463 / market_cap=1277",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-be-me"
+      ]
+    },
+    {
+      "factor_id": "lib-value-assets-market",
+      "expected": 0.826938136256852,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "total_assets=1056 / market_cap=1277",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-at-me"
+      ]
+    },
+    {
+      "factor_id": "lib-value-earnings-yield",
+      "expected": 0.09397024275646046,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "net_profit=120 / market_cap=1277",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-ni-me"
+      ]
+    },
+    {
+      "factor_id": "lib-value-sales-yield",
+      "expected": 0.5356303837118246,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "revenue=684 / market_cap=1277",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-sale-me"
+      ]
+    },
+    {
+      "factor_id": "lib-value-cashflow-yield",
+      "expected": 0.09866875489428348,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "operating_cash_flow=126 / market_cap=1277",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-ocf-me"
+      ]
+    },
+    {
+      "factor_id": "lib-value-rd-yield",
+      "expected": 0.06421299921691465,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "research_expense=82 / market_cap=1277",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-rd-me"
+      ]
+    },
+    {
+      "factor_id": "lib-value-debt-market",
+      "expected": 0.25606891151135475,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "total_debt=327 / market_cap=1277",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-debt-me"
+      ]
+    },
+    {
+      "factor_id": "lib-value-free-cashflow-yield",
+      "expected": 0.025841816758026624,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "(经营现金流-资本支出)/市值；全部金额单位一致",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-fcf-me"
+      ]
+    },
+    {
+      "factor_id": "lib-value-enterprise-book-market",
+      "expected": 0.4937062937062937,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "企业价值=market_cap+total_debt-cash；账面企业价值/企业价值",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-bev-mev"
+      ]
+    },
+    {
+      "factor_id": "lib-value-payout-yield",
+      "expected": 0.1182458888018794,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "(dividends+share_repurchases)/market_cap",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-eqpo-me"
+      ]
+    },
+    {
+      "factor_id": "lib-value-enterprise-ebitda-yield",
+      "expected": 0.13566433566433567,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "ebitda/(market_cap+total_debt-cash)",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-ebitda-mev"
+      ]
+    },
+    {
+      "factor_id": "lib-value-netdebt-market",
+      "expected": 0.11981205951448708,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "(total_debt-cash)/market_cap，现金缺失不默认为0",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-netdebt-me"
+      ]
+    },
+    {
+      "factor_id": "lib-quality-operating-margin",
+      "expected": 0.20614035087719298,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "ebit=141 / revenue=684",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-ebit-sale"
+      ]
+    },
+    {
+      "factor_id": "lib-quality-gross-profit-assets",
+      "expected": 0.26799242424242425,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "gross_profit=283 / total_assets=1056",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-gp-at"
+      ]
+    },
+    {
+      "factor_id": "lib-quality-roe",
+      "expected": 0.2591792656587473,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "net_profit=120 / book_equity=463",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-ni-be"
+      ]
+    },
+    {
+      "factor_id": "lib-quality-return-enterprise",
+      "expected": 0.19971671388101983,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "ebit=141 / enterprise_book_value=706",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-ebit-bev"
+      ]
+    },
+    {
+      "factor_id": "lib-quality-accrual-assets",
+      "expected": -0.09185606060606061,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "operating_accruals=-97 / total_assets=1056",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-oaccruals-at"
+      ]
+    },
+    {
+      "factor_id": "lib-quality-operating-leverage",
+      "expected": 0.3787878787878788,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "operating_expense=400 / total_assets=1056",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-opex-at"
+      ]
+    },
+    {
+      "factor_id": "lib-quality-enterprise-turnover",
+      "expected": 0.9688385269121813,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "revenue=684 / enterprise_book_value=706",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-sale-bev"
+      ]
+    },
+    {
+      "factor_id": "lib-quality-rd-sales",
+      "expected": 0.11988304093567251,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "research_expense=82 / revenue=684",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-rd-sale"
+      ]
+    },
+    {
+      "factor_id": "lib-quality-cash-assets",
+      "expected": 0.16477272727272727,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "cash=174 / total_assets=1056",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-cash-at"
+      ]
+    },
+    {
+      "factor_id": "lib-quality-current-ratio",
+      "expected": 1.8703703703703705,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "current_assets=404 / current_liabilities=216",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-currat"
+      ]
+    },
+    {
+      "factor_id": "lib-quality-receivables-turnover",
+      "expected": 4.1454545454545455,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "revenue=684 / receivables=165",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-salerec"
+      ]
+    },
+    {
+      "factor_id": "lib-quality-depreciation-ppe",
+      "expected": 0.30532212885154064,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "depreciation=109 / ppe=357",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-depr"
+      ]
+    },
+    {
+      "factor_id": "lib-quality-cash-profit-assets",
+      "expected": 0.35321969696969696,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "(ebitda+research_expense-operating_accruals)/total_assets，研发缺失不补0",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-cop-at"
+      ]
+    },
+    {
+      "factor_id": "lib-quality-accrual-profit",
+      "expected": -0.8083333333333333,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "operating_accruals/abs(net_profit)；以明确净利润替代来源nix口径",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-oaccruals-ni"
+      ]
+    },
+    {
+      "factor_id": "lib-quality-asset-turnover",
+      "expected": 0.652049571020019,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "revenue/mean(total_assets本期和上一观察期)",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-at-turnover"
+      ]
+    },
+    {
+      "factor_id": "lib-quality-quick-ratio",
+      "expected": 1.2314814814814814,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "(current_assets-inventory)/current_liabilities；无替代字段回填",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-quick"
+      ]
+    },
+    {
+      "factor_id": "lib-growth-asset-growth",
+      "expected": 0.013435700575815668,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "total_assets本期/上一观察期-1",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-at-gr1"
+      ]
+    },
+    {
+      "factor_id": "lib-growth-sales-growth",
+      "expected": 0.027027027027026973,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "revenue本期/上一观察期-1",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-sale-gr1"
+      ]
+    },
+    {
+      "factor_id": "lib-growth-capex-growth",
+      "expected": 0.1923076923076923,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "capital_expenditure本期/上一观察期-1",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-capx-gr1"
+      ]
+    },
+    {
+      "factor_id": "lib-growth-inventory-investment",
+      "expected": 0.014204545454545454,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "(inventory本期-inventory上期)/total_assets，明确采用来源JKP当期分母分支",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-inv-gr1a"
+      ]
+    },
+    {
+      "factor_id": "lib-growth-long-investment",
+      "expected": 0.013257575757575758,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "(long_term_investment本期-long_term_investment上期)/total_assets，明确采用来源JKP当期分母分支",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-lti-gr1a"
+      ]
+    },
+    {
+      "factor_id": "lib-growth-short-investment",
+      "expected": 0.014204545454545454,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "(short_term_investment本期-short_term_investment上期)/total_assets，明确采用来源JKP当期分母分支",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-sti-gr1a"
+      ]
+    },
+    {
+      "factor_id": "lib-growth-current-operating-assets",
+      "expected": 0.0,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "流动资产扣现金后经营资本的变化：先分别计算本期/上期组成金额，差值除当期总资产",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-coa-gr1a"
+      ]
+    },
+    {
+      "factor_id": "lib-growth-current-operating-liabilities",
+      "expected": -0.003787878787878788,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "流动负债扣短债后经营融资的变化：先分别计算本期/上期组成金额，差值除当期总资产",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-col-gr1a"
+      ]
+    },
+    {
+      "factor_id": "lib-growth-working-capital",
+      "expected": 0.003787878787878788,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "经营流动资产减经营流动负债的净投入变化：先分别计算本期/上期组成金额，差值除当期总资产",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-cowc-gr1a"
+      ]
+    },
+    {
+      "factor_id": "lib-growth-noncurrent-operating-assets",
+      "expected": -0.017045454545454544,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "资产扣流动资产和长期金融投资后的变化：先分别计算本期/上期组成金额，差值除当期总资产",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-ncoa-gr1a"
+      ]
+    },
+    {
+      "factor_id": "lib-growth-noncurrent-operating-liabilities",
+      "expected": -0.014204545454545454,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "负债扣流动负债与长期金融债后的变化：先分别计算本期/上期组成金额，差值除当期总资产",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-ncol-gr1a"
+      ]
+    },
+    {
+      "factor_id": "lib-growth-net-noncurrent-operating",
+      "expected": -0.002840909090909091,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "非流动经营资产扣经营负债后的净变化：先分别计算本期/上期组成金额，差值除当期总资产",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-nncoa-gr1a"
+      ]
+    },
+    {
+      "factor_id": "lib-growth-financial-liabilities",
+      "expected": 0.029356060606060608,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "债务加优先股金融融资余额变化：先分别计算本期/上期组成金额，差值除当期总资产",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-fnl-gr1a"
+      ]
+    },
+    {
+      "factor_id": "lib-growth-net-financial-assets",
+      "expected": -0.001893939393939394,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "金融投资扣金融负债后的净持有变化：先分别计算本期/上期组成金额，差值除当期总资产",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-nfna-gr1a"
+      ]
+    },
+    {
+      "factor_id": "lib-growth-rd-capital",
+      "expected": 0.17803030303030304,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "[1,.8,.6,.4,.2]分别乘当前及前四期研发后求和，再除总资产",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-rd5-at"
+      ]
+    },
+    {
+      "factor_id": "lib-growth-abnormal-capex",
+      "expected": 0.35054296310339117,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "本期capex/revenue除以前三期capex/revenue均值再减1",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-capex-abn"
+      ]
+    },
+    {
+      "factor_id": "lib-industry-book-market",
+      "expected": 0.024977386877858332,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "AAA与BBB同属IND-A，先各自计算定义值，AAA减两者算术均值；CCC的单成员行业不产生值",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-bm-ia"
+      ]
+    },
+    {
+      "factor_id": "lib-industry-cashflow-market",
+      "expected": 0.0033714566874115393,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "AAA与BBB同属IND-A，先各自计算定义值，AAA减两者算术均值；CCC的单成员行业不产生值",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-cfp-ia"
+      ]
+    },
+    {
+      "factor_id": "lib-industry-employment-growth",
+      "expected": -7.228915662649271e-05,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "AAA与BBB同属IND-A，先各自计算定义值，AAA减两者算术均值；CCC的单成员行业不产生值",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-chempia"
+      ]
+    },
+    {
+      "factor_id": "lib-industry-size",
+      "expected": -287.355,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "AAA与BBB同属IND-A，先各自计算定义值，AAA减两者算术均值；CCC的单成员行业不产生值",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-mve-ia"
+      ]
+    },
+    {
+      "factor_id": "lib-event-equity-finance",
+      "expected": -0.05113636363636364,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "(share_issuance-share_repurchases-dividends)/total_assets，采用来源非JKP分红扣除分支",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-eqnetis-at"
+      ]
+    },
+    {
+      "factor_id": "lib-event-debt-finance",
+      "expected": 0.08996212121212122,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "(debt_issuance-debt_repayment+short_term_debt_change)/total_assets；不启用缺失回退",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-dbnetis-at"
+      ]
+    },
+    {
+      "factor_id": "lib-event-share-issuance",
+      "expected": 0.09859154929577474,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "shares_outstanding本期/上期-1",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-chcsho-12m"
+      ]
+    },
+    {
+      "factor_id": "lib-event-composite-issuance",
+      "expected": -0.23345822184451026,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "log(market_cap本期/上期)-log(1+total_return)；总收益是用户声明的已实现含分红收益",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "pyanomaly-c-eqnpo-60m"
+      ]
+    },
+    {
+      "factor_id": "lib-etf-macro-correlation",
+      "expected": 0.9991507429465937,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "总体协方差([.04,-.02,.03],[.025,-.015,.02])除两者总体标准差",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "deepseek-harness-quant-corr-stats"
+      ]
+    },
+    {
+      "factor_id": "lib-etf-macro-beta",
+      "expected": 1.4736842105263157,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "总体Cov(strategy,benchmark)/总体Var(benchmark)",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "deepseek-harness-quant-corr-stats-beta"
+      ]
+    },
+    {
+      "factor_id": "lib-etf-macro-term-spread",
+      "expected": 0.013000000000000001,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "0.039-0.026=0.013，单位为比例百分点对应的ratio",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "deepseek-harness-quant-load-panel"
+      ]
+    },
+    {
+      "factor_id": "lib-etf-macro-social-finance-trend",
+      "expected": 1.1604938271604937,
+      "instrument": "AAA",
+      "observed_at": "2026-01-09T16:00:00Z",
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 1e-10,
+      "calculation_reason": "mean([160,130,180])/mean([90,140,110,160,130,180])",
+      "independent_method": "Python标准库标量算术/总体矩，无生产DSL、pandas或上游执行。",
+      "source_card_ids": [
+        "deepseek-harness-quant-macro-score"
+      ]
+    }
+  ]
+}

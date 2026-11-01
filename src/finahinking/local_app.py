@@ -1406,6 +1406,27 @@ class LocalApplication:
         except (ValueError, TypeError):
             return 422, "application/json", {"error": "因子输入或证据绑定无效，请重新读取定义和范围。"}
 
+    def _factor_library_route(self, method, clean, body, query):
+        if clean not in {"/research/factor-library", "/api/research/factor-library", "/api/research/factor-library/studies"}:
+            return None
+        try:
+            if clean == "/api/research/factor-library/studies" and method == "POST":
+                denied = self._data_write_guard(body)
+                if denied is not None:
+                    return denied
+                values = {key: value for key, value in (body or {}).items() if key != "_csrf"}
+                return 202, "application/json", self.research_service.create_library_factor_study(values)
+            if method != "GET" or clean.endswith("/studies"):
+                return 405, "application/json", {"error": "请使用明确的因子库读取或研究提交接口。"}
+            from .research.factor_library import FactorLibrary
+            library = FactorLibrary()
+            if clean.startswith("/api/"):
+                return 200, "application/json", {"inventory": library.inventory(), "formulas": library.entries(), "source_cards": library.cards()}
+            from .research.factor_library_page import library_page
+            return 200, "text/html; charset=utf-8", self.render_shell("/research/experiments", "因子定义库", library_page(self.csrf_token, query or {}))
+        except (ValueError, TypeError, KeyError):
+            return 422, "application/json", {"error": "因子定义、面板合同或附件未通过校验，请核对版本、字段、单位与样本长度。"}
+
     def _research_jobs_route(self, method, clean, body, query):
         if not (clean in {"/api/research/readiness", "/api/research/jobs", "/api/research/experiments", "/api/research/learning"} or clean.startswith(("/api/research/panels/", "/api/research/jobs/", "/api/research/snapshots", "/api/research/experiments/", "/api/research/learning/"))):
             return None
@@ -1753,6 +1774,9 @@ class LocalApplication:
         asset_response = self._asset_workspace_route(method, clean, query)
         if asset_response is not None:
             return asset_response
+        library_response = self._factor_library_route(method, clean, body, query)
+        if library_response is not None:
+            return library_response
         factor_response = self._factor_detail_route(method, clean, body, query)
         if factor_response is not None:
             return factor_response

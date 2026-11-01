@@ -48,3 +48,17 @@
 | 未逐项列举下游 | `FINATHINK_REQUIRE_BROWSER=1 python3 -m pytest -q`；`python3 -m ruff check src tests scripts` | 冻结生产源码后运行全量；前端build/test/perf保留 |
 
 命令在已授权的隔离工作树内执行，使用本地合成数据。安装门禁下载公开运行依赖；不调用用户API或模型账户。结果见[Phase23验收](reviews/2026-10-31-finathink-phase23-review.md)。
+
+## Phase24 因子库传播检查
+
+基线为已发布Phase23 `2678d1a`。依赖证据：`rg -n 'FactorSpec|resolve_factor_spec|run_factor_validation|ResearchFieldStore' src/finahinking/research`；新增目录/执行入口实现后复核 `rg -n 'FactorLibrary|factor_library|library_study' src tests scripts`。来源、内容和可执行定义分别计数，旧10治理试点继续作为独立兼容回归。
+
+| 模块与下游 | 回归命令 | 必须验证 |
+| --- | --- | --- |
+| 因子来源/公式 → 目录/旧引用 | `python3 -m pytest tests/research/test_factor_library.py tests/research/test_factor_catalog.py tests/research/test_factor_provenance.py -q` | AST/单位/作用域去重、缺公式只读、旧ID与治理 |
+| 公式/面板 → 确定性数值 | `python3 -m pytest tests/research/test_factor_library_numerics.py tests/research/test_panel_operators.py tests/research/test_panel_dsl.py -q` | 独立预期、逐字段缺失、错误单位、未来变更 |
+| 因子卡 → 真实任务/验证/报告 | `python3 -m pytest tests/research/test_factor_library_journey.py tests/research/test_factor_validation_pipeline.py tests/research/test_method_factor_journey.py -q` | 十家族worker、绑定、取消/恢复与旧流程 |
+| 资源登记 → 全新wheel | `python3 -m pytest tests/validation/test_research_asset_install.py tests/validation/test_artifact_install.py -q` | 逐字节许可/来源、安装后真实HTTP与worker |
+| 所有间接下游 | `FINATHINK_REQUIRE_BROWSER=1 python3 -m pytest -q`；`python3 -m ruff check src tests scripts`；`npm --prefix frontend run build`；`npm --prefix frontend test`；`npm --prefix frontend run perf` | 最终生产源码冻结后运行完整门禁；新增浏览器测试加入CI |
+
+命令在本任务已授权的隔离工作树执行；测试数据为本地合成数据，安装只获取公开依赖。实际结果和限制在Phase24验收记录中按执行事实填写，不以预计数量或文档存在代替通过证据。

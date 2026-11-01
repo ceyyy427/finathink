@@ -1,3 +1,4 @@
+import { mountFactorLibrary } from './factor-library.js';
 import { mountLearningReliability } from './learning-reliability.js';
 import { mountTaskMaintenance } from './task-maintenance.js';
 import { mountResearchReproduction } from './research-reproduction.js';
@@ -593,6 +594,7 @@ if (typeof document !== 'undefined') {
   document.querySelectorAll('[data-interface-workspace]').forEach((root) => { mountInterfaceDiagnostics(root); });
   document.querySelectorAll('[data-asset-workspace]').forEach((root) => { mountAssetWorkspace(root); });
   document.querySelectorAll('[data-factor-detail]').forEach((root) => { mountFactorDetail(root); });
+  document.querySelectorAll('[data-library-study]').forEach((form) => { mountFactorLibrary(form); });
   document.querySelectorAll('[data-experiment-workspace]').forEach((root) => { mountExperimentWorkspace(root); });
   document.querySelectorAll('[data-learning-workspace]').forEach((root) => { mountLearningReview(root); });
   document.querySelectorAll('[data-provider-form]').forEach((form) => { mountProviderSettings(form); });

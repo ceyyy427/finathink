@@ -133,11 +133,16 @@ class FactorStudyStore:
                 start, end = [pd.Timestamp(value) for value in row["spec"]["test_period"]]
                 if any(pd.isna(value) or value.tzinfo is None for value in (start, end)) or start >= end:
                     raise ValueError("test period requires ordered timezone-aware boundaries")
+                instruments = row["spec"].get("panel_contract", {}).get("instrument_ids", [row["spec"]["instrument"]])
                 instrument = row["spec"]["instrument"]
-                conflict = db.execute("SELECT 1 FROM factor_test_claims WHERE scope_id=? AND instrument=? AND start_ns<=? AND end_ns>=? LIMIT 1", (self.scope_id, instrument, end.value, start.value)).fetchone()
-                if conflict is not None:
-                    raise ValueError("overlapping test labels were already consumed")
-                db.execute("INSERT INTO factor_test_claims VALUES (?,?,?,?,?)", (self.scope_id, study_id, instrument, start.value, end.value))
+                # A panel holdout consumes each asset, including overlap with legacy studies.
+                for asset in instruments:
+                    conflict = db.execute("SELECT 1 FROM factor_test_claims WHERE scope_id=? AND instrument=? AND start_ns<=? AND end_ns>=? LIMIT 1", (self.scope_id, asset, end.value, start.value)).fetchone()
+                    if conflict is not None:
+                        raise ValueError("overlapping test labels were already consumed")
+                for asset in instruments:
+                    claim_id = study_id if asset == instrument else study_id + ":" + asset
+                    db.execute("INSERT INTO factor_test_claims VALUES (?,?,?,?,?)", (self.scope_id, claim_id, asset, start.value, end.value))
                 db.execute("UPDATE factor_studies SET test_key=?,state='TEST_RESERVED' WHERE scope_id=? AND study_id=?", (key, self.scope_id, study_id))
         return self.get(study_id)
 

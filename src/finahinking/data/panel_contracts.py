@@ -50,6 +50,18 @@ _PACKS = {
                       'macro_value': ('number', {'index_points'}, 'asof'),
                       'policy_regime': ('text', {'policy_category'}, 'asof')},
 }
+# Phase24 adds only explicitly declared, available-at observations. Monetary
+# statement values are carried forward after publication, never from report end.
+for _name in ['revenue', 'operating_cash_flow', 'capital_expenditure', 'research_expense', 'total_debt', 'cash', 'enterprise_book_value', 'dividends', 'share_repurchases', 'share_issuance', 'ebitda', 'ebit', 'gross_profit', 'operating_expense', 'operating_accruals', 'current_assets', 'current_liabilities', 'inventory', 'receivables', 'ppe', 'depreciation', 'long_term_investment', 'short_term_investment', 'total_liabilities', 'long_term_debt', 'short_term_debt', 'preferred_stock', 'debt_issuance', 'debt_repayment', 'short_term_debt_change']:
+    _PACKS['financials'][_name] = ('number', CURRENCIES, 'asof')
+_PACKS['financials']['employees'] = ('number', {'count'}, 'asof')
+_PACKS['financials']['shares_outstanding'] = ('number', {'shares'}, 'asof')
+for _name in ('bond_yield_long', 'bond_yield_short'):
+    _PACKS['macro_policy'][_name] = ('number', {'ratio'}, 'asof')
+_PACKS['macro_policy']['social_finance'] = ('number', CURRENCIES, 'asof')
+for _name in ('benchmark_return', 'strategy_return', 'total_return'):
+    _PACKS['etf'][_name] = ('number', {'ratio'}, 'exact')
+
 FIELD_PACKS = MappingProxyType({k: tuple(v) for k, v in _PACKS.items()})
 FIELD_DEFINITIONS = MappingProxyType({name: (pack, kind, frozenset(units), alignment)
     for pack, fields in _PACKS.items() for name, (kind, units, alignment) in fields.items()})

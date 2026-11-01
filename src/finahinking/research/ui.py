@@ -377,6 +377,10 @@ def render_status_wall_html(model: Mapping[str, Any], *, title: str = "Finathink
         rows = "".join(f'<tr><th scope="row">{esc(item.get("experiment_id"))}</th><td>{esc(item.get("parameters", {}).get("window"))}</td><td>{esc(item.get("failure_reason") or item.get("metrics", {}).get("information_coefficient"))}</td><td>{esc(item.get("metrics", {}).get("sample_size"))}</td></tr>' for item in factor_study.get("summaries", []))
         test = factor_study.get("test_evaluation") or {}
         evidence_html += f'<section aria-labelledby="factor-study"><h2 id="factor-study">因子研究实验 · PAPER-ONLY</h2><p>章程 {esc(factor_study.get("study_id"))} · 快照 {esc(factor_study.get("snapshot_ref"))}</p><p>验证排名不使用测试指标。测试状态 {esc(test.get("oos_status", "HIDDEN"))}；PASS 表示证据可计算，不代表盈利。审核不自动写入生产因子库。</p><table><thead><tr><th>候选</th><th>窗口</th><th>验证 IC / 失败原因</th><th>样本</th></tr></thead><tbody>{rows}</tbody></table></section>'
+        library = factor_study.get("library_validation")
+        if isinstance(library, Mapping):
+            details = {key: library.get(key) for key in ("factor_spec", "formula_fingerprint", "panel_fingerprint", "policy_fingerprint", "validation_policy_fingerprint", "source_card_ids", "status", "missing_reason", "evaluations", "backtest", "use_status")}
+            evidence_html += '<section aria-labelledby="library-evidence"><h2 id="library-evidence">因子库定义与量化证据</h2><p>公式、输入面板、策略规则与来源引用绑定当前运行；测试数据保持一次性读取。</p><details><summary>查看每资产 IC、衰减与纸面净值账本</summary><pre>' + esc(json.dumps(details, ensure_ascii=False, sort_keys=True)) + '</pre></details></section>'
     if isinstance(model_research, Mapping):
         roles = "".join(f'<li><strong>{esc(item.get("role"))} · {esc(item.get("status"))}</strong><p>{esc(" / ".join(item.get("claims", [])))}</p></li>' for item in model_research.get("roles", []))
         synthesis = model_research.get("synthesis", {})
