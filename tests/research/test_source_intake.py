@@ -174,6 +174,15 @@ def test_nested_license_is_discovered_even_when_not_in_reading_lock(source_tree)
     assert audit["rights_status"] == "REVIEW_REQUIRED"
 
 
+def test_readme_cannot_be_declared_as_a_license(source_tree):
+    root, record, modules = source_tree
+    record["license_path"] = "README.md"
+    audit = _api().audit_source(root, _snapshot(record, modules))
+    assert audit["status"] == "BLOCKED"
+    assert audit["declared_license_paths"] == ["README.md"]
+    assert "INVALID_DECLARED_LICENSE" in {e["code"] for e in audit["errors"]}
+
+
 def test_module_map_covers_both_real_trees_from_frozen_git_inventory():
     api = _api()
     root = Path(__file__).resolve().parents[2]

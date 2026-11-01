@@ -14,6 +14,9 @@
       "verification_scope": "COMMITTED_INVENTORY_AND_LOCKED_ARTIFACTS",
       "license_observed": "MIT",
       "tracked_file_count": 573,
+      "declared_license_paths": [
+        "LICENSE"
+      ],
       "modules": [
         {
           "module": ".github",
@@ -762,6 +765,9 @@
       "verification_scope": "COMMITTED_INVENTORY_AND_LOCKED_ARTIFACTS",
       "license_observed": "MIT_WITH_RESEARCH_NOTE",
       "tracked_file_count": 411,
+      "declared_license_paths": [
+        "LICENSE"
+      ],
       "modules": [
         {
           "module": ".gitignore",
@@ -1396,6 +1402,9 @@
       "verification_scope": "COMMITTED_INVENTORY_AND_LOCKED_ARTIFACTS",
       "license_observed": "MIT",
       "tracked_file_count": 643,
+      "declared_license_paths": [
+        "LICENSE"
+      ],
       "modules": [
         {
           "module": ".commitlintrc.js",
@@ -1810,6 +1819,9 @@
       "verification_scope": "COMMITTED_INVENTORY_AND_LOCKED_ARTIFACTS",
       "license_observed": "Apache-2.0",
       "tracked_file_count": 50,
+      "declared_license_paths": [
+        "LICENSE"
+      ],
       "modules": [
         {
           "module": ".flake8",
@@ -2072,6 +2084,9 @@
       "verification_scope": "COMMITTED_INVENTORY_AND_LOCKED_ARTIFACTS",
       "license_observed": "MIT",
       "tracked_file_count": 129,
+      "declared_license_paths": [
+        "LICENSE.txt"
+      ],
       "modules": [
         {
           "module": ".gitignore",
@@ -2293,6 +2308,9 @@
       "verification_scope": "COMMITTED_INVENTORY_AND_LOCKED_ARTIFACTS",
       "license_observed": "MIT",
       "tracked_file_count": 920,
+      "declared_license_paths": [
+        "LICENSE"
+      ],
       "modules": [
         {
           "module": ".bumpversion.cfg",
@@ -2667,6 +2685,9 @@
       "verification_scope": "COMMITTED_INVENTORY_AND_LOCKED_ARTIFACTS",
       "license_observed": "MIT",
       "tracked_file_count": 160,
+      "declared_license_paths": [
+        "LICENSE"
+      ],
       "modules": [
         {
           "module": ".copier-answers.yaml",

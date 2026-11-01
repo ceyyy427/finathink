@@ -118,6 +118,7 @@ def audit_source(root: Path, snapshot: SourceSnapshot) -> dict:
         "execution_policy": "SOURCE_TEXT_ONLY", "rights_status": "REVIEW_REQUIRED",
         "verification_scope": "COMMITTED_INVENTORY_AND_LOCKED_ARTIFACTS",
         "license_observed": snapshot.license_observed, "tracked_file_count": 0,
+        "declared_license_paths": list(snapshot.license_paths),
         "modules": [], "artifacts": [], "license_artifacts": [], "errors": [],
     }
 
@@ -153,6 +154,11 @@ def audit_source(root: Path, snapshot: SourceSnapshot) -> dict:
             error("MODULE_REFERENCE_MISMATCH", module.module)
         result["modules"].append(asdict(module))
     notices = {p for p in tree if _is_notice(p)}
+    if (not set(snapshot.license_paths) <= notices or not any(
+        re.match(r"^(license|licence|copying)([._-].*)?$", Path(p).name, re.IGNORECASE)
+        for p in snapshot.license_paths
+    )):
+        error("INVALID_DECLARED_LICENSE")
     declared = {a.path: a for a in snapshot.artifacts}
     total = 0
     for path in sorted(set(declared) | notices):

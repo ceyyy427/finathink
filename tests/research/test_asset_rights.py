@@ -134,6 +134,19 @@ def test_withdrawn_notice_review_blocks_dependent_resource(tmp_path):
         ResearchAssetCatalog(tmp_path).read_text("guide")
 
 
+def test_apache_resource_cannot_substitute_mit_license(tmp_path):
+    manifest = _v2_catalog(tmp_path)
+    ref = manifest["resources"][0]
+    ref["license_ref"] = "license"
+    review = next(r for r in manifest["rights_reviews"] if r["resource_id"] == "guide")
+    review["license_refs"] = [_material(next(r for r in manifest["resources"]
+                                            if r["resource_id"] == "license"))]
+    _save(tmp_path, manifest)
+    with pytest.raises(AssetLoadError) as exc:
+        ResearchAssetCatalog(tmp_path).read_text("guide")
+    assert exc.value.code == "LICENSE_ID_MISMATCH"
+
+
 def _audit(*, nested=False):
     license_hash, nested_hash, file_hash = "a" * 64, "b" * 64, "c" * 64
     paths = ["factors/LICENSE", "LICENSE"] if nested else ["LICENSE"]
@@ -164,6 +177,19 @@ def test_nested_license_overrides_repository_label():
     result = api.plan_asset_import(_audit(nested=True), existing_catalog=ResearchAssetCatalog.packaged())
     assert not result["eligible"]
     assert result["blocked"][0]["reason"] == "UNREVIEWED_APPLICABLE_NOTICE"
+
+
+@pytest.mark.parametrize("restriction", ["All rights reserved; no redistribution",
+                                          "Commons Clause License Condition",
+                                          "SPDX-License-Identifier: GPL-3.0-only"])
+def test_inspected_nested_restriction_cannot_be_labelled_mit(restriction):
+    audit = _audit(nested=True)
+    audit["license_artifacts"][1]["embedded_rights"] = [restriction]
+    audit["file_reviews"][0]["inspected_notices"].append(
+        {"path": "factors/LICENSE", "sha256": "b" * 64})
+    result = _api().plan_asset_import(audit, existing_catalog=ResearchAssetCatalog.packaged())
+    assert not result["eligible"]
+    assert result["blocked"][0]["reason"] == "EMBEDDED_RIGHTS_CONFLICT"
 
 
 def test_source_import_plan_is_per_file_and_has_no_execution_authority():
@@ -214,3 +240,31 @@ def test_all_legacy_resources_and_unresolved_definitions_are_reconciled():
     assert len(report["unresolved_definitions"]) == 8
     assert all(d["status"] == "UNRESOLVED" and d["reason"] for d in report["unresolved_definitions"])
     assert api.reconcile_resources(catalog, report)["status"] == "VERIFIED"
+
+
+@pytest.mark.parametrize("change", ["version", "path", "omitted_id", "omitted_definition",
+                                     "rewritten_baseline"])
+def test_reconciliation_detects_identity_or_baseline_drift(tmp_path, change):
+    from tests.research.test_method_context import _root
+
+    root = _root(tmp_path)
+    manifest_path = root / "provenance/upstream-lock.json"
+    manifest = json.loads(manifest_path.read_text())
+    report = json.loads((root / "provenance/resource-reconciliation.v1.json").read_text())
+    ref = next(r for r in manifest["resources"] if r["resource_id"] == "method-factor-mining-workflow")
+    if change == "version":
+        ref["version"] = "99.0.0"
+    elif change == "path":
+        old = root / ref["path"]
+        ref["path"] = "new-location.md"
+        (root / ref["path"]).write_bytes(old.read_bytes())
+    elif change == "omitted_id":
+        report["resources"].pop()
+    elif change == "omitted_definition":
+        report["unresolved_definitions"].pop()
+    else:
+        next(r for r in report["resources"]
+             if r["resource_id"] == ref["resource_id"])["previous_version"] = "99.0.0"
+    _save(root, manifest)
+    result = _api().reconcile_resources(ResearchAssetCatalog(root), report)
+    assert result["status"] == "BLOCKED" and result["errors"]

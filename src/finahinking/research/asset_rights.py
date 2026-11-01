@@ -100,11 +100,15 @@ def plan_asset_import(audit: dict, *, existing_catalog) -> dict:
                        or notices[p].get("sha256") != inspected[p] for p in applicable)):
             append("blocked", "UNREVIEWED_APPLICABLE_NOTICE")
             continue
-        embedded = artifact.get("embedded_rights", [])
+        embedded = list(artifact.get("embedded_rights", []))
+        for path in applicable:
+            embedded.extend(notices[path].get("embedded_rights", []))
         identifiers = [identifier for line in embedded for identifier in re.findall(
             r"SPDX-License-Identifier:\s*([^\s*]+)", line)]
         if (any(i != review["license_id"] for i in identifiers)
-                or any("commons clause" in line.casefold() for line in embedded)):
+                or any(re.search(r"commons clause|all rights reserved|no redistribution|"
+                                 r"redistribution (?:is )?(?:not permitted|prohibited|forbidden)|"
+                                 r"non[- ]commercial", line, re.IGNORECASE) for line in embedded)):
             append("blocked", "EMBEDDED_RIGHTS_CONFLICT")
             continue
         append("eligible", "REVIEWED_ADAPTATION_CANDIDATE")
@@ -119,16 +123,33 @@ def reconcile_resources(catalog, baseline: dict) -> dict:
     resources = baseline.get("resources")
     if not isinstance(resources, list) or len(resources) > 4096:
         raise ValueError("resource reconciliation records required")
+    # The installed, hash-and-rights checked baseline is the authority, not a
+    # caller-edited subset that could silently omit an unavailable old resource.
+    frozen = json.loads(catalog.read_text("resource-reconciliation"))
+    expected = {r["resource_id"]: r for r in frozen["resources"]}
     seen, errors = set(), []
+    if (baseline.get("schema_version") != frozen["schema_version"]
+            or baseline.get("baseline_commit") != frozen["baseline_commit"]):
+        errors.append({"code": "RECONCILIATION_BASELINE_MISMATCH"})
     for item in resources:
         rid = item["resource_id"]
         if rid in seen:
             raise ValueError("duplicate reconciliation resource")
         seen.add(rid)
+        original = expected.get(rid)
+        if original is None or any(item.get(key) != original[key] for key in (
+            "previous_sha256", "previous_availability", "previous_version", "previous_path",
+        )):
+            errors.append({"resource_id": rid, "code": "RECONCILIATION_BASELINE_MISMATCH"})
+    if seen != set(expected):
+        errors.append({"code": "RECONCILIATION_SET_MISMATCH"})
+    for rid, item in expected.items():
         try:
             current = catalog.get_resource(rid)
             if (current.sha256 != item["previous_sha256"]
-                    or current.availability != item["previous_availability"]):
+                    or current.availability != item["previous_availability"]
+                    or current.version != item["previous_version"]
+                    or current.path != item["previous_path"]):
                 errors.append({"resource_id": rid, "code": "LEGACY_IDENTITY_CHANGED"})
             if current.availability == "PACKAGED":
                 catalog.read_text(rid)
@@ -136,7 +157,9 @@ def reconcile_resources(catalog, baseline: dict) -> dict:
             errors.append({"resource_id": rid, "code": "LEGACY_RESOURCE_UNREADABLE"})
     definitions = {d["definition_id"]: d for d in json.loads(
         catalog.read_text("source-definitions"))["definitions"]}
-    for previous in baseline.get("unresolved_definitions", []):
+    if baseline.get("unresolved_definitions") != frozen["unresolved_definitions"]:
+        errors.append({"code": "DEFINITION_BASELINE_MISMATCH"})
+    for previous in frozen["unresolved_definitions"]:
         current = definitions.get(previous["definition_id"])
         if current is None or current["definition_status"] != previous["status"]:
             errors.append({"definition_id": previous["definition_id"],

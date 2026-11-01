@@ -218,6 +218,9 @@ class ResearchAssetCatalog:
         # an upstream NOTICE. It is labelled as ours, never fabricated as upstream.
         if ref.license_id == "Apache-2.0" and not review.notice_refs:
             raise AssetLoadError("NOTICE_MISSING", ref.resource_id)
+        primary_license = self.get_resource(ref.license_ref)
+        if primary_license.kind != "license" or primary_license.license_id != ref.license_id:
+            raise AssetLoadError("LICENSE_ID_MISMATCH", ref.resource_id)
         return review
 
     def _checked_bytes(self, ref, max_bytes):
