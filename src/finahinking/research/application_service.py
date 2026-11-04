@@ -256,6 +256,37 @@ def run_local_research_stage(invocation, checkpoint_ref, publish_checkpoint, *, 
                 budget.charge_bytes(len(json.dumps(inputs).encode("utf-8")))
         except (KeyError, ValueError, OSError, TypeError):
             return {"status": "blocked", "failure_kind": "CONTEXT_INTEGRITY_FAILED"}
+    discovery = spec.get("discovery")
+    discovery_driver = None
+    if discovery is not None:
+        from types import SimpleNamespace
+
+        from .asset_catalog import ResearchAssetCatalog
+        from .discovery_planner import open_knowledge
+        from .discovery_runtime import DiscoveryDriver, preview_discovery
+
+        try:
+            provider = inputs.get("discovery_provider") if spec.get("execution_mode") == "provider-grounded" else None
+            preview_service = SimpleNamespace(snapshots=SnapshotStore(root / "snapshots"),
+                learning=SimpleNamespace(store=LearningReviewStore(queue, root, scope_id=spec["scope_id"])))
+            blueprint = preview_discovery(preview_service, discovery["inputs"], frozen_provider=provider)
+            if blueprint != discovery["blueprint"] or blueprint["status"] != "READY":
+                raise ValueError("discovery identity changed")
+            from finahinking.data.panel_contracts import PanelContract
+
+            contract = PanelContract.from_dict(discovery["inputs"]["contract"])
+            frame = preview_service.snapshots.build_panel(contract, discovery["inputs"].get("attachment_refs", [])).frame
+            if publication_before is not None:
+                frame = frame[frame.index.get_level_values("observed_at") < publication_before]
+            fields = [field for field in frame if len(frame) and frame[field].notna().all()]
+            with open_knowledge(ResearchAssetCatalog.packaged()) as knowledge:
+                discovery_driver = DiscoveryDriver(request, blueprint, knowledge, available_fields=fields)
+            if provider is None:
+                driver = discovery_driver
+            else:
+                driver.discovery = discovery_driver
+        except (KeyError, OSError, TypeError, ValueError):
+            return {"status": "blocked", "failure_kind": "CONTEXT_INTEGRITY_FAILED"}
     result = ResearchOrchestrator().run(request, driver, tools, analyst_pool=AnalystPool(), manager=manager, run_control=Control(), checkpoint_writer=checkpoint)
     if budget is not None and budget.resource_failures:
         checkpoint(result.state)
@@ -291,6 +322,11 @@ def run_local_research_stage(invocation, checkpoint_ref, publish_checkpoint, *, 
 
         tools.analysis["strategy_study"] = execute_bound_strategy(
             SnapshotStore(root / "snapshots"), spec["strategy_study"], snapshot, policy_record)
+    if discovery is not None:
+        product = tools.analysis["factor_study" if binding is not None else "strategy_study"]
+        model = tools.analysis.get("model_research", {})
+        tools.analysis["discovery"] = discovery_driver.evidence(
+            result.state.analyst_reports, product, calls=model.get("calls", ()), synthesis=model.get("synthesis"))
     if budget is not None:
         budget.check_wall()
     manifest = ReportBundleWriter().write(result, root / "reports" / f"attempt-{attempt_id}", quant_analytics=tools.analysis)
@@ -385,12 +421,22 @@ class ResearchApplicationService:
             raise ValueError("budget exceeds local resource limits")
         return limits
 
+    def preview_discovery(self, values):
+        from .discovery_runtime import preview_discovery
+
+        return preview_discovery(self, values)
+
+    def run_discovery(self, values):
+        from .discovery_runtime import run_discovery
+
+        return run_discovery(self, values)
+
     def readiness(self, values):
         from .readiness import research_readiness
 
         return research_readiness(self, values)
 
-    def submit(self, values, *, factor_study=None, rerun_of=None, strategy_study=None):
+    def submit(self, values, *, factor_study=None, rerun_of=None, strategy_study=None, discovery=None):
         if not isinstance(values, dict):
             raise TypeError("research submission must be an object")
         if set(values) - {"idempotency_key", "snapshot_ref", "question", "instrument", "as_of", "model_config_ref", "budget", "materials", "allow_model_calls", "policy_ref"}:
@@ -447,7 +493,7 @@ class ResearchApplicationService:
         if strategy_study is not None:
             from dataclasses import replace
 
-            if config is not None or factor_study is not None or strategy_study["policy_digest"] != policy_fingerprint:
+            if (config is not None and discovery is None) or factor_study is not None or strategy_study["policy_digest"] != policy_fingerprint:
                 raise ValueError("策略研究需要冻结的离线执行合同")
             plan = replace(request.research_plan, validation_spec={**request.research_plan.validation_spec,
                            "strategy_study": strategy_study})
@@ -463,6 +509,12 @@ class ResearchApplicationService:
             for role in (*_ROLES, "research"):
                 build_context_bundle(request, snapshot, role, materials=materials)
             inputs = {"schema_version": 1, "scope_id": self.scope_id, "provider": config._stored(), "materials": materials}
+            if discovery is not None:
+                from .discovery_runtime import provider_binding
+
+                if discovery["blueprint"]["provider"] != provider_binding(config, values.get("materials", [])):
+                    raise ValueError("模型配置或资料已经改变，请重新预览")
+                inputs["discovery_provider"] = discovery["blueprint"]["provider"]
             reference = _model_input_digest(inputs)
             target = self.root / "model-inputs" / f"{reference}.json"
             try:
@@ -472,6 +524,13 @@ class ResearchApplicationService:
                     raise ValueError("model input integrity mismatch") from None
             plan = replace(request.research_plan, validation_spec={**request.research_plan.validation_spec, "context_input_ref": reference})
             request = replace(request, research_plan=plan, config_digest=stable_digest({"base": request.config_digest, "context_input_ref": reference}))
+        if discovery is not None:
+            from dataclasses import replace
+
+            plan = replace(request.research_plan, validation_spec={**request.research_plan.validation_spec,
+                           "discovery": discovery})
+            request = replace(request, research_plan=plan,
+                              config_digest=stable_digest({"base": request.config_digest, "discovery": discovery}))
         record = self.runtime.submit(request, idempotency_key=f"application:{stable_digest({'scope': self.scope_id, 'key': key})[:40]}", limits=limits)
         return self.get_job(record.job_id)
 
@@ -491,6 +550,21 @@ class ResearchApplicationService:
         return {"snapshot_ref": request.snapshot_ref, "attachment_ref": reference,
                 "fields": sorted(attachment.units), "status": "SAVED_NOT_EVALUATED", "paper_only": True}
 
+    def _discovery_handoff(self, request, record, *, current=True):
+        discovery = request.research_plan.validation_spec.get("discovery")
+        if discovery is None:
+            return None
+        if request.research_plan.validation_spec.get("execution_mode") != "local-deterministic":
+            raise ValueError("模型研究使用已授权供应商，外部交接只适用于本地研究")
+        if current:
+            study = request.research_plan.validation_spec.get("factor_study")
+            if record.status is not JobStatus.COMPLETED or (study and study["phase"] != "test"):
+                raise ValueError("外部交接需要已完成报告；验证期间保持样本外窗口冻结")
+            self._reconcile(record, request)
+            if self.preview_discovery(discovery["inputs"]) != discovery["blueprint"]:
+                raise ValueError("数据、方法或政策已改变，请重新预览")
+        return discovery["blueprint"]
+
     def export_method_handoff(self, job_id, route_request):
         """Explicit local export; it performs no provider call or market fetch."""
         from .asset_catalog import ResearchAssetCatalog
@@ -500,12 +574,15 @@ class ResearchApplicationService:
         from .method_handoff import build_method_handoff
         from .method_router import select_methods
 
-        request = self._request(self.queue.get(job_id))
+        record = self.queue.get(job_id)
+        request = self._request(record)
+        discovery = self._discovery_handoff(request, record)
         snapshot = self.snapshots.load(request.snapshot_ref)
         catalog = ResearchAssetCatalog.packaged()
         selected = select_methods(route_request, catalog)
-        loaded = load_methods(selected, catalog)
-        if loaded.status != "READY":
+        context_bytes = discovery["budget"]["max_context_bytes"] if discovery else 32768
+        loaded = load_methods(selected, catalog, max_bytes=context_bytes)
+        if loaded.status != "READY" or (discovery and loaded.fingerprint != discovery["method_context_digest"]):
             raise MethodContextError()
         materials = ()
         source = request.research_plan.validation_spec.get("context_input_ref")
@@ -516,7 +593,12 @@ class ResearchApplicationService:
             if _model_input_digest(stored) != source:
                 raise ValueError("model context integrity mismatch")
             materials = stored["materials"]
-        context = build_context_bundle(request, snapshot, "research", materials=materials)
+        background = {"blueprint_ref": discovery["fingerprint"], "method": discovery["method_version"],
+                      "hypothesis": discovery["hypothesis"], "falsification": discovery["falsification"]} if discovery else None
+        context = build_context_bundle(request, snapshot, "research", materials=materials,
+                                       max_bytes=context_bytes, discovery_knowledge=background)
+        if discovery and len(loaded.to_json().encode()) + len(context._json.encode()) + 40 > context_bytes:
+            raise MethodContextError()
         digest = stable_digest({"request": to_jsonable(request), "context": context.fingerprint,
                                 "methods": loaded.fingerprint})
         task = AgentTask("research", f"method-{digest[:32]}", digest,
@@ -525,12 +607,15 @@ class ResearchApplicationService:
         reference = self._method_store().export(package)
         return self.get_method_handoff(job_id, reference)
 
-    def _bound_method_handoff(self, job_id, reference):
-        request = self._request(self.queue.get(job_id))
+    def _bound_method_handoff(self, job_id, reference, *, current=False):
+        record = self.queue.get(job_id)
+        request = self._request(record)
+        discovery = self._discovery_handoff(request, record, current=current)
         store = self._method_store()
         package = store.load(reference)
-        if (package.context.to_dict()["run_id"] != request.run_id
-                or package.context.to_dict()["dataset_fingerprint"] != request.snapshot_ref):
+        context = package.context.to_dict()
+        if (context["run_id"] != request.run_id or context["dataset_fingerprint"] != request.snapshot_ref
+                or (discovery and context.get("knowledge_background", {}).get("blueprint_ref") != discovery["fingerprint"])):
             raise KeyError(reference)
         return store, package
 
@@ -543,7 +628,7 @@ class ResearchApplicationService:
                 "summary": method_handoff_activity(package, state["status"])}
 
     def accept_method_handoff(self, job_id, reference, response):
-        store, _ = self._bound_method_handoff(job_id, reference)
+        store, _ = self._bound_method_handoff(job_id, reference, current=True)
         outcome = store.accept(reference, response)
         return {"outcome": to_jsonable(outcome),
                 "summary": self.get_method_handoff(job_id, reference)["summary"],
@@ -632,6 +717,7 @@ class ResearchApplicationService:
             "question": request.research_plan.hypotheses[0], "model_config_ref": request.research_plan.validation_spec.get("model_config_ref", "offline"),
             "model_research": model_research,
             "factor_study": source.get("factor_study"),
+            **({"discovery": source["discovery"]} if report_status == "AVAILABLE" and "discovery" in source else {}),
             **({"strategy_study": source["strategy_study"]} if report_status == "AVAILABLE" and "strategy_study" in source else {}),
             "risk_portfolio": source.get("risk_portfolio"),
             "policy_ref": request.previous_policy_fingerprint or request.research_plan.validation_spec["policy_fingerprint"],
@@ -748,7 +834,7 @@ class ResearchApplicationService:
             'selection_status':'COMPLETE' if len(records)==len(family) else 'INCOMPLETE_WITH_UNKNOWN_ATTEMPTS',
             'production_write':False}
 
-    def create_library_factor_study(self, values):
+    def create_library_factor_study(self, values, *, discovery=None):
         from .factor_library_workbench import prepare_library_study
         from .snapshot_tools import local_research_policy
 
@@ -756,6 +842,8 @@ class ResearchApplicationService:
             raise TypeError("library study submission must be an object")
         key = _ref(values.get("idempotency_key"), "idempotency_key")
         spec = prepare_library_study(values, self.snapshots, policy_fingerprint=stable_digest(local_research_policy()))
+        if discovery is not None:
+            spec["discovery"] = discovery
         study_id = "study-" + stable_digest({"scope": self.scope_id, "key": key})[:24]
         study = self.factor_studies.create(study_id, spec, validation_key=key)
         job = self._submit_factor_job(study, "validation", key)
@@ -786,7 +874,7 @@ class ResearchApplicationService:
         from .factor_workbench import prepare_method_study
 
         request = self._request(self.queue.get(job_id))
-        store, package = self._bound_method_handoff(job_id, handoff_ref)
+        store, package = self._bound_method_handoff(job_id, handoff_ref, current=True)
         artifact = next((item for item in store.artifacts(handoff_ref) if item["artifact_ref"] == artifact_ref), None)
         if artifact is None:
             raise ValueError("factor study requires an accepted persisted method artifact")
@@ -814,7 +902,7 @@ class ResearchApplicationService:
 
     def _submit_factor_job(self, study, phase, key):
         spec = study["spec"]
-        return self.submit({"idempotency_key": "factor-" + stable_digest({"study": study["study_id"], "phase": phase, "key": key})[:32], **{name: spec[name] for name in ("snapshot_ref", "instrument", "as_of", "question")}, **({"policy_ref": spec["policy_ref"]} if "policy_ref" in spec else {}), "budget": {"max_wall_seconds": 120, "max_bytes": 64 * 1024 * 1024, "max_experiments": spec["evaluation_units"]}}, factor_study={"study_id": study["study_id"], "spec_ref": study["spec_ref"], "phase": phase})
+        return self.submit({"idempotency_key": "factor-" + stable_digest({"study": study["study_id"], "phase": phase, "key": key})[:32], **{name: spec[name] for name in ("snapshot_ref", "instrument", "as_of", "question")}, **({"policy_ref": spec["policy_ref"]} if "policy_ref" in spec else {}), "budget": {"max_wall_seconds": 120, "max_bytes": 64 * 1024 * 1024, "max_experiments": spec["evaluation_units"]}}, factor_study={"study_id": study["study_id"], "spec_ref": study["spec_ref"], "phase": phase}, discovery=spec.get("discovery"))
 
     def factor_study(self, study_id):
         study = self.factor_studies.get(study_id)

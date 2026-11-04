@@ -322,7 +322,9 @@ class ResearchOrchestrator:
                 owner="analyst_pool",
                 metadata={"stage_owner": "analyst_pool", "roles": tuple(spec.role for spec in specs)},
             )
-            context = {"dataset": data_response.result, "max_rounds": limits.max_analyst_rounds}
+            context = {"max_rounds": limits.max_analyst_rounds}
+            if not isinstance(request.research_plan, ResearchPlan) or "discovery" not in request.research_plan.validation_spec:
+                context["dataset"] = data_response.result
             try:
                 outcomes = tuple(pool.run(specs, request, driver, context, max_workers=limits.max_analyst_workers))
             except CancelledError:

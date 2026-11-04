@@ -1364,8 +1364,8 @@
     {
       "resource_id": "quant-research-questions",
       "path": "knowledge/research-questions.json",
-      "sha256": "7e7166e487511d411ba261141dda343584ae57b5cead45e0cb13e43e85008fef",
-      "byte_size": 7279,
+      "sha256": "8a2bbd36bf02bd982a88533f8d5910c2add18024da8d24d77cfc51e0f763a9fd",
+      "byte_size": 8099,
       "availability": "PACKAGED",
       "kind": "metadata",
       "author": "Finahinking contributors",
@@ -2562,7 +2562,7 @@
     {
       "review_id": "rights-quant-research-questions",
       "resource_id": "quant-research-questions",
-      "resource_sha256": "7e7166e487511d411ba261141dda343584ae57b5cead45e0cb13e43e85008fef",
+      "resource_sha256": "8a2bbd36bf02bd982a88533f8d5910c2add18024da8d24d77cfc51e0f763a9fd",
       "license_id": "MIT",
       "license_refs": [
         {

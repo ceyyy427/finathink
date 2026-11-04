@@ -108,6 +108,26 @@ def strategy_journey(get, post):
     return job['job_id'], entry['entry_ref']
 
 
+def discovery_journey(get, post):
+    sample = post("/api/research/strategies/sample", {})
+    values = {name: sample[name] for name in ("contract", "attachment_refs")}
+    values["question"] = "等权组合的集中风险如何？"
+    preview = post("/api/research/discovery/preview", values)
+    assert preview["status"] == "READY" and preview["target_id"] == "equal-weight"
+    job = post("/api/research/discovery", {**values, "authorized": True,
+        "blueprint_fingerprint": preview["fingerprint"], "idempotency_key": "installed-discovery"})["job"]
+    deadline = time.monotonic() + 60
+    while job["status"] not in {"completed", "failed", "cancelled"} and time.monotonic() < deadline:
+        time.sleep(.1)
+        job = json.loads(get("/api/research/jobs/" + job["job_id"]))
+    assert job["report_status"] == "AVAILABLE", job
+    proof = job["discovery"]
+    assert proof["blueprint"]["fingerprint"] == preview["fingerprint"] and len(proof["roles"]) == 5
+    document = get(job["report_url"])
+    assert "研究计划与分析师证据".encode() in document
+    return job["job_id"], document
+
+
 def suite_journey(app, get, post):
     from finahinking.research.factor_validation_sample import SAMPLE_SPEC
     from finahinking.research.research_evidence import PackagedCounterexamples
@@ -256,6 +276,7 @@ def main():
         library_study_id = library_journey(app, get, post)
         suite_study_id = suite_journey(app, get, post)
         strategy_job_id, pool_entry_ref = strategy_journey(get, post)
+        discovery_job_id, discovery_document = discovery_journey(get, post)
     finally:
         server.shutdown()
         server.server_close()
@@ -274,6 +295,9 @@ def main():
             assert reopened.route('GET', '/api/research/learning/pairs/'+pair_id)[2]['status'] == 'AVAILABLE'
             restored_diagnostic = reopened.route('GET', '/api/diagnostics/interfaces/' + diagnostic['receipt_id'])
             assert restored_diagnostic[0] == 200 and restored_diagnostic[2] == diagnostic
+            discovery = reopened.research_service.get_job(discovery_job_id)
+            assert discovery["report_status"] == "AVAILABLE" and discovery["discovery"]["product_ref"]
+            assert reopened.route("GET", discovery["report_url"])[2].encode() == discovery_document
             strategy = reopened.research_service.get_job(strategy_job_id)
             assert strategy['report_status'] == 'AVAILABLE' and strategy['strategy_study']['result']['ledger']['fills']
             _, _, pool = reopened.route('GET', '/api/research/pools?pool_ref=installed-pool')

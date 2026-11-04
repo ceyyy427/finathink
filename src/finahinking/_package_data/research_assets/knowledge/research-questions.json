@@ -8,6 +8,10 @@
       "knowledge_ids": [
         "momentum",
         "moving-average"
+      ],
+      "aliases": [
+        "动量因子",
+        "区间动量"
       ]
     },
     {
@@ -17,6 +21,10 @@
       "knowledge_ids": [
         "momentum",
         "moving-average"
+      ],
+      "aliases": [
+        "移动平均线",
+        "均值线"
       ]
     },
     {
@@ -35,6 +43,11 @@
       "knowledge_ids": [
         "rsi",
         "mean-reversion"
+      ],
+      "aliases": [
+        "均值回归因子",
+        "均值回归",
+        "相对强弱指标"
       ]
     },
     {
@@ -61,6 +74,9 @@
       "knowledge_ids": [
         "volatility",
         "standard-deviation"
+      ],
+      "aliases": [
+        "实现波动率"
       ]
     },
     {
@@ -85,6 +101,9 @@
       "target_id": "lib-liquidity-amihud",
       "knowledge_ids": [
         "liquidity"
+      ],
+      "aliases": [
+        "非流动性比率"
       ]
     },
     {
@@ -111,6 +130,10 @@
       "knowledge_ids": [
         "book-to-market",
         "earnings-yield"
+      ],
+      "aliases": [
+        "账面价值市值比",
+        "b/m"
       ]
     },
     {
@@ -139,6 +162,9 @@
         "gross-profitability",
         "roe",
         "accruals"
+      ],
+      "aliases": [
+        "净资产收益率"
       ]
     },
     {
@@ -169,6 +195,9 @@
         "asset-growth",
         "publication-lag",
         "revisions"
+      ],
+      "aliases": [
+        "资产增长率"
       ]
     },
     {
@@ -198,6 +227,9 @@
       "knowledge_ids": [
         "neutralization",
         "universe-bias"
+      ],
+      "aliases": [
+        "行业中性价值"
       ]
     },
     {
@@ -216,6 +248,9 @@
       "knowledge_ids": [
         "publication-lag",
         "adjustment"
+      ],
+      "aliases": [
+        "股权筹资"
       ]
     },
     {
@@ -243,6 +278,9 @@
       "knowledge_ids": [
         "beta",
         "etf-exposure"
+      ],
+      "aliases": [
+        "宏观beta"
       ]
     },
     {
@@ -252,6 +290,9 @@
       "knowledge_ids": [
         "etf-exposure",
         "momentum"
+      ],
+      "aliases": [
+        "etf相对强弱"
       ]
     },
     {
@@ -261,6 +302,9 @@
       "knowledge_ids": [
         "equal-weight",
         "concentration"
+      ],
+      "aliases": [
+        "等权配置"
       ]
     },
     {

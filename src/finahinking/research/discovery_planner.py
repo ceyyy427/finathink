@@ -84,12 +84,18 @@ def _canonical(text):
 
 
 def _match(question, templates):
-    candidates = [row for row in templates if _canonical(row["phrase"]) in question]
-    # A specific phrase (e.g. industry-neutral book-to-market) outranks its
-    # embedded general phrase. Multiple independent topics need clarification.
-    strongest = [row for row in candidates if not any(
-        row is not other and row["phrase"] in other["phrase"] for other in candidates)]
-    return strongest[0] if len(strongest) == 1 else None
+    exact = next((row for row in templates if _canonical(row["question"]) == question), None)
+    if exact is not None:
+        return exact
+    candidates = [(row["target_id"], phrase, row) for row in templates
+                  for raw in (row["phrase"], *row.get("aliases", ()))
+                  if (phrase := _canonical(raw)) in question]
+    # Specific phrases outrank their embedded general term. Independent
+    # topics need clarification even if one happened to have a longer label.
+    strongest = {target: row for target, phrase, row in candidates if not any(
+        target != other_target and phrase != other and phrase in other
+        for other_target, other, _ in candidates)}
+    return next(iter(strongest.values())) if len(strongest) == 1 else None
 
 
 def _references(index, question, template):
@@ -109,17 +115,17 @@ def _references(index, question, template):
 
 
 def prepare_discovery(question, profile, snapshot_ref, budget=None, *, available_fields=(),
-                      panel_ref=None, policy_ref=None, risk_ref=None, index=None):
+                      panel_ref=None, policy_ref=None, risk_ref=None, execution_ref=None, provider=None, index=None):
     """Return a preview. Neither retrieved prose nor a question grants authority."""
     if (not isinstance(question, str) or not 1 <= len(question.strip()) <= 1000
-            or profile not in PROFILES):
+            or not isinstance(profile, str) or profile not in PROFILES):
         raise ValueError("请填写研究问题并选择研究风格")
     if snapshot_ref is not None and (not isinstance(snapshot_ref, str) or not re.fullmatch(r"[0-9a-f]{64}", snapshot_ref)):
         raise ValueError("快照指纹无效")
     budget = budget if isinstance(budget, DiscoveryBudget) else DiscoveryBudget(**(budget or {}))
     assets = ResearchAssetCatalog.packaged()
     fields = {"question": question.strip(), "profile": profile, "profile_focus": PROFILES[profile],
-              "snapshot_ref": snapshot_ref, "panel_ref": panel_ref, "allowed_tools": []}
+              "snapshot_ref": snapshot_ref, "panel_ref": panel_ref, "allowed_tools": [], "provider": provider}
     template = _match(_canonical(question), question_templates(assets))
     if template is None:
         return StudyBlueprint.freeze({**fields, "status": "NEEDS_CLARIFICATION"}, budget)
@@ -148,7 +154,7 @@ def prepare_discovery(question, profile, snapshot_ref, budget=None, *, available
         method_refs=list(route.skill_ids), method_context_digest=methods.fingerprint,
         method_manifest_digest=methods.manifest_fingerprint,
         split_spec=dict(_SPLIT) if is_factor else {"kind": "fixed-policy-paper-simulation"},
-        cost_policy_ref=policy_ref, risk_policy_ref=risk_ref,
+        cost_policy_ref=policy_ref, risk_policy_ref=risk_ref, execution_ref=execution_ref,
         hypothesis=(f"{definition['title']}：在固定观察窗内检验所选信号的方向及计费后表现。"),
         falsification=("样本外方向反转、费用后优势消失或证据不足时，不支持原假设。"),
     )
