@@ -48,8 +48,14 @@ def test_arrival_and_search_feedback_do_not_delay_input_or_replay(http_app, obse
     page.add_init_script("""window.arrivals = [];
         document.addEventListener('animationstart', event => {
             if (event.target.matches('.workspace-layout')) window.arrivals.push(event.animationName);
+        });
+        document.addEventListener('animationend', event => {
+            if (event.target.matches('.workspace-layout') && event.animationName === 'workbench-arrive') {
+                event.target.dataset.arrivalFinished = 'true';
+            }
         });""")
     page.goto(base, wait_until="networkidle")
+    page.locator('.workspace-layout[data-arrival-finished="true"]').wait_for(timeout=10000)
     assert len(page.evaluate("window.arrivals")) == 1
     assert page.locator(".workspace-layout").evaluate("el => getComputedStyle(el).opacity") == "1"
     page.locator("#overview-question").fill("输入时页面不能重播或提交。")
