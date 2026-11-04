@@ -399,6 +399,8 @@ class ReportBundleWriter:
             status_model["model_research"] = analytics_payload.get("model_research")
             status_model["factor_study"] = analytics_payload.get("factor_study")
             status_model["risk_portfolio"] = analytics_payload.get("risk_portfolio")
+            if analytics_payload.get("strategy_study"):
+                status_model["strategy_study"] = analytics_payload["strategy_study"]
             status_model["policy_lineage"] = analytics_payload.get("policy_lineage")
             status_model["publication_scope"] = analytics_payload.get("publication_scope")
         complete_path = bundle / "complete_report.html"
@@ -433,6 +435,7 @@ class ReportBundleWriter:
                 **({"model_research": analytics_payload["model_research"]} if analytics_payload and analytics_payload.get("model_research") else {}),
                 **({"factor_study": analytics_payload["factor_study"]} if analytics_payload and analytics_payload.get("factor_study") else {}),
                 **({"risk_portfolio": analytics_payload["risk_portfolio"]} if analytics_payload and analytics_payload.get("risk_portfolio") else {}),
+                **({"strategy_study": analytics_payload["strategy_study"]} if analytics_payload and analytics_payload.get("strategy_study") else {}),
                 **({"quant_evidence": analytics_payload["quant_evidence"]} if analytics_payload and analytics_payload.get("quant_evidence") else {}),
                 **({"reproduction": analytics_payload["reproduction"]} if analytics_payload and analytics_payload.get("reproduction") else {}),
                 **({"policy_lineage": analytics_payload["policy_lineage"]} if analytics_payload and analytics_payload.get("policy_lineage") else {}),

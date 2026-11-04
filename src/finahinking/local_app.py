@@ -1406,6 +1406,69 @@ class LocalApplication:
         except (ValueError, TypeError):
             return 422, "application/json", {"error": "因子输入或证据绑定无效，请重新读取定义和范围。"}
 
+    def _research_pool_route(self, method, clean, body, query):
+        endpoints = {"/api/research/pools", "/api/research/pools/freeze",
+                     "/api/research/pools/observe", "/api/research/etf-mapping"}
+        if clean not in endpoints:
+            return None
+        from .research.pool_jobs import pool_store, record_published_decision
+
+        service = self.research_service
+        try:
+            if method == "GET" and clean == "/api/research/pools":
+                ref = (query or {}).get("pool_ref", [""])[0]
+                return 200, "application/json", {"entries": pool_store(service).list_entries(ref)}
+            if method != "POST":
+                return 405, "application/json", {"error": "请显式提交研究池或映射操作。"}
+            denied = self._data_write_guard(body)
+            if denied is not None:
+                return denied
+            values = {key: value for key, value in body.items() if key != "_csrf"}
+            if clean == "/api/research/pools":
+                return 201, "application/json", record_published_decision(service, values)
+            if clean.endswith("/freeze") and set(values) == {"pool_ref", "decision_at"}:
+                result = pool_store(service).freeze_cohort(values["pool_ref"], decision_at=values["decision_at"])
+            elif clean.endswith("/observe") and set(values) == {"cohort_ref", "snapshot_ref"}:
+                result = pool_store(service).observe_pool(values["cohort_ref"], service.snapshots.load(values["snapshot_ref"]))
+            elif clean.endswith("/etf-mapping") and set(values) <= {"snapshot_ref", "equity", "etf", "start", "end", "holdings"}:
+                from .research.etf_strategy_mapping import map_etf_strategy
+
+                snapshot = service.snapshots.load(values.pop("snapshot_ref"))
+                result = map_etf_strategy(snapshot, **values)
+            else:
+                raise ValueError("研究池操作参数不匹配")
+            return 200, "application/json", result
+        except (KeyError, OSError, TypeError, ValueError):
+            return 422, "application/json", {"error": "请核对已发布报告、决策时间和比较数据。"}
+
+    def _strategy_route(self, method, clean, body):
+        if clean not in {"/research/strategies", "/api/research/strategies", "/api/research/strategies/sample"}:
+            return None
+        try:
+            if method == "POST" and clean.startswith("/api/"):
+                denied = self._data_write_guard(body)
+                if denied is not None:
+                    return denied
+                values = {key: value for key, value in body.items() if key != "_csrf"}
+                if clean.endswith("/sample"):
+                    if values:
+                        raise ValueError("样例使用固定输入")
+                    return 201, "application/json", self.research_service.create_strategy_sample()
+                return 202, "application/json", self.research_service.run_strategy_template(values)
+            if method != "GET" or clean.endswith("/sample"):
+                return 405, "application/json", {"error": "请显式读取目录或提交策略任务。"}
+            from .research.strategy_catalog import StrategyCatalog
+
+            catalog = StrategyCatalog()
+            if clean.startswith("/api/"):
+                return 200, "application/json", {"templates": catalog.templates(), "risk_rules": catalog.risk_rules()}
+            from .research.strategy_page import strategy_page
+
+            return 200, "text/html; charset=utf-8", self.render_shell(
+                "/research/strategies", "策略与纸面账本", strategy_page(catalog, self.csrf_token))
+        except (KeyError, OSError, TypeError, ValueError):
+            return 422, "application/json", {"error": "请核对模板、面板合同、附件与批准政策。"}
+
     def _factor_suite_route(self, method, clean, body, query):
         if clean not in {"/research/factor-suites", "/api/research/factor-suites"}:
             return None
@@ -1796,6 +1859,12 @@ class LocalApplication:
         asset_response = self._asset_workspace_route(method, clean, query)
         if asset_response is not None:
             return asset_response
+        pool_response = self._research_pool_route(method, clean, body, query)
+        if pool_response is not None:
+            return pool_response
+        strategy_response = self._strategy_route(method, clean, body)
+        if strategy_response is not None:
+            return strategy_response
         suite_response = self._factor_suite_route(method, clean, body, query)
         if suite_response is not None:
             return suite_response

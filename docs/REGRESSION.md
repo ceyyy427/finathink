@@ -79,3 +79,18 @@ Phase24最终本地门禁：冻结源码 `f8e293b` 的全量回归2320 passed、
 以上命令在已授权工作树内执行；合成研究不访问用户模型或数据账号。隔离Alphalens对照环境只下载公开依赖，不加入应用默认运行依赖。实际退出码与证据在Phase25验收记录中填写。
 
 Phase25最终门禁：冻结实现`bbf9d84`的完整回归2407 passed、1 optional statsmodels skip，覆盖上述所有传播模块、强制浏览器与全新安装。独立审查修复窄复核8项+5项通过；前端71项、build/perf、Ruff、治理、依赖与发布检查退出码0，见[阶段验收](reviews/2026-10-31-finathink-phase25-review.md)。
+
+## Phase26 策略、账本与来源池
+
+基线为 Phase25 `dfc4cfc`。依赖证据由 `rg -n 'execute_strategy|strategy_study|ResearchPoolStore|map_etf_strategy' src tests scripts` 追踪。
+
+| 模块及下游 | 接受命令 | 传播重点 |
+| --- | --- | --- |
+| 模板与风险规则 → 后台策略任务 | `python3 -m pytest tests/research/test_strategy_library.py tests/research/test_strategy_ledger.py tests/research/test_portfolio_runtime.py tests/research/test_risk_runtime.py -q` | 真实模板执行、规则三态、现金与持仓对账、无证据的成交阻断 |
+| 来源池 → 冻结比较和 ETF 映射 | `python3 -m pytest tests/research/test_research_pools.py tests/research/test_etf_strategy_mapping.py -q` | 作用域、来源关联、同信号去重、统一观察点与可用时间 |
+| HTTP、报告与已安装应用 | `FINATHINK_REQUIRE_BROWSER=1 python3 -m pytest -q` | 保留旧入口并验证 worker、浏览器、全新安装和备份恢复 |
+| 发布 | Ruff、前端 build/test/perf、治理检查及 GitHub CI | PR 与合并后 main 按实际提交核验 |
+
+执行证据见[阶段验收](reviews/2026-10-31-finathink-phase26-review.md)。
+
+Phase26 最终本地回归使用冻结实现 `b90c584`，2447 项通过、1 项可选适配器跳过。包含全部强制浏览器、真实 worker、干净安装及备份恢复。前端 71 项及构建、性能、Ruff、治理、依赖与发布检查退出码均为 0。
