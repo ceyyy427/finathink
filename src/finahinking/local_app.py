@@ -1130,6 +1130,7 @@ class LocalApplication:
             "/strategy": "策略实验室",
             "/research": "研究工作区",
             "/research/jobs": "研究任务",
+            "/research/workbench": "量化研究工作台",
             "/research/experiments": "因子实验",
             "/research/learning": "复盘与学习",
             "/research/maintenance": "本地任务维护",
@@ -1227,7 +1228,7 @@ class LocalApplication:
         groups = (
             ("研究", "nav-workspace", ("/", "/research/jobs", "/events", "/knowledge", "/research/experiments", "/strategy", "/research/learning")),
             ("资料", "nav-library", ("/library/methods", "/library/behavior", "/library/lessons")),
-            ("学习", "nav-learn", ("/explore", "/quant", "/research", "/research/compare", "/workbench", "/ml", "/parameter", "/workspace", "/community", "/settings/engines", "/settings/data-sources")),
+            ("学习", "nav-learn", ("/explore", "/quant", "/research", "/research/workbench", "/research/compare", "/workbench", "/ml", "/parameter", "/workspace", "/community", "/settings/engines", "/settings/data-sources")),
             ("系统", "nav-system", ("/settings/data-connections", "/settings/providers", "/research/maintenance", "/diagnostics")),
         )
         icons = {"/": "overview", "/research/jobs": "codex", "/events": "events", "/knowledge": "knowledge", "/research/experiments": "factor", "/strategy": "strategy", "/research/learning": "report", "/settings/data-connections": "data"}
@@ -1407,7 +1408,7 @@ class LocalApplication:
             return 422, "application/json", {"error": "因子输入或证据绑定无效，请重新读取定义和范围。"}
 
     def _research_pool_route(self, method, clean, body, query):
-        endpoints = {"/api/research/pools", "/api/research/pools/freeze",
+        endpoints = {"/research/pools", "/api/research/pools", "/api/research/pools/freeze",
                      "/api/research/pools/observe", "/api/research/etf-mapping"}
         if clean not in endpoints:
             return None
@@ -1415,6 +1416,15 @@ class LocalApplication:
 
         service = self.research_service
         try:
+            if clean == "/research/pools":
+                if method != "GET":
+                    return 405, "application/json", {"error": "研究池页面仅供读取。"}
+                from .research.knowledge_workspace_page import pool_page
+
+                ref = query.get("pool_ref", [""])[0]
+                entries = pool_store(service).list_entries(ref) if ref else []
+                return 200, "text/html; charset=utf-8", self.render_shell(
+                    clean, "研究池", pool_page(ref, entries, self.csrf_token))
             if method == "GET" and clean == "/api/research/pools":
                 ref = (query or {}).get("pool_ref", [""])[0]
                 return 200, "application/json", {"entries": pool_store(service).list_entries(ref)}
@@ -1441,8 +1451,42 @@ class LocalApplication:
         except (KeyError, OSError, TypeError, ValueError):
             return 422, "application/json", {"error": "请核对已发布报告、决策时间和比较数据。"}
 
+    def _quant_workbench_route(self, method, clean, query):
+        from .research.asset_contracts import AssetLoadError
+        from .research.knowledge_index import KnowledgeIndexUnavailable
+        from .research.knowledge_workspace_page import API, WorkspaceCatalog, workspace_page
+        from .research.source_updates import SourceVersionStore
+
+        if method != "GET":
+            return 405, "application/json", {"error": "研究目录仅供读取。"}
+        try:
+            with self._lock:
+                if not hasattr(self, "_quant_workspace"):
+                    self._quant_workspace = WorkspaceCatalog.packaged(self.quant_knowledge)
+            if clean != API:
+                versions = SourceVersionStore(self.artifact_root).records()
+                updates = self._quant_workspace.source_update_summaries(versions)
+                if clean.endswith("/sources"):
+                    reference = query.get("ref", [None])[0]
+                    if reference is not None:
+                        record = next((row for row in versions if row["ref"] == reference), None)
+                        if record is None:
+                            return 404, "application/json", {"error": "未找到该来源版本。"}
+                        return 200, "application/json", record
+                    return 200, "application/json", {"updates": updates}
+            data = self._quant_workspace.search(query.get("q", [""])[0], query.get("kind", [""])[0],
+                offset=int(query.get("offset", ["0"])[0]), selected=query.get("selected", [None])[0])
+        except (KnowledgeIndexUnavailable, OSError, sqlite3.Error):
+            return 503, "application/json", {"error": "公开目录暂时不可读取，请检查本地存储后重试。"}
+        except (AssetLoadError, KeyError, TypeError, ValueError):
+            return 422, "application/json", {"error": "请核对关键词、类型和内容版本。"}
+        if clean == API:
+            return 200, "application/json", data
+        return 200, "text/html; charset=utf-8", self.render_shell(
+            clean, "量化研究工作台", workspace_page(data, self.csrf_token, journey=query.get("journey", [None])[0], updates=updates))
+
     def _discovery_route(self, method, clean, body):
-        if clean not in {"/api/research/discovery", "/api/research/discovery/preview"}:
+        if clean not in {"/api/research/discovery", "/api/research/discovery/preview", "/api/research/discovery/sample"}:
             return None
         if method != "POST":
             return 405, "application/json", {"error": "请明确预览或提交研究计划。"}
@@ -1451,14 +1495,22 @@ class LocalApplication:
             return denied
         values = {key: value for key, value in body.items() if key != "_csrf"}
         try:
+            if clean.endswith("/sample"):
+                from .research.discovery_sample import create_discovery_sample
+
+                if set(values) != {"question"}:
+                    raise ValueError("固定样例只接受研究问题")
+                return 201, "application/json", create_discovery_sample(self.research_service, values["question"])
             if clean.endswith("/preview"):
                 return 200, "application/json", self.research_service.preview_discovery(values)
             result = self.research_service.run_discovery(values)
             return (202 if result["job"] else 422), "application/json", result
+        except sqlite3.Error:
+            return 503, "application/json", {"error": "来源审阅暂时不可读取，请检查本地存储后重试。"}
         except (KeyError, OSError, TypeError, ValueError):
             return 422, "application/json", {"error": "请核对问题、面板、预算和批准政策后重新预览。"}
 
-    def _strategy_route(self, method, clean, body):
+    def _strategy_route(self, method, clean, body, query):
         if clean not in {"/research/strategies", "/api/research/strategies", "/api/research/strategies/sample"}:
             return None
         try:
@@ -1482,7 +1534,7 @@ class LocalApplication:
             from .research.strategy_page import strategy_page
 
             return 200, "text/html; charset=utf-8", self.render_shell(
-                "/research/strategies", "策略与纸面账本", strategy_page(catalog, self.csrf_token))
+                "/research/strategies", "策略与纸面账本", strategy_page(catalog, self.csrf_token, selected=query.get("template", [None])[0]))
         except (KeyError, OSError, TypeError, ValueError):
             return 422, "application/json", {"error": "请核对模板、面板合同、附件与批准政策。"}
 
@@ -1853,6 +1905,8 @@ class LocalApplication:
         parsed = urlsplit(path)
         query = parse_qs(parsed.query) if query is None else query
         clean = parsed.path.rstrip("/") or "/"
+        if clean in {"/research/workbench", "/api/research/workbench", "/api/research/workbench/sources"}:
+            return self._quant_workbench_route(method, clean, query)
         from .research.knowledge_workspace import route as knowledge_route
 
         knowledge_response = knowledge_route(self, method, clean, query)
@@ -1882,7 +1936,7 @@ class LocalApplication:
         discovery_response = self._discovery_route(method, clean, body)
         if discovery_response is not None:
             return discovery_response
-        strategy_response = self._strategy_route(method, clean, body)
+        strategy_response = self._strategy_route(method, clean, body, query)
         if strategy_response is not None:
             return strategy_response
         suite_response = self._factor_suite_route(method, clean, body, query)

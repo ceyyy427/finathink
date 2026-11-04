@@ -36,7 +36,7 @@ def test_data_and_budget_are_explicit_before_candidates():
                              available_fields=["close"]).to_dict()
     assert plan["missing_fields"] == ["high", "low"]
     assert plan["status"] == "NEEDS_DATA"
-    assert plan["repair_href"] == "/data"
+    assert plan["repair_href"] == "/settings/data-connections"
     assert "candidates" not in plan
 
     budget = DiscoveryBudget(max_context_bytes=4096)

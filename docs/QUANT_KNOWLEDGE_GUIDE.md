@@ -67,3 +67,31 @@ python3 -m pytest tests/research/test_knowledge_index.py tests/research/test_qua
 ```
 
 60道题在实现前冻结。首次完整验收Top-5命中58/60（96.67%），各域最低85.71%。开发集39/40；保留集19/20，保留集技术价量子域2/3。后者作为小样本诊断保留，未据此改词条、权重或题集；完整60题是本阶段既定门禁。后续优化应增加独立的新测试集。证据和发布状态见[阶段验收记录](reviews/2026-10-31-finathink-phase22-review.md)。
+
+## 量化研究工作台
+
+从应用侧栏打开「量化研究工作台」。可以检索中文关键词，按知识、因子、策略、风险或反例筛选，也可直接打开十二条研究路径。每个对象显示所需字段、适用条件、出处、定义版本和验证边界。目录从已有资产生成，公式指纹去重，来源卡与别名只用于查找和追溯。
+
+### 从问题到报告
+
+1. 选一条研究路径或输入自己的问题。
+2. 选择「仅准备问题」「按问题加载合成样例」或「已保存的用户面板」。样例中的收益、成交和风险仅用于验证固定输入下的计算。
+3. 预览研究计划，补齐缺失字段，阅读反证条件。就绪后显式确认提交。
+4. 因子实验用训练和验证结果冻结候选，再执行一次样本外测试和用途审核。策略使用股票与 ETF 的纸面账本。可以把已发布报告登记到研究池，冻结并查看观察窗口。
+5. 打开报告阅读五位分析师证据、数据缺口、结果与复核建议。完整 HTML 可保存到本地阅读。便携复算包逐项标注可复算范围，研究计划、因子验证和策略账本的原始证据继续通过原报告及原研究流程查看。
+
+### 审阅来源更新
+
+操作员准备两个固定提交的本地检出，以及与之对应的来源快照 JSON。快照须包含来源、仓库、提交、捕获日期、文件摘要与大小、许可证文件、文件总数和模块处置清单。沿用已有的[来源治理](research/2026-10-31-open-source-quant-study.md)。暂存命令会核对 Git 树、锁定文件和许可证字节，并保存受影响对象的快照。
+
+```sh
+python -m finahinking.research.source_updates --artifact-root ./artifacts stage \
+  --old ./old.json --new ./new.json \
+  --old-checkout ./old-checkout --new-checkout ./new-checkout
+python -m finahinking.research.source_updates --artifact-root ./artifacts review "$SOURCE_REF" \
+  --decision APPROVE_REFERENCE --reviewer local-user --rationale "审阅新版文件和许可证"
+```
+
+`--artifact-root` 使用本地应用数据库相邻的 `artifacts` 目录。用暂存返回的 `ref` 设置 `SOURCE_REF`。可选择批准作为参考、撤回或拒绝。工作台的「来源审阅」展示差异及历史记录。撤回会阻止引用该来源的新因子库和策略研究，旧报告与复算证据保留原始身份。批准来源作为参考后，内容变更和使用范围仍按原流程审核。
+
+备份包含来源审阅记录。恢复后，知识索引由已安装的公开内容重建。详见[阶段验收](reviews/2026-10-31-finathink-phase28-review.md)。

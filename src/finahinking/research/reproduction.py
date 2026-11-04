@@ -17,6 +17,12 @@ MAX_PACKAGE_BYTES = 8 * 1024 * 1024
 _FIELDS = {'schema_version', 'run_id', 'original_dataset', 'as_of', 'instrument', 'publication_before',
            'identity', 'policy', 'snapshot', 'snapshot_digest', 'expected', 'product_coverage',
            'missing_dependencies', 'package_id'}
+_WORKFLOW_DEPENDENCIES = {
+    "factor_study": "FACTOR_WORKFLOW_DEPENDENCIES",
+    "strategy_study": "STRATEGY_WORKFLOW_DEPENDENCIES",
+    "model_text": "MODEL_MATERIALS_AND_AUTHORIZATION",
+    "discovery": "DISCOVERY_BLUEPRINT_DEPENDENCIES",
+}
 _ROW = {'instrument', 'timestamp', 'available_at', 'open', 'high', 'low', 'close', 'volume', 'amount', 'industry', 'suspended'}
 _IDENTITY_KEYS = {'run_id', 'fingerprint', 'dataset_fingerprint', 'engine_dataset_fingerprint',
                   'policy_fingerprint', 'snapshot_id', 'evidence_refs', 'baseline_fingerprints',
@@ -139,11 +145,12 @@ def validate_package(package):
     if not isinstance(package['expected'], dict) or set(package['expected']) - {'baseline', 'quant_evidence'} or 'baseline' not in package['expected']:
         raise ValueError('确定性产物清单无效。')
     coverage = package['product_coverage']
-    if not isinstance(coverage, dict) or set(coverage) - {'baseline', 'quant_evidence', 'factor_study', 'strategy_study', 'model_text'} or any(coverage.get(key) != 'INCLUDED' for key in package['expected']):
+    if not isinstance(coverage, dict) or set(coverage) - {"baseline", "quant_evidence", *_WORKFLOW_DEPENDENCIES} or any(coverage.get(key) != 'INCLUDED' for key in package['expected']):
         raise ValueError('复现覆盖清单无效。')
     if any(status != ('INCLUDED' if key in {'baseline', 'quant_evidence'} else 'REQUIRES_ORIGINAL_WORKFLOW') for key, status in coverage.items()) or {key for key, status in coverage.items() if status == 'INCLUDED'} != set(package['expected']):
         raise ValueError('复现覆盖必须与已携带的确定性产物完全一致；模型与因子研究需要原工作流。')
-    expected_missing = ([] if package['snapshot'] is not None else ['NORMALIZED_DATA']) + (['FACTOR_WORKFLOW_DEPENDENCIES'] if 'factor_study' in coverage else []) + (['STRATEGY_WORKFLOW_DEPENDENCIES'] if 'strategy_study' in coverage else []) + (['MODEL_MATERIALS_AND_AUTHORIZATION'] if 'model_text' in coverage else [])
+    expected_missing = ([] if package['snapshot'] is not None else ['NORMALIZED_DATA'])
+    expected_missing.extend(code for key, code in _WORKFLOW_DEPENDENCIES.items() if key in coverage)
     if package['missing_dependencies'] != expected_missing:
         raise ValueError('缺依赖清单与复现覆盖不一致。')
     if package['snapshot'] is not None:
@@ -202,9 +209,9 @@ class ReproductionService:
         expected = products(analytics)
         coverage = {key: 'INCLUDED' for key in expected}
         missing = [] if include_data else ['NORMALIZED_DATA']
-        for key, code in [('factor_study', 'FACTOR_WORKFLOW_DEPENDENCIES'), ('strategy_study', 'STRATEGY_WORKFLOW_DEPENDENCIES'), ('model_research', 'MODEL_MATERIALS_AND_AUTHORIZATION')]:
-            if analytics.get(key):
-                coverage['model_text' if key == 'model_research' else key] = 'REQUIRES_ORIGINAL_WORKFLOW'
+        for key, code in _WORKFLOW_DEPENDENCIES.items():
+            if analytics.get('model_research' if key == 'model_text' else key):
+                coverage[key] = 'REQUIRES_ORIGINAL_WORKFLOW'
                 missing.append(code)
         package = {'schema_version': 'research-package.v1', 'run_id': run_id,
             'original_dataset': analytics['dataset_fingerprint'], 'as_of': analytics['as_of'], 'instrument': analytics['instrument'],
@@ -262,7 +269,7 @@ class ReproductionService:
         receipt = {'package_id': reference, 'status': 'BLOCKED', 'products': {key: 'BLOCKED' if status == 'INCLUDED' else status for key, status in package['product_coverage'].items()}, 'missing_dependencies': missing,
                    'runtime_identity': current, 'numeric_products_only': True, 'integrity': 'CONTENT_ONLY',
                    'model_called': False, 'paper_only': True}
-        blockers = set(missing) - {'FACTOR_WORKFLOW_DEPENDENCIES', 'STRATEGY_WORKFLOW_DEPENDENCIES', 'MODEL_MATERIALS_AND_AUTHORIZATION'}
+        blockers = set(missing) - set(_WORKFLOW_DEPENDENCIES.values())
         if not blockers:
             snapshot = _snapshot(package['snapshot'])
             tools = SnapshotResearchTools(snapshot, policy=package['policy'], publication_before=package['publication_before'])

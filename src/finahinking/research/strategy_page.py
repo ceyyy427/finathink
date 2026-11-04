@@ -3,9 +3,9 @@
 from html import escape
 
 
-def strategy_page(catalog, csrf):
+def strategy_page(catalog, csrf, *, selected=None):
     templates = "".join(
-        f'<option value="{escape(item["template_id"], quote=True)}">{escape(item.get("title", item["template_id"]))}</option>'
+        f'<option value="{escape(item["template_id"], quote=True)}"{" selected" if item["template_id"] == selected else ""}>{escape(item.get("title", item["template_id"]))}</option>'
         for item in catalog.templates()
     )
     rules = "".join(
@@ -26,5 +26,5 @@ def strategy_page(catalog, csrf):
 <button type="submit">提交纸面策略研究</button>
 <p role="status" data-strategy-status>选择数据后提交后台任务。</p>
 </form>
-<p><a href="/research/jobs">后台研究与报告</a></p>
-</section><section class="panel section"><h2>风险规则</h2><ul>{rules}</ul></section>"""
+<p><a href="/research/jobs">后台研究与报告</a> · <a href="/research/workbench">返回量化研究工作台</a></p>
+</section><section class="panel section" id="risk-rules"><h2>风险规则</h2><ul>{rules}</ul></section>"""

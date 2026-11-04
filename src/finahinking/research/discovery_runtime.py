@@ -4,12 +4,20 @@ from datetime import datetime
 
 from finahinking.data.panel_contracts import FIELD_PACKS, PanelContract
 
+from .asset_catalog import ResearchAssetCatalog
 from .contracts import AgentReport, stable_digest
-from .discovery_planner import DiscoveryBudget, StudyBlueprint, encode, prepare_discovery
+from .discovery_planner import (
+    DiscoveryBudget,
+    StudyBlueprint,
+    encode,
+    open_knowledge,
+    prepare_discovery,
+)
 from .drivers import DriverResult
 from .job_queue import _ref
 from .research_identity import execution_identity
 from .snapshot_tools import local_research_policy
+from .source_updates import SourceVersionStore, research_source_refs, source_policy
 from .strategy_catalog import StrategyCatalog
 
 _ROLE_TOPICS = {
@@ -80,6 +88,24 @@ def preview_discovery(service, values, *, frozen_provider=None):
                              available_fields=fields, panel_ref=panel.fingerprint,
                              policy_ref=policy["policy_ref"], execution_ref=stable_digest(execution_identity(policy["effective"])),
                              risk_ref=stable_digest(StrategyCatalog().risk_rules()), provider=frozen_provider).to_dict()
+    if plan["status"] == "READY" and SourceVersionStore(service.root).path.exists():
+        ids = {ref["item_id"] for ref in plan["knowledge_refs"]}
+        ids.update(item_id for defaults in _ROLE_BASE.values() for item_id in defaults)
+        with open_knowledge(ResearchAssetCatalog.packaged()) as knowledge:
+            bibliography = [source for item_id in sorted(ids)
+                            for source in knowledge.resolve(item_id)["source_refs"]]
+        sources = source_policy(service.root, [
+            *research_source_refs(plan["target_kind"], plan["target_id"]), *bibliography,
+        ])
+        if sources["versions"]:
+            for key in ("fingerprint", "blueprint_id", "schema_version"):
+                plan.pop(key)
+            source_budget = DiscoveryBudget(**plan.pop("budget"))
+            plan["source_versions"] = sources["versions"]
+            if sources["blocked"]:
+                plan.update(status="SOURCE_REVIEW_REQUIRED", source_review_href="/research/workbench#qw-sources")
+                plan.pop("candidates")
+            plan = StudyBlueprint.freeze(plan, source_budget).to_dict()
     if frozen_provider and plan.get("target_kind") == "FACTOR":
         raise ValueError("冻结因子研究使用离线分析，以隔离样本外窗口")
     execution_gaps = []
@@ -90,7 +116,7 @@ def preview_discovery(service, values, *, frozen_provider=None):
         for key in ("candidates", "fingerprint", "blueprint_id", "schema_version"):
             plan.pop(key, None)
         budget = DiscoveryBudget(**plan.pop("budget"))
-        plan.update(status="NEEDS_DATA", repair_href="/data",
+        plan.update(status="NEEDS_DATA", repair_href="/settings/data-connections",
                     readiness_gaps=[*panel.audit["reasons"], *execution_gaps,
                                     *(["研究需要至少50个观察点"] if len(contract.observed_at) < 50 else [])])
         return StudyBlueprint.freeze(plan, budget).to_dict()
