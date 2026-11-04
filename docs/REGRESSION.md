@@ -92,3 +92,5 @@ Phase25最终门禁：冻结实现`bbf9d84`的完整回归2407 passed、1 option
 | 发布 | Ruff、前端 build/test/perf、治理检查及 GitHub CI | PR 与合并后 main 按实际提交核验 |
 
 执行证据见[阶段验收](reviews/2026-10-31-finathink-phase26-review.md)。
+
+Phase26 最终本地回归使用冻结实现 `b90c584`，2447 项通过、1 项可选适配器跳过。包含全部强制浏览器、真实 worker、干净安装及备份恢复。前端 71 项及构建、性能、Ruff、治理、依赖与发布检查退出码均为 0。
