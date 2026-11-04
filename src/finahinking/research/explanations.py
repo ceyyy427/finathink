@@ -80,6 +80,18 @@ def research_explanation(job):
             # Specialized factor reports have their own evidence sections.
             anchor = "identity" if isinstance(job["factor_study"].get("validation_run"), dict) else "factor-study"
             evidence = [{"label": "冻结章程与因子验证报告", "href": base + "#" + anchor}]
+    if published and job.get("strategy_study"):
+        result = job["strategy_study"]["result"]
+        count = len((result.get("ledger") or {}).get("fills", []))
+        headline = "策略研究已发布"
+        conclusion = {
+            "COMPLETE": f"本轮策略纸面账本记录 {count} 笔成交。核对费用、基准与风险规则。",
+            "RESEARCH_ONLY": "本轮提供理论或事件统计。成交笔数为 0。",
+            "NEEDS_DATA": "本轮记录了数据缺口。查看账本与规则诊断。",
+            "BLOCKED_RISK": "本轮记录了风险阻断。查看规则依据和纸面订单。",
+        }.get(result["status"], "查看策略结果及其适用范围。")
+        evidence = [{"label": "策略结果与统一纸面账本", "href": f"/research/{run}/report/complete#strategy-study"}]
+        next_steps = ["核对同窗口基准、规则结果和订单状态。", "需要比较来源时，将已核验报告登记到冻结研究池。"]
     study = (job.get("model_research") or {}) if published else {}
     synthesis = study.get("synthesis") or {}
     conditions = [f'{job.get("data_mode", "UNKNOWN")} 数据 · 标的 {job.get("instrument", "未记录")} · 截止日 {job.get("as_of", "未记录")}',

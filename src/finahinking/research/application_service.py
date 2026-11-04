@@ -283,6 +283,14 @@ def run_local_research_stage(invocation, checkpoint_ref, publish_checkpoint, *, 
 
         tools.analysis["factor_study"] = compute_study(snapshot, study, phase=phase, validation=validation,
             research_fields_store=ResearchFieldStore(SnapshotStore(root / "snapshots")), study_store=studies)
+    if "strategy_study" in spec:
+        from .strategy_jobs import execute_bound_strategy
+
+        if budget is not None:
+            budget.charge_experiments(1)
+
+        tools.analysis["strategy_study"] = execute_bound_strategy(
+            SnapshotStore(root / "snapshots"), spec["strategy_study"], snapshot, policy_record)
     if budget is not None:
         budget.check_wall()
     manifest = ReportBundleWriter().write(result, root / "reports" / f"attempt-{attempt_id}", quant_analytics=tools.analysis)
@@ -382,7 +390,7 @@ class ResearchApplicationService:
 
         return research_readiness(self, values)
 
-    def submit(self, values, *, factor_study=None, rerun_of=None):
+    def submit(self, values, *, factor_study=None, rerun_of=None, strategy_study=None):
         if not isinstance(values, dict):
             raise TypeError("research submission must be an object")
         if set(values) - {"idempotency_key", "snapshot_ref", "question", "instrument", "as_of", "model_config_ref", "budget", "materials", "allow_model_calls", "policy_ref"}:
@@ -436,6 +444,15 @@ class ResearchApplicationService:
 
             plan = replace(request.research_plan, validation_spec={**request.research_plan.validation_spec, "factor_study": factor_study})
             request = replace(request, research_plan=plan, config_digest=stable_digest({"base": request.config_digest, "factor_study": factor_study}))
+        if strategy_study is not None:
+            from dataclasses import replace
+
+            if config is not None or factor_study is not None or strategy_study["policy_digest"] != policy_fingerprint:
+                raise ValueError("策略研究需要冻结的离线执行合同")
+            plan = replace(request.research_plan, validation_spec={**request.research_plan.validation_spec,
+                           "strategy_study": strategy_study})
+            request = replace(request, research_plan=plan,
+                              config_digest=stable_digest({"base": request.config_digest, "strategy_study": strategy_study}))
         if config is not None:
             from dataclasses import replace
 
@@ -615,6 +632,7 @@ class ResearchApplicationService:
             "question": request.research_plan.hypotheses[0], "model_config_ref": request.research_plan.validation_spec.get("model_config_ref", "offline"),
             "model_research": model_research,
             "factor_study": source.get("factor_study"),
+            **({"strategy_study": source["strategy_study"]} if report_status == "AVAILABLE" and "strategy_study" in source else {}),
             "risk_portfolio": source.get("risk_portfolio"),
             "policy_ref": request.previous_policy_fingerprint or request.research_plan.validation_spec["policy_fingerprint"],
             "policy_lineage": source.get("policy_lineage", request.research_plan.validation_spec.get("policy_lineage")),
@@ -656,6 +674,23 @@ class ResearchApplicationService:
         self._request(self.queue.get(job_id))
         self.queue.cancel(job_id)
         return self.get_job(job_id)
+
+    def run_strategy_template(self, values):
+        from .strategy_jobs import prepare_strategy
+
+        request, binding = prepare_strategy(self, values)
+        return self.submit(request, strategy_study=binding)
+
+    def create_strategy_sample(self):
+        from finahinking.data.research_fields import ResearchFieldStore
+
+        from .strategy_runner import strategy_sample
+
+        snapshot, attachments, contract, _ = strategy_sample()
+        reference = self.snapshots.save(snapshot)
+        store = ResearchFieldStore(self.snapshots)
+        return {"snapshot_ref": reference, "attachment_refs": [store.save(a) for a in attachments],
+                "contract": contract.to_dict(), "data_mode": "SAMPLE"}
 
     def create_factor_suite(self, values):
         from .factor_study_suite import prepare_suite

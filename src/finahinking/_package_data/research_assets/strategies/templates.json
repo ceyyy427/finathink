@@ -1,0 +1,1272 @@
+{
+  "schema_version": "strategy-templates.v1",
+  "templates": [
+    {
+      "template_id": "equal-weight",
+      "version": "1.0.0",
+      "title": "等权基准",
+      "universe": "all",
+      "required_fields": [
+        "close",
+        "in_universe",
+        "is_session"
+      ],
+      "selection_rule": "在当期已知可纳入资产间等权。",
+      "weight_rule": "单资产上限与现金保留。",
+      "rebalance_rule": "按声明观察点间隔检查并冻结目标权重。",
+      "execution_mode": "PAPER_LONG_ONLY",
+      "execution_rule": "最早下一观察点执行，受现金、交易许可、整手、结算及价格限制约束。",
+      "benchmark": {
+        "kind": "equal-weight-buy-hold",
+        "universe": "all",
+        "cost_basis": "frictionless"
+      },
+      "risk_rules": [
+        "data-pit",
+        "financial-abnormality",
+        "tradeability",
+        "liquidity",
+        "concentration",
+        "industry",
+        "collinearity",
+        "volatility",
+        "tail-loss",
+        "stop-loss",
+        "drawdown",
+        "stress"
+      ],
+      "failure_scenario": "未知交易日或资产池成员需补证据。",
+      "parameter_bounds": {
+        "rebalance_every": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 60,
+          "default": 5
+        },
+        "starting_cash": {
+          "type": "number",
+          "minimum": 100,
+          "maximum": 1000000,
+          "default": 10000
+        },
+        "fee_bps": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "default": 5
+        },
+        "slippage_bps": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "default": 5
+        },
+        "cash_buffer": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 0.9,
+          "default": 0.1
+        },
+        "max_weight": {
+          "type": "number",
+          "minimum": 0.05,
+          "maximum": 0.5,
+          "default": 0.5
+        }
+      },
+      "source_refs": [
+        {
+          "source_id": "bt",
+          "repository": "https://github.com/pmorissette/bt",
+          "commit": "4ae4090266300c0185f418aca18e28e649509a33",
+          "path": "bt/algos.py",
+          "sha256": "81b79443e7dc36356293a22bf4c237a76267d77bcfbaeb90e3a5df374425f2ee",
+          "license": "MIT",
+          "license_path": "LICENSE",
+          "capture_date": "2026-10-31",
+          "use": "REFERENCE_ONLY",
+          "topic": "选择、权重与再平衡的组合接口"
+        }
+      ]
+    },
+    {
+      "template_id": "single-factor-quantile",
+      "version": "1.0.0",
+      "title": "单因子分层",
+      "universe": "all",
+      "required_fields": [
+        "close",
+        "in_universe",
+        "is_session",
+        "split_factor"
+      ],
+      "selection_rule": "将同一因子可比样本按截面分位阈值分层。账面市值比或资产收益率需要仅股票面板和相应财务字段。",
+      "weight_rule": "顶层等权，保留并列信号。",
+      "rebalance_rule": "按声明观察点间隔检查并冻结目标权重。",
+      "execution_mode": "PAPER_LONG_ONLY",
+      "execution_rule": "最早下一观察点执行，受现金、交易许可、整手、结算及价格限制约束。",
+      "benchmark": {
+        "kind": "equal-weight-buy-hold",
+        "universe": "all",
+        "cost_basis": "frictionless"
+      },
+      "risk_rules": [
+        "data-pit",
+        "financial-abnormality",
+        "tradeability",
+        "liquidity",
+        "concentration",
+        "industry",
+        "collinearity",
+        "volatility",
+        "tail-loss",
+        "stop-loss",
+        "drawdown",
+        "stress"
+      ],
+      "failure_scenario": "缺字段或截面无差异时分层不可用。",
+      "parameter_bounds": {
+        "rebalance_every": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 60,
+          "default": 5
+        },
+        "starting_cash": {
+          "type": "number",
+          "minimum": 100,
+          "maximum": 1000000,
+          "default": 10000
+        },
+        "fee_bps": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "default": 5
+        },
+        "slippage_bps": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "default": 5
+        },
+        "cash_buffer": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 0.9,
+          "default": 0.1
+        },
+        "max_weight": {
+          "type": "number",
+          "minimum": 0.05,
+          "maximum": 0.5,
+          "default": 0.5
+        },
+        "window": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 60,
+          "default": 10
+        },
+        "quantile": {
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 0.95,
+          "default": 0.7
+        },
+        "factor": {
+          "type": "enum",
+          "choices": [
+            "momentum",
+            "book_to_market",
+            "return_on_assets"
+          ],
+          "default": "momentum"
+        }
+      },
+      "source_refs": [
+        {
+          "source_id": "bt",
+          "repository": "https://github.com/pmorissette/bt",
+          "commit": "4ae4090266300c0185f418aca18e28e649509a33",
+          "path": "bt/algos.py",
+          "sha256": "81b79443e7dc36356293a22bf4c237a76267d77bcfbaeb90e3a5df374425f2ee",
+          "license": "MIT",
+          "license_path": "LICENSE",
+          "capture_date": "2026-10-31",
+          "use": "REFERENCE_ONLY",
+          "topic": "选择、权重与再平衡的组合接口"
+        },
+        {
+          "source_id": "pyanomaly",
+          "repository": "https://github.com/chulwoohan/pyanomaly",
+          "commit": "59758c913a4146bbfb9d3c056668ccdc5231c8c8",
+          "path": "pyanomaly/characteristics.py",
+          "sha256": "c9ad1d14b61fae774d1a7446609971225fb0a709f0e0da7dc998d7aead32bc20",
+          "license": "MIT",
+          "license_path": "LICENSE.txt",
+          "capture_date": "2026-10-31",
+          "use": "REFERENCE_ONLY",
+          "topic": "价值和质量指标的输入口径"
+        }
+      ],
+      "parameter_fields": {
+        "factor": {
+          "book_to_market": [
+            "book_equity",
+            "market_cap"
+          ],
+          "return_on_assets": [
+            "net_profit",
+            "total_assets"
+          ]
+        }
+      }
+    },
+    {
+      "template_id": "short-term-reversal",
+      "version": "1.0.0",
+      "title": "短期反转",
+      "universe": "all",
+      "required_fields": [
+        "close",
+        "in_universe",
+        "is_session",
+        "split_factor"
+      ],
+      "selection_rule": "按近窗拆分中性收益从低到高选取弱势资产。",
+      "weight_rule": "排名靠前资产等权。",
+      "rebalance_rule": "按声明观察点间隔检查并冻结目标权重。",
+      "execution_mode": "PAPER_LONG_ONLY",
+      "execution_rule": "最早下一观察点执行，受现金、交易许可、整手、结算及价格限制约束。",
+      "benchmark": {
+        "kind": "equal-weight-buy-hold",
+        "universe": "all",
+        "cost_basis": "frictionless"
+      },
+      "risk_rules": [
+        "data-pit",
+        "financial-abnormality",
+        "tradeability",
+        "liquidity",
+        "concentration",
+        "industry",
+        "collinearity",
+        "volatility",
+        "tail-loss",
+        "stop-loss",
+        "drawdown",
+        "stress"
+      ],
+      "failure_scenario": "观察点不足或拆分字段缺失时保留数据缺口。",
+      "parameter_bounds": {
+        "rebalance_every": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 60,
+          "default": 5
+        },
+        "starting_cash": {
+          "type": "number",
+          "minimum": 100,
+          "maximum": 1000000,
+          "default": 10000
+        },
+        "fee_bps": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "default": 5
+        },
+        "slippage_bps": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "default": 5
+        },
+        "cash_buffer": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 0.9,
+          "default": 0.1
+        },
+        "max_weight": {
+          "type": "number",
+          "minimum": 0.05,
+          "maximum": 0.5,
+          "default": 0.5
+        },
+        "window": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 20,
+          "default": 3
+        },
+        "selection_count": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20,
+          "default": 2
+        }
+      },
+      "source_refs": [
+        {
+          "source_id": "bt",
+          "repository": "https://github.com/pmorissette/bt",
+          "commit": "4ae4090266300c0185f418aca18e28e649509a33",
+          "path": "bt/algos.py",
+          "sha256": "81b79443e7dc36356293a22bf4c237a76267d77bcfbaeb90e3a5df374425f2ee",
+          "license": "MIT",
+          "license_path": "LICENSE",
+          "capture_date": "2026-10-31",
+          "use": "REFERENCE_ONLY",
+          "topic": "选择、权重与再平衡的组合接口"
+        }
+      ]
+    },
+    {
+      "template_id": "trend-breakout",
+      "version": "1.0.0",
+      "title": "趋势突破",
+      "universe": "all",
+      "required_fields": [
+        "close",
+        "in_universe",
+        "is_session",
+        "split_factor"
+      ],
+      "selection_rule": "比较当前拆分中性价格与前窗最高价格。",
+      "weight_rule": "突破资产等权，无突破保留现金。",
+      "rebalance_rule": "按声明观察点间隔检查并冻结目标权重。",
+      "execution_mode": "PAPER_LONG_ONLY",
+      "execution_rule": "最早下一观察点执行，受现金、交易许可、整手、结算及价格限制约束。",
+      "benchmark": {
+        "kind": "equal-weight-buy-hold",
+        "universe": "all",
+        "cost_basis": "frictionless"
+      },
+      "risk_rules": [
+        "data-pit",
+        "financial-abnormality",
+        "tradeability",
+        "liquidity",
+        "concentration",
+        "industry",
+        "collinearity",
+        "volatility",
+        "tail-loss",
+        "stop-loss",
+        "drawdown",
+        "stress"
+      ],
+      "failure_scenario": "拆分或停牌缺口使价格窗口不可比。",
+      "parameter_bounds": {
+        "rebalance_every": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 60,
+          "default": 5
+        },
+        "starting_cash": {
+          "type": "number",
+          "minimum": 100,
+          "maximum": 1000000,
+          "default": 10000
+        },
+        "fee_bps": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "default": 5
+        },
+        "slippage_bps": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "default": 5
+        },
+        "cash_buffer": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 0.9,
+          "default": 0.1
+        },
+        "max_weight": {
+          "type": "number",
+          "minimum": 0.05,
+          "maximum": 0.5,
+          "default": 0.5
+        },
+        "window": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 60,
+          "default": 10
+        }
+      },
+      "source_refs": [
+        {
+          "source_id": "bt",
+          "repository": "https://github.com/pmorissette/bt",
+          "commit": "4ae4090266300c0185f418aca18e28e649509a33",
+          "path": "bt/algos.py",
+          "sha256": "81b79443e7dc36356293a22bf4c237a76267d77bcfbaeb90e3a5df374425f2ee",
+          "license": "MIT",
+          "license_path": "LICENSE",
+          "capture_date": "2026-10-31",
+          "use": "REFERENCE_ONLY",
+          "topic": "选择、权重与再平衡的组合接口"
+        }
+      ]
+    },
+    {
+      "template_id": "low-volatility-low-turnover",
+      "version": "1.0.0",
+      "title": "低波低换手",
+      "universe": "all",
+      "required_fields": [
+        "close",
+        "in_universe",
+        "is_session",
+        "split_factor"
+      ],
+      "selection_rule": "按同窗收益波动排序，保留处于持仓缓冲名次内的资产。",
+      "weight_rule": "优先保留符合缓冲条件的持仓后等权。",
+      "rebalance_rule": "按声明观察点间隔检查并冻结目标权重。",
+      "execution_mode": "PAPER_LONG_ONLY",
+      "execution_rule": "最早下一观察点执行，受现金、交易许可、整手、结算及价格限制约束。",
+      "benchmark": {
+        "kind": "equal-weight-buy-hold",
+        "universe": "all",
+        "cost_basis": "frictionless"
+      },
+      "risk_rules": [
+        "data-pit",
+        "financial-abnormality",
+        "tradeability",
+        "liquidity",
+        "concentration",
+        "industry",
+        "collinearity",
+        "volatility",
+        "tail-loss",
+        "stop-loss",
+        "drawdown",
+        "stress"
+      ],
+      "failure_scenario": "窗口不连续或波动无法估计时需补数据。",
+      "parameter_bounds": {
+        "rebalance_every": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 60,
+          "default": 5
+        },
+        "starting_cash": {
+          "type": "number",
+          "minimum": 100,
+          "maximum": 1000000,
+          "default": 10000
+        },
+        "fee_bps": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "default": 5
+        },
+        "slippage_bps": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "default": 5
+        },
+        "cash_buffer": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 0.9,
+          "default": 0.1
+        },
+        "max_weight": {
+          "type": "number",
+          "minimum": 0.05,
+          "maximum": 0.5,
+          "default": 0.5
+        },
+        "window": {
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 60,
+          "default": 15
+        },
+        "selection_count": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20,
+          "default": 3
+        },
+        "rank_buffer": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10,
+          "default": 1
+        }
+      },
+      "source_refs": [
+        {
+          "source_id": "bt",
+          "repository": "https://github.com/pmorissette/bt",
+          "commit": "4ae4090266300c0185f418aca18e28e649509a33",
+          "path": "bt/algos.py",
+          "sha256": "81b79443e7dc36356293a22bf4c237a76267d77bcfbaeb90e3a5df374425f2ee",
+          "license": "MIT",
+          "license_path": "LICENSE",
+          "capture_date": "2026-10-31",
+          "use": "REFERENCE_ONLY",
+          "topic": "选择、权重与再平衡的组合接口"
+        }
+      ]
+    },
+    {
+      "template_id": "value-quality",
+      "version": "1.0.0",
+      "title": "价值质量",
+      "universe": "equity",
+      "required_fields": [
+        "book_equity",
+        "in_universe",
+        "is_session",
+        "market_cap",
+        "net_profit",
+        "total_assets"
+      ],
+      "selection_rule": "组合账面市值比和资产收益率的平均截面秩。",
+      "weight_rule": "高价值质量资产等权。",
+      "rebalance_rule": "按声明观察点间隔检查并冻结目标权重。",
+      "execution_mode": "PAPER_LONG_ONLY",
+      "execution_rule": "最早下一观察点执行，受现金、交易许可、整手、结算及价格限制约束。",
+      "benchmark": {
+        "kind": "equal-weight-buy-hold",
+        "universe": "equity",
+        "cost_basis": "frictionless"
+      },
+      "risk_rules": [
+        "data-pit",
+        "financial-abnormality",
+        "tradeability",
+        "liquidity",
+        "concentration",
+        "industry",
+        "collinearity",
+        "volatility",
+        "tail-loss",
+        "stop-loss",
+        "drawdown",
+        "stress"
+      ],
+      "failure_scenario": "缺财报、市值或无效分母时不推断估值。",
+      "parameter_bounds": {
+        "rebalance_every": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 60,
+          "default": 5
+        },
+        "starting_cash": {
+          "type": "number",
+          "minimum": 100,
+          "maximum": 1000000,
+          "default": 10000
+        },
+        "fee_bps": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "default": 5
+        },
+        "slippage_bps": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "default": 5
+        },
+        "cash_buffer": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 0.9,
+          "default": 0.1
+        },
+        "max_weight": {
+          "type": "number",
+          "minimum": 0.05,
+          "maximum": 0.5,
+          "default": 0.5
+        },
+        "selection_count": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20,
+          "default": 2
+        }
+      },
+      "source_refs": [
+        {
+          "source_id": "bt",
+          "repository": "https://github.com/pmorissette/bt",
+          "commit": "4ae4090266300c0185f418aca18e28e649509a33",
+          "path": "bt/algos.py",
+          "sha256": "81b79443e7dc36356293a22bf4c237a76267d77bcfbaeb90e3a5df374425f2ee",
+          "license": "MIT",
+          "license_path": "LICENSE",
+          "capture_date": "2026-10-31",
+          "use": "REFERENCE_ONLY",
+          "topic": "选择、权重与再平衡的组合接口"
+        },
+        {
+          "source_id": "pyanomaly",
+          "repository": "https://github.com/chulwoohan/pyanomaly",
+          "commit": "59758c913a4146bbfb9d3c056668ccdc5231c8c8",
+          "path": "pyanomaly/characteristics.py",
+          "sha256": "c9ad1d14b61fae774d1a7446609971225fb0a709f0e0da7dc998d7aead32bc20",
+          "license": "MIT",
+          "license_path": "LICENSE.txt",
+          "capture_date": "2026-10-31",
+          "use": "REFERENCE_ONLY",
+          "topic": "价值和质量指标的输入口径"
+        }
+      ]
+    },
+    {
+      "template_id": "multifactor-neutral",
+      "version": "1.0.0",
+      "title": "多因子中性",
+      "universe": "equity",
+      "required_fields": [
+        "book_equity",
+        "close",
+        "in_universe",
+        "is_session",
+        "market_cap",
+        "net_profit",
+        "split_factor",
+        "style_beta",
+        "total_assets"
+      ],
+      "selection_rule": "将动量、价值和质量合成秩对常数项与风格暴露回归，保留残差。",
+      "weight_rule": "残差正负分组形成归一化理论多空权重。",
+      "rebalance_rule": "按声明观察点间隔检查并冻结目标权重。",
+      "execution_mode": "THEORETICAL",
+      "execution_rule": "展示研究统计与理论结果，成交目标为空。",
+      "benchmark": {
+        "kind": "equal-weight-buy-hold",
+        "universe": "equity",
+        "cost_basis": "frictionless"
+      },
+      "risk_rules": [
+        "data-pit",
+        "financial-abnormality",
+        "tradeability",
+        "liquidity",
+        "concentration",
+        "industry",
+        "collinearity",
+        "volatility",
+        "tail-loss",
+        "stop-loss",
+        "drawdown",
+        "stress"
+      ],
+      "failure_scenario": "暴露缺失或回归退化时需补数据。",
+      "parameter_bounds": {
+        "rebalance_every": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 60,
+          "default": 5
+        },
+        "starting_cash": {
+          "type": "number",
+          "minimum": 100,
+          "maximum": 1000000,
+          "default": 10000
+        },
+        "fee_bps": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "default": 5
+        },
+        "slippage_bps": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "default": 5
+        },
+        "cash_buffer": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 0.9,
+          "default": 0.1
+        },
+        "max_weight": {
+          "type": "number",
+          "minimum": 0.05,
+          "maximum": 0.5,
+          "default": 0.5
+        },
+        "window": {
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 60,
+          "default": 15
+        }
+      },
+      "source_refs": [
+        {
+          "source_id": "bt",
+          "repository": "https://github.com/pmorissette/bt",
+          "commit": "4ae4090266300c0185f418aca18e28e649509a33",
+          "path": "bt/algos.py",
+          "sha256": "81b79443e7dc36356293a22bf4c237a76267d77bcfbaeb90e3a5df374425f2ee",
+          "license": "MIT",
+          "license_path": "LICENSE",
+          "capture_date": "2026-10-31",
+          "use": "REFERENCE_ONLY",
+          "topic": "选择、权重与再平衡的组合接口"
+        },
+        {
+          "source_id": "pyanomaly",
+          "repository": "https://github.com/chulwoohan/pyanomaly",
+          "commit": "59758c913a4146bbfb9d3c056668ccdc5231c8c8",
+          "path": "pyanomaly/characteristics.py",
+          "sha256": "c9ad1d14b61fae774d1a7446609971225fb0a709f0e0da7dc998d7aead32bc20",
+          "license": "MIT",
+          "license_path": "LICENSE.txt",
+          "capture_date": "2026-10-31",
+          "use": "REFERENCE_ONLY",
+          "topic": "价值和质量指标的输入口径"
+        }
+      ]
+    },
+    {
+      "template_id": "etf-risk-budget",
+      "version": "1.0.0",
+      "title": "ETF 风险预算",
+      "universe": "etf",
+      "required_fields": [
+        "close",
+        "in_universe",
+        "is_session",
+        "nav",
+        "split_factor",
+        "tracking_error"
+      ],
+      "selection_rule": "用有可用净值、跟踪误差与同窗价格波动的 ETF 构造风险预算。",
+      "weight_rule": "按波动倒数给权重并应用单基金上限。",
+      "rebalance_rule": "按声明观察点间隔检查并冻结目标权重。",
+      "execution_mode": "PAPER_LONG_ONLY",
+      "execution_rule": "最早下一观察点执行，受现金、交易许可、整手、结算及价格限制约束。",
+      "benchmark": {
+        "kind": "equal-weight-buy-hold",
+        "universe": "etf",
+        "cost_basis": "frictionless"
+      },
+      "risk_rules": [
+        "data-pit",
+        "financial-abnormality",
+        "tradeability",
+        "liquidity",
+        "concentration",
+        "industry",
+        "collinearity",
+        "volatility",
+        "tail-loss",
+        "stop-loss",
+        "drawdown",
+        "stress"
+      ],
+      "failure_scenario": "净值、跟踪误差或波动证据缺失时停止分配。",
+      "parameter_bounds": {
+        "rebalance_every": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 60,
+          "default": 5
+        },
+        "starting_cash": {
+          "type": "number",
+          "minimum": 100,
+          "maximum": 1000000,
+          "default": 10000
+        },
+        "fee_bps": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "default": 5
+        },
+        "slippage_bps": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "default": 5
+        },
+        "cash_buffer": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 0.9,
+          "default": 0.1
+        },
+        "max_weight": {
+          "type": "number",
+          "minimum": 0.05,
+          "maximum": 0.5,
+          "default": 0.5
+        },
+        "window": {
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 60,
+          "default": 15
+        },
+        "tracking_error_limit": {
+          "type": "number",
+          "minimum": 0.01,
+          "maximum": 0.2,
+          "default": 0.05
+        }
+      },
+      "source_refs": [
+        {
+          "source_id": "bt",
+          "repository": "https://github.com/pmorissette/bt",
+          "commit": "4ae4090266300c0185f418aca18e28e649509a33",
+          "path": "bt/algos.py",
+          "sha256": "81b79443e7dc36356293a22bf4c237a76267d77bcfbaeb90e3a5df374425f2ee",
+          "license": "MIT",
+          "license_path": "LICENSE",
+          "capture_date": "2026-10-31",
+          "use": "REFERENCE_ONLY",
+          "topic": "选择、权重与再平衡的组合接口"
+        },
+        {
+          "source_id": "deepseek-harness-quant",
+          "repository": "https://github.com/yuanwang589-dev/deepseek-harness-quant",
+          "commit": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+          "path": "etf/etf_map.py",
+          "sha256": "cacefdb73a9b88e733c894a01aa1c4aa0563d53377a9a1f667b2f1d300910f1a",
+          "license": "MIT_WITH_RESEARCH_NOTE",
+          "license_path": "LICENSE",
+          "capture_date": "2026-10-31",
+          "use": "REFERENCE_ONLY",
+          "topic": "基金净值、暴露与观察区间"
+        }
+      ]
+    },
+    {
+      "template_id": "etf-relative-strength",
+      "version": "1.0.0",
+      "title": "ETF 相对强弱轮动",
+      "universe": "etf",
+      "required_fields": [
+        "close",
+        "in_universe",
+        "is_session",
+        "nav",
+        "split_factor"
+      ],
+      "selection_rule": "在同一窗口比较基金拆分中性收益。",
+      "weight_rule": "领先基金等权，非正收益时保留现金。",
+      "rebalance_rule": "按声明观察点间隔检查并冻结目标权重。",
+      "execution_mode": "PAPER_LONG_ONLY",
+      "execution_rule": "最早下一观察点执行，受现金、交易许可、整手、结算及价格限制约束。",
+      "benchmark": {
+        "kind": "equal-weight-buy-hold",
+        "universe": "etf",
+        "cost_basis": "frictionless"
+      },
+      "risk_rules": [
+        "data-pit",
+        "financial-abnormality",
+        "tradeability",
+        "liquidity",
+        "concentration",
+        "industry",
+        "collinearity",
+        "volatility",
+        "tail-loss",
+        "stop-loss",
+        "drawdown",
+        "stress"
+      ],
+      "failure_scenario": "净值缺口或对齐窗口不足时需补数据。",
+      "parameter_bounds": {
+        "rebalance_every": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 60,
+          "default": 5
+        },
+        "starting_cash": {
+          "type": "number",
+          "minimum": 100,
+          "maximum": 1000000,
+          "default": 10000
+        },
+        "fee_bps": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "default": 5
+        },
+        "slippage_bps": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "default": 5
+        },
+        "cash_buffer": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 0.9,
+          "default": 0.1
+        },
+        "max_weight": {
+          "type": "number",
+          "minimum": 0.05,
+          "maximum": 0.5,
+          "default": 0.5
+        },
+        "window": {
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 60,
+          "default": 15
+        },
+        "selection_count": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20,
+          "default": 1
+        }
+      },
+      "source_refs": [
+        {
+          "source_id": "bt",
+          "repository": "https://github.com/pmorissette/bt",
+          "commit": "4ae4090266300c0185f418aca18e28e649509a33",
+          "path": "bt/algos.py",
+          "sha256": "81b79443e7dc36356293a22bf4c237a76267d77bcfbaeb90e3a5df374425f2ee",
+          "license": "MIT",
+          "license_path": "LICENSE",
+          "capture_date": "2026-10-31",
+          "use": "REFERENCE_ONLY",
+          "topic": "选择、权重与再平衡的组合接口"
+        },
+        {
+          "source_id": "deepseek-harness-quant",
+          "repository": "https://github.com/yuanwang589-dev/deepseek-harness-quant",
+          "commit": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+          "path": "etf/etf_map.py",
+          "sha256": "cacefdb73a9b88e733c894a01aa1c4aa0563d53377a9a1f667b2f1d300910f1a",
+          "license": "MIT_WITH_RESEARCH_NOTE",
+          "license_path": "LICENSE",
+          "capture_date": "2026-10-31",
+          "use": "REFERENCE_ONLY",
+          "topic": "基金净值、暴露与观察区间"
+        }
+      ]
+    },
+    {
+      "template_id": "regime-allocation",
+      "version": "1.0.0",
+      "title": "市场状态调仓",
+      "universe": "all",
+      "required_fields": [
+        "close",
+        "in_universe",
+        "is_session",
+        "policy_regime"
+      ],
+      "selection_rule": "按已知 RISK_ON、NEUTRAL 或 RISK_OFF 将风险预算分配到股票和 ETF。",
+      "weight_rule": "各资产类别等权，按状态使用显式类别预算。",
+      "rebalance_rule": "按声明观察点间隔检查并冻结目标权重。",
+      "execution_mode": "PAPER_LONG_ONLY",
+      "execution_rule": "最早下一观察点执行，受现金、交易许可、整手、结算及价格限制约束。",
+      "benchmark": {
+        "kind": "equal-weight-buy-hold",
+        "universe": "all",
+        "cost_basis": "frictionless"
+      },
+      "risk_rules": [
+        "data-pit",
+        "financial-abnormality",
+        "tradeability",
+        "liquidity",
+        "concentration",
+        "industry",
+        "collinearity",
+        "volatility",
+        "tail-loss",
+        "stop-loss",
+        "drawdown",
+        "stress"
+      ],
+      "failure_scenario": "市场状态缺失、不一致或缺一个资产类别时需补数据。",
+      "parameter_bounds": {
+        "rebalance_every": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 60,
+          "default": 5
+        },
+        "starting_cash": {
+          "type": "number",
+          "minimum": 100,
+          "maximum": 1000000,
+          "default": 10000
+        },
+        "fee_bps": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "default": 5
+        },
+        "slippage_bps": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "default": 5
+        },
+        "cash_buffer": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 0.9,
+          "default": 0.1
+        },
+        "max_weight": {
+          "type": "number",
+          "minimum": 0.05,
+          "maximum": 0.5,
+          "default": 0.5
+        }
+      },
+      "source_refs": [
+        {
+          "source_id": "bt",
+          "repository": "https://github.com/pmorissette/bt",
+          "commit": "4ae4090266300c0185f418aca18e28e649509a33",
+          "path": "bt/algos.py",
+          "sha256": "81b79443e7dc36356293a22bf4c237a76267d77bcfbaeb90e3a5df374425f2ee",
+          "license": "MIT",
+          "license_path": "LICENSE",
+          "capture_date": "2026-10-31",
+          "use": "REFERENCE_ONLY",
+          "topic": "选择、权重与再平衡的组合接口"
+        }
+      ]
+    },
+    {
+      "template_id": "event-study",
+      "version": "1.0.0",
+      "title": "事件研究",
+      "universe": "all",
+      "required_fields": [
+        "close",
+        "event_type",
+        "in_universe",
+        "is_session",
+        "split_factor"
+      ],
+      "selection_rule": "跟踪已公开事件及其已成熟的固定观察间隔收益。",
+      "weight_rule": "按事件类型报告原始收益样本统计。",
+      "rebalance_rule": "按声明观察点间隔检查并冻结目标权重。",
+      "execution_mode": "STATISTICS",
+      "execution_rule": "展示研究统计与理论结果，成交目标为空。",
+      "benchmark": {
+        "kind": "equal-weight-buy-hold",
+        "universe": "all",
+        "cost_basis": "frictionless"
+      },
+      "risk_rules": [
+        "data-pit",
+        "financial-abnormality",
+        "tradeability",
+        "liquidity",
+        "concentration",
+        "industry",
+        "collinearity",
+        "volatility",
+        "tail-loss",
+        "stop-loss",
+        "drawdown",
+        "stress"
+      ],
+      "failure_scenario": "无成熟事件或后续价格缺失时说明覆盖不足。",
+      "parameter_bounds": {
+        "rebalance_every": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 60,
+          "default": 5
+        },
+        "starting_cash": {
+          "type": "number",
+          "minimum": 100,
+          "maximum": 1000000,
+          "default": 10000
+        },
+        "fee_bps": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "default": 5
+        },
+        "slippage_bps": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "default": 5
+        },
+        "cash_buffer": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 0.9,
+          "default": 0.1
+        },
+        "max_weight": {
+          "type": "number",
+          "minimum": 0.05,
+          "maximum": 0.5,
+          "default": 0.5
+        },
+        "event_horizon": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20,
+          "default": 5
+        },
+        "event_window": {
+          "type": "integer",
+          "minimum": 20,
+          "maximum": 120,
+          "default": 60
+        }
+      },
+      "source_refs": [
+        {
+          "source_id": "bt",
+          "repository": "https://github.com/pmorissette/bt",
+          "commit": "4ae4090266300c0185f418aca18e28e649509a33",
+          "path": "bt/algos.py",
+          "sha256": "81b79443e7dc36356293a22bf4c237a76267d77bcfbaeb90e3a5df374425f2ee",
+          "license": "MIT",
+          "license_path": "LICENSE",
+          "capture_date": "2026-10-31",
+          "use": "REFERENCE_ONLY",
+          "topic": "选择、权重与再平衡的组合接口"
+        }
+      ]
+    },
+    {
+      "template_id": "pairs-mean-reversion",
+      "version": "1.0.0",
+      "title": "配对均值回归",
+      "universe": "equity",
+      "required_fields": [
+        "close",
+        "in_universe",
+        "is_session",
+        "split_factor"
+      ],
+      "selection_rule": "前窗拟合配对对数价格并以当前残差标准分检查偏离。",
+      "weight_rule": "以已知对冲系数给出理论多空方向与权重。",
+      "rebalance_rule": "按声明观察点间隔检查并冻结目标权重。",
+      "execution_mode": "THEORETICAL",
+      "execution_rule": "展示研究统计与理论结果，成交目标为空。",
+      "benchmark": {
+        "kind": "equal-weight-buy-hold",
+        "universe": "equity",
+        "cost_basis": "frictionless"
+      },
+      "risk_rules": [
+        "data-pit",
+        "financial-abnormality",
+        "tradeability",
+        "liquidity",
+        "concentration",
+        "industry",
+        "collinearity",
+        "volatility",
+        "tail-loss",
+        "stop-loss",
+        "drawdown",
+        "stress"
+      ],
+      "failure_scenario": "训练价格退化、残差方差不足或配对价格错位时需补数据。",
+      "parameter_bounds": {
+        "rebalance_every": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 60,
+          "default": 5
+        },
+        "starting_cash": {
+          "type": "number",
+          "minimum": 100,
+          "maximum": 1000000,
+          "default": 10000
+        },
+        "fee_bps": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "default": 5
+        },
+        "slippage_bps": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "default": 5
+        },
+        "cash_buffer": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 0.9,
+          "default": 0.1
+        },
+        "max_weight": {
+          "type": "number",
+          "minimum": 0.05,
+          "maximum": 0.5,
+          "default": 0.5
+        },
+        "window": {
+          "type": "integer",
+          "minimum": 8,
+          "maximum": 60,
+          "default": 20
+        },
+        "entry_z": {
+          "type": "number",
+          "minimum": 0.25,
+          "maximum": 4.0,
+          "default": 1.0
+        }
+      },
+      "source_refs": [
+        {
+          "source_id": "bt",
+          "repository": "https://github.com/pmorissette/bt",
+          "commit": "4ae4090266300c0185f418aca18e28e649509a33",
+          "path": "bt/algos.py",
+          "sha256": "81b79443e7dc36356293a22bf4c237a76267d77bcfbaeb90e3a5df374425f2ee",
+          "license": "MIT",
+          "license_path": "LICENSE",
+          "capture_date": "2026-10-31",
+          "use": "REFERENCE_ONLY",
+          "topic": "选择、权重与再平衡的组合接口"
+        }
+      ]
+    }
+  ]
+}

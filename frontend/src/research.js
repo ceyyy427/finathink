@@ -1,3 +1,4 @@
+import { mountStrategyStudy } from './strategy-study.js';
 import { mountFactorSuite } from './factor-suite.js';
 import { mountFactorLibrary } from './factor-library.js';
 import { mountLearningReliability } from './learning-reliability.js';
@@ -589,6 +590,7 @@ export function mountResearch(root, { payload, payloadUrl } = {}) {
 
 if (typeof document !== 'undefined') {
   mountAppShell(document);
+  document.querySelectorAll('[data-strategy-study]').forEach(mountStrategyStudy);
   document.querySelectorAll('[data-suite-form]').forEach(form => mountFactorSuite(form));
   document.querySelectorAll('[data-learning-reliability]').forEach(root => { mountLearningReliability(root); });
   document.querySelectorAll('[data-task-maintenance]').forEach(root => { mountTaskMaintenance(root); });

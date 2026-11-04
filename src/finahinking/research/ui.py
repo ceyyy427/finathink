@@ -95,6 +95,7 @@ def research_view_model(run_state: ResearchRunState, manifest: ReportManifest | 
             "mode": "USER_API" if snapshot.get("model_research", {}).get("execution_mode") == "provider-grounded" else "OFFLINE",
             "model_research": snapshot.get("model_research"),
             "factor_study": snapshot.get("factor_study"),
+            **({"strategy_study": snapshot["strategy_study"]} if "strategy_study" in snapshot else {}),
             "risk_portfolio": snapshot.get("risk_portfolio"),
             "policy_lineage": snapshot.get("policy_lineage"),
             "paper_only": True,
@@ -351,8 +352,9 @@ def render_status_wall_html(model: Mapping[str, Any], *, title: str = "Finathink
         f'<section aria-labelledby="source"><h2 id="source">Research input</h2><p>Dataset fingerprint</p><pre>{esc(safe.get("dataset_fingerprint"))}</pre></section>'
         if safe.get("dataset_fingerprint") else ""
     )
+    metric_title = "辅助单资产基线" if safe.get("strategy_study") else "Historical metrics"
     if metric_rows:
-        evidence_html += f'<section aria-labelledby="quant-metrics"><h2 id="quant-metrics">Historical metrics</h2><table><tbody>{metric_rows}</tbody></table><p>In-sample deterministic baseline, including declared transaction costs. Not an out-of-sample forecast.</p></section>'
+        evidence_html += f'<section aria-labelledby="quant-metrics"><h2 id="quant-metrics">{metric_title}</h2><table><tbody>{metric_rows}</tbody></table><p>In-sample deterministic baseline, including declared transaction costs. Not an out-of-sample forecast.</p></section>'
     if (safe.get("publication_scope") or {}).get("kind") == "PRE_TEST_ONLY":
         evidence_html += '<p>验证阶段：辅助回测、风险与归因仅使用最终测试期之前的观察。本报告不展示测试期价格与绩效。</p>'
     if safe.get("data_mode"):
@@ -366,12 +368,18 @@ def render_status_wall_html(model: Mapping[str, Any], *, title: str = "Finathink
         evidence_html += f'<section aria-labelledby="policy-lineage"><h2 id="policy-lineage">配置版本与复跑来源</h2><p>v{esc(lineage.get("version"))} · {esc(kind)}</p><p>配置引用</p><pre>{esc(lineage.get("policy_ref"))}</pre><p>实际参数指纹</p><pre>{esc(lineage.get("runtime_fingerprint"))}</pre><p>父版本 {esc(lineage.get("parent_ref"))} · 批准可用时间 {esc(lineage.get("available_at"))} · 复跑原运行 {esc(lineage.get("rerun_of"))}</p><p>旧观察使用新配置时属于回溯分析，不是当时可获得的预测或独立样本外证据。</p></section>'
     risk_portfolio = safe.get("risk_portfolio")
     if isinstance(risk_portfolio, Mapping):
+        risk_title = "辅助基线的风险与组合" if safe.get("strategy_study") else "风险与组合 · PAPER-ONLY"
         effects = "".join(f'<tr><th scope="row">{esc(item.get("constraint"))}</th><td>{esc(item.get("before_weight"))}</td><td>{esc(item.get("after_weight"))}</td><td>{esc(item.get("cash_added"))}</td><td>{esc(item.get("reason"))}</td></tr>' for item in risk_portfolio.get("constraint_effects", []))
         attribution = risk_portfolio.get("attribution", {})
         contribution_rows = "".join(f'<tr><th scope="row">{esc(label)}</th><td>{esc(attribution.get(key))}</td></tr>' for key, label in (("strategy", "原始策略（零成本）"), ("cost", "成本差额"), ("risk_scaling", "风险缩放差额"), ("net_return", "约束后净收益"), ("residual", "加总残差")))
         exposure = risk_portfolio.get("exposure", {})
         risk_details = esc(json.dumps({key: risk_portfolio.get(key) for key in ("exposure", "stress", "review", "allocation", "paper_ledger")}, ensure_ascii=False, sort_keys=True))
-        evidence_html += f'<section aria-labelledby="risk-portfolio"><h2 id="risk-portfolio">风险与组合 · PAPER-ONLY</h2><p>行业来源 {esc(risk_portfolio.get("industry_status"))} · 历史 CVaR {esc(exposure.get("cvar"))} · 样本数 {esc(risk_portfolio.get("cvar_sample_size"))}</p><p>{esc(risk_portfolio.get("factor_definition"))}</p><p>计划现金比例 {esc(risk_portfolio.get("planned_cash_weight"))} · 纸面执行 {esc(risk_portfolio.get("execution_status"))}。计划仓位不等于已成交仓位；没有下一观测时保留现金与待执行状态。</p><h3>约束对仓位与现金的影响</h3><div tabindex="0" role="region" aria-label="约束影响表，可横向滚动" style="overflow-x:auto"><table><thead><tr><th>约束</th><th>约束前</th><th>约束后</th><th>增留现金</th><th>依据</th></tr></thead><tbody>{effects}</tbody></table></div><h3>路径归因</h3><p>同一数据与执行容量下，原始零成本 → 原始含成本 → 前缀风控含成本；这是有顺序的反事实差额，不是唯一因果解释或收益预测。</p><table><tbody>{contribution_rows}</tbody></table><details><summary>暴露、压力情景、配置与纸面账本证据</summary><pre>{risk_details}</pre></details></section>'
+        evidence_html += f'<section aria-labelledby="risk-portfolio"><h2 id="risk-portfolio">{risk_title}</h2><p>行业来源 {esc(risk_portfolio.get("industry_status"))} · 历史 CVaR {esc(exposure.get("cvar"))} · 样本数 {esc(risk_portfolio.get("cvar_sample_size"))}</p><p>{esc(risk_portfolio.get("factor_definition"))}</p><p>计划现金比例 {esc(risk_portfolio.get("planned_cash_weight"))} · 纸面执行 {esc(risk_portfolio.get("execution_status"))}。计划仓位不等于已成交仓位；没有下一观测时保留现金与待执行状态。</p><h3>约束对仓位与现金的影响</h3><div tabindex="0" role="region" aria-label="约束影响表，可横向滚动" style="overflow-x:auto"><table><thead><tr><th>约束</th><th>约束前</th><th>约束后</th><th>增留现金</th><th>依据</th></tr></thead><tbody>{effects}</tbody></table></div><h3>路径归因</h3><p>同一数据与执行容量下，原始零成本 → 原始含成本 → 前缀风控含成本；这是有顺序的反事实差额，不是唯一因果解释或收益预测。</p><table><tbody>{contribution_rows}</tbody></table><details><summary>暴露、压力情景、配置与纸面账本证据</summary><pre>{risk_details}</pre></details></section>'
+    strategy = safe.get("strategy_study")
+    if isinstance(strategy, Mapping):
+        result = strategy.get("result", {})
+        details = esc(json.dumps(strategy, ensure_ascii=False, sort_keys=True))
+        evidence_html += f'<section aria-labelledby="strategy-study"><h2 id="strategy-study">策略研究与统一纸面账本</h2><p>{esc(strategy.get("data_mode"))} · {esc(strategy.get("binding", {}).get("template_id"))} · {esc(result.get("status"))}</p><details><summary>成交、持仓、费用、基准与规则证据</summary><pre>{details}</pre></details></section>'
     factor_study = safe.get("factor_study")
     if isinstance(factor_study, Mapping):
         rows = "".join(f'<tr><th scope="row">{esc(item.get("experiment_id"))}</th><td>{esc(item.get("parameters", {}).get("window"))}</td><td>{esc(item.get("failure_reason") or item.get("metrics", {}).get("information_coefficient"))}</td><td>{esc(item.get("metrics", {}).get("sample_size"))}</td></tr>' for item in factor_study.get("summaries", []))
@@ -399,7 +407,8 @@ def render_status_wall_html(model: Mapping[str, Any], *, title: str = "Finathink
         "report_status": "AVAILABLE", "snapshot_ref": safe.get("dataset_fingerprint"),
         "data_mode": safe.get("data_mode", "UNKNOWN"), "instrument": safe.get("instrument") or "未记录",
         "as_of": safe.get("as_of"), "metrics": metrics, "model_research": model_research,
-        "risk_portfolio": risk_portfolio, "factor_study": factor_study, "failure_kind": safe.get("failure_kind"),
+        "risk_portfolio": risk_portfolio, "factor_study": factor_study, "strategy_study": strategy,
+        "failure_kind": safe.get("failure_kind"),
     })
     evidence_html = render_explanation_html(explanation, offline=True) + evidence_html
     report_style = """body{font:16px/1.5 system-ui,sans-serif;max-width:980px;margin:0 auto;padding:clamp(1rem,4vw,2rem);color:#173137;overflow-wrap:anywhere}h1{margin-bottom:.25rem}.meta{color:#617174}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(180px,100%),1fr));gap:.7rem;padding:0;list-style:none}.grid li{border:1px solid #c9c2b5;padding:.8rem;display:flex;justify-content:space-between;gap:.5rem}table{width:100%;table-layout:fixed;border-collapse:collapse;margin:1rem 0;font-variant-numeric:tabular-nums}th,td{text-align:left;border-bottom:1px solid #c9c2b5;padding:.6rem;overflow-wrap:anywhere}code,pre{max-width:100%;overflow:auto}pre{white-space:pre-wrap;overflow-wrap:anywhere}.note{border-left:3px solid #c36e48;padding-left:1rem}:focus-visible{outline:2px solid #173137;outline-offset:3px}summary{min-height:44px;cursor:pointer}@media(max-width:480px){th,td{padding:.4rem;font-size:.875rem}}"""

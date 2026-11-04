@@ -1326,6 +1326,40 @@
       "source_sha256": null,
       "derivation": "FINATHINK_ORIGINAL",
       "rights_ref": "rights-factor-counterexamples"
+    },
+    {
+      "resource_id": "strategy-templates",
+      "path": "strategies/templates.json",
+      "sha256": "d1a2c4cfa9f679c52b63fe21efe8d9a3bc46eec4115fbf8a2b8f5d6f0147e63b",
+      "byte_size": 37142,
+      "availability": "PACKAGED",
+      "kind": "metadata",
+      "author": "Finahinking contributors",
+      "license_id": "MIT",
+      "license_ref": "finathink-license",
+      "version": "1.0.0",
+      "source_url": null,
+      "source_path": null,
+      "source_sha256": null,
+      "derivation": "FINATHINK_ORIGINAL",
+      "rights_ref": "rights-strategy-templates"
+    },
+    {
+      "resource_id": "strategy-risk-rules",
+      "path": "strategies/risk-rules.json",
+      "sha256": "a820bbf403699f417516d1ed96d0304796a8b9f80aa1411af718017791fb3ff9",
+      "byte_size": 12509,
+      "availability": "PACKAGED",
+      "kind": "metadata",
+      "author": "Finahinking contributors",
+      "license_id": "MIT",
+      "license_ref": "finathink-license",
+      "version": "1.0.0",
+      "source_url": null,
+      "source_path": null,
+      "source_sha256": null,
+      "derivation": "FINATHINK_ORIGINAL",
+      "rights_ref": "rights-strategy-risk-rules"
     }
   ],
   "rights_reviews": [
@@ -2462,6 +2496,48 @@
       "reviewed_by": "Finathink Phase25 authored counterexample content review",
       "reviewed_on": "2026-11-01",
       "rationale": "原创中文反例、有限合成输入规范、断言和修正说明；未复制上游执行代码。许可仅覆盖此内容字节，不授予金融用途。",
+      "source_url": null,
+      "source_path": null,
+      "source_sha256": null
+    },
+    {
+      "review_id": "rights-strategy-templates",
+      "resource_id": "strategy-templates",
+      "resource_sha256": "d1a2c4cfa9f679c52b63fe21efe8d9a3bc46eec4115fbf8a2b8f5d6f0147e63b",
+      "license_id": "MIT",
+      "license_refs": [
+        {
+          "resource_id": "finathink-license",
+          "sha256": "8f005100947b20fd54ad3d7c5dd501d303a627fd1c738f75f95f5f7b66040015"
+        }
+      ],
+      "notice_refs": [],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase26 authored metadata review",
+      "reviewed_on": "2026-11-03",
+      "rationale": "原创策略合同和风险规则说明，固定出处用于追溯，发布许可仅覆盖此文件字节。",
+      "source_url": null,
+      "source_path": null,
+      "source_sha256": null
+    },
+    {
+      "review_id": "rights-strategy-risk-rules",
+      "resource_id": "strategy-risk-rules",
+      "resource_sha256": "a820bbf403699f417516d1ed96d0304796a8b9f80aa1411af718017791fb3ff9",
+      "license_id": "MIT",
+      "license_refs": [
+        {
+          "resource_id": "finathink-license",
+          "sha256": "8f005100947b20fd54ad3d7c5dd501d303a627fd1c738f75f95f5f7b66040015"
+        }
+      ],
+      "notice_refs": [],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase26 authored metadata review",
+      "reviewed_on": "2026-11-03",
+      "rationale": "原创策略合同和风险规则说明，固定出处用于追溯，发布许可仅覆盖此文件字节。",
       "source_url": null,
       "source_path": null,
       "source_sha256": null

@@ -82,6 +82,32 @@ def panel_journey(app, post):
     assert result == post("/api/research/panels/evaluate", inputs)
 
 
+def strategy_journey(get, post):
+    catalog = json.loads(get('/api/research/strategies'))
+    assert len(catalog['templates']) == len(catalog['risk_rules']) == 12
+    sample = post('/api/research/strategies/sample', {})
+    job = post('/api/research/strategies', {'idempotency_key': 'installed-strategy',
+        'template_id': 'equal-weight', 'contract': sample['contract'],
+        'attachment_refs': sample['attachment_refs']})
+    deadline = time.monotonic() + 60
+    while job['status'] not in {'completed', 'failed', 'cancelled'} and time.monotonic() < deadline:
+        time.sleep(.1)
+        job = json.loads(get('/api/research/jobs/' + job['job_id']))
+    assert job['status'] == 'completed' and job['report_status'] == 'AVAILABLE', job
+    result = job['strategy_study']['result']
+    assert result['status'] == 'COMPLETE' and result['ledger']['fills']
+    assert '策略研究与统一纸面账本' in get(job['report_url']).decode()
+    decision = next(row for row in reversed(result['decisions']) if row['status'] == 'SCHEDULED')
+    entry = post('/api/research/pools', {'pool_ref': 'installed-pool', 'job_id': job['job_id'],
+        'decision_origin': 'QUANT_BASELINE', 'stage': 'DECISION',
+        'instrument': next(iter(decision['target_weights']))})
+    cohort = post('/api/research/pools/freeze', {'pool_ref': entry['pool_ref'], 'decision_at': entry['decision_at']})
+    observed = post('/api/research/pools/observe', {'cohort_ref': cohort['cohort_ref'],
+        'snapshot_ref': sample['snapshot_ref']})
+    assert len(observed['horizons']) == 4
+    return job['job_id'], entry['entry_ref']
+
+
 def suite_journey(app, get, post):
     from finahinking.research.factor_validation_sample import SAMPLE_SPEC
     from finahinking.research.research_evidence import PackagedCounterexamples
@@ -229,6 +255,7 @@ def main():
         panel_journey(app, post)
         library_study_id = library_journey(app, get, post)
         suite_study_id = suite_journey(app, get, post)
+        strategy_job_id, pool_entry_ref = strategy_journey(get, post)
     finally:
         server.shutdown()
         server.server_close()
@@ -247,6 +274,10 @@ def main():
             assert reopened.route('GET', '/api/research/learning/pairs/'+pair_id)[2]['status'] == 'AVAILABLE'
             restored_diagnostic = reopened.route('GET', '/api/diagnostics/interfaces/' + diagnostic['receipt_id'])
             assert restored_diagnostic[0] == 200 and restored_diagnostic[2] == diagnostic
+            strategy = reopened.research_service.get_job(strategy_job_id)
+            assert strategy['report_status'] == 'AVAILABLE' and strategy['strategy_study']['result']['ledger']['fills']
+            _, _, pool = reopened.route('GET', '/api/research/pools?pool_ref=installed-pool')
+            assert pool['entries'][0]['entry_ref'] == pool_entry_ref
             restored_suite = reopened.research_service.factor_study(suite_study_id)
             assert restored_suite['state'] == 'VALIDATED'
             assert restored_suite['validation']['suite_validation']['trials'][0]['data_mode'] == 'SAMPLE'

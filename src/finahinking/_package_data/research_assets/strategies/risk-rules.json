@@ -1,0 +1,365 @@
+{
+  "schema_version": "strategy-risk-rules.v1",
+  "rules": [
+    {
+      "rule_id": "data-pit",
+      "version": "1.0.0",
+      "title": "时点完整性",
+      "metric": "pit_valid",
+      "unit": "boolean",
+      "operator": "is_true",
+      "limit": true,
+      "action": "GATE",
+      "description": "使用审计后的可用时间与原始价格快照。",
+      "examples": {
+        "pass": true,
+        "triggered": false,
+        "needs_data": null
+      },
+      "source_refs": [
+        {
+          "source_id": "deepseek-harness-quant",
+          "repository": "https://github.com/yuanwang589-dev/deepseek-harness-quant",
+          "commit": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+          "path": "risk/data_audit.py",
+          "sha256": "e9952017cdfac9aea433b07a0d433fb6ce06d2316f8bd98546adb017b441f7bc",
+          "license": "MIT_WITH_RESEARCH_NOTE",
+          "license_path": "LICENSE",
+          "capture_date": "2026-10-31",
+          "use": "REFERENCE_ONLY",
+          "topic": "研究风险规则的诊断与审核结构"
+        }
+      ]
+    },
+    {
+      "rule_id": "financial-abnormality",
+      "version": "1.0.0",
+      "title": "财务异常观察",
+      "metric": "financial_anomaly",
+      "unit": "ratio",
+      "operator": "at_most",
+      "limit": 0.3,
+      "action": "ADVISORY",
+      "description": "股票净利润绝对值或负权益占资产比率较高时提示核对财务口径。",
+      "examples": {
+        "pass": 0.1,
+        "triggered": 0.9,
+        "needs_data": null
+      },
+      "source_refs": [
+        {
+          "source_id": "deepseek-harness-quant",
+          "repository": "https://github.com/yuanwang589-dev/deepseek-harness-quant",
+          "commit": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+          "path": "risk/beneish_full.py",
+          "sha256": "9f1d4f71d02cdb3a45061909955cc266ab8d4e75eb33deac8dd56927be65c0cc",
+          "license": "MIT_WITH_RESEARCH_NOTE",
+          "license_path": "LICENSE",
+          "capture_date": "2026-10-31",
+          "use": "REFERENCE_ONLY",
+          "topic": "研究风险规则的诊断与审核结构"
+        }
+      ]
+    },
+    {
+      "rule_id": "tradeability",
+      "version": "1.0.0",
+      "title": "可交易性",
+      "metric": "tradeable",
+      "unit": "boolean",
+      "operator": "is_true",
+      "limit": true,
+      "action": "GATE",
+      "description": "调仓涉及的资产须具有交易日、交易许可和停牌状态记录。",
+      "examples": {
+        "pass": true,
+        "triggered": false,
+        "needs_data": null
+      },
+      "source_refs": [
+        {
+          "source_id": "deepseek-harness-quant",
+          "repository": "https://github.com/yuanwang589-dev/deepseek-harness-quant",
+          "commit": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+          "path": "risk/pitch_review.py",
+          "sha256": "8852cd141a9d4b2f71ce08607b95b6a3750d4bace1549dfedbce23cd48e85013",
+          "license": "MIT_WITH_RESEARCH_NOTE",
+          "license_path": "LICENSE",
+          "capture_date": "2026-10-31",
+          "use": "REFERENCE_ONLY",
+          "topic": "研究风险规则的诊断与审核结构"
+        }
+      ]
+    },
+    {
+      "rule_id": "liquidity",
+      "version": "1.0.0",
+      "title": "流动性参与率",
+      "metric": "liquidity_participation",
+      "unit": "ratio",
+      "operator": "at_most",
+      "limit": 0.1,
+      "action": "GATE",
+      "description": "最大预估成交额占同一观察点可用成交额比率。",
+      "examples": {
+        "pass": 0.01,
+        "triggered": 0.9,
+        "needs_data": null
+      },
+      "source_refs": [
+        {
+          "source_id": "deepseek-harness-quant",
+          "repository": "https://github.com/yuanwang589-dev/deepseek-harness-quant",
+          "commit": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+          "path": "risk/pitch_review.py",
+          "sha256": "8852cd141a9d4b2f71ce08607b95b6a3750d4bace1549dfedbce23cd48e85013",
+          "license": "MIT_WITH_RESEARCH_NOTE",
+          "license_path": "LICENSE",
+          "capture_date": "2026-10-31",
+          "use": "REFERENCE_ONLY",
+          "topic": "研究风险规则的诊断与审核结构"
+        }
+      ]
+    },
+    {
+      "rule_id": "concentration",
+      "version": "1.0.0",
+      "title": "资产集中度",
+      "metric": "concentration",
+      "unit": "ratio",
+      "operator": "at_most",
+      "limit": 0.5,
+      "action": "GATE",
+      "description": "单一资产目标权重上限。",
+      "examples": {
+        "pass": 0.2,
+        "triggered": 0.99,
+        "needs_data": null
+      },
+      "source_refs": [
+        {
+          "source_id": "deepseek-harness-quant",
+          "repository": "https://github.com/yuanwang589-dev/deepseek-harness-quant",
+          "commit": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+          "path": "risk/pitch_review.py",
+          "sha256": "8852cd141a9d4b2f71ce08607b95b6a3750d4bace1549dfedbce23cd48e85013",
+          "license": "MIT_WITH_RESEARCH_NOTE",
+          "license_path": "LICENSE",
+          "capture_date": "2026-10-31",
+          "use": "REFERENCE_ONLY",
+          "topic": "研究风险规则的诊断与审核结构"
+        }
+      ]
+    },
+    {
+      "rule_id": "industry",
+      "version": "1.0.0",
+      "title": "行业暴露",
+      "metric": "industry_concentration",
+      "unit": "ratio",
+      "operator": "at_most",
+      "limit": 0.75,
+      "action": "ADVISORY",
+      "description": "历史行业分类对应的最大权重，行业分类缺失时需补数据。",
+      "examples": {
+        "pass": 0.3,
+        "triggered": 0.99,
+        "needs_data": null
+      },
+      "source_refs": [
+        {
+          "source_id": "deepseek-harness-quant",
+          "repository": "https://github.com/yuanwang589-dev/deepseek-harness-quant",
+          "commit": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+          "path": "risk/pitch_review.py",
+          "sha256": "8852cd141a9d4b2f71ce08607b95b6a3750d4bace1549dfedbce23cd48e85013",
+          "license": "MIT_WITH_RESEARCH_NOTE",
+          "license_path": "LICENSE",
+          "capture_date": "2026-10-31",
+          "use": "REFERENCE_ONLY",
+          "topic": "研究风险规则的诊断与审核结构"
+        }
+      ]
+    },
+    {
+      "rule_id": "collinearity",
+      "version": "1.0.0",
+      "title": "资产共线性",
+      "metric": "collinearity",
+      "unit": "correlation",
+      "operator": "at_most",
+      "limit": 0.98,
+      "action": "ADVISORY",
+      "description": "同窗拆分中性价格收益之间的最大绝对相关系数。",
+      "examples": {
+        "pass": 0.5,
+        "triggered": 0.9999,
+        "needs_data": null
+      },
+      "source_refs": [
+        {
+          "source_id": "deepseek-harness-quant",
+          "repository": "https://github.com/yuanwang589-dev/deepseek-harness-quant",
+          "commit": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+          "path": "risk/pitch_review.py",
+          "sha256": "8852cd141a9d4b2f71ce08607b95b6a3750d4bace1549dfedbce23cd48e85013",
+          "license": "MIT_WITH_RESEARCH_NOTE",
+          "license_path": "LICENSE",
+          "capture_date": "2026-10-31",
+          "use": "REFERENCE_ONLY",
+          "topic": "研究风险规则的诊断与审核结构"
+        }
+      ]
+    },
+    {
+      "rule_id": "volatility",
+      "version": "1.0.0",
+      "title": "组合波动",
+      "metric": "volatility",
+      "unit": "ratio_per_observation",
+      "operator": "at_most",
+      "limit": 0.08,
+      "action": "ADVISORY",
+      "description": "固定当前目标权重的历史收益样本标准差，按观察点计量。",
+      "examples": {
+        "pass": 0.02,
+        "triggered": 0.9,
+        "needs_data": null
+      },
+      "source_refs": [
+        {
+          "source_id": "deepseek-harness-quant",
+          "repository": "https://github.com/yuanwang589-dev/deepseek-harness-quant",
+          "commit": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+          "path": "risk/pitch_review.py",
+          "sha256": "8852cd141a9d4b2f71ce08607b95b6a3750d4bace1549dfedbce23cd48e85013",
+          "license": "MIT_WITH_RESEARCH_NOTE",
+          "license_path": "LICENSE",
+          "capture_date": "2026-10-31",
+          "use": "REFERENCE_ONLY",
+          "topic": "研究风险规则的诊断与审核结构"
+        }
+      ]
+    },
+    {
+      "rule_id": "tail-loss",
+      "version": "1.0.0",
+      "title": "尾部损失",
+      "metric": "tail_loss",
+      "unit": "ratio_per_observation",
+      "operator": "at_most",
+      "limit": 0.12,
+      "action": "ADVISORY",
+      "description": "固定当前权重的经验95%尾部损失。",
+      "examples": {
+        "pass": 0.02,
+        "triggered": 0.9,
+        "needs_data": null
+      },
+      "source_refs": [
+        {
+          "source_id": "deepseek-harness-quant",
+          "repository": "https://github.com/yuanwang589-dev/deepseek-harness-quant",
+          "commit": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+          "path": "risk/pitch_review.py",
+          "sha256": "8852cd141a9d4b2f71ce08607b95b6a3750d4bace1549dfedbce23cd48e85013",
+          "license": "MIT_WITH_RESEARCH_NOTE",
+          "license_path": "LICENSE",
+          "capture_date": "2026-10-31",
+          "use": "REFERENCE_ONLY",
+          "topic": "研究风险规则的诊断与审核结构"
+        }
+      ]
+    },
+    {
+      "rule_id": "stop-loss",
+      "version": "1.0.0",
+      "title": "止损观察",
+      "metric": "logic_loss",
+      "unit": "ratio_per_observation",
+      "operator": "at_most",
+      "limit": 0.1,
+      "action": "ADVISORY",
+      "description": "纸面权益最近一次下跌比例，触发后复核持仓假设。",
+      "examples": {
+        "pass": 0.02,
+        "triggered": 0.9,
+        "needs_data": null
+      },
+      "source_refs": [
+        {
+          "source_id": "deepseek-harness-quant",
+          "repository": "https://github.com/yuanwang589-dev/deepseek-harness-quant",
+          "commit": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+          "path": "risk/pitch_review.py",
+          "sha256": "8852cd141a9d4b2f71ce08607b95b6a3750d4bace1549dfedbce23cd48e85013",
+          "license": "MIT_WITH_RESEARCH_NOTE",
+          "license_path": "LICENSE",
+          "capture_date": "2026-10-31",
+          "use": "REFERENCE_ONLY",
+          "topic": "研究风险规则的诊断与审核结构"
+        }
+      ]
+    },
+    {
+      "rule_id": "drawdown",
+      "version": "1.0.0",
+      "title": "回撤",
+      "metric": "drawdown",
+      "unit": "ratio",
+      "operator": "at_most",
+      "limit": 0.2,
+      "action": "ADVISORY",
+      "description": "当前纸面权益相对已记录权益峰值的回撤。",
+      "examples": {
+        "pass": 0.05,
+        "triggered": 0.99,
+        "needs_data": null
+      },
+      "source_refs": [
+        {
+          "source_id": "deepseek-harness-quant",
+          "repository": "https://github.com/yuanwang589-dev/deepseek-harness-quant",
+          "commit": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+          "path": "risk/pitch_review.py",
+          "sha256": "8852cd141a9d4b2f71ce08607b95b6a3750d4bace1549dfedbce23cd48e85013",
+          "license": "MIT_WITH_RESEARCH_NOTE",
+          "license_path": "LICENSE",
+          "capture_date": "2026-10-31",
+          "use": "REFERENCE_ONLY",
+          "topic": "研究风险规则的诊断与审核结构"
+        }
+      ]
+    },
+    {
+      "rule_id": "stress",
+      "version": "1.0.0",
+      "title": "情景压力",
+      "metric": "stress_loss",
+      "unit": "ratio",
+      "operator": "at_most",
+      "limit": 0.15,
+      "action": "ADVISORY",
+      "description": "风险资产同步下跌15%的固定情景下，当前目标权重对应的损失。",
+      "examples": {
+        "pass": 0.03,
+        "triggered": 0.99,
+        "needs_data": null
+      },
+      "source_refs": [
+        {
+          "source_id": "deepseek-harness-quant",
+          "repository": "https://github.com/yuanwang589-dev/deepseek-harness-quant",
+          "commit": "9f72ab7e64799aecfc79cf3b913359acea1dd9b9",
+          "path": "risk/pitch_review.py",
+          "sha256": "8852cd141a9d4b2f71ce08607b95b6a3750d4bace1549dfedbce23cd48e85013",
+          "license": "MIT_WITH_RESEARCH_NOTE",
+          "license_path": "LICENSE",
+          "capture_date": "2026-10-31",
+          "use": "REFERENCE_ONLY",
+          "topic": "研究风险规则的诊断与审核结构"
+        }
+      ]
+    }
+  ]
+}
