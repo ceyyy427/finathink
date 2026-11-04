@@ -276,6 +276,9 @@ def main():
         library_study_id = library_journey(app, get, post)
         suite_study_id = suite_journey(app, get, post)
         strategy_job_id, pool_entry_ref = strategy_journey(get, post)
+        workbench = json.loads(get("/api/research/quant-workspace"))
+        assert sum(workbench["inventory"].values()) >= 200 and len(workbench["journeys"]) == 12
+        assert "量化研究工作台".encode() in get("/research/workbench?journey=portfolio")
         discovery_job_id, discovery_document = discovery_journey(get, post)
     finally:
         server.shutdown()
@@ -287,12 +290,17 @@ def main():
     subprocess.run([str(maintenance), 'backup', '--db', str(db), '--output', str(archive)], check=True)
     subprocess.run([str(maintenance), 'restore', '--archive', str(archive), '--to', str(root / 'restored')], check=True)
     restored = root / 'restored' / 'app.sqlite3'
+    cache = restored.parent / ".knowledge-cache" / "public.sqlite3"
+    assert not cache.exists()  # derived index is rebuilt from installed canonical content
+
     # Opening the upgraded/restored installation twice must preserve history.
     for _ in range(2):
         reopened = LocalApplication(LocalAppConfig(db_path=str(restored), offline=True))
         try:
             assert reopened.route('GET', '/api/research/learning/assessments/'+assessment_id)[2]['sample_count'] == 1
             assert reopened.route('GET', '/api/research/learning/pairs/'+pair_id)[2]['status'] == 'AVAILABLE'
+            _, _, rebuilt = reopened.route("GET", "/api/research/quant-workspace")
+            assert cache.is_file() and rebuilt["fingerprint"] == workbench["fingerprint"]
             restored_diagnostic = reopened.route('GET', '/api/diagnostics/interfaces/' + diagnostic['receipt_id'])
             assert restored_diagnostic[0] == 200 and restored_diagnostic[2] == diagnostic
             discovery = reopened.research_service.get_job(discovery_job_id)

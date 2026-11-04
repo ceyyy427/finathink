@@ -18,6 +18,8 @@ def _conditions(source):
     conditions = quant.get('comparison_conditions') or {}
     study = source.get('factor_study') or {}
     charter = study.get('charter') or {}
+    discovery = (source.get('discovery') or {}).get('blueprint') or {}
+    strategy = (source.get('strategy_study') or {}).get('binding') or {}
     def subset(keys):
         return {key: policy.get(key) for key in sorted(keys)}
     return {
@@ -28,7 +30,9 @@ def _conditions(source):
                  'attachment': charter.get('attachment_ref', 'NONE')},
         'method': {**subset(_METHOD), 'split': conditions.get('split'),
                    'factor_study': {key: charter.get(key, 'NONE') for key in ('version', 'recipe_id', 'recipe_version', 'factor_spec', 'method_binding')} if study else 'NONE',
-                   'study_phase': study.get('phase', 'NONE')},
+                   'study_phase': study.get('phase', 'NONE'),
+                   'discovery': {key: discovery.get(key) for key in ('target_digest', 'method_manifest_digest', 'execution_ref')} if discovery else 'NONE',
+                   'strategy': {key: strategy.get(key) for key in ('template_digest', 'risk_digest')} if strategy else 'NONE'},
         'parameters': {**subset(_PARAMETERS), 'study': {key: charter[key] for key in ('windows', 'label_horizon', 'embargo', 'n_splits', 'min_abs_ic', 'max_neighbor_delta') if key in charter}},
         'costs': {**subset(_COST), 'study': charter.get('cost', 'NONE')},
         'risk': {key: value for key, value in policy.items() if key not in _METHOD | _PARAMETERS | _COST} or None,

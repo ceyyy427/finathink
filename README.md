@@ -149,6 +149,7 @@ finathink --offline --db .local-state/app.sqlite3 --port 8765
 - 方法资料库：<http://127.0.0.1:8765/library/methods>
 - 公开行为档案：<http://127.0.0.1:8765/library/behavior>
 - 反例与教训：<http://127.0.0.1:8765/library/lessons>
+- 量化研究工作台：<http://127.0.0.1:8765/research/workbench> · [研究路径与来源审阅](docs/QUANT_KNOWLEDGE_GUIDE.md)
 - 因子策略工作台：<http://127.0.0.1:8765/workbench>
 - Provider 设置：<http://127.0.0.1:8765/settings/providers>
 

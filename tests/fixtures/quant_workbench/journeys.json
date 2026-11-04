@@ -1,0 +1,14 @@
+[
+  ["knowledge","lib-trend-roc","/knowledge/paths/trend-research"],
+  ["missing-data","lib-volatility-atr","/settings/data-connections"],
+  ["financial","lib-quality-roe","/knowledge/paths/fundamental-quality"],
+  ["technical","lib-reversal-rsi","/research/experiments"],
+  ["event","event-study","/events"],
+  ["etf","etf-relative-strength","/research/strategies"],
+  ["falsify","lib-value-book-market","/research/factor-suites"],
+  ["portfolio","equal-weight","/research/strategies"],
+  ["risk","lib-volatility-return-std","/knowledge/paths/risk-research"],
+  ["pool","equal-weight","/research/pools"],
+  ["learning","lib-growth-asset-growth","/research/learning"],
+  ["replay","lib-trend-ma-spread","/research/compare"]
+]

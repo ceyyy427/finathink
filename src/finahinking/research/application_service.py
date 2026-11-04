@@ -227,6 +227,15 @@ def run_local_research_stage(invocation, checkpoint_ref, publish_checkpoint, *, 
         studies.set_job(study["study_id"], binding["phase"], record.job_id)
         if binding["phase"] == "validation":
             publication_before = study["spec"]["test_period"][0]
+    from .source_updates import require_active_research_source
+
+    try:
+        if study is not None and study["spec"].get("version") == "factor-workbench.library.v1":
+            require_active_research_source(root, "FACTOR", study["spec"]["factor_spec"]["factor_id"])
+        if "strategy_study" in spec:
+            require_active_research_source(root, "STRATEGY", spec["strategy_study"]["template_id"])
+    except (KeyError, ValueError, sqlite3.Error):
+        return {"status": "blocked", "failure_kind": "POLICY_CHANGED"}
     tools = SnapshotResearchTools(snapshot, publication_before=publication_before, policy=policy_record["effective"], policy_lineage=lineage)
     driver, manager = OfflineDriver(), ResearchManager()
     if spec.get("execution_mode") == "provider-grounded":
@@ -267,7 +276,7 @@ def run_local_research_stage(invocation, checkpoint_ref, publish_checkpoint, *, 
 
         try:
             provider = inputs.get("discovery_provider") if spec.get("execution_mode") == "provider-grounded" else None
-            preview_service = SimpleNamespace(snapshots=SnapshotStore(root / "snapshots"),
+            preview_service = SimpleNamespace(root=root, snapshots=SnapshotStore(root / "snapshots"),
                 learning=SimpleNamespace(store=LearningReviewStore(queue, root, scope_id=spec["scope_id"])))
             blueprint = preview_discovery(preview_service, discovery["inputs"], frozen_provider=provider)
             if blueprint != discovery["blueprint"] or blueprint["status"] != "READY":
@@ -492,6 +501,10 @@ class ResearchApplicationService:
             request = replace(request, research_plan=plan, config_digest=stable_digest({"base": request.config_digest, "factor_study": factor_study}))
         if strategy_study is not None:
             from dataclasses import replace
+
+            from .source_updates import require_active_research_source
+
+            require_active_research_source(self.root, "STRATEGY", strategy_study["template_id"])
 
             if (config is not None and discovery is None) or factor_study is not None or strategy_study["policy_digest"] != policy_fingerprint:
                 raise ValueError("策略研究需要冻结的离线执行合同")
@@ -841,6 +854,9 @@ class ResearchApplicationService:
         if not isinstance(values, dict):
             raise TypeError("library study submission must be an object")
         key = _ref(values.get("idempotency_key"), "idempotency_key")
+        from .source_updates import require_active_research_source
+
+        require_active_research_source(self.root, "FACTOR", values.get("factor_id"))
         spec = prepare_library_study(values, self.snapshots, policy_fingerprint=stable_digest(local_research_policy()))
         if discovery is not None:
             spec["discovery"] = discovery

@@ -149,7 +149,7 @@ def prepare_discovery(question, profile, snapshot_ref, budget=None, *, available
     fields.update(
         status=status, target_id=target, target_kind="FACTOR" if is_factor else "STRATEGY",
         target_digest=stable_digest(definition), method_version=definition["version"],
-        required_fields=required, missing_fields=missing, repair_href="/data" if missing else None,
+        required_fields=required, missing_fields=missing, repair_href="/settings/data-connections" if missing else None,
         knowledge_refs=refs, counterexample_refs=counterexamples,
         method_refs=list(route.skill_ids), method_context_digest=methods.fingerprint,
         method_manifest_digest=methods.manifest_fingerprint,

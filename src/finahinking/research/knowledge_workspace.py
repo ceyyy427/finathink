@@ -89,7 +89,7 @@ def catalog_page(index, query):
             f'<div class="knowledge-grid" data-knowledge-results>{cards(payload["items"])}</div><p data-knowledge-empty {"hidden" if payload["items"] else ""}>暂未找到匹配词条。试试缩短关键词，或清除筛选条件。</p>'
             f'<div data-knowledge-pagination>{pagination(payload)}</div><noscript><p>当前可直接阅读；提交检索表单将刷新结果。</p></noscript>'
             f'<section id="learning-paths"><h2>选择一条学习路径</h2><p>按顺序理解概念，随时回到前置知识；阅读与个人掌握记录分别保存。</p><div class="knowledge-grid">{paths}</div><details><summary>原有课程入口</summary><ul>{legacy}</ul></details></section>'
-            '<p><a href="/api/knowledge/export">导出公开知识与来源（JSON）</a></p></div>')
+            '<p><a href="/research/workbench">打开量化研究工作台</a> · <a href="/api/knowledge/export">导出公开知识与来源（JSON）</a></p></div>')
 
 
 def source_list(item):
