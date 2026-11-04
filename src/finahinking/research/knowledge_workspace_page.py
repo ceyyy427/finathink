@@ -13,7 +13,7 @@ from .factor_library import FactorLibrary
 from .strategy_catalog import StrategyCatalog
 
 PAGE = "/research/workbench"
-API = "/api/research/workbench"
+API = "/api/research/quant-workspace"
 KINDS = {"knowledge": "知识", "factor": "因子", "strategy": "策略", "risk": "风险", "case": "反例"}
 JOURNEYS = (
     ("knowledge", "理解趋势并提交研究", "过去的价格动量能否解释下一观察点的收益？", "/knowledge/paths/trend-research"),
@@ -242,7 +242,7 @@ def workspace_page(payload, csrf, *, journey=None, updates=()):
 <p data-qw-empty {"hidden" if cards else ""}>暂无匹配对象，请调整关键词或类型。</p>
 <nav data-qw-pagination aria-label="目录分页">{next_steps}</nav></section>
 <section class="panel" id="qw-sources"><h2>来源版本与审阅</h2><ul>{update_rows}</ul>
-<a href="/api/research/workbench/sources">查看逐项差异与历史版本</a></section></div>'''
+<a href="/api/research/quant-workspace/sources">查看逐项差异与历史版本</a></section></div>'''
 
 
 def pool_page(ref, entries, csrf):

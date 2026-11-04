@@ -1905,7 +1905,7 @@ class LocalApplication:
         parsed = urlsplit(path)
         query = parse_qs(parsed.query) if query is None else query
         clean = parsed.path.rstrip("/") or "/"
-        if clean in {"/research/workbench", "/api/research/workbench", "/api/research/workbench/sources"}:
+        if clean in {"/research/workbench", "/api/research/quant-workspace", "/api/research/quant-workspace/sources"}:
             return self._quant_workbench_route(method, clean, query)
         from .research.knowledge_workspace import route as knowledge_route
 

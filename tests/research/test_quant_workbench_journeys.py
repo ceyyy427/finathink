@@ -17,7 +17,7 @@ CASES = json.loads((Path(__file__).parents[1] / "fixtures/quant_workbench/journe
 @pytest.mark.parametrize("http_app", [False], indirect=True)
 def test_twelve_journeys_reach_explainable_report(http_app, journey_id, target, tool):
     app, base = http_app
-    directory = json.loads(call(app, base, "/api/research/workbench"))
+    directory = json.loads(call(app, base, "/api/research/quant-workspace"))
     assert len(directory["journeys"]) == len(CASES) == 12
     path = next(row for row in directory["journeys"] if row["id"] == journey_id)
     assert path["href"] == tool and call(app, base, tool)

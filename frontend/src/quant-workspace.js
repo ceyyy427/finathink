@@ -1,7 +1,7 @@
 import { readLocalJSON, userErrorMessage } from './local-request.js';
 
 const PAGE = '/research/workbench';
-const API = '/api/research/workbench';
+const API = '/api/research/quant-workspace';
 const NAMES = { knowledge: '知识', factor: '因子', strategy: '策略', risk: '风险', case: '反例' };
 const LOCAL_PATHS = ['/knowledge/items/', '/research/factor-library?', '/research/strategies', '/research/factor-suites'];
 

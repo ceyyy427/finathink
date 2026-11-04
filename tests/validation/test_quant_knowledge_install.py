@@ -18,8 +18,8 @@ def test_clean_wheel_backup_restore_and_reindex(tmp_path, source_tree):
         source_store = SourceVersionStore(app.artifact_root)
         ref = source_store.stage(old, new, old_checkout=old_root, new_checkout=new_root)
         source_store.review(ref, decision="WITHDRAW", reviewer="local-reviewer", rationale="固定撤回说明。")
-        original = app.route("GET", "/api/research/workbench")[2]
-        source = app.route("GET", f"/api/research/workbench/sources?ref={ref}")[2]
+        original = app.route("GET", "/api/research/quant-workspace")[2]
+        source = app.route("GET", f"/api/research/quant-workspace/sources?ref={ref}")[2]
         assert source["decision"] == "WITHDRAW"
     finally:
         app.close()
@@ -30,8 +30,8 @@ def test_clean_wheel_backup_restore_and_reindex(tmp_path, source_tree):
     assert not cache.exists()
     restored = LocalApplication(LocalAppConfig(db_path=str(target / "app.sqlite3"), offline=True))
     try:
-        assert restored.route("GET", f"/api/research/workbench/sources?ref={ref}")[2] == source
-        assert restored.route("GET", "/api/research/workbench")[2] == original
+        assert restored.route("GET", f"/api/research/quant-workspace/sources?ref={ref}")[2] == source
+        assert restored.route("GET", "/api/research/quant-workspace")[2] == original
         assert cache.is_file()
         assert restored.research_service.list_jobs()["total"] == 0
     finally:

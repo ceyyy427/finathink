@@ -4,7 +4,7 @@ from finahinking.local_app import LocalAppConfig, LocalApplication
 def test_catalog_uses_distinct_reviewed_objects_and_reading_never_runs_jobs():
     app = LocalApplication(LocalAppConfig(db_path=":memory:", offline=True))
     try:
-        status, _, catalog = app.route("GET", "/api/research/workbench?kind=factor")
+        status, _, catalog = app.route("GET", "/api/research/quant-workspace?kind=factor")
         assert status == 200
         assert catalog["inventory"] == {"knowledge": 80, "factor": 80, "strategy": 12, "risk": 12, "case": 22}
         assert catalog["total"] == 80
