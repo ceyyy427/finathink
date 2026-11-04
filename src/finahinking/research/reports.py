@@ -407,6 +407,12 @@ class ReportBundleWriter:
         complete_document = (render_factor_report_document(factor_sections, run_id=result.state.run_id,
             question=study.get("charter", {}).get("question", "按冻结章程核对因子假设")) if factor_sections is not None
             else theme_report_document(render_status_wall_html(status_model, title="Finathink 研究报告")))
+        if analytics_payload and analytics_payload.get("discovery"):
+            from .report_sections import discovery_section
+
+            section = discovery_section(analytics_payload["discovery"])
+            tail = "</main>" if "</main>" in complete_document else "</body>"
+            complete_document = complete_document.replace(tail, section + tail, 1)
         complete_path.write_text(complete_document, encoding="utf-8")
         activity_path = bundle / "activity.jsonl"
         if activity_path.exists():
@@ -435,6 +441,7 @@ class ReportBundleWriter:
                 **({"model_research": analytics_payload["model_research"]} if analytics_payload and analytics_payload.get("model_research") else {}),
                 **({"factor_study": analytics_payload["factor_study"]} if analytics_payload and analytics_payload.get("factor_study") else {}),
                 **({"risk_portfolio": analytics_payload["risk_portfolio"]} if analytics_payload and analytics_payload.get("risk_portfolio") else {}),
+                **({"discovery": analytics_payload["discovery"]} if analytics_payload and analytics_payload.get("discovery") else {}),
                 **({"strategy_study": analytics_payload["strategy_study"]} if analytics_payload and analytics_payload.get("strategy_study") else {}),
                 **({"quant_evidence": analytics_payload["quant_evidence"]} if analytics_payload and analytics_payload.get("quant_evidence") else {}),
                 **({"reproduction": analytics_payload["reproduction"]} if analytics_payload and analytics_payload.get("reproduction") else {}),

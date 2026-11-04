@@ -1360,6 +1360,23 @@
       "source_sha256": null,
       "derivation": "FINATHINK_ORIGINAL",
       "rights_ref": "rights-strategy-risk-rules"
+    },
+    {
+      "resource_id": "quant-research-questions",
+      "path": "knowledge/research-questions.json",
+      "sha256": "8a2bbd36bf02bd982a88533f8d5910c2add18024da8d24d77cfc51e0f763a9fd",
+      "byte_size": 8099,
+      "availability": "PACKAGED",
+      "kind": "metadata",
+      "author": "Finahinking contributors",
+      "license_id": "MIT",
+      "license_ref": "finathink-license",
+      "version": "1.0.0",
+      "source_url": null,
+      "source_path": null,
+      "source_sha256": null,
+      "derivation": "FINATHINK_ORIGINAL",
+      "rights_ref": "rights-quant-research-questions"
     }
   ],
   "rights_reviews": [
@@ -2538,6 +2555,27 @@
       "reviewed_by": "Finathink Phase26 authored metadata review",
       "reviewed_on": "2026-11-03",
       "rationale": "原创策略合同和风险规则说明，固定出处用于追溯，发布许可仅覆盖此文件字节。",
+      "source_url": null,
+      "source_path": null,
+      "source_sha256": null
+    },
+    {
+      "review_id": "rights-quant-research-questions",
+      "resource_id": "quant-research-questions",
+      "resource_sha256": "8a2bbd36bf02bd982a88533f8d5910c2add18024da8d24d77cfc51e0f763a9fd",
+      "license_id": "MIT",
+      "license_refs": [
+        {
+          "resource_id": "finathink-license",
+          "sha256": "8f005100947b20fd54ad3d7c5dd501d303a627fd1c738f75f95f5f7b66040015"
+        }
+      ],
+      "notice_refs": [],
+      "decision": "DISTRIBUTION_APPROVED",
+      "scope": "FILE_BYTES_ONLY",
+      "reviewed_by": "Finathink Phase27 authored metadata review",
+      "reviewed_on": "2026-11-04",
+      "rationale": "原创中文研究问题与本地定义的路由映射。",
       "source_url": null,
       "source_path": null,
       "source_sha256": null

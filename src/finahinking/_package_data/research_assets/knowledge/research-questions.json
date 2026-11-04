@@ -1,0 +1,320 @@
+{
+  "version": "1.0.0",
+  "questions": [
+    {
+      "question": "过去的价格动量能否解释下一观察点的收益？",
+      "phrase": "价格动量",
+      "target_id": "lib-trend-roc",
+      "knowledge_ids": [
+        "momentum",
+        "moving-average"
+      ],
+      "aliases": [
+        "动量因子",
+        "区间动量"
+      ]
+    },
+    {
+      "question": "短期均值线与长期均线的差距值得研究吗？",
+      "phrase": "均线",
+      "target_id": "lib-trend-ma-spread",
+      "knowledge_ids": [
+        "momentum",
+        "moving-average"
+      ],
+      "aliases": [
+        "移动平均线",
+        "均值线"
+      ]
+    },
+    {
+      "question": "价格趋势斜率在震荡市会失效吗？",
+      "phrase": "趋势斜率",
+      "target_id": "lib-trend-slope",
+      "knowledge_ids": [
+        "momentum",
+        "moving-average"
+      ]
+    },
+    {
+      "question": "RSI 过度下跌后会出现反转吗？",
+      "phrase": "rsi",
+      "target_id": "lib-reversal-rsi",
+      "knowledge_ids": [
+        "rsi",
+        "mean-reversion"
+      ],
+      "aliases": [
+        "均值回归因子",
+        "均值回归",
+        "相对强弱指标"
+      ]
+    },
+    {
+      "question": "布林下轨触碰后的收益有反转吗？",
+      "phrase": "布林下轨",
+      "target_id": "lib-reversal-boll-lower",
+      "knowledge_ids": [
+        "bollinger",
+        "mean-reversion"
+      ]
+    },
+    {
+      "question": "威廉指标在只有收盘的行情上能算吗？",
+      "phrase": "威廉指标",
+      "target_id": "lib-reversal-williams",
+      "knowledge_ids": [
+        "mean-reversion"
+      ]
+    },
+    {
+      "question": "收益波动率较低的资产是否更稳健？",
+      "phrase": "波动率",
+      "target_id": "lib-volatility-return-std",
+      "knowledge_ids": [
+        "volatility",
+        "standard-deviation"
+      ],
+      "aliases": [
+        "实现波动率"
+      ]
+    },
+    {
+      "question": "最大单期收益与尾部表现有关吗？",
+      "phrase": "最大单期收益",
+      "target_id": "lib-volatility-maximum-return",
+      "knowledge_ids": [
+        "downside-risk"
+      ]
+    },
+    {
+      "question": "ATR 在缺最高最低价时能解释波动吗？",
+      "phrase": "atr",
+      "target_id": "lib-volatility-atr",
+      "knowledge_ids": [
+        "atr"
+      ]
+    },
+    {
+      "question": "Amihud 能否衡量低成交额标的的冲击？",
+      "phrase": "amihud",
+      "target_id": "lib-liquidity-amihud",
+      "knowledge_ids": [
+        "liquidity"
+      ],
+      "aliases": [
+        "非流动性比率"
+      ]
+    },
+    {
+      "question": "成交额和流动性在冷清时段一致吗？",
+      "phrase": "成交额和流动性",
+      "target_id": "lib-liquidity-dollar-volume",
+      "knowledge_ids": [
+        "liquidity",
+        "capacity"
+      ]
+    },
+    {
+      "question": "换手率缺少流通数据还能研究吗？",
+      "phrase": "换手率",
+      "target_id": "lib-liquidity-turnover",
+      "knowledge_ids": [
+        "turnover-ratio"
+      ]
+    },
+    {
+      "question": "账面市值比越高是否更容易出现价值陷阱？",
+      "phrase": "账面市值比",
+      "target_id": "lib-value-book-market",
+      "knowledge_ids": [
+        "book-to-market",
+        "earnings-yield"
+      ],
+      "aliases": [
+        "账面价值市值比",
+        "b/m"
+      ]
+    },
+    {
+      "question": "盈利收益率的解释会受亏损影响吗？",
+      "phrase": "盈利收益率",
+      "target_id": "lib-value-earnings-yield",
+      "knowledge_ids": [
+        "book-to-market",
+        "earnings-yield"
+      ]
+    },
+    {
+      "question": "自由现金流收益率需要哪些财报字段？",
+      "phrase": "自由现金流收益率",
+      "target_id": "lib-value-free-cashflow-yield",
+      "knowledge_ids": [
+        "book-to-market",
+        "cashflow-quality"
+      ]
+    },
+    {
+      "question": "ROE 能否区分盈利能力还是高杠杆？",
+      "phrase": "roe",
+      "target_id": "lib-quality-roe",
+      "knowledge_ids": [
+        "gross-profitability",
+        "roe",
+        "accruals"
+      ],
+      "aliases": [
+        "净资产收益率"
+      ]
+    },
+    {
+      "question": "毛利润资产比能作为质量信号吗？",
+      "phrase": "毛利润资产比",
+      "target_id": "lib-quality-gross-profit-assets",
+      "knowledge_ids": [
+        "gross-profitability",
+        "roe",
+        "accruals"
+      ]
+    },
+    {
+      "question": "应计资产比在没有现金流时能复现吗？",
+      "phrase": "应计资产比",
+      "target_id": "lib-quality-accrual-assets",
+      "knowledge_ids": [
+        "gross-profitability",
+        "roe",
+        "accruals"
+      ]
+    },
+    {
+      "question": "总资产增长是否与下一期收益有关？",
+      "phrase": "总资产增长",
+      "target_id": "lib-growth-asset-growth",
+      "knowledge_ids": [
+        "asset-growth",
+        "publication-lag",
+        "revisions"
+      ],
+      "aliases": [
+        "资产增长率"
+      ]
+    },
+    {
+      "question": "销售增长在财务重述后还能比较吗？",
+      "phrase": "销售增长",
+      "target_id": "lib-growth-sales-growth",
+      "knowledge_ids": [
+        "asset-growth",
+        "publication-lag",
+        "revisions"
+      ]
+    },
+    {
+      "question": "资本开支增长能跨不同会计期比较吗？",
+      "phrase": "资本开支增长",
+      "target_id": "lib-growth-capex-growth",
+      "knowledge_ids": [
+        "asset-growth",
+        "publication-lag",
+        "revisions"
+      ]
+    },
+    {
+      "question": "行业中性账面市值比能减少行业集中吗？",
+      "phrase": "行业中性账面市值比",
+      "target_id": "lib-industry-book-market",
+      "knowledge_ids": [
+        "neutralization",
+        "universe-bias"
+      ],
+      "aliases": [
+        "行业中性价值"
+      ]
+    },
+    {
+      "question": "行业规模标准化能否控制风格偏移？",
+      "phrase": "行业规模",
+      "target_id": "lib-industry-size",
+      "knowledge_ids": [
+        "neutralization",
+        "universe-bias"
+      ]
+    },
+    {
+      "question": "公告中的股权融资强度能否解释后续收益？",
+      "phrase": "股权融资",
+      "target_id": "lib-event-equity-finance",
+      "knowledge_ids": [
+        "publication-lag",
+        "adjustment"
+      ],
+      "aliases": [
+        "股权筹资"
+      ]
+    },
+    {
+      "question": "债务融资流量的公告窗口值得研究吗？",
+      "phrase": "债务融资",
+      "target_id": "lib-event-debt-finance",
+      "knowledge_ids": [
+        "publication-lag",
+        "adjustment"
+      ]
+    },
+    {
+      "question": "ETF 宏观相关性会随时间窗口变化吗？",
+      "phrase": "宏观相关",
+      "target_id": "lib-etf-macro-correlation",
+      "knowledge_ids": [
+        "etf-exposure",
+        "correlation"
+      ]
+    },
+    {
+      "question": "ETF 的宏观贝塔能稳定估计吗？",
+      "phrase": "宏观贝塔",
+      "target_id": "lib-etf-macro-beta",
+      "knowledge_ids": [
+        "beta",
+        "etf-exposure"
+      ],
+      "aliases": [
+        "宏观beta"
+      ]
+    },
+    {
+      "question": "ETF 相对强弱策略计入成本后如何？",
+      "phrase": "etf 相对强弱",
+      "target_id": "etf-relative-strength",
+      "knowledge_ids": [
+        "etf-exposure",
+        "momentum"
+      ],
+      "aliases": [
+        "etf相对强弱"
+      ]
+    },
+    {
+      "question": "等权组合策略能降低单一标的集中吗？",
+      "phrase": "等权组合",
+      "target_id": "equal-weight",
+      "knowledge_ids": [
+        "equal-weight",
+        "concentration"
+      ],
+      "aliases": [
+        "等权配置"
+      ]
+    },
+    {
+      "question": "财报事件研究遇到公告滞后会怎样？",
+      "phrase": "财报事件",
+      "target_id": "event-study",
+      "knowledge_ids": [
+        "publication-lag",
+        "earnings-surprise"
+      ]
+    }
+  ]
+}

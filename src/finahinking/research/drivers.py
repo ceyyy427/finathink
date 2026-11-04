@@ -157,12 +157,13 @@ class CompatibleApiDriver(UserApiDriver):
 class GroundedApiDriver:
     """One explicitly configured call per material-backed role; no tool access."""
 
-    def __init__(self, snapshot, config, *, materials=(), transport=None, credential_store=None, call_journal=None):
+    def __init__(self, snapshot, config, *, materials=(), transport=None, credential_store=None, call_journal=None, discovery=None):
         import threading
 
         self.snapshot, self.config, self.materials = snapshot, config, materials
         self.transport, self.credential_store = transport, credential_store
         self.call_journal = call_journal
+        self.discovery = discovery
         self._calls = []
         self.synthesis_summary = {}
         self._lock = threading.RLock()
@@ -186,7 +187,10 @@ class GroundedApiDriver:
             return DriverResult(failure_kind=FailureKind.PROVIDER_NOT_CONFIGURED, failure_message="provider is disabled or unsupported")
         role = context.get("analyst_role", "technical")
         try:
-            bundle = build_context_bundle(request, self.snapshot, role, materials=self.materials, reports=context.get("reports", ()))
+            pack = None if self.discovery is None else self.discovery.background(role)
+            cap = 32768 if self.discovery is None else self.discovery.blueprint["budget"]["max_context_bytes"]
+            bundle = build_context_bundle(request, self.snapshot, role, materials=self.materials,
+                                          reports=context.get("reports", ()), max_bytes=cap, discovery_knowledge=pack)
         except (TypeError, ValueError):
             return DriverResult(failure_kind=FailureKind.VALIDATION_FAILED, failure_message="research context is invalid or exceeds its byte limit")
         if not bundle.evidence_index:
@@ -228,6 +232,8 @@ class GroundedApiDriver:
             record["status"] = "READY"
             plan = None
             if role == "research":
+                if self.discovery is not None and len(response.content.get("hypotheses", ())) >= self.discovery.blueprint["budget"]["max_hypotheses"]:
+                    raise ValueError("discovery hypothesis budget exceeded")
                 base = request.research_plan
                 plan = ResearchPlan(hypotheses=tuple(response.content.get("hypotheses", ())), required_datasets=base.required_datasets,
                                     factor_ids=base.factor_ids, risk_policy_version=base.risk_policy_version,

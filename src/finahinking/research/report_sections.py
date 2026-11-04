@@ -137,3 +137,24 @@ def theme_report_document(document):
         f'<style>{blue_white_report_css()}</style>')
     document = re.sub(r'<html lang="en">', '<html lang="zh-CN">', document, count=1)
     return document.replace('</head>', additions + '</head>', 1)
+
+
+def discovery_section(discovery):
+    esc = html.escape
+    blueprint = discovery["blueprint"]
+    roles = []
+    for role in discovery["roles"]:
+        citations = "".join(
+            f'<li>{esc(item["title"])} · {esc("、".join(item["source_ids"]))}'
+            f' · <code>{esc(item["digest"])}</code></li>'
+            for item in role["knowledge"]["items"]
+        )
+        observations = "".join(f"<p>{esc(note)}</p>" for note in role["observations"])
+        roles.append(f'<details><summary>{esc(role["role"])} · {esc(role["status"])}</summary>'
+                     f'{observations}<ul>{citations}</ul></details>')
+    return (
+        '<section aria-labelledby="discovery-evidence"><h2 id="discovery-evidence">研究计划与分析师证据</h2>'
+        f'<p>{esc(blueprint["hypothesis"])}</p><p>{esc(blueprint["falsification"])}</p>'
+        f'<p>研究计划 <code>{esc(blueprint["fingerprint"])}</code></p>'
+        f'{"".join(roles)}<p>{esc(discovery["knowledge_suggestion"])}</p></section>'
+    )

@@ -1441,6 +1441,23 @@ class LocalApplication:
         except (KeyError, OSError, TypeError, ValueError):
             return 422, "application/json", {"error": "请核对已发布报告、决策时间和比较数据。"}
 
+    def _discovery_route(self, method, clean, body):
+        if clean not in {"/api/research/discovery", "/api/research/discovery/preview"}:
+            return None
+        if method != "POST":
+            return 405, "application/json", {"error": "请明确预览或提交研究计划。"}
+        denied = self._data_write_guard(body)
+        if denied is not None:
+            return denied
+        values = {key: value for key, value in body.items() if key != "_csrf"}
+        try:
+            if clean.endswith("/preview"):
+                return 200, "application/json", self.research_service.preview_discovery(values)
+            result = self.research_service.run_discovery(values)
+            return (202 if result["job"] else 422), "application/json", result
+        except (KeyError, OSError, TypeError, ValueError):
+            return 422, "application/json", {"error": "请核对问题、面板、预算和批准政策后重新预览。"}
+
     def _strategy_route(self, method, clean, body):
         if clean not in {"/research/strategies", "/api/research/strategies", "/api/research/strategies/sample"}:
             return None
@@ -1862,6 +1879,9 @@ class LocalApplication:
         pool_response = self._research_pool_route(method, clean, body, query)
         if pool_response is not None:
             return pool_response
+        discovery_response = self._discovery_route(method, clean, body)
+        if discovery_response is not None:
+            return discovery_response
         strategy_response = self._strategy_route(method, clean, body)
         if strategy_response is not None:
             return strategy_response
