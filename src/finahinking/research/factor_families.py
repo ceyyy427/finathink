@@ -96,9 +96,11 @@ def audit_family_inputs(family_id, panel, policy) -> FamilyInputAudit:
             provenance = row["field_provenance"].get("limit_rule_version", {})
             if not row.get("limit_rule_version") or not provenance.get("effective_from"):
                 codes.add("LIMIT_RULE_VERSION_MISSING")
-        elif family_id == "institutional":
-            if row.get("seat_identity_confidence") != "SOURCE_VERIFIED_INSTITUTIONAL_AGGREGATE":
-                codes.add("SEAT_IDENTITY_UNCERTAIN")
+        elif (
+            family_id == "institutional"
+            and row.get("seat_identity_confidence") != "SOURCE_VERIFIED_INSTITUTIONAL_AGGREGATE"
+        ):
+            codes.add("SEAT_IDENTITY_UNCERTAIN")
     if family_id == "industry" and panel.missing_inputs(("industry_relative_return",)):
         codes.add("INSUFFICIENT_CONTEMPORANEOUS_PEERS")
     limitations = [definition.get("rights_notice", "User-declared units, timing and identities are not independent source verification."),

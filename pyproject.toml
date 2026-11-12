@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "finathink"
-version = "0.1.0"
+version = "0.2.0"
 description = "Finathink — Financial Research Optimizer for governed, auditable research"
 requires-python = ">=3.11"
 dependencies = ["numpy>=2.0,<3", "pandas>=2.2,<4"]

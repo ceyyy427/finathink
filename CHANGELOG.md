@@ -74,6 +74,15 @@ renamed repository's remote `main` through PR #2.
   gate evidence. A GitHub release is not claimed until a maintainer publishes
   the tagged artifact.
 
+## 0.2.0 - 2026-11-11
+
+- 中文量化研究工作台统一检索 206 个独立对象，提供 12 条已验收的研究路径。
+- 自然语言研究支持数据就绪检查、冻结计划、五类分析师、经理综合、显式模型授权和离线证据报告。
+- 因子定义库收录十个家族的 80 个独立公式，支持时点面板、预登记验证、稳健性评分和冻结样本外测试。
+- 12 个策略模板和 12 条风险规则接入股票与 ETF 统一纸面账本。研究池记录五类决策来源及冻结窗口观察。
+- 来源更新按文件比较和审核。历史证据随报告保留，安装验收覆盖备份恢复和索引重建。
+- 使用入口见 [量化知识与研究工作台指南](docs/QUANT_KNOWLEDGE_GUIDE.md)。验收基线与后续安排见 [阶段 29–35 规划](docs/FINATHINK_ROADMAP_PHASE_29_35.md)。
+
 ## 0.1.0 - 2026-10-03 (source candidate; no GitHub release published)
 
 - Prepared the governed P0–P7 research foundation and local-first P7.5 product
