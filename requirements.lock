@@ -84,7 +84,7 @@ ruff==0.16.9
 setuptools==84.1.0
 Send2Trash==2.1.0
 six==1.17.0
-soupsieve==2.10
+soupsieve==4.0
 sympy==1.14.0
 stack-data==0.6.3
 terminado==0.18.1
