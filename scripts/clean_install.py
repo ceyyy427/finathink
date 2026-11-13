@@ -41,7 +41,7 @@ def main() -> int:
         env_dir = work / "venv"
         venv.EnvBuilder(with_pip=True, system_site_packages=False).create(env_dir)
         python = env_dir / ("Scripts/python.exe" if sys.platform == "win32" else "bin/python")
-        _run([str(python), "-m", "pip", "install", str(wheel)], cwd=work)
+        _run([str(python), "-m", "pip", "install", str(wheel.absolute())], cwd=work)
         probe = """
 import sqlite3
 from finahinking.local_app import LocalApplication

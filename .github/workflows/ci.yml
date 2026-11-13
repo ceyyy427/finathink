@@ -91,8 +91,8 @@ jobs:
           python scripts/secret_scan.py
       - name: Build smoke
         run: |
-          python -m pip wheel --no-deps --wheel-dir /tmp/finathink-wheel .
-          python scripts/clean_install.py --wheel "$(find /tmp/finathink-wheel -name 'finathink-*.whl' -print -quit)"
+          python -m pip wheel --no-deps --wheel-dir dist .
+          python scripts/clean_install.py --wheel "$(find dist -name 'finathink-*.whl' -print -quit)"
       - name: Diff whitespace
         run: git diff --check
 
