@@ -164,7 +164,7 @@ def render_snapshot_factor_report(study, *, run_id):
         '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">'
         '<title>自有数据因子报告</title></head><body><main>'
         f'<header class="report-header"><h1>自有数据因子报告</h1><p>运行 <code>{esc(run_id)}</code> · 仅供研究</p></header>'
-        f'<section class="report-section"><h2>{heading}</h2><dl class="report-meta">{output}</dl>{replay}</section>'
+        f'<section class="report-section" id="factor-study"><h2>{heading}</h2><dl class="report-meta">{output}</dl>{replay}</section>'
         '<section class="report-section"><h2>研究输入与证据</h2>'
         '<p>按观测顺序使用 60% 训练、20% 验证和 20% 测试。信号滞后一条观测，'
         '标签跨界的样本会被剔除。</p>'

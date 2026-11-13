@@ -234,6 +234,7 @@ def test_saved_user_snapshot_to_frozen_factor_report_and_replay(tmp_path, observ
         offline.write_bytes(report.body())
         page.goto(offline.as_uri())
         assert page.get_by_role('heading', name='冻结后的样本外结果').is_visible()
+        assert page.locator('#factor-study').is_visible()
         assert page.get_by_text('样本外结果指纹', exact=False).count()
         assert len(calls) == 1
         page.goto('about:blank')
