@@ -164,6 +164,96 @@ def test_user_configures_own_api_then_explicitly_captures_and_researches(tmp_pat
     assert not diagnostics['errors']
 
 
+def test_saved_user_snapshot_to_frozen_factor_report_and_replay(tmp_path, observed_page, monkeypatch):
+    import finahinking.data.user_api as api
+
+    page, artifacts, _ = observed_page
+    monkeypatch.setattr(api, '_default_resolver', lambda *_: ('93.184.216.34',))
+    source = FixtureMarketDataSource(points=150).snapshot('AAA')
+    fields = ('instrument', 'timestamp', 'available_at', 'open', 'high', 'low', 'close', 'volume')
+    records = [{key: row.to_dict()[key] for key in fields} for row in source.observations]
+    calls = []
+
+    class Transport:
+        def request(self, url, *, headers, timeout, allow_redirects=False):
+            calls.append(url)
+            return TransportResponse(200, {'content-type': 'application/json'}, json.dumps({'data': records}).encode(), url)
+
+    config = LocalAppConfig(db_path=str(tmp_path / 'local.sqlite'), offline=True)
+    app = LocalApplication(config, data_transport=Transport(), data_credential_store=InMemoryDataCredentialStore())
+    app.research_service.snapshots.save(source)
+    with serve(app) as base:
+        page.goto(base + '/settings/data-connections')
+        connection = page.locator('form[action="/api/data/connections"]')
+        connection.locator('[name="connection_id"]').fill('trial-factor')
+        connection.locator('[name="display_name"]').fill('我的日频接口')
+        connection.locator('[name="base_url"]').fill('https://api.trial.invalid/prices')
+        connection.locator('[name="records_path"]').fill('data')
+        connection.locator('[name="field_mapping"]').fill(json.dumps({key: key for key in fields}))
+        with page.expect_response('**/api/data/connections') as saved:
+            connection.locator('button[type="submit"]').click()
+        assert saved.value.status == 201
+        assert not calls
+        page.goto(base + '/research/jobs')
+        capture = page.locator('[data-snapshot-capture]')
+        capture.locator('[name="connection_id"]').select_option('trial-factor')
+        for name, value in (('start', '2026-01-01'), ('end', '2026-06-30'), ('as_of', '2026-06-30')):
+            capture.locator(f'[name="{name}"]').fill(value)
+        with page.expect_response('**/api/research/snapshots/capture') as captured:
+            capture.locator('button[type="submit"]').click()
+        assert captured.value.status == 201
+        reference = captured.value.json()['snapshot_ref']
+        assert len(calls) == 1
+        page.get_by_role('link', name='用已保存的快照做因子样本外检验').click()
+        form = page.locator('[data-snapshot-factor-form]')
+        form.get_by_label('用户数据快照').select_option(reference)
+        assert form.get_by_label('用户数据快照').locator(f'option[value="{source.fingerprint}"]').count() == 0
+        form.get_by_label('标的').select_option('AAA')
+        form.get_by_label('因子').select_option('close_momentum')
+        form.get_by_label('研究问题').fill('过去五期的收盘动量与下一期收益有关吗？')
+        check = form.get_by_role('button', name='检查数据和样本外区间')
+        submit = form.get_by_role('button', name='固定输入并提交验证')
+        check.click()
+        submit.wait_for()
+        assert app.research_service.list_jobs()['total'] == 0
+        form.get_by_label('研究问题').fill('收盘动量在隔离样本外与下一期收益有关吗？')
+        submit.wait_for(state='hidden')
+        check.click()
+        submit.click()
+        page.wait_for_selector('[data-study-state="VALIDATED"]', timeout=30_000)
+        page.locator('[data-freeze-ack]').check()
+        page.get_by_role('button', name='冻结候选', exact=True).click()
+        page.wait_for_selector('[data-study-state="FROZEN"]')
+        page.get_by_role('button', name='读取一次冻结测试集').click()
+        page.wait_for_selector('[data-study-state="TEST_EVALUATED"]', timeout=30_000)
+        study_path = page.url.removeprefix(base)
+        report_link = page.get_by_role('link', name='打开完整 HTML 报告')
+        report = page.request.get(base + report_link.get_attribute('href'))
+        assert report.ok and reference in report.text()
+        offline = tmp_path / 'factor-report.html'
+        offline.write_bytes(report.body())
+        page.goto(offline.as_uri())
+        assert page.get_by_role('heading', name='冻结后的样本外结果').is_visible()
+        assert page.get_by_text('样本外结果指纹', exact=False).count()
+        assert len(calls) == 1
+        page.goto('about:blank')
+
+    with serve(LocalApplication(config)) as base:
+        page.goto(base + study_path)
+        page.wait_for_selector('[data-study-state="TEST_EVALUATED"]')
+        page.set_viewport_size({'width': 375, 'height': 812})
+        assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 2')
+        with page.expect_response('**/api/research/experiments/*/replay') as replayed:
+            page.get_by_role('button', name='复跑已冻结的样本外结果').click()
+        assert replayed.value.ok and replayed.value.json()['status'] == 'MATCH', replayed.value.text()
+        status = page.locator('[data-snapshot-factor-replay-status]')
+        status.filter(has_text='复跑结果一致。').wait_for()
+        assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 2')
+        assert page.request.get(base + '/api/research/jobs').json()['total'] == 2
+        page.screenshot(path=str(artifacts / 'snapshot-factor-replay.png'), full_page=True)
+        page.goto('about:blank')
+
+
 def test_large_task_history_is_paginated_under_cpu_throttle(tmp_path, observed_page):
     page, artifacts, diagnostics = observed_page
     app = LocalApplication(LocalAppConfig(db_path=str(tmp_path / 'local.sqlite'), offline=True))

@@ -35,7 +35,7 @@ test('switching a method study to ordinary or pending study clears prior provena
     replaceChildren(...items) { this.children = items; }
   }
   const elements = new Map(); const get = (selector) => { if (!elements.has(selector)) elements.set(selector, new Element()); return elements.get(selector); };
-  const root = { dataset: {}, setAttribute() {}, querySelector: get, ownerDocument: { createElement: () => new Element() } };
+  const root = { dataset: {}, setAttribute() {}, querySelector: (selector) => selector.startsWith('[data-snapshot-factor-') ? null : get(selector), ownerDocument: { createElement: () => new Element() } };
   const ids = ['scope_data_audit', 'semantic_check', 'information_coefficient', 'deduplication', 'portfolio_backtest', 'oos_stability', 'incremental_value', 'capacity', 'archive_decision'];
   const spec = { ...study.spec, instrument: 'AAA', recipe_id: 'turnover_mean', windows: [5], n_splits: 2, label_horizon: 1, embargo: 1, method_binding: { methods_digest: 'c'.repeat(64) } };
   const method = { ...study, study_id: 'study-method', state: 'VALIDATED', spec, validation: { snapshot_ref: spec.snapshot_ref, spec_ref: study.spec_ref, summaries: [], validation_run: { schema_version: 'factor-validation-run.v1', fingerprint: 'd'.repeat(64), binding_digest: 'e'.repeat(64), reproduction_scope: 'FORMULA_FIXTURE', steps: ids.map((stage_id) => ({ stage_id, status: 'COMPLETE', binding_digest: 'e'.repeat(64) })) } } };

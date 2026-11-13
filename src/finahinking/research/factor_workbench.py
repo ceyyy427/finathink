@@ -12,7 +12,7 @@ import pandas as pd
 from finahinking.factors.dsl import evaluate_expression
 from finahinking.factors.evaluation import evaluate_factor_candidate
 
-from .contracts import stable_digest
+from .contracts import _unsafe_public_text, stable_digest
 from .factor_catalog_loader import get_research_recipe
 from .factor_experiments import FactorExperimentSpec, _candidate_for, run_factor_experiments
 from .observability import current_runtime_budget
@@ -21,6 +21,19 @@ from .reports import compare_experiments
 from .temporal_validation import purged_walk_forward
 
 METHOD_VERSION = "factor-workbench.v1"
+SNAPSHOT_FACTOR_RECIPES = ("close_momentum", "close_reversal")
+SNAPSHOT_FACTOR_FIELDS = frozenset({"snapshot_ref", "instrument", "recipe_id", "question"})
+_SNAPSHOT_FACTOR_WINDOW = 5
+_SNAPSHOT_FACTOR_FOLDS = 2
+_SNAPSHOT_FACTOR_MIN_ROWS = 98
+_SNAPSHOT_FACTOR_LIMITATIONS = (
+    "按单标的实际观测顺序检验，未核验交易日历、公司行动和复权。",
+    "费用来自秩换手诊断，报告中的分层收益和 IC 不代表实际成交、组合净收益或盈利。",
+)
+
+
+class SnapshotFactorInputError(ValueError):
+    """User-facing repair instructions for the saved-snapshot factor workflow."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -38,20 +51,21 @@ class ExperimentSummary:
         return json.loads(self._json)
 
 
-def study_frame(snapshot, instrument, as_of):
+def study_frame(snapshot, instrument, as_of, *, utc=False):
     from .snapshot_tools import SnapshotResearchTools
 
     if instrument not in snapshot.instruments or not snapshot.pit_available(SnapshotResearchTools._boundary(as_of)):
         raise ValueError("study snapshot has unknown/future availability or wrong instrument")
     rows = [item for item in snapshot.observations if item.instrument == instrument]
-    if not 4 <= len(rows) <= 5000 or len({item.timestamp.date() for item in rows}) != len(rows):
+    timestamps = [item.timestamp.tz_convert("UTC") if utc else item.timestamp for item in rows]
+    if not 4 <= len(rows) <= 5000 or len({timestamp.date() for timestamp in timestamps}) != len(rows):
         raise ValueError("study needs 4..5000 low-frequency observations")
     if any(previous.available_at > following.timestamp for previous, following in pairwise(rows)):
         raise ValueError("study data was unavailable at its historical execution boundary")
-    return pd.DataFrame([{key: getattr(item, key) for key in ("open", "high", "low", "close", "volume")} for item in rows], index=pd.DatetimeIndex([item.timestamp for item in rows]))
+    return pd.DataFrame([{key: getattr(item, key) for key in ("open", "high", "low", "close", "volume")} for item in rows], index=pd.DatetimeIndex(timestamps))
 
 
-def prepare_study(values, snapshot, *, policy_fingerprint):
+def prepare_study(values, snapshot, *, policy_fingerprint, frame=None):
     fields = {"idempotency_key", "snapshot_ref", "instrument", "as_of", "question", "recipe_id", "windows", "n_splits", "embargo", "label_horizon", "fee_bps", "slippage_bps", "min_abs_ic", "max_neighbor_delta"}
     if not isinstance(values, dict) or set(values) - fields:
         raise ValueError("unsupported study inputs; choose a controlled recipe")
@@ -69,13 +83,63 @@ def prepare_study(values, snapshot, *, policy_fingerprint):
     numeric = {key: values.get(key, default) for key, default in (("fee_bps", 5), ("slippage_bps", 5), ("min_abs_ic", 0.02), ("max_neighbor_delta", 0.1))}
     if any(isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or not 0 <= value <= (100 if key.endswith("bps") else 1) for key, value in numeric.items()):
         raise ValueError("study costs and thresholds must be finite and bounded")
-    frame = study_frame(snapshot, values.get("instrument"), values.get("as_of"))
+    if frame is None:
+        frame = study_frame(snapshot, values.get("instrument"), values.get("as_of"))
     if set(recipe.required_fields) - set(frame.columns):
         raise ValueError("BLOCKED_DATA: choose the method-guided study with explicit research fields and units")
     temporal = purged_walk_forward(frame.index, horizon=horizon, embargo=embargo, n_splits=folds)
     if any(len(fold["validation"]) < 8 for fold in temporal["folds"]) or len(temporal["test"]) < 8:
         raise ValueError("not enough samples after purge/embargo; prepare a longer snapshot")
     return {"version": METHOD_VERSION, "snapshot_ref": snapshot.fingerprint, "instrument": values["instrument"], "as_of": values["as_of"], "question": question.strip(), "recipe_id": recipe.recipe_id, "recipe_version": recipe.version, "windows": windows, "label_horizon": horizon, "embargo": embargo, "n_splits": folds, "split": {"train": 0.6, "validation": 0.2, "test": 0.2}, "sample_period": [frame.index[0].isoformat(), frame.index[-1].isoformat()], "test_period": [frame.index[temporal["validation_end"]].isoformat(), frame.index[-1].isoformat()], "cost": {"fee_bps": numeric["fee_bps"], "slippage_bps": numeric["slippage_bps"], "basis": "ex-post rank-turnover diagnostic, not portfolio net P&L"}, "min_abs_ic": numeric["min_abs_ic"], "max_neighbor_delta": numeric["max_neighbor_delta"], "policy_fingerprint": policy_fingerprint, "metric_basis": "OBSERVATION", "evaluation_units": len(windows) * (2 * folds + 1) + 2}
+
+
+def prepare_snapshot_factor(values, snapshots, *, policy_fingerprint):
+    if not isinstance(values, dict) or set(values) != SNAPSHOT_FACTOR_FIELDS:
+        raise SnapshotFactorInputError("请选择已保存快照、标的与因子，并填写研究问题。")
+    question = values["question"]
+    if not isinstance(question, str) or not 1 <= len(question.strip()) <= 2000 or _unsafe_public_text(question):
+        raise SnapshotFactorInputError("请填写 1 至 2000 字的研究问题，移除接口地址或私密信息。")
+    if values["recipe_id"] not in SNAPSHOT_FACTOR_RECIPES:
+        raise SnapshotFactorInputError("请选择收盘动量或收盘均值回归。")
+    try:
+        snapshot = snapshots.load(values["snapshot_ref"])
+    except (FileNotFoundError, ValueError):
+        raise SnapshotFactorInputError("快照不存在或未通过完整性校验，请重新选择或获取。") from None
+    if snapshot.mode not in {"CAPTURED", "LIVE"}:
+        raise SnapshotFactorInputError("请选择从自有数据接口保存的快照。")
+    instrument = values["instrument"]
+    if instrument not in snapshot.instruments:
+        raise SnapshotFactorInputError("请选择快照中包含的标的。")
+    if any(row.available_at is None for row in snapshot.observations):
+        raise SnapshotFactorInputError("快照有记录缺少可用时间。请补齐 available_at 后重新获取，或只重新获取所选标的。")
+    if not snapshot.pit_available() or snapshot.as_of > pd.Timestamp.now(tz="UTC"):
+        raise SnapshotFactorInputError("快照含截止时点后的记录。请核对时间与可用时间后重新获取，或只重新获取所选标的。")
+    rows = [row for row in snapshot.observations if row.instrument == instrument]
+    if len(rows) > 5000 or len({row.timestamp.tz_convert("UTC").date() for row in rows}) != len(rows):
+        raise SnapshotFactorInputError("请选择每个 UTC 日期至多一条记录的日频数据，上限 5000 条。")
+    if any(row.available_at < row.timestamp for row in rows):
+        raise SnapshotFactorInputError("记录可用时间早于观测时间，请核对接口时间字段后重新获取。")
+    if any(previous.available_at > following.timestamp for previous, following in pairwise(rows)):
+        raise SnapshotFactorInputError("部分记录在下一次观测时尚未可用，请换用及时发布的日频快照。")
+    if len(rows) < _SNAPSHOT_FACTOR_MIN_ROWS:
+        raise SnapshotFactorInputError("历史不足，验证与样本外测试需要约 100 条日频记录。")
+
+    as_of = snapshot.as_of.tz_convert("UTC").date().isoformat()
+    frame = study_frame(snapshot, instrument, as_of, utc=True)
+    spec = prepare_study(
+        {**values, "as_of": as_of, "windows": [_SNAPSHOT_FACTOR_WINDOW], "n_splits": _SNAPSHOT_FACTOR_FOLDS},
+        snapshot, policy_fingerprint=policy_fingerprint, frame=frame,
+    )
+    recipe = get_research_recipe(spec["recipe_id"])
+    return {**spec, "snapshot_factor": {
+        "data_mode": snapshot.mode,
+        "snapshot_as_of": snapshot.as_of.isoformat(),
+        "formula": recipe.expression(_SNAPSHOT_FACTOR_WINDOW),
+        "formula_fingerprint": recipe.implementation_fingerprint,
+        "source_ids": recipe.to_dict()["source_ids"],
+        "record_count": len(frame),
+        "limitations": list(_SNAPSHOT_FACTOR_LIMITATIONS),
+    }}
 
 
 def _summary(record, spec, spec_ref, *, phase="VALIDATION", evaluation=None):
@@ -102,10 +166,13 @@ def compute_study(snapshot, study, *, phase, validation=None, research_fields_st
                                      research_fields_store=research_fields_store, study_store=study_store)
     if spec["version"] != METHOD_VERSION or spec["snapshot_ref"] != snapshot.fingerprint:
         raise ValueError("study version or selected snapshot changed")
-    frame = study_frame(snapshot, spec["instrument"], spec["as_of"])
+    pilot = spec.get("snapshot_factor")
+    frame = study_frame(snapshot, spec["instrument"], spec["as_of"], utc=pilot is not None)
     recipe = get_research_recipe(spec["recipe_id"])
     if recipe.version != spec["recipe_version"]:
         raise ValueError("study recipe version changed")
+    if pilot and recipe.implementation_fingerprint != pilot["formula_fingerprint"]:
+        raise ValueError("study recipe implementation changed")
     forward = frame.close.pct_change(spec["label_horizon"], fill_method=None).shift(-spec["label_horizon"])
     dataset = {"frame": frame, "forward_return": forward}
     temporal = purged_walk_forward(frame.index, horizon=spec["label_horizon"], embargo=spec["embargo"], n_splits=spec["n_splits"])

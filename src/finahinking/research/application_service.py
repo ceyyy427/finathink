@@ -881,6 +881,82 @@ class ResearchApplicationService:
         self.factor_studies.set_job(study_id, "validation", job["job_id"])
         return self.factor_study(study_id)
 
+    def _snapshot_factor_spec(self, values):
+        from .factor_workbench import prepare_snapshot_factor
+        from .snapshot_tools import local_research_policy
+
+        return prepare_snapshot_factor(
+            values, self.snapshots, policy_fingerprint=stable_digest(local_research_policy()),
+        )
+
+    def preview_snapshot_factor(self, values):
+        spec = self._snapshot_factor_spec(values)
+        return {
+            "preview_ref": stable_digest(spec),
+            **{key: spec[key] for key in (
+                "snapshot_ref", "instrument", "recipe_id", "recipe_version", "question",
+                "sample_period", "test_period", "cost", "split", "windows", "label_horizon", "embargo",
+            )},
+            **spec["snapshot_factor"],
+            "as_of": spec["snapshot_factor"]["snapshot_as_of"],
+        }
+
+    def create_snapshot_factor(self, values):
+        from .factor_workbench import SNAPSHOT_FACTOR_FIELDS, SnapshotFactorInputError
+
+        if set(values) != SNAPSHOT_FACTOR_FIELDS | {"preview_ref", "idempotency_key"}:
+            raise SnapshotFactorInputError("请检查输入并预览后提交研究。")
+        key = _ref(values["idempotency_key"], "idempotency_key")
+        spec = self._snapshot_factor_spec({field: values[field] for field in SNAPSHOT_FACTOR_FIELDS})
+        if values["preview_ref"] != stable_digest(spec):
+            raise SnapshotFactorInputError("输入已改变，请重新检查快照和因子后提交。")
+        study_id = "study-" + stable_digest({"scope": self.scope_id, "key": key})[:24]
+        self.factor_studies.create(study_id, spec, validation_key=key)
+        return self.factor_study(study_id)
+
+    def replay_snapshot_factor(self, study_id):
+        from .factor_workbench import SnapshotFactorInputError, compute_study
+
+        study = self.factor_studies.get(study_id)
+        if "snapshot_factor" not in study["spec"] or study["state"] not in {"TESTING", "TEST_EVALUATED", "REVIEWED"}:
+            raise SnapshotFactorInputError("请先完成这项自有数据因子研究的最终测试。")
+        results = {}
+        for phase in ("validation", "test"):
+            record = self.queue.get(study[f"{phase}_job_id"])
+            if record.status is not JobStatus.COMPLETED:
+                raise SnapshotFactorInputError("请先完成这项自有数据因子研究的最终测试。")
+            try:
+                verified = verify_research_receipt(self.root, self.queue, record, record.result_ref)
+                result = verified["manifest"]["source_snapshot"]["factor_study"]
+                if (
+                    result["study_id"] != study_id
+                    or result["spec_ref"] != study["spec_ref"]
+                    or result["phase"] != phase.upper()
+                ):
+                    raise ValueError("invalid report binding")
+            except (FileNotFoundError, ValueError, TypeError, KeyError):
+                raise SnapshotFactorInputError("原始研究报告缺失或未通过校验，请恢复报告后再复算。") from None
+            results[phase] = result
+
+        snapshot_ref = study["spec"]["snapshot_ref"]
+        try:
+            snapshot = self.snapshots.load(snapshot_ref)
+        except (FileNotFoundError, ValueError):
+            raise SnapshotFactorInputError("原快照缺失或未通过校验，请恢复该快照后再复算。") from None
+        try:
+            recomputed = compute_study(snapshot, study, phase="test", validation=results["validation"])
+        except (ValueError, KeyError):
+            raise SnapshotFactorInputError("当前因子实现或冻结证据与原报告不兼容，无法复算。") from None
+        expected = results["test"]["test_summary"]["fingerprint"]
+        actual = recomputed["test_summary"]["fingerprint"]
+        return {
+            "status": "MATCH" if expected == actual else "MISMATCH",
+            "study_id": study_id,
+            "snapshot_ref": snapshot_ref,
+            "expected_fingerprint": expected,
+            "actual_fingerprint": actual,
+        }
+
     def create_method_factor_study(self, job_id, handoff_ref, artifact_ref, *, attachment_ref=None, idempotency_key):
         from finahinking.data.research_fields import ResearchFieldStore
 

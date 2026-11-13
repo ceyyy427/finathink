@@ -74,6 +74,10 @@ renamed repository's remote `main` through PR #2.
   gate evidence. A GitHub release is not claimed until a maintainer publishes
   the tagged artifact.
 
+## 0.2.1 - 2026-11-13
+
+- 已保存的用户快照可直接用于收盘动量或收盘均值回归的样本外检验。报告记录公式、输入和结果指纹，可在原工作区复跑。
+
 ## 0.2.0 - 2026-11-11
 
 - 中文量化研究工作台统一检索 206 个独立对象，提供 12 条已验收的研究路径。

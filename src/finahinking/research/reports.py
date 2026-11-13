@@ -109,6 +109,69 @@ def render_section_html(
     )
 
 
+def render_snapshot_factor_report(study, *, run_id):
+    charter = study["charter"]
+    pilot = charter["snapshot_factor"]
+    test = study.get("test_evaluation")
+    summary = study["test_summary"] if test else study["summaries"][0]
+    metrics = summary["metrics"]
+
+    def esc(value):
+        return html.escape(str(value) if value is not None else "未得到有效数值", quote=True)
+
+    def facts(items):
+        return "".join(f"<dt>{esc(label)}</dt><dd>{esc(value)}</dd>" for label, value in items)
+
+    inputs = facts((
+        ("研究问题", charter["question"]),
+        ("数据模式", pilot["data_mode"]),
+        ("标的", charter["instrument"]),
+        ("快照指纹", charter["snapshot_ref"]),
+        ("输入截止时间", pilot["snapshot_as_of"]),
+        ("日频记录数", pilot["record_count"]),
+        ("输入区间", " 至 ".join(charter["sample_period"])),
+        ("保留的测试区间", " 至 ".join(charter["test_period"])),
+        ("因子公式", pilot["formula"]),
+        ("配方版本", charter["recipe_version"]),
+        ("公式实现指纹", pilot["formula_fingerprint"]),
+        ("公式来源", "、".join(pilot["source_ids"])),
+        ("章程指纹", study["spec_ref"]),
+        ("研究配置指纹", charter["policy_fingerprint"]),
+        ("费用诊断", f'费用 {charter["cost"]["fee_bps"]} bps，滑点 {charter["cost"]["slippage_bps"]} bps'),
+    ))
+    heading = "冻结后的样本外结果" if test else "验证结果"
+    provenance = test.get("provenance", {}) if test else {}
+    outcome = ("证据不足" if summary["failure_reason"] else "证据可计算")
+    output = facts((
+        ("结果", outcome),
+        ("时间序列 Pearson IC", metrics.get("information_coefficient")),
+        ("有效样本数", metrics.get("sample_size")),
+        ("覆盖率", metrics.get("coverage")),
+        ("秩换手率", metrics.get("turnover")),
+        ("秩换手费用估计", metrics.get("transaction_cost")),
+        ("样本外评分区间", " 至 ".join(
+            [provenance.get("evaluation_start") or "未确定", provenance.get("evaluation_end") or "未确定"]
+        )) if test else ("样本外状态", "保留测试数据，待冻结后执行"),
+        ("样本外结果指纹" if test else "验证结果指纹", summary["fingerprint"]),
+    ))
+    limits = "".join(f"<li>{esc(value)}</li>" for value in pilot["limitations"])
+    replay = (
+        f'<p>回到本地因子实验，打开研究 <code>{esc(study["study_id"])}</code>，'
+        "可按原快照、公式和冻结候选重新计算并核对结果指纹。</p>"
+        if test else "<p>回到本地因子实验冻结候选，然后运行一次最终测试。</p>"
+    )
+    return theme_report_document(
+        '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">'
+        '<title>自有数据因子报告</title></head><body><main>'
+        f'<header class="report-header"><h1>自有数据因子报告</h1><p>运行 <code>{esc(run_id)}</code> · 仅供研究</p></header>'
+        f'<section class="report-section"><h2>{heading}</h2><dl class="report-meta">{output}</dl>{replay}</section>'
+        '<section class="report-section"><h2>研究输入与证据</h2>'
+        '<p>按观测顺序使用 60% 训练、20% 验证和 20% 测试。信号滞后一条观测，'
+        '标签跨界的样本会被剔除。</p>'
+        f'<dl class="report-meta">{inputs}</dl><ul>{limits}</ul></section></main></body></html>'
+    )
+
+
 def render_workbench_report_html(payload: Mapping[str, Any], explanation: Mapping[str, Any] | None = None) -> str:
     """Render a self-contained research publication for the workbench payload."""
 
@@ -404,9 +467,13 @@ class ReportBundleWriter:
             status_model["policy_lineage"] = analytics_payload.get("policy_lineage")
             status_model["publication_scope"] = analytics_payload.get("publication_scope")
         complete_path = bundle / "complete_report.html"
-        complete_document = (render_factor_report_document(factor_sections, run_id=result.state.run_id,
-            question=study.get("charter", {}).get("question", "按冻结章程核对因子假设")) if factor_sections is not None
-            else theme_report_document(render_status_wall_html(status_model, title="Finathink 研究报告")))
+        if factor_sections is not None:
+            complete_document = render_factor_report_document(factor_sections, run_id=result.state.run_id,
+                question=study.get("charter", {}).get("question", "按冻结章程核对因子假设"))
+        elif study and study.get("charter", {}).get("snapshot_factor"):
+            complete_document = render_snapshot_factor_report(study, run_id=result.state.run_id)
+        else:
+            complete_document = theme_report_document(render_status_wall_html(status_model, title="Finathink 研究报告"))
         if analytics_payload and analytics_payload.get("discovery"):
             from .report_sections import discovery_section
 
