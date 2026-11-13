@@ -30,6 +30,11 @@ export function mountExperimentWorkspace(root, { fetcher = globalThis.fetch, int
   let generation = 0; let timer; let controller; let current; let snapshots = []; let recipes = []; let createKey;
   const request = (url, options) => readLocalJSON(fetcher, url, options);
   const post = (url, values) => request(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...values, _csrf: csrf }) });
+  const studyForm = query('[data-study-form]');
+  const studySnapshot = studyForm.querySelector('[name="snapshot_ref"]');
+  const studyInstrument = studyForm.querySelector('[name="instrument"]');
+  const studyCutoff = studyForm.querySelector('[name="as_of"]');
+  const studyRecipe = studyForm.querySelector('[name="recipe_id"]');
   const pilotForm = query('[data-snapshot-factor-form]');
   const pilotSnapshot = pilotForm?.querySelector('[name="snapshot_ref"]');
   const pilotInstrument = pilotForm?.querySelector('[name="instrument"]');
@@ -75,26 +80,36 @@ export function mountExperimentWorkspace(root, { fetcher = globalThis.fetch, int
     }));
     if (!payload.studies.length) query('[data-study-history]').append(node('li', '尚无本地实验；先选择快照并固定章程。'));
   }
+  function setStudySnapshotFields() {
+    const snapshot = snapshots.find((item) => item.snapshot_ref === studySnapshot.value);
+    if (snapshot) {
+      studyCutoff.value = snapshot.as_of.slice(0, 10);
+      studyInstrument.value = snapshot.instruments[0];
+    }
+  }
   async function loadSnapshots(preferred) {
     snapshots = (await request('/api/research/snapshots')).snapshots;
-    const select = query('[name="snapshot_ref"]'); const old = preferred ?? select.value;
+    const old = preferred ?? studySnapshot.value;
     const placeholder = node('option', '请选择已冻结数据'); placeholder.value = '';
-    select.replaceChildren(placeholder, ...snapshots.map(snapshotOption));
-    select.value = snapshots.some((item) => item.snapshot_ref === old) ? old : snapshots.length === 1 ? snapshots[0].snapshot_ref : '';
-    const snapshot = snapshots.find((item) => item.snapshot_ref === select.value);
-    if (snapshot) { query('[name="as_of"]').value = snapshot.as_of.slice(0, 10); query('[name="instrument"]').value = snapshot.instruments[0]; }
+    studySnapshot.replaceChildren(placeholder, ...snapshots.map(snapshotOption));
+    studySnapshot.value = snapshots.some((item) => item.snapshot_ref === old) ? old : snapshots.length === 1 ? snapshots[0].snapshot_ref : '';
+    setStudySnapshotFields();
     if (pilotSnapshot) {
       const previous = pilotSnapshot.value;
       const eligible = snapshots.filter((item) => ['CAPTURED', 'LIVE'].includes(item.mode));
       const empty = node('option', eligible.length ? '请选择已保存的用户数据快照' : '尚无用户数据快照');
       empty.value = '';
       pilotSnapshot.replaceChildren(empty, ...eligible.map(snapshotOption));
-      if (eligible.some((item) => item.snapshot_ref === previous)) pilotSnapshot.value = previous;
-      pilotInstruments();
+      if (eligible.some((item) => item.snapshot_ref === previous)) {
+        pilotSnapshot.value = previous;
+      } else {
+        pilotInstruments();
+        if (previous) resetPilotPreview();
+      }
     }
   }
   function recipeNote() {
-    const item = recipes.find((entry) => entry.recipe_id === query('[name="recipe_id"]').value);
+    const item = recipes.find((entry) => entry.recipe_id === studyRecipe.value);
     text('[data-study-recipe-note]', item ? `${item.title} · ${item.formula} · 字段 ${item.required_fields.join(', ')} · 单位 ${item.units} · 实现 ${item.implementation_license} · ${item.effect_status}${item.windowed ? '' : ' · 无窗口参数，仅执行一个候选'}` : '');
   }
   function render(study) {
@@ -266,7 +281,7 @@ export function mountExperimentWorkspace(root, { fetcher = globalThis.fetch, int
       if (current?.study_id === study.study_id) replayButton.disabled = false;
     }
   });
-  query('[data-study-form]').addEventListener('submit', (event) => {
+  studyForm.addEventListener('submit', (event) => {
     event.preventDefault();
     const values = Object.fromEntries(new FormData(event.currentTarget));
     values.windows = values.windows.split(',').map((value) => Number(value.trim()));
@@ -276,11 +291,11 @@ export function mountExperimentWorkspace(root, { fetcher = globalThis.fetch, int
     action(() => post('/api/research/experiments', { ...values, idempotency_key: createKey.key }));
   });
   query('[data-study-sample]').addEventListener('click', async () => {
-    try { const sample = await post('/api/research/experiments/sample', { instrument: query('[name="instrument"]').value }); await loadSnapshots(sample.snapshot_ref); text('[data-study-status]', 'SAMPLE 快照已生成；请固定章程后提交。'); }
+    try { const sample = await post('/api/research/experiments/sample', { instrument: studyInstrument.value }); await loadSnapshots(sample.snapshot_ref); text('[data-study-status]', 'SAMPLE 快照已生成；请固定章程后提交。'); }
     catch (reason) { error(reason); }
   });
-  query('[name="snapshot_ref"]').addEventListener('change', () => { const snapshot = snapshots.find((item) => item.snapshot_ref === query('[name="snapshot_ref"]').value); if (snapshot) { query('[name="as_of"]').value = snapshot.as_of.slice(0, 10); query('[name="instrument"]').value = snapshot.instruments[0]; } });
-  query('[name="recipe_id"]').addEventListener('change', recipeNote);
+  studySnapshot.addEventListener('change', setStudySnapshotFields);
+  studyRecipe.addEventListener('change', recipeNote);
   query('[data-study-test]').addEventListener('click', () => { if (current) action(() => post(`/api/research/experiments/${current.study_id}/test`, { idempotency_key: current.test_key ?? crypto.randomUUID() })); });
   query('[data-study-review]').addEventListener('click', () => { if (current) action(() => post(`/api/research/experiments/${current.study_id}/review`, { decision: query('[name="review_decision"]').value, reviewer_id: query('[name="reviewer_id"]').value })); });
   query('[data-study-cancel]').addEventListener('click', () => action(async () => {
@@ -289,7 +304,7 @@ export function mountExperimentWorkspace(root, { fetcher = globalThis.fetch, int
     return current ? request(`/api/research/experiments/${current.study_id}`) : null;
   }));
   const ready = Promise.all([loadSnapshots(), history(), request('/api/research/experiments/catalog').then((payload) => {
-    recipes = payload.recipes; query('[name="recipe_id"]').replaceChildren(...recipes.map((item) => { const option = node('option', item.title); option.value = item.recipe_id; return option; })); recipeNote();
+    recipes = payload.recipes; studyRecipe.replaceChildren(...recipes.map((item) => { const option = node('option', item.title); option.value = item.recipe_id; return option; })); recipeNote();
   })]).then(async () => {
     const requested = new URLSearchParams(document.defaultView?.location?.search ?? '').get('study_id');
     if (requested) await select(requested);

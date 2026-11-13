@@ -35,6 +35,7 @@ test('switching a method study to ordinary or pending study clears prior provena
     replaceChildren(...items) { this.children = items; }
   }
   const elements = new Map(); const get = (selector) => { if (!elements.has(selector)) elements.set(selector, new Element()); return elements.get(selector); };
+  get('[data-study-form]').querySelector = (selector) => get(`[data-study-form] ${selector}`);
   const root = { dataset: {}, setAttribute() {}, querySelector: (selector) => selector.startsWith('[data-snapshot-factor-') ? null : get(selector), ownerDocument: { createElement: () => new Element() } };
   const ids = ['scope_data_audit', 'semantic_check', 'information_coefficient', 'deduplication', 'portfolio_backtest', 'oos_stability', 'incremental_value', 'capacity', 'archive_decision'];
   const spec = { ...study.spec, instrument: 'AAA', recipe_id: 'turnover_mean', windows: [5], n_splits: 2, label_horizon: 1, embargo: 1, method_binding: { methods_digest: 'c'.repeat(64) } };

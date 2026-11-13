@@ -164,6 +164,42 @@ def test_user_configures_own_api_then_explicitly_captures_and_researches(tmp_pat
     assert not diagnostics['errors']
 
 
+def test_factor_workspace_keeps_sample_and_user_snapshot_controls_separate(tmp_path, observed_page):
+    page, _, _ = observed_page
+    app = LocalApplication(LocalAppConfig(db_path=str(tmp_path / 'local.sqlite'), offline=True))
+    source = FixtureMarketDataSource(points=120)
+    first = source.snapshot('AAA')
+    captured = replace(first, observations=first.observations + source.snapshot('BBB').observations, mode='CAPTURED')
+    captured_ref = app.research_service.snapshots.save(captured)
+    with serve(app) as base:
+        page.goto(base + '/research/experiments')
+        legacy = page.locator('[data-study-form]')
+        pilot = page.locator('[data-snapshot-factor-form]')
+        page.locator('[data-study-status]').filter(has_text='本地目录已就绪').wait_for()
+        assert pilot.locator('[name="recipe_id"] option').evaluate_all('(options) => options.map(option => option.value)') == [
+            'close_momentum', 'close_reversal',
+        ]
+        pilot.locator('[name="snapshot_ref"]').select_option(captured_ref)
+        pilot.locator('[name="instrument"]').select_option('BBB')
+        legacy.locator('[name="recipe_id"]').select_option('volume_momentum')
+        legacy.locator('[name="instrument"]').fill('SAMPLE-TEST')
+        with page.expect_response('**/api/research/experiments/sample') as response:
+            page.get_by_role('button', name='生成明确标记的示例快照').click()
+        assert response.value.ok
+        sample = response.value.json()
+        assert sample['instruments'] == ['SAMPLE-TEST']
+        page.locator('[data-study-status]').filter(has_text='SAMPLE 快照已生成').wait_for()
+        assert legacy.locator('[name="snapshot_ref"]').input_value() == sample['snapshot_ref']
+        assert legacy.locator('[name="as_of"]').input_value() == sample['as_of'][:10]
+        assert pilot.locator('[name="snapshot_ref"]').input_value() == captured_ref
+        assert pilot.locator('[name="instrument"]').input_value() == 'BBB'
+        assert pilot.locator('[name="snapshot_ref"] option').count() == 2
+        legacy.locator('[name="snapshot_ref"]').select_option(captured_ref)
+        assert legacy.locator('[name="instrument"]').input_value() == 'AAA'
+        assert legacy.locator('[name="as_of"]').input_value() == captured.as_of.isoformat()[:10]
+        assert pilot.locator('[name="recipe_id"]').input_value() == 'close_momentum'
+
+
 def test_saved_user_snapshot_to_frozen_factor_report_and_replay(tmp_path, observed_page, monkeypatch):
     import finahinking.data.user_api as api
 
