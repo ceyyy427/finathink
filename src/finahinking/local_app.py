@@ -366,7 +366,7 @@ _FACTOR_STUDY_CSS = """
 [data-experiment-workspace] input[type=checkbox] { width: 1rem; height: 1rem; display: inline-block; }
 [data-experiment-workspace] .study-freeze-ack { display: flex; gap: var(--space-2); align-items: baseline; }
 [data-experiment-workspace] button:disabled { opacity: .45; cursor: not-allowed; }
-[data-experiment-workspace] [data-study-binding],[data-experiment-workspace] .field-help,[data-experiment-workspace] .overview-list { overflow-wrap: anywhere; }
+[data-experiment-workspace] [data-study-binding],[data-experiment-workspace] [data-study-method-binding],[data-experiment-workspace] [data-snapshot-factor-replay-status],[data-experiment-workspace] .field-help,[data-experiment-workspace] .overview-list { overflow-wrap: anywhere; }
 @media(max-width: 760px) { [data-experiment-workspace] .study-form { grid-template-columns: minmax(0,1fr); } }
 """
 
@@ -1660,6 +1660,10 @@ class LocalApplication:
                 snapshot = FixtureMarketDataSource(points=240).snapshot(values.get("instrument", "AAA"))
                 service.snapshots.save(snapshot)
                 return 201, content_type, self._snapshot_summary(snapshot)
+            if clean == "/api/research/experiments/snapshot-factor/preview" and method == "POST":
+                return 200, content_type, service.preview_snapshot_factor(values)
+            if clean == "/api/research/experiments/snapshot-factor" and method == "POST":
+                return 202, content_type, service.create_snapshot_factor(values)
             if clean == "/api/research/experiments":
                 if method == "POST":
                     return 202, content_type, service.create_factor_study(values)
@@ -1673,6 +1677,8 @@ class LocalApplication:
                         return 200, content_type, service.freeze_factor_study(parts[0], values["candidate_id"])
                     if parts[1] == "test" and set(values) == {"idempotency_key"}:
                         return 202, content_type, service.test_factor_study(parts[0], values["idempotency_key"])
+                    if parts[1] == "replay" and not values:
+                        return 200, content_type, service.replay_snapshot_factor(parts[0])
                     if parts[1] == "review" and set(values) == {"decision", "reviewer_id"}:
                         return 200, content_type, service.review_factor_study(parts[0], values["decision"], values["reviewer_id"])
                 return 405, content_type, {"error": "use explicit study actions with supported fields"}
@@ -1719,7 +1725,10 @@ class LocalApplication:
             return 502, content_type, {"error": "数据获取失败，请检查连接、字段映射及数据权限。", "code": exc.code}
         except (ValueError, TypeError) as exc:
             from .p8_2.data_sources import MissingPriceFields
+            from .research.factor_workbench import SnapshotFactorInputError
 
+            if isinstance(exc, SnapshotFactorInputError):
+                return 422, content_type, {"error": str(exc)}
             if clean == "/api/research/snapshots/capture" and isinstance(exc, MissingPriceFields):
                 return 422, content_type, {"error": "数据缺少必要字段：" + "、".join(exc.fields) + "。请在数据接口中补齐字段映射，再获取快照。", "code": "MISSING_PRICE_FIELDS", "missing_fields": list(exc.fields)}
             if clean.startswith("/api/research/learning"):
@@ -1755,7 +1764,7 @@ class LocalApplication:
             '<label>标的（多个用英文逗号分隔）<input name="instrument" required maxlength="2579" value="AAA"></label><label>开始日期<input type="date" name="start" required></label><label>结束日期<input type="date" name="end" required></label><label>数据截止日<input type="date" name="as_of" required></label>'
             '<fieldset id="data-units" tabindex="-1"><legend>数据单位（用户声明）</legend><label>价格币种<select name="price_currency"><option value="UNKNOWN">尚未确认</option><option>CNY</option><option>USD</option><option>HKD</option><option>EUR</option><option>GBP</option><option>JPY</option></select></label><label>成交量单位<select name="volume_unit"><option value="UNKNOWN">尚未确认</option><option value="shares">股（已换算）</option><option value="units">份（已换算）</option></select></label><p class="field-help">价格与现金使用同一币种；手数或合约乘数需由数据端换算。此处记录声明，不转换数值。</p></fieldset>'
             '<details><summary>多资产证据声明（可选）</summary><label>资产类别 JSON<textarea name="asset_classes" maxlength="4096" placeholder="{&quot;AAA&quot;:&quot;EQUITY&quot;,&quot;ETF&quot;:&quot;ETF&quot;}"></textarea></label><p class="field-help">为返回的每个标的填写 EQUITY 或 ETF。声明与单位随快照冻结，用于研究对比中的多资产证据。</p></details>'
-            '<button type="submit">获取并保存快照</button></form><p><a href="/settings/data-connections">配置自己的数据接口</a></p>'
+            '<button type="submit">获取并保存快照</button></form><p><a href="/settings/data-connections">配置自己的数据接口</a> · <a href="/research/experiments#snapshot-factor">用已保存的快照做因子样本外检验</a></p>'
             '<details><summary>使用明确标记的演示数据</summary><form class="form-grid" data-snapshot-sample><label>演示标的<input name="instrument" required maxlength="128" value="AAA"></label><button type="submit">生成 SAMPLE 快照</button></form></details></section>'
             '<section class="card"><h2>02 / 提交研究</h2><form class="form-grid" data-run-submit>'
             '<label>已保存的快照<select name="snapshot_ref" required><option value="">请选择数据快照</option></select></label>'

@@ -30,6 +30,43 @@ export function mountExperimentWorkspace(root, { fetcher = globalThis.fetch, int
   let generation = 0; let timer; let controller; let current; let snapshots = []; let recipes = []; let createKey;
   const request = (url, options) => readLocalJSON(fetcher, url, options);
   const post = (url, values) => request(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...values, _csrf: csrf }) });
+  const studyForm = query('[data-study-form]');
+  const studySnapshot = studyForm.querySelector('[name="snapshot_ref"]');
+  const studyInstrument = studyForm.querySelector('[name="instrument"]');
+  const studyCutoff = studyForm.querySelector('[name="as_of"]');
+  const studyRecipe = studyForm.querySelector('[name="recipe_id"]');
+  const pilotForm = query('[data-snapshot-factor-form]');
+  const pilotSnapshot = pilotForm?.querySelector('[name="snapshot_ref"]');
+  const pilotInstrument = pilotForm?.querySelector('[name="instrument"]');
+  const pilotStatus = query('[data-snapshot-factor-status]');
+  const pilotPreview = query('[data-snapshot-factor-preview]');
+  const pilotSubmit = query('[data-snapshot-factor-submit]');
+  const replay = query('[data-snapshot-factor-replay]');
+  const replayButton = replay?.querySelector('button');
+  const replayStatus = query('[data-snapshot-factor-replay-status]');
+  let pilotConfirmation;
+  let previewGeneration = 0;
+
+  function snapshotOption(item) {
+    const option = node('option', `${item.mode} · ${item.instruments.join(', ')} · ${item.record_count} 行 · ${item.snapshot_ref.slice(0, 12)}`);
+    option.value = item.snapshot_ref;
+    return option;
+  }
+  function pilotInstruments() {
+    const snapshot = snapshots.find((item) => item.snapshot_ref === pilotSnapshot.value);
+    pilotInstrument.replaceChildren(...(snapshot?.instruments ?? ['']).map((instrument) => {
+      const option = node('option', instrument || '先选择快照');
+      option.value = instrument;
+      return option;
+    }));
+  }
+  function resetPilotPreview() {
+    previewGeneration++;
+    pilotConfirmation = undefined;
+    pilotPreview.hidden = true;
+    pilotSubmit.hidden = true;
+    pilotStatus.textContent = '';
+  }
   function stop() { generation++; clearTimeout(timer); controller?.abort(); }
   function error(reason) {
     text('[data-study-status]', `需要处理：${userErrorMessage(reason)} 输入已保留，可重新读取记录。`);
@@ -39,26 +76,47 @@ export function mountExperimentWorkspace(root, { fetcher = globalThis.fetch, int
     const payload = await request('/api/research/experiments');
     query('[data-study-history]').replaceChildren(...payload.studies.map((item) => {
       const li = node('li'); const button = node('button', `${item.question} · ${item.state}`); button.type = 'button';
-      button.addEventListener('click', () => select(item.study_id)); li.append(button); return li;
+      button.addEventListener('click', () => openStudy(item.study_id)); li.append(button); return li;
     }));
     if (!payload.studies.length) query('[data-study-history]').append(node('li', '尚无本地实验；先选择快照并固定章程。'));
   }
+  function setStudySnapshotFields() {
+    const snapshot = snapshots.find((item) => item.snapshot_ref === studySnapshot.value);
+    if (snapshot) {
+      studyCutoff.value = snapshot.as_of.slice(0, 10);
+      studyInstrument.value = snapshot.instruments[0];
+    }
+  }
   async function loadSnapshots(preferred) {
     snapshots = (await request('/api/research/snapshots')).snapshots;
-    const select = query('[name="snapshot_ref"]'); const old = preferred ?? select.value;
+    const old = preferred ?? studySnapshot.value;
     const placeholder = node('option', '请选择已冻结数据'); placeholder.value = '';
-    select.replaceChildren(placeholder, ...snapshots.map((item) => {
-      const option = node('option', `${item.mode} · ${item.instruments.join(', ')} · ${item.record_count} 行 · ${item.snapshot_ref.slice(0, 12)}`); option.value = item.snapshot_ref; return option;
-    }));
-    select.value = snapshots.some((item) => item.snapshot_ref === old) ? old : snapshots.length === 1 ? snapshots[0].snapshot_ref : '';
-    const snapshot = snapshots.find((item) => item.snapshot_ref === select.value);
-    if (snapshot) { query('[name="as_of"]').value = snapshot.as_of.slice(0, 10); query('[name="instrument"]').value = snapshot.instruments[0]; }
+    studySnapshot.replaceChildren(placeholder, ...snapshots.map(snapshotOption));
+    studySnapshot.value = snapshots.some((item) => item.snapshot_ref === old) ? old : snapshots.length === 1 ? snapshots[0].snapshot_ref : '';
+    setStudySnapshotFields();
+    if (pilotSnapshot) {
+      const previous = pilotSnapshot.value;
+      const eligible = snapshots.filter((item) => ['CAPTURED', 'LIVE'].includes(item.mode));
+      const empty = node('option', eligible.length ? '请选择已保存的用户数据快照' : '尚无用户数据快照');
+      empty.value = '';
+      pilotSnapshot.replaceChildren(empty, ...eligible.map(snapshotOption));
+      if (eligible.some((item) => item.snapshot_ref === previous)) {
+        pilotSnapshot.value = previous;
+      } else {
+        pilotInstruments();
+        if (previous) resetPilotPreview();
+      }
+    }
   }
   function recipeNote() {
-    const item = recipes.find((entry) => entry.recipe_id === query('[name="recipe_id"]').value);
+    const item = recipes.find((entry) => entry.recipe_id === studyRecipe.value);
     text('[data-study-recipe-note]', item ? `${item.title} · ${item.formula} · 字段 ${item.required_fields.join(', ')} · 单位 ${item.units} · 实现 ${item.implementation_license} · ${item.effect_status}${item.windowed ? '' : ' · 无窗口参数，仅执行一个候选'}` : '');
   }
   function render(study) {
+    if (replay && current?.study_id !== study.study_id) {
+      replayStatus.textContent = '';
+      replayButton.disabled = false;
+    }
     current = normalizeFactorStudy(study); root.dataset.studyState = study.state;
     root.setAttribute('aria-busy', 'false'); query('[data-study-status]').setAttribute('role', 'status');
     text('[data-study-status]', `${study.state} · 章程 ${study.study_id} · PAPER-ONLY`);
@@ -74,6 +132,9 @@ export function mountExperimentWorkspace(root, { fetcher = globalThis.fetch, int
     }
     if (result?.library_validation) {
       text('[data-study-method-binding]', `因子库 ${spec.family} · 定义 ${result.library_validation.formula_fingerprint} · 输入 ${result.library_validation.panel_fingerprint} · ${result.library_validation.status} · 仅研究用途`);
+    }
+    if (spec.snapshot_factor) {
+      text('[data-study-method-binding]', `用户数据 · ${spec.snapshot_factor.formula} · 样本外区间 ${spec.test_period.join(' 至 ')} · 章程指纹 ${study.spec_ref}`);
     }
     const body = query('[data-study-candidates] tbody');
     body.replaceChildren(...(result?.experiments ?? []).map((item) => {
@@ -101,6 +162,7 @@ export function mountExperimentWorkspace(root, { fetcher = globalThis.fetch, int
     const report = study.test_job?.report_url ?? study.validation_job?.report_url;
     const link = query('[data-study-report]'); link.hidden = !report;
     if (report && /^\/research\/[A-Za-z0-9_-]+\/report\/complete$/.test(report)) link.setAttribute('href', report); else link.removeAttribute('href');
+    if (replay) replay.hidden = !(spec.snapshot_factor && study.test_result && study.test_job?.report_status === 'AVAILABLE');
     const failed = [study.test_job, study.validation_job].find((job) => job?.failure_kind);
     if (failed) text('[data-study-status]', `${study.state} · ${failed.failure_kind} · 失败记录已保留；测试占用不会自动清除。`);
   }
@@ -117,13 +179,109 @@ export function mountExperimentWorkspace(root, { fetcher = globalThis.fetch, int
     }
     return poll();
   }
+  async function openStudy(id) {
+    const view = document.defaultView;
+    const url = new URL(view.location.href);
+    url.searchParams.set('study_id', id);
+    url.hash = '';
+    view.history.replaceState(null, '', url);
+    await select(id);
+    query('[data-study-validation-heading]')?.focus();
+  }
   async function action(operation) {
     const expected = generation; root.setAttribute('aria-busy', 'true');
     try { const study = await operation(); if (expected === generation && study) await select(study.study_id); await history(); }
     catch (reason) { if (expected === generation) error(reason); }
     finally { if (expected === generation) root.setAttribute('aria-busy', 'false'); }
   }
-  query('[data-study-form]').addEventListener('submit', (event) => {
+  if (pilotForm && pilotSnapshot && pilotInstrument) {
+    const pilotValues = () => Object.fromEntries(new FormData(pilotForm));
+    pilotForm.addEventListener('input', resetPilotPreview);
+    pilotSnapshot.addEventListener('change', pilotInstruments);
+    pilotForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const button = query('[data-snapshot-factor-check]');
+      if (button.disabled) return;
+      resetPilotPreview();
+      const expected = previewGeneration;
+      const values = pilotValues();
+      button.disabled = true;
+      pilotStatus.textContent = '正在检查本地快照…';
+      try {
+        const result = await post('/api/research/experiments/snapshot-factor/preview', values);
+        if (expected !== previewGeneration) return;
+        if (!digest.test(result.preview_ref ?? '') || result.snapshot_ref !== values.snapshot_ref
+            || result.instrument !== values.instrument || result.recipe_id !== values.recipe_id) {
+          throw new TypeError('Invalid snapshot factor preview');
+        }
+        pilotPreview.replaceChildren(
+          node('p', `${result.instrument} · ${result.record_count} 条观测 · ${result.formula}`),
+          node('p', `数据区间 ${result.sample_period.join(' 至 ')}`),
+          node('p', `保留的样本外区间 ${result.test_period.join(' 至 ')}`),
+          node('p', `费用 ${result.cost.fee_bps} bps，滑点 ${result.cost.slippage_bps} bps。先提交验证，冻结后再运行样本外测试。`),
+          ...result.limitations.map((item) => node('p', item)),
+        );
+        pilotConfirmation = { values, previewRef: result.preview_ref };
+        pilotPreview.hidden = false;
+        pilotSubmit.hidden = false;
+        pilotStatus.textContent = '数据检查通过。请核对下面的输入。';
+      } catch (reason) {
+        if (expected === previewGeneration) pilotStatus.textContent = userErrorMessage(reason);
+      } finally {
+        button.disabled = false;
+      }
+    });
+    pilotSubmit.addEventListener('click', async () => {
+      if (pilotSubmit.disabled || !pilotConfirmation) return;
+      if (JSON.stringify(pilotValues()) !== JSON.stringify(pilotConfirmation.values)) {
+        resetPilotPreview();
+        pilotStatus.textContent = '输入已修改，请重新检查数据。';
+        return;
+      }
+      const selectedGeneration = generation;
+      const expected = previewGeneration;
+      const { values, previewRef } = pilotConfirmation;
+      pilotSubmit.disabled = true;
+      pilotStatus.textContent = '正在提交验证…';
+      try {
+        const study = normalizeFactorStudy(await post('/api/research/experiments/snapshot-factor', {
+          ...values, preview_ref: previewRef, idempotency_key: `snapshot-factor-${previewRef}`,
+        }));
+        await history();
+        if (expected !== previewGeneration) return;
+        pilotSubmit.hidden = true;
+        if (selectedGeneration === generation) {
+          pilotStatus.textContent = '验证已提交。请在候选区查看结果。';
+          await openStudy(study.study_id);
+        } else {
+          pilotStatus.textContent = '验证已提交，可在本地实验历史打开。';
+        }
+      } catch (reason) {
+        if (expected === previewGeneration) pilotStatus.textContent = userErrorMessage(reason);
+      } finally {
+        pilotSubmit.disabled = false;
+      }
+    });
+  }
+  replayButton?.addEventListener('click', async () => {
+    const study = current;
+    if (!study || replayButton.disabled) return;
+    replayButton.disabled = true;
+    replayStatus.textContent = '正在用冻结输入复算…';
+    try {
+      const result = await post(`/api/research/experiments/${study.study_id}/replay`, {});
+      if (current?.study_id !== study.study_id) return;
+      if (result.study_id !== study.study_id || result.snapshot_ref !== study.spec.snapshot_ref
+          || !['MATCH', 'MISMATCH'].includes(result.status)) throw new TypeError('Invalid factor replay');
+      const message = result.status === 'MATCH' ? '复跑结果一致。' : '复跑结果与原报告不同。';
+      replayStatus.textContent = `${message} 原结果 ${result.expected_fingerprint}。复跑 ${result.actual_fingerprint}。`;
+    } catch (reason) {
+      if (current?.study_id === study.study_id) replayStatus.textContent = userErrorMessage(reason);
+    } finally {
+      if (current?.study_id === study.study_id) replayButton.disabled = false;
+    }
+  });
+  studyForm.addEventListener('submit', (event) => {
     event.preventDefault();
     const values = Object.fromEntries(new FormData(event.currentTarget));
     values.windows = values.windows.split(',').map((value) => Number(value.trim()));
@@ -133,11 +291,11 @@ export function mountExperimentWorkspace(root, { fetcher = globalThis.fetch, int
     action(() => post('/api/research/experiments', { ...values, idempotency_key: createKey.key }));
   });
   query('[data-study-sample]').addEventListener('click', async () => {
-    try { const sample = await post('/api/research/experiments/sample', { instrument: query('[name="instrument"]').value }); await loadSnapshots(sample.snapshot_ref); text('[data-study-status]', 'SAMPLE 快照已生成；请固定章程后提交。'); }
+    try { const sample = await post('/api/research/experiments/sample', { instrument: studyInstrument.value }); await loadSnapshots(sample.snapshot_ref); text('[data-study-status]', 'SAMPLE 快照已生成；请固定章程后提交。'); }
     catch (reason) { error(reason); }
   });
-  query('[name="snapshot_ref"]').addEventListener('change', () => { const snapshot = snapshots.find((item) => item.snapshot_ref === query('[name="snapshot_ref"]').value); if (snapshot) { query('[name="as_of"]').value = snapshot.as_of.slice(0, 10); query('[name="instrument"]').value = snapshot.instruments[0]; } });
-  query('[name="recipe_id"]').addEventListener('change', recipeNote);
+  studySnapshot.addEventListener('change', setStudySnapshotFields);
+  studyRecipe.addEventListener('change', recipeNote);
   query('[data-study-test]').addEventListener('click', () => { if (current) action(() => post(`/api/research/experiments/${current.study_id}/test`, { idempotency_key: current.test_key ?? crypto.randomUUID() })); });
   query('[data-study-review]').addEventListener('click', () => { if (current) action(() => post(`/api/research/experiments/${current.study_id}/review`, { decision: query('[name="review_decision"]').value, reviewer_id: query('[name="reviewer_id"]').value })); });
   query('[data-study-cancel]').addEventListener('click', () => action(async () => {
@@ -146,7 +304,7 @@ export function mountExperimentWorkspace(root, { fetcher = globalThis.fetch, int
     return current ? request(`/api/research/experiments/${current.study_id}`) : null;
   }));
   const ready = Promise.all([loadSnapshots(), history(), request('/api/research/experiments/catalog').then((payload) => {
-    recipes = payload.recipes; query('[name="recipe_id"]').replaceChildren(...recipes.map((item) => { const option = node('option', item.title); option.value = item.recipe_id; return option; })); recipeNote();
+    recipes = payload.recipes; studyRecipe.replaceChildren(...recipes.map((item) => { const option = node('option', item.title); option.value = item.recipe_id; return option; })); recipeNote();
   })]).then(async () => {
     const requested = new URLSearchParams(document.defaultView?.location?.search ?? '').get('study_id');
     if (requested) await select(requested);

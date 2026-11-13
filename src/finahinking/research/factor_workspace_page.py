@@ -15,6 +15,20 @@ def factor_workspace_page(csrf):
     return f'''
 <section data-experiment-workspace data-study-state="EMPTY">
 <header class="overview-header"><div><p class="eyebrow">FACTOR RESEARCH / PAPER-ONLY</p><h1>因子实验</h1><p class="lede">先固定问题、样本与成本，再验证候选；冻结后只查看一次测试集。</p></div></header>
+<section class="panel section" id="snapshot-factor"><h2>用自己的快照检验一个因子</h2>
+<p class="field-help">使用已保存的日频数据检验单一标的。结果反映因子与后续收益的关联，费用和滑点用于换手诊断。</p>
+<p><a href="/research/jobs">获取并保存用户数据快照</a></p>
+<form class="form-grid study-form" data-snapshot-factor-form>
+<label>用户数据快照<select name="snapshot_ref" required><option value="">正在读取快照</option></select></label>
+<label>标的<select name="instrument" required><option value="">先选择快照</option></select></label>
+<label>因子<select name="recipe_id"><option value="close_momentum">收盘动量</option><option value="close_reversal">收盘均值回归</option></select></label>
+<label>研究问题<textarea name="question" maxlength="2000" required placeholder="例如，过去 5 个观察期的动量能否解释下一期收益？"></textarea></label>
+<button type="submit" data-snapshot-factor-check>检查数据和样本外区间</button>
+<button type="button" data-snapshot-factor-submit hidden>固定输入并提交验证</button>
+</form>
+<p data-snapshot-factor-status role="status" aria-live="polite"></p>
+<div data-snapshot-factor-preview hidden></div>
+</section>
 <p class="field-help">旧实验入口有 {len(research_recipes())} 个受控配方；工程复现不代表盈利。附加字段配方需走类型化研究入口，不使用成交量代替真实换手率。</p>
 <p><a href="/research/factor-library">打开跨家族因子定义库，准备真实后台研究 →</a></p>
 <details id="factor-directory"><summary>查看来源与本地定义目录</summary><ul>{directory}</ul></details>
@@ -39,7 +53,7 @@ def factor_workspace_page(csrf):
 <button type="submit">固定章程并提交验证</button>
 </form><p class="field-help" data-study-recipe-note></p>
 <p class="field-help">默认 60% 训练 / 20% 验证 / 20% 测试；标签跨界会被 purge，隔离间隔按观察数计。费用为秩换手诊断口径，不冒充组合净收益。</p></section>
-<section class="panel section"><h2>02 / 候选、验证与冻结</h2><p data-study-binding>尚未提交研究。请选择快照与受控配方。</p>
+<section class="panel section"><h2 data-study-validation-heading tabindex="-1">02 / 候选、验证与冻结</h2><p data-study-binding>尚未提交研究。请选择快照与受控配方。</p>
 <ol data-study-stages aria-label="实验阶段"></ol>
 <p class="learning-evidence" data-study-method-binding></p>
 <p><label class="study-freeze-ack"><input type="checkbox" data-freeze-ack> 我确认先依据验证证据冻结候选，不根据测试结果换选。</label></p>
@@ -47,6 +61,7 @@ def factor_workspace_page(csrf):
 <h3>可比条件与验证平台</h3><ul class="overview-list" data-study-groups></ul><p class="field-help" data-study-multiplicity></p></section>
 <section class="panel section"><h2>03 / 冻结后测试与审核</h2><p data-study-test-result>测试集未读取。</p>
 <div class="action-row"><button type="button" data-study-test disabled>读取一次冻结测试集</button><button type="button" data-study-cancel disabled>取消当前计算</button><a data-study-report hidden>打开完整 HTML 报告</a></div>
+<div data-snapshot-factor-replay hidden><button type="button">复跑已冻结的样本外结果</button><p role="status" aria-live="polite" data-snapshot-factor-replay-status></p></div>
 <p class="field-help">同一标的的测试区间（含重叠区间）在本地账本中只消费一次；换问题、成本或快照不能重开。PASS 表示证据可计算，不表示盈利。中断后占用仍保留。</p>
 <div class="form-grid"><label>研究审核<select name="review_decision"><option value="">请选择</option><option value="REJECT">拒绝候选</option><option value="APPROVE_FOR_RESEARCH">保留为待准入研究提案</option></select></label><label>审核标识<input name="reviewer_id" value="local-reviewer" maxlength="128"></label><button type="button" data-study-review disabled>记录审核决定</button></div><p class="field-help">审核仅记录研究决定，不自动写入生产因子库或改变投资策略。</p></section>
 <section class="panel section"><h2>本地实验历史</h2><p>重启后可继续读取同一章程、报告与测试占用记录。</p><ul class="overview-list" data-study-history></ul><a href="/research/compare">查看可比条件与运行差异</a></section>
