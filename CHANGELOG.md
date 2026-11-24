@@ -74,6 +74,12 @@ renamed repository's remote `main` through PR #2.
   gate evidence. A GitHub release is not claimed until a maintainer publishes
   the tagged artifact.
 
+## 0.2.2 - 2026-11-24
+
+- 研究面板支持用已保存的 API 连接获取原始行情和规则附件，预览字段的时点覆盖后保存并复用。
+- 已保存面板可进入因子定义、因子评分、策略和自然语言研究。后台报告保留面板指纹。
+- 行情可在保留历史快照的前提下追加新日期。财务附件保留公告和修订时刻。
+
 ## 0.2.1 - 2026-11-13
 
 - 已保存的用户快照可直接用于收盘动量或收盘均值回归的样本外检验。报告记录公式、输入和结果指纹，可在原工作区复跑。

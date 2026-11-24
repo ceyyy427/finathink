@@ -56,14 +56,16 @@ def learning_journey(app, get, post, template_ref):
     return assessment['assessment_id'], pair['pair_id']
 
 
-def panel_journey(app, post):
+def panel_journey(app, get, post):
     from finahinking.data.panel_contracts import PanelContract, PanelFieldAttachment
     from finahinking.p8_2.contracts import DatasetSnapshot, MarketObservation
 
     times = [f"2026-01-0{d}T16:00:00Z" for d in (2,3,4)]
     observations = tuple(MarketObservation(a,t,v,v,v,v,100,available_at=t,suspended=False)
                          for a, values in (("AAA",(1,2,3)),("BBB",(5,6,7))) for t,v in zip(times,values))
-    snap = DatasetSnapshot("installed-panel", observations, provenance={"adjustment":"RAW"})
+    snap = DatasetSnapshot("installed-panel", observations, provenance={
+        "adjustment": "RAW", "units": {"price_currency": "CNY", "volume_unit": "shares"},
+    })
     app.research_service.snapshots.save(snap)
     units = {"is_session":"boolean", "in_universe":"boolean", "trade_allowed":"boolean",
              "lot_size":"shares", "settlement_days":"sessions", "split_factor":"ratio"}
@@ -80,6 +82,17 @@ def panel_journey(app, post):
     assert result["status"] == "READY" and result["execution_permission"] is False
     assert result["results"][0]["records"][-2]["value"] == .5
     assert result == post("/api/research/panels/evaluate", inputs)
+    assert "保存面板" in get("/research/panels").decode()
+    draft = {
+        "name": "已安装面板", "snapshot_ref": snap.fingerprint, "instrument_ids": list(snap.instruments),
+        "start": "2026-01-02", "end": "2026-01-04", "timezone": "UTC", "attachment_refs": [],
+        "rules": dict.fromkeys(("calendar_ref", "universe_ref", "adjustment_ref", "trade_rule_ref"), ref),
+    }
+    preview = post("/api/research/panels/preview", draft)
+    assert preview["status"] == "READY" and preview["row_count"] == 6
+    saved = post("/api/research/panels/save", {**draft, "preview_fingerprint": preview["preview_fingerprint"]})
+    assert json.loads(get("/api/research/panels/saved"))["panels"] == [saved]
+    return saved
 
 
 def strategy_journey(get, post):
@@ -272,7 +285,7 @@ def main():
         finally:
             portable.close()
         assessment_id, pair_id = learning_journey(app, get, post, snapshot['snapshot_ref'])
-        panel_journey(app, post)
+        saved_panel = panel_journey(app, get, post)
         library_study_id = library_journey(app, get, post)
         suite_study_id = suite_journey(app, get, post)
         strategy_job_id, pool_entry_ref = strategy_journey(get, post)
@@ -299,6 +312,7 @@ def main():
         try:
             assert reopened.route('GET', '/api/research/learning/assessments/'+assessment_id)[2]['sample_count'] == 1
             assert reopened.route('GET', '/api/research/learning/pairs/'+pair_id)[2]['status'] == 'AVAILABLE'
+            assert reopened.route('GET', '/api/research/panels/saved')[2]["panels"] == [saved_panel]
             _, _, rebuilt = reopened.route("GET", "/api/research/quant-workspace")
             assert cache.is_file() and rebuilt["fingerprint"] == workbench["fingerprint"]
             restored_diagnostic = reopened.route('GET', '/api/diagnostics/interfaces/' + diagnostic['receipt_id'])

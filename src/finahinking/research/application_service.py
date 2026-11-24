@@ -377,6 +377,9 @@ class ResearchApplicationService:
         self.provider_configs = provider_configs if provider_configs is not None else ProviderConfigStore()
         self.allow_model_calls = allow_model_calls
         self.snapshots = SnapshotStore(self.root / "snapshots")
+        from .panel_workbench import PanelWorkbench
+
+        self.panels = PanelWorkbench(self.snapshots, scope_id)
         self.runs = RunRepository(self.root / "research-index.sqlite3", report_root=self.root / "reports", scope_id=scope_id)
         queue_path = self.root / "research-jobs.sqlite3"
         if queue_path.is_symlink():
@@ -433,12 +436,12 @@ class ResearchApplicationService:
     def preview_discovery(self, values):
         from .discovery_runtime import preview_discovery
 
-        return preview_discovery(self, values)
+        return preview_discovery(self, self.panels.expand_input(values))
 
     def run_discovery(self, values):
         from .discovery_runtime import run_discovery
 
-        return run_discovery(self, values)
+        return run_discovery(self, self.panels.expand_input(values))
 
     def readiness(self, values):
         from .readiness import research_readiness
@@ -777,7 +780,7 @@ class ResearchApplicationService:
     def run_strategy_template(self, values):
         from .strategy_jobs import prepare_strategy
 
-        request, binding = prepare_strategy(self, values)
+        request, binding = prepare_strategy(self, self.panels.expand_input(values))
         return self.submit(request, strategy_study=binding)
 
     def create_strategy_sample(self):
@@ -794,6 +797,7 @@ class ResearchApplicationService:
     def create_factor_suite(self, values):
         from .factor_study_suite import prepare_suite
         from .snapshot_tools import local_research_policy
+        values = self.panels.expand_input(values)
         key=_ref(values.get('idempotency_key'),'idempotency_key')
         spec=prepare_suite(values,self.snapshots,policy_fingerprint=stable_digest(local_research_policy()))
         study_id='study-'+stable_digest({'scope':self.scope_id,'key':key})[:24]
@@ -857,7 +861,8 @@ class ResearchApplicationService:
         from .source_updates import require_active_research_source
 
         require_active_research_source(self.root, "FACTOR", values.get("factor_id"))
-        spec = prepare_library_study(values, self.snapshots, policy_fingerprint=stable_digest(local_research_policy()))
+        spec = prepare_library_study(self.panels.expand_input(values), self.snapshots,
+                                     policy_fingerprint=stable_digest(local_research_policy()))
         if discovery is not None:
             spec["discovery"] = discovery
         study_id = "study-" + stable_digest({"scope": self.scope_id, "key": key})[:24]

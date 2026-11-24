@@ -14,6 +14,18 @@ from .contracts import stable_digest
 
 VERSION = "strategy-runner.v1"
 EPSILON = 1e-9
+CORPORATE_ACTION_FIELDS = ("split_factor", "cash_dividend")
+PRICE_LIMIT_FIELDS = ("limit_rule_version", "limit_up_price", "limit_down_price")
+
+
+def strategy_input_fields(template, *, bounded_limits=False):
+    """Describe the fields needed by the template, benchmark and paper account."""
+    fields = {*template["required_fields"], "close", "volume", *CORPORATE_ACTION_FIELDS}
+    if template["execution_mode"] == "PAPER_LONG_ONLY":
+        fields.update({"amount", PRICE_LIMIT_FIELDS[0]})
+        if bounded_limits:
+            fields.update(PRICE_LIMIT_FIELDS)
+    return fields
 
 
 class StrategyDataError(ValueError):
@@ -79,7 +91,7 @@ def _strategy_panel(panel, asset_classes):
     selections = {
         (row["observed_at"], row["instrument"], row["field"]): row
         for row in panel.audit["selections"]
-        if row["field"] in {"split_factor", "cash_dividend", "limit_rule_version", "limit_up_price", "limit_down_price", "is_session"}
+        if row["field"] in {*CORPORATE_ACTION_FIELDS, *PRICE_LIMIT_FIELDS, "is_session"}
     }
     return frame, times, assets, next(iter(currency_set)), selections
 

@@ -45,6 +45,7 @@ def test_library_layout_keyboard_empty_detail_and_input_errors(http_app,observed
     assert '0.272727' in page.locator('[data-numeric-expected]').inner_text()
     assert page.locator('[data-definition-notes] a[href="/knowledge/items/momentum"]').count()==1
     assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 2')
+    page.get_by_text('手动输入面板合同', exact=True).click()
     page.locator('[name=contract]').fill('{bad-json')
     page.get_by_role('button',name='固定定义与输入，提交后台验证',exact=True).click()
     assert 'JSON 格式有误' in page.locator('[data-library-status]').inner_text()
@@ -57,6 +58,7 @@ def test_library_card_submit_to_existing_worker_and_history(http_app,observed_pa
     app,base=http_app;page,_,_=observed_page
     payload=prepare(app.research_service,'lib-trend-roc')
     page.goto(base+'/research/factor-library?factor=lib-trend-roc',wait_until='networkidle')
+    page.get_by_text('手动输入面板合同', exact=True).click()
     page.locator('[name=contract]').fill(json.dumps(payload['contract']))
     page.locator('[name=attachment_refs]').fill(json.dumps(payload['attachment_refs']))
     page.get_by_role('button',name='固定定义与输入，提交后台验证',exact=True).click()

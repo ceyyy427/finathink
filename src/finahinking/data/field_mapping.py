@@ -9,7 +9,7 @@ from typing import Any
 
 from .panel_contracts import FIELD_DEFINITIONS, panel_time
 from .research_fields import DATE_RESEARCH_FIELDS, NUMERIC_RESEARCH_FIELDS, TEXT_RESEARCH_FIELDS
-from .user_api_contracts import DataBatch, fingerprint_records
+from .user_api_contracts import DataBatch, fingerprint_records, request_cutoff
 
 _NUMERIC_FIELDS = frozenset({"open", "high", "low", "close", "volume", "amount", "value"}) | NUMERIC_RESEARCH_FIELDS
 _PANEL_NUMERIC = frozenset(name for name, spec in FIELD_DEFINITIONS.items() if spec[1] == "number")
@@ -68,7 +68,7 @@ def normalize_records(
     quality: list[str] = []
     normalized: list[dict[str, object]] = []
     seen: set[tuple[str, ...]] = set()
-    as_of_value = _timestamp(as_of) if as_of is not None else None
+    as_of_value = request_cutoff(as_of)
     for index, raw in enumerate(records):
         if not isinstance(raw, Mapping):
             quality.append(f"record {index}: record is not an object")
@@ -76,18 +76,20 @@ def normalize_records(
         item: dict[str, object] = {}
         for canonical, source in mapping.items():
             if source not in raw:
+                if dataset_kind == "panel_fields" and canonical in DATE_RESEARCH_FIELDS:
+                    continue
                 quality.append(f"record {index}: missing {canonical}")
                 continue
             value = raw[source]
             if canonical in {"timestamp", "available_at", "as_of"} | DATE_RESEARCH_FIELDS:
-                unknown_available = dataset_kind == "panel_fields" and canonical == "available_at" and value is None
-                converted = (None if unknown_available else panel_time(value).isoformat()) if dataset_kind == "panel_fields" else _timestamp(value)
-                if converted is None and not unknown_available:
+                unknown_clock = dataset_kind == "panel_fields" and canonical in (DATE_RESEARCH_FIELDS | {"available_at"}) and value is None
+                converted = (None if unknown_clock else panel_time(value).isoformat()) if dataset_kind == "panel_fields" else _timestamp(value)
+                if converted is None and not unknown_clock:
                     quality.append(f"record {index}: invalid {canonical}")
                     continue
             elif canonical in _PANEL_BOOLEAN:
                 if not isinstance(value, bool):
-                    raise ValueError("suspended mapping requires an explicit boolean")
+                    raise ValueError("规则和停牌字段需要显式布尔值")
                 converted = value
             elif canonical in _NUMERIC_FIELDS or (dataset_kind == "panel_fields" and canonical in _PANEL_NUMERIC):
                 converted = _number(value)
@@ -110,6 +112,10 @@ def normalize_records(
             key = (str(item["instrument"]), str(item["timestamp"]))
             if dataset_kind in {"research_fields", "panel_fields"}:
                 key = (*key, str(item.get("available_at", "")))
+            if dataset_kind == "panel_fields":
+                # PanelFieldAttachment checks each observed field and effective clock.
+                normalized.append(item)
+                continue
             if key in seen:
                 quality.append(f"record {index}: duplicate instrument/timestamp")
             seen.add(key)
@@ -117,7 +123,8 @@ def normalize_records(
     available_values = [item.get("available_at") for item in normalized]
     future_available = bool(
         as_of_value is not None
-        and any(isinstance(value, str) and value > as_of_value for value in available_values)
+        and any(isinstance(value, str) and datetime.fromisoformat(value) > as_of_value
+                for value in available_values)
     )
     if future_available:
         quality.append("available_at is later than request as_of; PIT is unavailable")

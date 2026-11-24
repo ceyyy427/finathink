@@ -6,6 +6,7 @@ from urllib.parse import quote
 from .asset_catalog import ResearchAssetCatalog
 from .factor_library import FactorLibrary
 from .factor_validation_sample import SAMPLE_SPEC
+from .panel_workbench_page import saved_panel_select
 
 
 def esc(value):
@@ -23,6 +24,7 @@ def suite_page(service, csrf, study_id=None):
 <label>试验家族标识<input name="family_key" required maxlength="128" value="factor-research"></label>
 <fieldset><legend>选择1至24个候选</legend><div class="suite-choices">{rows}</div></fieldset>
 <label>研究数据<select name="mode"><option value="sample">固定合成 SAMPLE（64标的×756观察点）</option><option value="user">已保存的用户面板</option></select></label>
+{saved_panel_select()}
 <p>合成样例用于工程复现。评分是滞后分层诊断，实际成交账本通过既有因子研究流程核验。</p>
 <details><summary>用户面板合同与附件</summary><label>面板合同 JSON<textarea name="contract" spellcheck="false"></textarea></label><label>字段附件引用 JSON 数组<textarea name="attachments" spellcheck="false">[]</textarea></label></details>
 <button type="submit">登记候选并提交后台检验</button><p role="status" aria-live="polite" data-suite-status>读取页面不会创建研究任务。</p></form></section>'''

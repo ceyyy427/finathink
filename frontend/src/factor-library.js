@@ -19,12 +19,14 @@ export function mountFactorLibrary(form, { fetcher = globalThis.fetch } = {}) {
         requestSignature = signature;
         requestKey = 'library-' + crypto.randomUUID();
       }
+      const panel = fields.get('saved_panel_ref')
+        ? { saved_panel_ref: fields.get('saved_panel_ref') }
+        : { contract: JSON.parse(fields.get('contract')), attachment_refs: JSON.parse(fields.get('attachment_refs')) };
       const data = await readLocalJSON(fetcher, '/api/research/factor-library/studies', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ _csrf: fields.get('csrf'), factor_id: fields.get('factor_id'),
           factor_version: fields.get('factor_version'), question: fields.get('question'),
-          contract: JSON.parse(fields.get('contract')), attachment_refs: JSON.parse(fields.get('attachment_refs')),
-          idempotency_key: requestKey }),
+          ...panel, idempotency_key: requestKey }),
       });
       if (!/^study-[a-zA-Z0-9_-]+$/.test(data.study_id ?? '') || data.production_write !== false) throw new Error('研究回执格式有误，请在因子实验历史中检查提交结果。');
       const document = form.ownerDocument;

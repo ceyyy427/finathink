@@ -2,6 +2,8 @@
 
 from html import escape
 
+from .panel_workbench_page import saved_panel_select
+
 
 def strategy_page(catalog, csrf, *, selected=None):
     templates = "".join(
@@ -18,6 +20,7 @@ def strategy_page(catalog, csrf, *, selected=None):
 <label>策略模板<select name="template_id">{templates}</select></label>
 <label>数据<select name="mode"><option value="sample">固定股票与 ETF 合成样例</option>
 <option value="saved">已保存的用户面板</option></select></label>
+{saved_panel_select()}
 <details><summary>用户面板与模板参数</summary>
 <label>面板合同<textarea name="contract" rows="4"></textarea></label>
 <label>附件引用<textarea name="attachment_refs" rows="2">[]</textarea></label>

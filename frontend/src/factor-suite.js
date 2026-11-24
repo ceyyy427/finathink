@@ -24,6 +24,7 @@ export function mountFactorSuite(form) {
       const data = { _csrf: csrf, idempotency_key: key, family_key: fields.get('family_key'),
         factor_ids: ids, question: fields.get('question') };
       if (fields.get('mode') === 'sample') data.sample_spec = JSON.parse(root.querySelector('[data-suite-default]').textContent);
+      else if (fields.get('saved_panel_ref')) data.saved_panel_ref = fields.get('saved_panel_ref');
       else { data.contract = JSON.parse(fields.get('contract')); data.attachment_refs = JSON.parse(fields.get('attachments')); }
       const result = await readLocalJSON(fetch, '/api/research/factor-suites', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });

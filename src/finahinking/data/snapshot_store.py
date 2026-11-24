@@ -33,7 +33,8 @@ class SnapshotStore:
         if not isinstance(attachment_refs, (tuple, list)) or len(attachment_refs) > 32:
             raise ValueError("面板附件引用数量无效")
         fields = ResearchFieldStore(self)
-        return build_research_panel(self.load(typed.snapshot_ref), [fields.load(ref) for ref in attachment_refs], typed)
+        snapshot = self.load(typed.snapshot_ref)
+        return build_research_panel(snapshot, fields.load_for_snapshot(snapshot, attachment_refs), typed)
 
     def load(self, fingerprint: str) -> DatasetSnapshot:
         path = self._path(fingerprint)

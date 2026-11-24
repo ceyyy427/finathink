@@ -10,6 +10,7 @@ from .asset_catalog import ResearchAssetCatalog
 from .contracts import stable_digest
 from .discovery_planner import PROFILES, question_templates
 from .factor_library import FactorLibrary
+from .panel_workbench_page import saved_panel_select
 from .strategy_catalog import StrategyCatalog
 
 PAGE = "/research/workbench"
@@ -214,7 +215,7 @@ def workspace_page(payload, csrf, *, journey=None, updates=()):
 <div class="qw-chips" aria-label="已审核对象">{metrics}</div></header>
 <nav class="qw-nav" aria-label="研究工具"><a href="/knowledge">知识库</a><a href="/research/factor-library">因子库</a>
 <a href="/research/strategies">策略与风险</a><a href="/research/pools">研究池</a><a href="/research/experiments">实验</a>
-<a href="/research/jobs">任务与报告</a><a href="/research/compare">对比与复现</a><a href="/library/sources">来源</a><a href="#qw-sources">来源审阅</a></nav>
+<a href="/research/panels">研究面板</a><a href="/research/jobs">任务与报告</a><a href="/research/compare">对比与复现</a><a href="/library/sources">来源</a><a href="#qw-sources">来源审阅</a></nav>
 <section class="panel" id="qw-start"><h2>从研究问题开始</h2>
 <form data-qw-discovery>
 <input type="hidden" name="csrf" value="{escape(csrf, quote=True)}">
@@ -223,6 +224,7 @@ def workspace_page(payload, csrf, *, journey=None, updates=()):
 <label>复核重点<select name="profile">{profiles}</select></label>
 <label>输入面板<select name="mode"><option value="preview">仅准备问题</option>
 <option value="sample">按问题加载合成样例</option><option value="saved">已保存的用户面板</option></select></label>
+{saved_panel_select()}
 <details><summary>用户面板和附件</summary>
 <label>面板合同<textarea name="contract" rows="4"></textarea></label>
 <label>附件引用<textarea name="attachment_refs" rows="2">[]</textarea></label></details>
