@@ -13,4 +13,6 @@
 
 四条受控 HTTP 场景走真实本地 HTTP 和独立 worker。合成行情和财务记录作为固定比较样本，映射后按用户快照合同走同一流程。测试在 `tests/research/test_saved_panel_journeys.py` 和 `tests/p7_5/test_phase29_browser.py`。
 
+发布审计要求 Notebook 环境使用修复后的 Tornado。锁文件更新到 6.6.1，研究额外依赖也以该版本作为最低要求。 [Tornado 6.6.1 发布说明](https://www.tornadoweb.org/en/latest/releases/v6.6.1.html)
+
 真实用户数据服务状态为 **待验收**。完成时记录返回的数据模式、可用时间、字段覆盖、接口错误和失败后的恢复结果。验收记录仅保存摘要。

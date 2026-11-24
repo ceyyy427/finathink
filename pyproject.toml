@@ -16,7 +16,7 @@ finathink-state = "finahinking.maintenance:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=8,<10", "ruff>=0.8,<1", "playwright>=1.61,<1.62"]
-research = ["jupyterlab>=4,<5", "ipykernel>=6,<8"]
+research = ["jupyterlab>=4,<5", "ipykernel>=6,<8", "tornado>=6.6.1,<7"]
 math = ["sympy>=1.13,<2"]
 
 [tool.setuptools.packages.find]
