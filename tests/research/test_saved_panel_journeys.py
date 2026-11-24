@@ -22,12 +22,13 @@ PANEL = "/api/research/panels/"
 CAPTURE = "/api/research/snapshots/capture"
 STOCKS = ("STKA", "STKB", "STKC")
 ETFS = ("ETFA", "ETFB", "ETFC")
+MIXED = (*STOCKS[:2], ETFS[0])
 TIMES = tuple(pd.date_range("2026-01-02", periods=112, freq="B", tz="UTC"))
 TRADE = {"is_session": "boolean", "in_universe": "boolean", "split_factor": "ratio",
          "trade_allowed": "boolean", "lot_size": "shares", "settlement_days": "sessions",
          "cash_dividend": "CNY_per_share", "limit_rule_version": "rule_version"}
 UNITS = {"rules": TRADE, "financial": {"book_equity": "CNY", "net_profit": "CNY"},
-         "nav": {"nav": "CNY_per_share"}}
+         "nav": {"nav": "CNY_per_share"}, "mixed-rules": {**TRADE, "limit_up_price": "CNY", "limit_down_price": "CNY"}}
 IDENTITY = {"instrument": "code", "timestamp": "stamp", "available_at": "known"}
 PRICE_MAP = {**IDENTITY, "open": "o", "high": "h", "low": "l", "close": "c", "volume": "v",
              "suspended": "paused", "amount": "value"}
@@ -35,6 +36,7 @@ METHODS = {
     "stock": ("factor", "lib-trend-roc"),
     "etf": ("strategy", "etf-relative-strength"),
     "financial": ("factor", "lib-quality-roe"),
+    "mixed": ("strategy", "equal-weight"),
 }
 
 
@@ -50,9 +52,15 @@ def source_rows():
             address = {"code": code, "stamp": stamp.isoformat(), "known": stamp.isoformat()}
             result["prices"].append({**address, "o": price - 0.1, "h": price + 0.2, "l": price - 0.2, "c": price,
                                      "v": 120_000, "paused": False, "value": price * 120_000})
-            result["rules"].append({**address, "is_session": True, "in_universe": True, "split_factor": 1,
-                                    "trade_allowed": True, "lot_size": 1, "settlement_days": 0,
-                                    "cash_dividend": 0, "limit_rule_version": "UNRESTRICTED"})
+            rules = {**address, "is_session": True, "in_universe": True, "split_factor": 1,
+                     "trade_allowed": True, "lot_size": 1, "settlement_days": 0,
+                     "cash_dividend": 0, "limit_rule_version": "UNRESTRICTED"}
+            result["rules"].append(rules)
+            result["mixed-rules"].append({
+                **rules, "limit_rule_version": "TEST_BAND" if code in STOCKS else "UNRESTRICTED",
+                "limit_up_price": price * 1.1 if code in STOCKS else None,
+                "limit_down_price": price * 0.9 if code in STOCKS else None,
+            })
             if code in ETFS:
                 result["nav"].append({**address, "nav": price * (1 + asset_index / 100)})
         if code in STOCKS:
@@ -173,7 +181,7 @@ def capture_request(assets, end=TIMES[-1]):
     return {
         "connection_id": "prices", "instrument": ",".join(assets),
         "price_currency": "CNY", "volume_unit": "shares", "adjustment": "RAW",
-        "asset_classes": dict.fromkeys(assets, "ETF" if assets == ETFS else "EQUITY"),
+        "asset_classes": {asset: "ETF" if asset in ETFS else "EQUITY" for asset in assets},
         "start": utc_day(TIMES[0]), "end": utc_day(end),
     }
 
@@ -193,13 +201,14 @@ def draft_input(snap_ref, rule_ref, assets, kind, extra=()):
     }
 
 
-@pytest.mark.parametrize("kind", ("stock", "etf", "financial"))
+@pytest.mark.parametrize("kind", ("stock", "etf", "financial", "mixed"))
 def test_owned_feed_to_saved_panel_to_spawned_report(tmp_path, owned_feed, kind):
     transport, proof, calls, failures, rows = owned_feed
     config = LocalAppConfig(db_path=str(tmp_path / "app.sqlite3"), offline=True)
     credentials = InMemoryDataCredentialStore()
-    assets = ETFS if kind == "etf" else STOCKS
-    names = ["prices", "rules"] + (["nav"] if kind == "etf" else ["financial"] if kind == "financial" else [])
+    assets = ETFS if kind == "etf" else MIXED if kind == "mixed" else STOCKS
+    rules = "mixed-rules" if kind == "mixed" else "rules"
+    names = ["prices", rules] + (["nav"] if kind == "etf" else ["financial"] if kind == "financial" else [])
     with running_panel_app(config, transport, credentials) as (app, base):
         configure(app, base, proof, names)
         assert calls == []  # Configuration and local reads never fetch remote data.
@@ -224,7 +233,7 @@ def test_owned_feed_to_saved_panel_to_spawned_report(tmp_path, owned_feed, kind)
             assert "历史修订" in rejected["error"]
             assert app.research_service.snapshots.load(first["snapshot_ref"]).fingerprint == first["snapshot_ref"]
         snap_ref = snap["snapshot_ref"]
-        rule_ref = request(app, base, PANEL + "capture-fields", attach_request(snap_ref, assets, "rules"), expected=201)["attachment_ref"]
+        rule_ref = request(app, base, PANEL + "capture-fields", attach_request(snap_ref, assets, rules), expected=201)["attachment_ref"]
         extra = []
         if len(names) > 2:
             field_ref = request(app, base, PANEL + "capture-fields", attach_request(snap_ref, assets, names[-1]), expected=201)["attachment_ref"]
@@ -250,6 +259,9 @@ def test_owned_feed_to_saved_panel_to_spawned_report(tmp_path, owned_feed, kind)
             assert sparse["status"] == "NEEDS_DATA" and any("缺少当时可用的日历" in issue for issue in sparse["issues"])
         preview = request(app, base, PANEL + "preview", draft)
         assert preview["status"] == "READY" and not preview["target_issues"], preview
+        if kind == "mixed":
+            limit = next(row for row in preview["fields"] if row["field"] == "limit_up_price")
+            assert limit["covered"] == limit["row_count"] == len(TIMES) * 2
         if kind == "financial":
             evidence = next(row for row in preview["fields"] if row["field"] == "net_profit")
             assert evidence["available_at"] == [TIMES[10].isoformat(), TIMES[53].isoformat()]
@@ -279,9 +291,9 @@ def test_owned_feed_to_saved_panel_to_spawned_report(tmp_path, owned_feed, kind)
                           "idempotency_key": "phase29-discovery"}
             payload = request(app, base, endpoint, submission, expected=202)["job"]
             assert request(app, base, endpoint, submission, expected=202)["job"]["job_id"] == payload["job_id"]
-        elif kind == "etf":
+        elif kind in {"etf", "mixed"}:
             endpoint = "/api/research/strategies"
-            submission = {**binding, "template_id": "etf-relative-strength", "idempotency_key": "phase29-etf"}
+            submission = {**binding, "template_id": METHODS[kind][1], "idempotency_key": f"phase29-{kind}"}
             payload = request(app, base, endpoint, submission, expected=202)
             assert request(app, base, endpoint, submission, expected=202)["job_id"] == payload["job_id"]
         else:
@@ -299,9 +311,11 @@ def test_owned_feed_to_saved_panel_to_spawned_report(tmp_path, owned_feed, kind)
         job = completed(service, payload["job_id"])
         report = request(app, base, job["report_url"])
         assert saved["panel_fingerprint"].encode() in report
-        if kind == "etf":
+        if kind in {"etf", "mixed"}:
             result = job["strategy_study"]["result"]
             assert result["status"] == "COMPLETE" and result["ledger"]["fills"]
+            if kind == "mixed":
+                assert {row["asset_class"] for row in result["ledger"]["fills"]} == {"EQUITY", "ETF"}
         else:
             assert job["factor_study"]["library_validation"]["snapshot_ref"] == snap_ref
         assert service.list_jobs()["total"] == 1

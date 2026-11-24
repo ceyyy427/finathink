@@ -232,10 +232,14 @@ class PanelWorkbench:
         frame = panel.frame
         if not frame["is_session"].eq(True).all():
             issues.append("所选标的需要同一组日历决策时点。请选用一致的日历或分别保存面板。")
+        band_rows = None
         if values.get("target_kind") == "strategy":
             limits = frame.get("limit_rule_version")
-            if limits is not None and limits.dropna().ne("UNRESTRICTED").any():
-                required_fields, _ = _target("strategy", values["target_id"], bounded_limits=True)
+            if limits is not None:
+                restricted = limits.notna() & limits.ne("UNRESTRICTED")
+                if restricted.any():
+                    band_rows = restricted
+                    required_fields, _ = _target("strategy", values["target_id"], bounded_limits=True)
             for key, names in (("adjustment_ref", CORPORATE_ACTION_FIELDS), ("trade_rule_ref", PRICE_LIMIT_FIELDS)):
                 expected = set(names) & required_fields.keys()
                 if not expected <= by_ref[rules[key]].units.keys():
@@ -244,20 +248,26 @@ class PanelWorkbench:
             if any(classes.get(asset) not in {"EQUITY", "ETF"} for asset in assets):
                 preview["target_issues"].append("策略需要在行情快照中声明每个标的是股票还是 ETF。")
         fields = sorted(_CORE_FIELDS | set(audit["units"]) | set(required_fields))
+        coverage = {field: (audit["coverage"].get(field, 0), preview["row_count"]) for field in fields}
+        if band_rows is not None:
+            for field in set(PRICE_LIMIT_FIELDS[1:]) & required_fields.keys():
+                coverage[field] = (int(frame.loc[band_rows, field].notna().sum()) if field in frame else 0,
+                                   int(band_rows.sum()))
         for field in required_fields:
             expected = required_fields[field]
-            if not audit["coverage"].get(field):
+            covered, total = coverage[field]
+            if not covered:
                 preview["target_issues"].append(f"{field} 在所选日期内无可用记录，请先补充对应附件。")
             elif expected is not None and audit["units"].get(field) != expected:
                 preview["target_issues"].append(f"{field} 需要 {expected}，请检查附件或行情单位。")
-            elif values.get("target_kind") == "strategy" and audit["coverage"][field] < preview["row_count"]:
+            elif values.get("target_kind") == "strategy" and covered < total:
                 preview["target_issues"].append(f"{field} 只覆盖部分决策时点，请核对该策略的输入范围。")
         preview["fields"] = [{
             "field": field, "unit": audit["units"].get(field) or (
                 "boolean" if field in {"is_session", "in_universe", "trade_allowed"} else None),
             "expected_unit": required_fields.get(field), "required": field in required_fields,
             "allowed_units": sorted(FIELD_DEFINITIONS[field][2]) if field in required_fields else [],
-            "available_at": audit["availability"].get(field), "covered": audit["coverage"].get(field, 0),
+            "available_at": audit["availability"].get(field), "covered": coverage[field][0], "row_count": coverage[field][1],
         } for field in fields]
         record["panel_fingerprint"] = panel.fingerprint
         preview.update(

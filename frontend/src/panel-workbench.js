@@ -107,7 +107,7 @@ function renderPreview(output, preview) {
     const label = node(doc, 'th', item.field + (item.required ? '（所需）' : ''));
     label.scope = 'row';
     row.append(label, ...[item.unit || '—', item.expected_unit || item.allowed_units?.join('、') || '—',
-      item.covered == null ? '—' : item.covered + ' / ' + preview.row_count,
+      item.covered == null ? '—' : item.covered + ' / ' + (item.row_count ?? preview.row_count),
       item.available_at?.join(' 至 ') || '—'].map(value => node(doc, 'td', value)));
   }
   wrapper.append(table);

@@ -81,6 +81,9 @@ def normalize_records(
                 quality.append(f"record {index}: missing {canonical}")
                 continue
             value = raw[source]
+            if value is None and dataset_kind == "panel_fields" and canonical in FIELD_DEFINITIONS:
+                item[canonical] = None
+                continue
             if canonical in {"timestamp", "available_at", "as_of"} | DATE_RESEARCH_FIELDS:
                 unknown_clock = dataset_kind == "panel_fields" and canonical in (DATE_RESEARCH_FIELDS | {"available_at"}) and value is None
                 converted = (None if unknown_clock else panel_time(value).isoformat()) if dataset_kind == "panel_fields" else _timestamp(value)
