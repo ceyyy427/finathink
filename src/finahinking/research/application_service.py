@@ -216,7 +216,9 @@ def run_local_research_stage(invocation, checkpoint_ref, publish_checkpoint, *, 
     spec = request.research_plan.validation_spec
     binding = spec.get("factor_study")
     study = studies = None
+    validation = None
     publication_before = None
+    panel_scope = None
     if binding is not None:
         studies = FactorStudyStore(queue, scope_id=spec["scope_id"])
         study = studies.get(binding["study_id"])
@@ -232,11 +234,30 @@ def run_local_research_stage(invocation, checkpoint_ref, publish_checkpoint, *, 
     try:
         if study is not None and study["spec"].get("version") == "factor-workbench.library.v1":
             require_active_research_source(root, "FACTOR", study["spec"]["factor_spec"]["factor_id"])
+        if study is not None and "multi_factor_discovery" in study["spec"]:
+            from .factor_discovery import verify_discovery_sources
+
+            verify_discovery_sources(root, study["spec"]["multi_factor_discovery"])
+            if "panel_contract" in study["spec"]:
+                contract = study["spec"]["panel_contract"]
+                panel_scope = {name: contract[name] for name in ("instrument_ids", "timezones", "observed_at")}
         if "strategy_study" in spec:
             require_active_research_source(root, "STRATEGY", spec["strategy_study"]["template_id"])
     except (KeyError, ValueError, sqlite3.Error):
         return {"status": "blocked", "failure_kind": "POLICY_CHANGED"}
-    tools = SnapshotResearchTools(snapshot, publication_before=publication_before, policy=policy_record["effective"], policy_lineage=lineage)
+    if binding is not None and binding["phase"] == "test":
+        try:
+            validation_record = queue.get(study["validation_job_id"])
+            validated = verify_research_receipt(root, queue, validation_record, validation_record.result_ref)
+            validation = validated["manifest"]["source_snapshot"]["factor_study"]
+            if "multi_factor_discovery" in study["spec"]:
+                from .factor_discovery import frozen_discovery_candidate
+
+                frozen_discovery_candidate(study, validation)
+        except (KeyError, OSError, TypeError, ValueError):
+            return {"status": "blocked", "failure_kind": "CONTEXT_INTEGRITY_FAILED"}
+    tools = SnapshotResearchTools(snapshot, publication_before=publication_before, policy=policy_record["effective"],
+                                  policy_lineage=lineage, panel_scope=panel_scope)
     driver, manager = OfflineDriver(), ResearchManager()
     if spec.get("execution_mode") == "provider-grounded":
         if not allow_model_calls:
@@ -314,11 +335,6 @@ def run_local_research_stage(invocation, checkpoint_ref, publish_checkpoint, *, 
         from .factor_workbench import compute_study
 
         phase = binding["phase"]
-        validation = None
-        if phase == "test":
-            validation_record = queue.get(study["validation_job_id"])
-            validated = verify_research_receipt(root, queue, validation_record, validation_record.result_ref)
-            validation = validated["manifest"]["source_snapshot"].get("factor_study")
         from finahinking.data.research_fields import ResearchFieldStore
 
         tools.analysis["factor_study"] = compute_study(snapshot, study, phase=phase, validation=validation,
@@ -711,6 +727,9 @@ class ResearchApplicationService:
         if record.status is JobStatus.COMPLETED and report_status != "AVAILABLE":
             publication_error = "PUBLICATION_INVALID"
         source = entry["manifest"].get("source_snapshot", {}) if entry is not None else {}
+        factor_study = source.get("factor_study")
+        if report_status != "AVAILABLE" and factor_study and "multi_factor_discovery" in factor_study.get("charter", {}):
+            factor_study = None
         if report_status == "AVAILABLE":
             metrics = entry["manifest"].get("source_snapshot", {}).get("quant_analytics", {}).get("metrics", {})
         runtime_metrics = self.queue.load_metrics(record.job_id) or {}
@@ -732,7 +751,7 @@ class ResearchApplicationService:
             "snapshot_ref": request.snapshot_ref, "instrument": request.instrument, "as_of": request.as_of.isoformat(),
             "question": request.research_plan.hypotheses[0], "model_config_ref": request.research_plan.validation_spec.get("model_config_ref", "offline"),
             "model_research": model_research,
-            "factor_study": source.get("factor_study"),
+            "factor_study": factor_study,
             **({"discovery": source["discovery"]} if report_status == "AVAILABLE" and "discovery" in source else {}),
             **({"strategy_study": source["strategy_study"]} if report_status == "AVAILABLE" and "strategy_study" in source else {}),
             "risk_portfolio": source.get("risk_portfolio"),
@@ -800,6 +819,29 @@ class ResearchApplicationService:
         values = self.panels.expand_input(values)
         key=_ref(values.get('idempotency_key'),'idempotency_key')
         spec=prepare_suite(values,self.snapshots,policy_fingerprint=stable_digest(local_research_policy()))
+        return self._register_factor_suite(spec, key)
+
+    def preview_factor_discovery(self, values):
+        from .factor_discovery import prepare_discovery_suite
+
+        return prepare_discovery_suite(self, values)[0]
+
+    def create_factor_discovery(self, values):
+        from .factor_discovery import FactorDiscoveryInputError, prepare_discovery_suite
+        from .factor_validation_sample import ValidationSample
+
+        if not isinstance(values, dict) or values.get("authorized") is not True:
+            raise FactorDiscoveryInputError("请先明确授权已预览的多候选计划。")
+        key = _ref(values.get("idempotency_key"), "idempotency_key")
+        inputs = {name: value for name, value in values.items() if name not in {"authorized", "idempotency_key", "preview_ref"}}
+        plan, spec = prepare_discovery_suite(self, inputs)
+        if plan["status"] != "READY" or plan["fingerprint"] != values.get("preview_ref"):
+            raise FactorDiscoveryInputError("研究问题、数据或来源已改变，请重新预览。")
+        if "sample_spec" in spec:
+            self.snapshots.save(ValidationSample(spec["sample_spec"]).anchor())
+        return self._register_factor_suite(spec, key)
+
+    def _register_factor_suite(self, spec, key):
         study_id='study-'+stable_digest({'scope':self.scope_id,'key':key})[:24]
         study=self.factor_studies.create(study_id,spec,validation_key=key,suite_registration=True)
         job=self._submit_factor_job(study,'validation',key)
@@ -838,13 +880,16 @@ class ResearchApplicationService:
             except (ValueError,KeyError):
                 invalid_reports+=1
                 continue
-            if not study.get('validation'):continue
-            if study.get('validation_job',{}).get('report_status')!='AVAILABLE':
+            job = study.get("validation_job", {})
+            if job.get("status") == "completed" and job.get("report_status") != "AVAILABLE":
                 invalid_reports+=1
                 continue
+            if not study.get('validation'):continue
             for row in study['validation']['suite_validation']['trials']:
                 records.setdefault(row['factor_id'],row)
-        values=[records.get(r['factor_id'],{}).get('metrics',{}).get('pvalue') if records.get(r['factor_id'],{}).get('metrics') else None for r in family]
+        pvalues = {factor_id: (row["metrics"] or {}).get("pvalue") for factor_id, row in records.items()
+                   if row["status"] in {"PASS", "FALSIFIED"}}
+        values = [pvalues.get(row["factor_id"]) for row in family]
         return {'family_ref':family_ref,'registered_count':len(family),'published_count':len(records),'invalid_reports':invalid_reports,
             'trial_refs':[{'record_id':r['record_id'],'digest':r['fingerprint']} for r in records.values()],
             'holm':dict(zip([r['factor_id'] for r in family],adjust_pvalues(values))),
@@ -1032,7 +1077,24 @@ class ResearchApplicationService:
                     for trial in self.factor_studies.suite_trials(study_id):
                         if trial['phase']==phase and trial['state'] in {'REGISTERED','RUNNING'}:
                             self.factor_studies.suite_trial_state(study_id,phase,trial['factor_id'],'CANCELLED' if job['status']=='cancelled' else 'EXECUTION_FAILED')
-        return {**self.factor_studies.get(study_id), **jobs, **results}
+        current = {**self.factor_studies.get(study_id), **jobs, **results}
+        if "multi_factor_discovery" in current["spec"]:
+            current["trials"] = self.factor_studies.suite_trials(study_id)
+            if current["candidate_id"] is not None and results.get("validation") is not None:
+                from .factor_discovery import frozen_discovery_candidate
+
+                current["freeze_receipt"] = frozen_discovery_candidate(current, results["validation"])
+            if (current["state"] in {"TEST_EVALUATED", "REVIEWED"} and results.get("test_result") is not None
+                    and "freeze_receipt" in current):
+                from .factor_provenance import discovery_use_scope
+
+                scope = discovery_use_scope(results["test_result"], jobs["test_job"]["run_id"])
+                current["review_scope"] = scope
+                if current["state"] == "REVIEWED":
+                    use_scope = {name: value for name, value in scope.items() if name != "factor_id"}
+                    events = self.factor_uses.current(scope["factor_id"], use_scope=use_scope)["events"]
+                    current["admission"] = next((event for event in events if event["decision"]["run_ref"] == jobs["test_job"]["run_id"]), None)
+        return current
 
     def factor_evidence(self, factor_ref, *, use_scope=None, run_refs=()):
         from .asset_catalog import ResearchAssetCatalog
@@ -1070,8 +1132,12 @@ class ResearchApplicationService:
             raise ValueError("factor use review fields are invalid") from exc
         evidence = load_factor_evidence(factor_ref, catalog=ResearchAssetCatalog.packaged(), run_repository=self.runs,
                                        run_refs=(decision.run_ref,))
-        if evidence.to_dict()["factor_id"] != decision.factor_id:
+        facts = evidence.to_dict()
+        if facts["factor_id"] != decision.factor_id:
             raise ValueError("factor use route and decision identity disagree")
+        if any(row.get("evidence_kind") == "MULTI_FACTOR_FINAL_TEST" and row["run_ref"] == decision.run_ref
+               for row in facts["local_runs"]):
+            raise ValueError("多候选最终测试须在对应研究页审核。")
         with self.queue._connect() as db:
             db.execute("BEGIN IMMEDIATE")
             if decision.decision in {"APPROVE_FOR_RESEARCH", "REJECT"}:
@@ -1117,13 +1183,19 @@ class ResearchApplicationService:
         return self.factor_study(study_id)
 
     def test_factor_study(self, study_id, idempotency_key):
-        self.factor_study(study_id)
+        current = self.factor_study(study_id)
+        if "multi_factor_discovery" in current["spec"] and current["test_key"] is None:
+            from .factor_discovery import FactorDiscoveryInputError, verify_discovery_sources
+
+            if "freeze_receipt" not in current:
+                raise FactorDiscoveryInputError("最终测试需要完整的冻结证据。")
+            verify_discovery_sources(self.root, current["spec"]["multi_factor_discovery"])
         study = self.factor_studies.reserve_test(study_id, idempotency_key)
         job = self._submit_factor_job(study, "test", idempotency_key)
         self.factor_studies.set_job(study_id, "test", job["job_id"])
         return self.factor_study(study_id)
 
-    def review_factor_study(self, study_id, decision, reviewer_id):
+    def review_factor_study(self, study_id, decision, reviewer_id, *, use_scope=None):
         study = self.factor_study(study_id)
         if not study.get("test_result"):
             raise ValueError("review requires a verified final-test report")
@@ -1139,7 +1211,25 @@ class ResearchApplicationService:
                     or archived["metrics"].get("decision") != "PENDING_HUMAN_RESEARCH_REVIEW"):
                 raise ValueError("blocked or observation-only evidence cannot be approved")
         scoped = None
-        if validation_run is not None:
+        discovery = study.get("spec", {}).get("multi_factor_discovery")
+        if discovery is not None:
+            from .asset_catalog import ResearchAssetCatalog
+            from .factor_discovery import FactorDiscoveryInputError, verify_discovery_sources
+            from .factor_lifecycle import FactorUseDecision
+            from .factor_provenance import load_factor_evidence
+
+            if use_scope is None or study.get("review_scope") != use_scope or "freeze_receipt" not in study:
+                raise FactorDiscoveryInputError("请逐项确认最终测试的公式、市场、资产范围、时间和用途。")
+            if decision == "APPROVE_FOR_RESEARCH":
+                verify_discovery_sources(self.root, discovery)
+            run_ref = study["test_job"]["run_id"]
+            scoped = FactorUseDecision(**use_scope, reviewer=reviewer_id, decision=decision, run_ref=run_ref,
+                idempotency_key="study-review-" + stable_digest([study_id, decision, reviewer_id])[:32])
+            evidence = load_factor_evidence(scoped.factor_id, catalog=ResearchAssetCatalog.packaged(),
+                                           run_repository=self.runs, run_refs=(run_ref,))
+        elif use_scope is not None:
+            raise ValueError("当前研究不接受多候选审核范围。")
+        elif validation_run is not None:
             from .asset_catalog import ResearchAssetCatalog
             from .factor_lifecycle import FactorUseDecision
             from .factor_provenance import load_factor_evidence

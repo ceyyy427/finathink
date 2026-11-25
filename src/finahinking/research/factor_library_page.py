@@ -76,6 +76,7 @@ def library_page(csrf, query):
         body=f'''<p><a href="/research/factor-library">← 因子库</a></p><header class="overview-header"><div><p class="eyebrow">FACTOR DEFINITION / RESEARCH</p><h1>{_esc(row.get('title',factor_id))}</h1><p>{_esc(FAMILY_NAMES[row['family']])} · 定义版本 {_esc(row['version'])}</p></div></header>
 <section class="panel"><h2>固定定义与适用范围</h2><pre>{_esc(row['formula'])}</pre><dl><dt>计算范围 / 输出单位</dt><dd>{_esc(row['scope'])} / {_esc(row['units'])}</dd><dt>方向说明</dt><dd>{_esc(row['direction_scope'])}</dd><dt>反例与局限</dt><dd>{_esc(row['counterexample'])}</dd><dt>定义指纹</dt><dd>{_esc(row['formula_fingerprint'])}</dd></dl><h3>所需字段</h3><ul>{field_html}</ul><p>字段必须带可用时间与单位；训练、验证和一次性测试使用同一份不可变面板。</p>{source_html}</section>
 {_definition_notes(row)}
+<p><a href="/research/factors/{quote(factor_id, safe='')}#factor-lifecycle">查看本地证据与用途审核</a></p>
 <section class="panel section"><h2>从定义准备研究</h2><p>选择已保存的研究面板。量价、交易日历、成分和交易规则共同参与就绪校验。</p><form data-library-study method="post" action="/api/research/factor-library/studies">
 <input type="hidden" name="factor_id" value="{_esc(factor_id)}"><input type="hidden" name="factor_version" value="{_esc(row['version'])}"><input type="hidden" name="csrf" value="{_esc(csrf)}">
 <label>研究问题<textarea name="question" maxlength="2000" required>检验{_esc(row.get('title',factor_id))}在当前样本的解释力与稳定性</textarea></label>

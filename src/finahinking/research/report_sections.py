@@ -158,3 +158,45 @@ def discovery_section(discovery):
         f'<p>研究计划 <code>{esc(blueprint["fingerprint"])}</code></p>'
         f'{"".join(roles)}<p>{esc(discovery["knowledge_suggestion"])}</p></section>'
     )
+
+
+def multi_factor_discovery_section(study):
+    charter = study["charter"]
+    plan = charter["multi_factor_discovery"]
+    suite = study["suite_validation"]
+    ranks = {key: number for number, key in enumerate(study["ranking"], start=1)}
+    results = {row["factor_id"]: row for row in suite["trials"]}
+    rows = []
+    for candidate in plan["candidates"]:
+        factor_id = candidate["factor_id"]
+        trial = results.get(factor_id)
+        status = trial["status"] if trial else "本次最终测试未读取"
+        reason = (trial.get("failure_reason") or "、".join(trial.get("missing_reason", []))) if trial else ""
+        rows.append(f'<tr><th scope="row">{html.escape(candidate["title"])}</th>'
+                    f'<td><code>{html.escape(candidate["factor_spec"]["formula"])}</code></td>'
+                    f'<td>{html.escape("高值优先" if candidate["direction"] == 1 else "低值优先")}</td>'
+                    f'<td>{ranks.get(factor_id, "—")}</td><td>{html.escape(status)}</td><td>{html.escape(reason or "—")}</td></tr>')
+    sources = "".join(f'<li>{html.escape(source["title"])} · <code>{html.escape(source["repository"])}'
+                      f'@{html.escape(source["commit"])}</code> · {html.escape(source["path"])}'
+                      f' · {html.escape(source["license_id"])}</li>' for source in plan["sources"])
+    references = {case["counterexample_id"]: case["correction"]
+                  for candidate in plan["candidates"] for case in candidate["counterexamples"]}
+    cases = "".join(f'<li>{html.escape(corrected)}</li>' for corrected in references.values())
+    exclusion_count = sum(row["reason"] == "DUPLICATE_FORMULA" for row in plan["excluded"])
+    cost = charter["validation_policy"]
+    receipt = study.get("freeze_receipt")
+    freeze = (f'<details><summary>冻结收据</summary>{_pre(receipt)}</details>' if receipt else
+              '<p>验证报告在读取保留测试区间前发布。</p>')
+    return (
+        '<section class="report-section" aria-labelledby="multi-factor-evidence">'
+        '<h2 id="multi-factor-evidence">多候选研究设计</h2>'
+        f'<p>{html.escape(plan["question"])}</p><p>{html.escape(plan["hypothesis"])}{html.escape(plan["falsification"])}</p>'
+        f'<p>{html.escape(charter["data_mode"])} · {html.escape(plan["market"])} · '
+        f'费用 {cost["fee_bps"]:g} bps · 滑点 {cost["slippage_bps"]:g} bps · 全家族 {suite["multiple_testing"]["registered_family_size"]} 项 · '
+        f'公式去重 {exclusion_count} 项</p>'
+        '<div class="table-wrap"><table><caption>候选与当前阶段结果</caption>'
+        '<thead><tr><th scope="col">候选</th><th scope="col">公式</th><th scope="col">方向</th>'
+        '<th scope="col">验证排名</th><th scope="col">状态</th><th scope="col">说明</th></tr></thead>'
+        f'<tbody>{"".join(rows)}</tbody></table></div>{freeze}'
+        f'<details><summary>公式来源和反例</summary><ul>{sources}</ul><ul>{cases}</ul></details></section>'
+    )

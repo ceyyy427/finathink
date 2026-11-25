@@ -36,7 +36,18 @@ def factor_detail(app, factor_id, *, version=None, window=None, run_ref=None):
     if run_ref is not None and (not isinstance(run_ref, str) or not _LABEL.fullmatch(run_ref)):
         raise ValueError("报告引用无效")
     catalog = ResearchAssetCatalog.packaged()
-    if not any(row["factor_id"] == factor_id for row in factor_directory(catalog)):
+    library_spec = None
+    if factor_id.startswith("lib-"):
+        from .factor_library import FactorLibrary
+
+        try:
+            library_spec = FactorLibrary(catalog).spec(factor_id)
+        except ValueError as exc:
+            raise KeyError(factor_id) from exc
+        if ((version is not None and version != library_spec.version)
+                or (window is not None and window != library_spec.window)):
+            raise KeyError("指定定义版本或窗口不可用")
+    elif not any(row["factor_id"] == factor_id for row in factor_directory(catalog)):
         raise KeyError(factor_id)
     refs = () if run_ref is None else (run_ref,)
     evidence = app.factor_evidence(factor_id, run_refs=refs)
@@ -44,6 +55,8 @@ def factor_detail(app, factor_id, *, version=None, window=None, run_ref=None):
     if run_ref is not None and requested_run is None:
         raise KeyError("该报告不属于所选因子")
     candidates = [spec for spec in (*pilot_factor_specs(window or 5), *family_factor_specs()) if spec.factor_id == factor_id]
+    if library_spec is not None:
+        candidates.append(library_spec)
     for row in evidence["local_runs"]:
         if row.get("factor_spec") is not None:
             candidates.append(FactorSpec(**{key: value for key, value in row["factor_spec"].items() if key != "schema_version"}))
@@ -58,11 +71,14 @@ def factor_detail(app, factor_id, *, version=None, window=None, run_ref=None):
         raise KeyError("指定定义版本没有对应证据")
     available = False
     if spec is not None:
-        try:
-            resolve_factor_spec(spec)
-            available = True
-        except ValueError:
-            pass
+        if library_spec is not None:
+            available = spec.fingerprint == library_spec.fingerprint
+        else:
+            try:
+                resolve_factor_spec(spec)
+                available = True
+            except ValueError:
+                pass
         evidence = app.factor_evidence(spec, run_refs=refs)
     selected = (next((row for row in evidence["local_runs"] if row["run_ref"] == run_ref), None) if run_ref else
         next((row for row in evidence["local_runs"] if row["definition_matches"]), None))
@@ -95,9 +111,10 @@ def factor_detail_page(data, csrf):
     esc = html.escape
     evidence, selected, spec = data["evidence"], data["selected_run"], data["factor_spec"]
     definition, lifecycle = evidence["definition"], data["lifecycle"]
+    multi = selected is not None and selected.get("evidence_kind") == "MULTI_FACTOR_FINAL_TEST"
     navigation = ''.join(f'<a href="#factor-{key}">{label}</a>' for key, label in (
         ("source", "来源"), ("definition", "定义"), ("formula", "公式"), ("data", "数据"),
-        ("validation", "九步验证"), ("lifecycle", "用途审核"), ("lessons", "反例")))
+        ("validation", "冻结诊断" if multi else "九步验证"), ("lifecycle", "用途审核"), ("lessons", "反例")))
     claims = ''.join('<li>' + esc(str(row["metric_name"])) + ' = ' + esc(str(row["metric_value"]))
         + ' · 来源声明，非本地结果<p>' + esc(row["scope"]) + '</p></li>' for row in evidence["source_claims"])
     comparison_links = ''.join('<li><a href="?' + esc(urlencode({"run_ref": row["run_ref"]}), quote=True) + '">'
@@ -123,6 +140,11 @@ def factor_detail_page(data, csrf):
     methods = selected.get("method_binding", {}) if selected else {}
     validation = _section("validation", "九步验证与本次方法", identity + '<details><summary>本次方法与指纹</summary>'
         + _pre(methods or "此记录没有冻结方法清单，不用当前目录补写历史加载状态。") + '</details><ol class="factor-track">' + steps + '</ol>')
+    if multi:
+        validation = _section("validation", "多候选的冻结诊断", identity
+            + '<details><summary>评分卡和冻结收据</summary>'
+            + _pre({"freeze_ref": selected["freeze_ref"], "scorecard": selected["local_metric"]["scorecard"]})
+            + '</details>')
     use = _section("lifecycle", "范围用途与显式审核", f'<p data-factor-lifecycle="{esc(lifecycle["state"])}">当前投影：{esc(lifecycle["state"])}</p>'
         '<p>批准仅适用于原公式、市场、股票池、时间域、用途、政策与评估；缺数据和程序错误不等于金融失效。</p>'
         + _pre(lifecycle["use_scopes"] or "尚无范围用途决定。")
@@ -137,7 +159,7 @@ def factor_detail_page(data, csrf):
         selector += f'<label>观察窗口<input name="window" type="number" min="1" max="252" value="{spec["window"]}"></label>'
     selector += (f'<label>本地报告<select name="run_ref"><option value="">最近报告</option>{options}</select></label>' if options else '') + '<button type="submit">读取此定义</button></form>'
     actions = ''
-    if selected and selected.get("local_metric") is not None and selected.get("definition_matches"):
+    if selected and selected.get("local_metric") is not None and selected.get("definition_matches") and not multi:
         scope_payload = {"factor_id": data["factor_id"], "factor_ref": selected["factor_ref"], "market": scope["universe"]["market"],
             "universe_ref": stable_digest(scope["universe"]), "time_domain": scope["final_test_window"],
             "purpose": "FORMULA_RESEARCH" if selected["reproduction_scope"] == "FORMULA_FIXTURE" else "PAPER_RESEARCH",

@@ -23,27 +23,34 @@ POLICY={'version':'factor-suite-policy.v1','fee_bps':5.,'slippage_bps':5.,'min_i
         'selection_family_size':80,'correction':'holm','interpretation':'exploratory diagnostics; not an execution ledger'}
 
 
-def prepare_suite(values, snapshots, *, policy_fingerprint):
+def prepare_suite(values, snapshots, *, policy_fingerprint, library=None, discovery_family=None, persist_sample=True):
     if not isinstance(values,dict) or set(values)-{'idempotency_key','family_key','factor_ids','question','sample_spec','contract','attachment_refs'}:
         raise ValueError('批量研究接受固定因子、样例或用户面板引用')
-    ids=values.get('factor_ids');library=FactorLibrary()
+    ids=values.get('factor_ids');library=library or FactorLibrary()
     if not isinstance(ids,list) or not 1<=len(ids)<=24 or len(set(ids))!=len(ids):raise ValueError('每批需要1到24个不同因子')
     factors=[library.spec(f).to_dict() for f in ids]
     question=values.get('question')
     if not isinstance(question,str) or not 1<=len(question.strip())<=2000:raise ValueError('请填写有界研究问题')
     if 'sample_spec' in values:
         if 'contract' in values or values.get('attachment_refs'):raise ValueError('样例与用户面板不能混用')
-        sample=ValidationSample(values['sample_spec']);snapshot=sample.anchor();snapshots.save(snapshot)
+        sample=ValidationSample(values['sample_spec']);snapshot=sample.anchor()
+        if persist_sample:
+            snapshots.save(snapshot)
         times,assets=sample.times,sample.assets
         source={'sample_spec':sample.spec,'sample_fingerprint':sample.fingerprint,'sample_content_digest':sample.content_digest,'data_mode':'SAMPLE'}
     else:
         contract=PanelContract.from_dict(values['contract']);refs=values.get('attachment_refs',[])
-        panel=snapshots.build_panel(contract,refs);snapshot=snapshots.load(contract.snapshot_ref)
-        times=panel.frame.index.get_level_values('observed_at').unique().sort_values();assets=contract.instrument_ids
-        source={'panel_contract':contract.to_dict(),'attachment_refs':sorted(refs),'panel_fingerprint':panel.fingerprint,'data_mode':'SAMPLE' if snapshot.mode in {'SAMPLE','SYNTHETIC'} else 'USER_DATA' if snapshot.mode in {'CAPTURED','LIVE'} else 'UNKNOWN'}
+        snapshot=snapshots.load(contract.snapshot_ref);assets=contract.instrument_ids
+        source={'panel_contract':contract.to_dict(),'attachment_refs':sorted(refs),'data_mode':'SAMPLE' if snapshot.mode in {'SAMPLE','SYNTHETIC'} else 'USER_DATA' if snapshot.mode in {'CAPTURED','LIVE'} else 'UNKNOWN'}
+        if discovery_family is None:
+            panel=snapshots.build_panel(contract,refs)
+            times=panel.frame.index.get_level_values('observed_at').unique().sort_values()
+            source['panel_fingerprint']=panel.fingerprint
+        else:
+            times=pd.DatetimeIndex(contract.observed_at)
     split=purged_walk_forward(times,horizon=1,embargo=1,n_splits=2)
     if len(split['validation'])<8 or len(split['test'])<8:raise ValueError('切分后样本不足')
-    family_key=values.get('family_key',values['idempotency_key'])
+    family_key=discovery_family or values.get('family_key',values.get('idempotency_key'))
     if not isinstance(family_key,str) or not 1<=len(family_key)<=128:raise ValueError('试验家族标识无效')
     family_ref=stable_digest({'family_key':family_key,'source':source,'policy':POLICY})
     return {'version':VERSION,'snapshot_ref':snapshot.fingerprint,'instrument':assets[0],
@@ -90,12 +97,14 @@ def _signal(library, spec, panel, end):
 
 
 def run_factor_study_suite(study_id, specs, panel, validation_policy, *, phase='validation', store=None, spec_ref='',
-                           family_ref='', snapshot_ref='', policy_fingerprint='', frozen_factor=None,data_mode=None):
+                           family_ref='', snapshot_ref='', policy_fingerprint='', frozen_factor=None,data_mode=None,
+                           discovery=None, observation_schedule=None):
     if not 1<=len(specs)<=24:raise ValueError('每轮最多24个公式')
     library=FactorLibrary();sample=isinstance(panel,ValidationSample)
     data_mode='SAMPLE' if sample else data_mode or 'UNKNOWN'
     frame=None if sample else panel.frame
-    times=panel.times if sample else frame.index.get_level_values('observed_at').unique().sort_values()
+    times=observation_schedule if observation_schedule is not None else (
+        panel.times if sample else frame.index.get_level_values('observed_at').unique().sort_values())
     split=purged_walk_forward(times,horizon=1,embargo=1,n_splits=2)
     if phase not in {'validation','test'}:raise ValueError('未知研究阶段')
     end=split['validation_end'] if phase=='validation' else len(times)
@@ -109,6 +118,7 @@ def run_factor_study_suite(study_id, specs, panel, validation_policy, *, phase='
     refs=[];trials=[];signals={};budget=current_runtime_budget()
     from .research_evidence import PackagedCounterexamples
     counterrefs=PackagedCounterexamples().refs()
+    candidates = {row["factor_id"]: row for row in discovery["candidates"]} if discovery else {}
     # Baselines are predeclared economic definitions, never selected using holdout.
     references={'price_momentum':prices.pct_change(fill_method=None)}
     for spec in specs:
@@ -116,6 +126,8 @@ def run_factor_study_suite(study_id, specs, panel, validation_policy, *, phase='
         record_id=f'{study_id}:{phase}:{spec.factor_id}'
         if store:store.suite_trial_state(study_id,phase,spec.factor_id,'RUNNING')
         if budget:budget.charge_experiments(1)
+        candidate = candidates.get(spec.factor_id)
+        trial_policy = {**validation_policy, "direction": candidate["direction"]} if candidate else validation_policy
         try:
             signal,panel_ref,diagnostics=_signal(library,spec,panel,end if sample else bound_times[-1])
             signal=signal.reindex(index=prices.index,columns=prices.columns)
@@ -124,7 +136,7 @@ def run_factor_study_suite(study_id, specs, panel, validation_policy, *, phase='
                 size=field('market_cap') if sample or 'market_cap' in frame else None,
                 amount=field('amount') if sample or 'amount' in frame else None,
                 reference_signals=references,panel_fingerprint=panel_ref,
-                **{k:validation_policy[k] for k in ('fee_bps','slippage_bps','min_ic','min_net_return','direction','quantiles','horizons','min_assets','min_periods')})
+                **{k:trial_policy[k] for k in ('fee_bps','slippage_bps','min_ic','min_net_return','direction','quantiles','horizons','min_assets','min_periods')})
             signals[spec.factor_id]=signal.loc[selected]
             diagnostics=sorted(set(diagnostics+scored.get('missing_reasons',[])))
             status='NEEDS_DATA' if diagnostics else scored['status'];reason=None
@@ -133,9 +145,12 @@ def run_factor_study_suite(study_id, specs, panel, validation_policy, *, phase='
         row={'record_id':record_id,'factor_id':spec.factor_id,'formula_fingerprint':library.get(spec.factor_id)['formula_fingerprint'],
             'family':library.get(spec.factor_id)['family'],'factor_spec':spec.to_dict(),'data_mode':data_mode,
             'status':status,'failure_reason':reason,'missing_reason':diagnostics,'snapshot_ref':snapshot_ref,'panel_fingerprint':panel_ref,
-            'policy_fingerprint':policy_fingerprint,'validation_policy_fingerprint':stable_digest(validation_policy),
+            'policy_fingerprint':policy_fingerprint,'validation_policy_fingerprint':stable_digest(trial_policy),
             'phase':phase,'metrics':scored,'counterevidence_refs':counterrefs,
             'financial_falsification':False,'production_write':False,'use_status':'RESEARCH_ONLY'}
+        if candidate:
+            row.update(direction=candidate["direction"], question_ref=discovery["fingerprint"],
+                       source_ids=candidate["source_ids"], counterexample_ids=[c["counterexample_id"] for c in candidate["counterexamples"]])
         row['fingerprint']=stable_digest(row);trials.append(row)
         refs.append({'record_id':record_id,'digest':row['fingerprint']})
         if store:store.suite_trial_state(study_id,phase,spec.factor_id,status,result_ref=row['fingerprint'])
@@ -147,7 +162,7 @@ def run_factor_study_suite(study_id, specs, panel, validation_policy, *, phase='
                 value=pair.iloc[:,0].corr(pair.iloc[:,1]) if len(pair)>2 else None
                 family_correlation[f'{left}|{right}']=None if value is None or pd.isna(value) else float(value)
     # Unknown and failed attempts still occupy the full predeclared 80-trial family.
-    pvalues=[None if t['metrics'] is None else t['metrics'].get('pvalue') for t in trials]
+    pvalues=[t['metrics'].get('pvalue') if t['metrics'] is not None and t['status'] in {'PASS','FALSIFIED'} else None for t in trials]
     adjusted=adjust_pvalues(pvalues+[None]*(validation_policy['selection_family_size']-len(pvalues)))[:len(pvalues)]
     payload={'schema_version':'factor-study-suite.v1','study_id':study_id,'spec_ref':spec_ref,'family_ref':family_ref,
         'trials':trials,'trial_refs':refs,'metric_refs':[t['metrics']['fingerprint'] for t in trials if t['metrics']],
@@ -164,39 +179,63 @@ def run_factor_study_suite(study_id, specs, panel, validation_policy, *, phase='
 def compute_suite(snapshot,study,*,phase,validation,research_fields_store,study_store):
     spec=study['spec'];library=FactorLibrary()
     if spec['version']!=VERSION or snapshot.fingerprint!=spec['snapshot_ref']:raise ValueError('批量章程与快照不匹配')
+    discovery = spec.get("multi_factor_discovery")
     if phase=='test':
         if not validation or study['state'] not in {'TEST_RESERVED','TESTING'} or not study['test_key']:raise ValueError('测试需要冻结授权')
         frozen=next((r for r in validation['experiments'] if r['experiment_id']==study['candidate_id']),None)
         if not frozen or frozen['digest']!=study['candidate_fingerprint']:raise ValueError('冻结候选绑定已改变')
     else:frozen=None
-    if 'sample_spec' in spec:panel=ValidationSample(spec['sample_spec'])
-    else:panel=build_research_panel(snapshot,[research_fields_store.load(r) for r in spec['attachment_refs']],PanelContract.from_dict(spec['panel_contract']))
+    schedule = None
+    if 'sample_spec' in spec:
+        panel=ValidationSample(spec['sample_spec'])
+        if (panel.fingerprint, panel.content_digest) != (spec['sample_fingerprint'], spec['sample_content_digest']):
+            raise ValueError("合成样例与已登记证据不匹配。")
+    else:
+        contract = PanelContract.from_dict(spec['panel_contract'])
+        if discovery and phase == 'validation':
+            schedule = pd.DatetimeIndex(contract.observed_at)
+            bound = {key: val for key, val in contract.to_dict().items() if key not in {'schema_version', 'fingerprint'}}
+            bound['observed_at'] = [day for day in contract.observed_at if day < spec['test_period'][0]]
+            contract = PanelContract(**bound)
+        panel=build_research_panel(snapshot,[research_fields_store.load(r) for r in spec['attachment_refs']],contract)
     factors=[library.spec(f['factor_id']) for f in spec['factors']]
     if [f.to_dict() for f in factors]!=spec['factors']:raise ValueError('已登记公式版本改变')
     suite=run_factor_study_suite(study['study_id'],factors,panel,spec['validation_policy'],phase=phase,store=study_store,
         spec_ref=study['spec_ref'],family_ref=spec['family_ref'],snapshot_ref=snapshot.fingerprint,
-        policy_fingerprint=spec['policy_fingerprint'],data_mode=spec['data_mode'],frozen_factor=None if frozen is None else frozen['parameters']['factor_id'])
+        policy_fingerprint=spec['policy_fingerprint'],data_mode=spec['data_mode'],frozen_factor=None if frozen is None else frozen['parameters']['factor_id'],
+        discovery=discovery, observation_schedule=schedule)
     experiments=[];summaries=[]
+    cost = ({key: spec["validation_policy"][key] for key in ("fee_bps", "slippage_bps")}
+            if discovery else spec["validation_policy"])
     for trial in suite['trials']:
         metrics=trial['metrics']['metrics'] if trial['metrics'] else {}
         item={'experiment_id':trial['factor_id'],'parameters':{'factor_id':trial['factor_id']},
             'evaluation':{'information_coefficient':metrics.get('mean_ic'),'status':'VALID' if trial['status'] in {'PASS','FALSIFIED'} else 'INVALID'},
             'ic':metrics.get('mean_ic'),'hypothesis_status':trial['status'],'failure_reason':None if trial['status'] in {'PASS','FALSIFIED'} else trial['status']}
+        if discovery:
+            item['parameters'].update(direction=trial["direction"], version=trial["factor_spec"]["version"],
+                                      window=trial["factor_spec"]["window"], trial_ref=trial["fingerprint"])
         item['digest']=stable_digest(item);experiments.append(item)
         summaries.append(ExperimentSummary.build(snapshot_ref=snapshot.fingerprint,hypothesis=spec['question'],parameters=item['parameters'],
-            sample_period=spec['sample_period'],split={**spec['split'],'phase':phase},cost=spec['validation_policy'],metrics=metrics,
+            sample_period=spec['sample_period'],split={**spec['split'],'phase':phase},cost=cost,metrics=metrics,
             failure_reason=item['failure_reason'],version=VERSION,evidence_refs=[trial['fingerprint']],experiment_id=item['experiment_id'],
             conditions={'dataset_fingerprint':snapshot.fingerprint,'instrument':spec['instrument'],'instruments':spec['instrument_ids'],
-                'sample_period':spec['sample_period'],'split':spec['split'],'cost':spec['validation_policy'],'version':VERSION,
+                'sample_period':spec['sample_period'],'split':spec['split'],'cost':cost,'version':VERSION,
                 'policy_fingerprint':spec['policy_fingerprint'],'metric_basis':'OBSERVATION'},phase=phase.upper()).to_dict())
     result={'study_id':study['study_id'],'spec_ref':study['spec_ref'],'snapshot_ref':snapshot.fingerprint,'charter':spec,
         'suite_validation':suite,'phase':phase.upper(),'experiments':experiments,'summaries':summaries,
-        'ranking':rank_suite_experiments(experiments,direction=spec['validation_policy']['direction']),
+        'ranking':rank_suite_experiments(experiments),
         'ranking_groups':[],'comparison':{'groups':[]},'surfaces':[],'state':'CANDIDATE_POOL','selected_candidate':None,'test_evaluation':None,
         'paper_only':True,'production_write':False,'requires_human_admission':True,
         'limitations':['分层收益与换手为诊断口径；实际交易账本NOT_RUN，可通过原因子工作流另做纸面成交研究。','SAMPLE只验证工程行为；金融用途需要独立审核。']}
-    if phase=='test':result.update(experiments=validation['experiments'],summaries=validation['summaries'],ranking=validation['ranking'],
-        selected_candidate=study['candidate_id'],state='TEST_EVALUATED',test_evaluation=experiments[0]['evaluation'] if experiments else None,test_summary=summaries[0] if summaries else None)
+    if phase=='test':
+        result.update(experiments=validation['experiments'],summaries=validation['summaries'],ranking=validation['ranking'],
+                      selected_candidate=study['candidate_id'],state='TEST_EVALUATED',test_evaluation=experiments[0]['evaluation'] if experiments else None,
+                      test_summary=summaries[0] if summaries else None)
+        if discovery:
+            from .factor_discovery import frozen_discovery_candidate
+
+            result["freeze_receipt"] = frozen_discovery_candidate(study, validation)
     return {**result,'fingerprint':stable_digest(result)}
 
 

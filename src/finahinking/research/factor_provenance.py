@@ -25,6 +25,10 @@ def _definition(catalog, factor_id):
     for value in (*data["definitions"], *data.get("finathink_pilots", ()), *data.get("family_pilots", ())):
         if value.get("definition_id", value.get("factor_id")) == factor_id:
             return value
+    if factor_id.startswith("lib-"):
+        from .factor_library import FactorLibrary
+
+        return FactorLibrary(catalog).get(factor_id)
     raise ValueError("unknown factor definition")
 
 
@@ -58,6 +62,58 @@ def _local(entry, raw, requested):
         "financial_falsification": False, "settled": run["policy"]["phase"] == "test" and run["status"] == "COMPLETE"}
 
 
+def discovery_test_record(study, run_ref):
+    """Project a single frozen diagnostic. The caller must verify the report bundle."""
+    from .factor_discovery import PURPOSE, VERSION
+
+    charter = study["charter"]
+    plan = charter["multi_factor_discovery"]
+    suite, receipt = study["suite_validation"], study["freeze_receipt"]
+    if (plan["schema_version"] != VERSION or study["phase"] != "TEST" or suite["phase"] != "test"
+            or len(suite["trials"]) != 1 or receipt["spec_ref"] != study["spec_ref"]
+            or suite["spec_ref"] != study["spec_ref"] or receipt["plan_ref"] != plan["fingerprint"]
+            or receipt["test_period"] != charter["test_period"] or plan["purpose"] != PURPOSE):
+        raise ValueError("最终测试与冻结研究章程不匹配。")
+    trial = suite["trials"][0]
+    spec = _spec(receipt["factor_spec"])
+    if (trial["factor_id"] != spec.factor_id or suite["frozen_test_ref"] != spec.factor_id
+            or study["selected_candidate"] != spec.factor_id or receipt["factor_id"] != spec.factor_id
+            or trial["factor_spec"] != spec.to_dict() or trial["snapshot_ref"] != charter["snapshot_ref"]
+            or trial["formula_fingerprint"] != receipt["formula_fingerprint"] or trial["direction"] != receipt["direction"]
+            or trial["question_ref"] != plan["fingerprint"]
+            or trial["record_id"] != f'{study["study_id"]}:test:{spec.factor_id}'):
+        raise ValueError("最终测试没有绑定唯一冻结候选。")
+    mode = charter["data_mode"]
+    universe = {"market": plan["market"], "instrument_ids": charter["instrument_ids"],
+                "selection_ref": charter.get("panel_contract", {}).get("universe_ref") or charter.get("sample_fingerprint"),
+                "data_mode": mode}
+    return {
+        "evidence_kind": "MULTI_FACTOR_FINAL_TEST",
+        "run_ref": run_ref, "status": trial["status"], "factor_id": spec.factor_id,
+        "factor_ref": spec.fingerprint, "definition_matches": True,
+        "version": spec.version, "formula": spec.formula, "factor_spec": spec.to_dict(),
+        "phase": "test", "evaluation_fingerprint": trial["fingerprint"], "candidate_fingerprint": receipt["candidate_fingerprint"],
+        "freeze_ref": receipt["fingerprint"], "policy_fingerprint": stable_digest({
+            "research_policy": trial["policy_fingerprint"], "validation_policy": trial["validation_policy_fingerprint"]}),
+        "scope": {"universe": universe, "final_test_window": charter["test_period"]},
+        "reproduction_scope": {"SAMPLE": "FORMULA_FIXTURE", "USER_DATA": "PANEL_DIAGNOSTIC"}.get(mode, "UNKNOWN_PANEL"),
+        "local_metric": {"scorecard": trial["metrics"]}, "stages": [], "settled": False,
+        "financial_falsification": False,
+    }
+
+
+def discovery_use_scope(study, run_ref):
+    from .factor_discovery import PURPOSE
+
+    record = discovery_test_record(study, run_ref)
+    universe = record["scope"]["universe"]
+    return {
+        **{key: record[key] for key in ("factor_id", "factor_ref", "evaluation_fingerprint", "policy_fingerprint")},
+        "market": universe["market"], "universe_ref": stable_digest(universe),
+        "time_domain": record["scope"]["final_test_window"], "purpose": PURPOSE,
+    }
+
+
 def load_factor_evidence(factor_ref, *, catalog, run_repository, run_refs=()) -> FactorEvidenceView:
     requested = factor_ref if isinstance(factor_ref, FactorSpec) else None
     factor_id = requested.factor_id if requested else factor_ref
@@ -76,6 +132,7 @@ def load_factor_evidence(factor_ref, *, catalog, run_repository, run_refs=()) ->
     if claims:
         missing.append({"code": "UPSTREAM_EXPERIMENT_NOT_REPRODUCED", "resource_id": None})
     references = tuple(dict.fromkeys((*run_refs, *run_repository.list_run_refs(limit=200))))[:200]
+    trusted_suite_spec = None
     for reference in references:
         try:
             entry = run_repository.get_run(reference)
@@ -83,15 +140,26 @@ def load_factor_evidence(factor_ref, *, catalog, run_repository, run_refs=()) ->
             missing.append({"code": "INDEX_RECORD_CORRUPT", "run_ref": reference})
             continue
         study = entry.get("manifest", {}).get("source_snapshot", {}).get("factor_study")
-        if not isinstance(study, dict) or not isinstance(study.get("validation_run"), dict):
+        if not isinstance(study, dict):
             continue
-        raw = study["validation_run"]
-        if raw.get("bindings", {}).get("factor_id") != factor_id:
+        raw = study.get("validation_run")
+        suite = (study.get("charter", {}).get("multi_factor_discovery") is not None
+                 and study.get("selected_candidate") == factor_id and study.get("phase") == "TEST")
+        if not suite and (not isinstance(raw, dict) or raw.get("bindings", {}).get("factor_id") != factor_id):
             continue
         try:
             if entry["report_status"] != "AVAILABLE":
                 raise ValueError("report bundle unavailable")
-            record = _local(entry, raw, requested)
+            if suite:
+                record = discovery_test_record(study, reference)
+                if trusted_suite_spec is None:
+                    from .factor_library import FactorLibrary
+
+                    trusted_suite_spec = FactorLibrary(catalog).spec(factor_id)
+                record["definition_matches"] = (record["factor_ref"] == trusted_suite_spec.fingerprint
+                    and (requested is None or requested.fingerprint == trusted_suite_spec.fingerprint))
+            else:
+                record = _local(entry, raw, requested)
         except (ValueError, TypeError, KeyError, OSError):
             record = {"run_ref": reference, "status": "CORRUPT", "local_metric": None,
                       "definition_matches": False, "evaluation_fingerprint": None}

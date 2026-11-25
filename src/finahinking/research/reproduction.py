@@ -78,14 +78,20 @@ def products(analytics):
     return result
 
 
-def _portable_snapshot(snapshot, cutoff):
+def _portable_snapshot(snapshot, cutoff, *, panel_scope=None):
     import pandas as pd
-    rows = [row for row in snapshot.observations if cutoff is None or row.timestamp < pd.Timestamp(cutoff)]
+    if panel_scope is not None:
+        rows = SnapshotResearchTools.panel_observations(snapshot, panel_scope, cutoff)
+    else:
+        rows = [row for row in snapshot.observations if cutoff is None or row.timestamp < pd.Timestamp(cutoff)]
     if not 4 <= len(rows) <= 5000:
         raise ValueError('迁移复算需要 4 至 5000 条已发表观测。')
     provenance = snapshot.provenance
+    classes = provenance.get('asset_classes', {})
+    if panel_scope is not None:
+        classes = {asset: classes[asset] for asset in panel_scope["instrument_ids"] if asset in classes}
     result = {'mode': snapshot.mode, 'units': provenance.get('units', {}),
-              'asset_classes': provenance.get('asset_classes', {}),
+              'asset_classes': classes,
               'observations': [{key: value for key, value in row.to_dict().items() if key in _ROW} for row in rows]}
     _sanitize_public(result)
     result['fingerprint'] = _digest(result)
@@ -205,7 +211,7 @@ class ReproductionService:
         compact = None
         if include_data:
             snapshot = self.service.snapshots.load(analytics['dataset_fingerprint'])
-            compact = _portable_snapshot(snapshot, frozen['publication_before'])
+            compact = _portable_snapshot(snapshot, frozen['publication_before'], panel_scope=frozen.get("panel_scope"))
         expected = products(analytics)
         coverage = {key: 'INCLUDED' for key in expected}
         missing = [] if include_data else ['NORMALIZED_DATA']

@@ -74,6 +74,12 @@ renamed repository's remote `main` through PR #2.
   gate evidence. A GitHub release is not claimed until a maintainer publishes
   the tagged artifact.
 
+## 0.2.3 - 2026-11-24
+
+- 多候选因子研究按问题与反例组织公式，预览时显示去重、方向、费用、字段和试验预算。
+- 后台保留全部登记候选并提供评分、排序和全家族 Holm 校正。冻结候选后可读取一次保留测试，并按确切范围记录公式研究审核。
+- 工作台和离线 HTML 报告展示候选来源、试验结果和冻结证据。
+
 ## 0.2.2 - 2026-11-24
 
 - 研究面板支持用已保存的 API 连接获取原始行情和规则附件，预览字段的时点覆盖后保存并复用。
