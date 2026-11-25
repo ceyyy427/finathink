@@ -4,7 +4,7 @@ import sqlite3
 
 import pytest
 
-from finahinking.research.contracts import AgentTask, stable_digest
+from finahinking.research.contracts import AgentTask, ResearchPlan, ResearchRequest, stable_digest
 from finahinking.research.job_queue import JobQueue, JobStatus, StaleLeaseError
 
 
@@ -15,6 +15,34 @@ def task(task_id: str = "task-1") -> AgentTask:
         input_digest=f"input-{task_id}",
         inputs={"dataset_ref": "dataset-1"},
     )
+
+
+def test_iana_names_are_admitted_only_in_verified_panel_timezone_maps(tmp_path):
+    from finahinking.data.panel_contracts import PanelContract
+
+    queue = JobQueue(tmp_path / "typed-zones.sqlite")
+    contract = PanelContract("a"*64, ["AAA"], ["2025-05-01T16:00:00Z"], {"close": "USD"},
+                             "research", {"AAA": "USD"}, {"AAA": "Asia/Shanghai"}).to_dict()
+
+    def enqueue(key, spec):
+        request = ResearchRequest(key, "AAA", "2025-05-01", ResearchPlan(validation_spec=spec),
+                                  ("technical",), "EQUITY", "local-research.v1", "config", snapshot_ref="a"*64)
+        work = AgentTask("technical", key, stable_digest(request))
+        record = queue.enqueue_with_request_snapshot(work, key, request)
+        return queue.load_request_snapshot(record.task_ref, expected_digest=stable_digest(request))
+
+    for name, spec in (("strategy", {"strategy_study": {"contract": contract}}),
+                       ("discovery", {"discovery": {"inputs": {"contract": contract}}})):
+        assert enqueue(name, spec).research_plan.validation_spec == spec
+    for key, bad in (("lookalike", {"other": {"contract": contract}}),
+                     ("outside", {"strategy_study": {"contract": contract, "notes": "Asia/Shanghai"}})):
+        with pytest.raises(ValueError, match="secret or endpoint"):
+            enqueue(key, bad)
+    for zone, error in (("Asia/../Shanghai", "IANA"), ("Asia/Unknown_Zone_For_Test", "时区无效")):
+        with pytest.raises(ValueError, match=error):
+            enqueue("invalid-zone", {"strategy_study": {"contract": {**contract, "timezones": {"AAA": zone}}}})
+    with pytest.raises(ValueError, match="完整性"):
+        enqueue("unverified", {"strategy_study": {"contract": {**contract, "fingerprint": "0"*64}}})
 
 
 @pytest.fixture

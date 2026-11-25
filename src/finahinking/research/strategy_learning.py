@@ -13,7 +13,7 @@ from .learning_manager import (
 )
 from .learning_reliability import instant
 from .strategy_learning_store import StrategyLearningStore
-from .strategy_settlement import MIN_SAMPLES, StrategySettlementService
+from .strategy_settlement import ECONOMIC_MODE, MIN_SAMPLES, StrategySettlementService
 
 METHOD = "strategy-settled-relative-budget.v1"
 BUDGET_RULE = "signal_budget_scale"
@@ -40,6 +40,11 @@ def _scope(receipt, source):
         },
         "use": "PAPER_STRATEGY", "parent_policy_ref": receipt["policy_ref"],
     }
+
+
+def _economic_scope(scope):
+    """Use settlement's provenance equivalence only when grouping economic evidence."""
+    return {**scope, "data_mode": ECONOMIC_MODE[scope["data_mode"]]}
 
 
 def _frozen_inputs(receipt, source):
@@ -130,7 +135,7 @@ class StrategyLearningService:
             "scope": scope, "scope_fingerprint": stable_digest(scope), "frozen": frozen, "baseline": baseline,
             "as_of": receipt["as_of"], "source_status": receipt["status"], "source_reasons": receipt["reasons"],
             "status": status, "method": METHOD, "minimum_samples": MIN_SAMPLES, "sample_count": len(selected),
-            "economic_set_fingerprint": stable_digest([scope, sorted(row["sample_ref"] for row in selected)]),
+            "economic_set_fingerprint": stable_digest([_economic_scope(scope), sorted(row["sample_ref"] for row in selected)]),
             "selected_samples": selected, "excluded_windows": excluded, "below_benchmark_count": negatives,
             "mean_net_return": fmean(row["net_return"] for row in selected) if selected else None,
             "mean_benchmark_return": fmean(row["benchmark_return"] for row in selected) if selected else None,
@@ -148,6 +153,7 @@ class StrategyLearningService:
         if receipt["status"] != "SETTLED" or not receipt["new_sample_count"]:
             return set()
         earlier = [row for row in receipt["samples"] if row["duplicate"] and row["sample_ref"] not in claimed]
+        evidence_scope = _economic_scope(scope)
         matching = {receipt["run_id"]: True}
         owner_runs = {}
         for ref in {row["first_observation_ref"] for row in earlier}:
@@ -157,7 +163,7 @@ class StrategyLearningService:
             if run_id not in matching:
                 frozen = self.settlements.replay_inputs(run_id)
                 _frozen_inputs(owner, frozen)
-                matching[run_id] = _scope(owner, frozen) == scope
+                matching[run_id] = _economic_scope(_scope(owner, frozen)) == evidence_scope
         return {row["sample_ref"] for row in earlier if matching[owner_runs[row["first_observation_ref"]]]}
 
     def get_audit(self, identity):
