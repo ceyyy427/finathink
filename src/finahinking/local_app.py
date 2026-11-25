@@ -27,6 +27,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, unquote, urlencode, urlsplit
 
+from finahinking import __version__
 from finahinking.data.connection_settings import (
     DataConnectionSettingsStore,
     DataCredentialStore,
@@ -59,10 +60,12 @@ from finahinking.p8_2b.context import ContextSnapshot, no_context, resolve_conte
 from finahinking.p8_2b.export import export_bibtex, export_csl_json, export_latex, export_markdown
 from finahinking.p8_2b.math import render_latex, render_mathml
 from finahinking.p8_2b.widgets import WidgetSpec, run_widget
+from finahinking.research.atlas_routes import ASSETS as ATLAS_ASSETS
+from finahinking.research.atlas_workspace import VIEWS as ATLAS_VIEWS
+from finahinking.research.atlas_workspace import masthead, overview_plate
 from finahinking.research.diagnostic_page import DIAGNOSTIC_CSS, diagnostic_page
 from finahinking.workbench_ui import (
     BLUE_WHITE_CSS,
-    OVERVIEW_HEADER_HTML,
     nav_icon,
     shell_search_dialog,
 )
@@ -1155,7 +1158,7 @@ class LocalApplication:
     def asset_bytes(asset_name: str) -> bytes:
         """Return one of the explicitly allow-listed packaged assets."""
 
-        allowed = {"finathink-splash-map.jpg", "finathink-research-splash.jpg", "finathink-research.js"}
+        allowed = {"finathink-splash-map.jpg", "finathink-research-splash.jpg", "finathink-research.js", *ATLAS_ASSETS}
         if asset_name not in allowed:
             raise FileNotFoundError(asset_name)
         try:
@@ -1237,7 +1240,7 @@ class LocalApplication:
         # Keep the conditional attribute construction explicit so the rendered
         # HTML remains easy to inspect in a browser and in snapshot tests.
         def nav_item(href: str) -> str:
-            current = ' aria-current="page"' if href == page else ""
+            current = ' aria-current="page"' if href == page and href not in ATLAS_VIEWS else ""
             return f'<li><a class="nav-link" href="{href}"{current}>{nav_icon(icons.get(href, "system"))}<span>{html.escape(names[href])}</span></a></li>'
 
         sections = []
@@ -1288,7 +1291,7 @@ class LocalApplication:
                 "Next": "Open an evidence or learning path",
             },
         )
-        style_tags = "".join(f'<link rel="stylesheet" href="{html.escape(path)}">' for path in styles)
+        style_tags = "".join(f'<link rel="stylesheet" href="{html.escape(path)}">' for path in ("/assets/research-atlas.css", *styles))
         script_tags = "".join(f'<script src="{html.escape(path)}" defer></script>' for path in dict.fromkeys(("/assets/finathink-research.js", *scripts)))
         from .research.asset_workspace_page import ASSET_WORKSPACE_CSS
         from .research.factor_detail_page import FACTOR_DETAIL_CSS
@@ -1296,12 +1299,13 @@ class LocalApplication:
 
         content = f'<div class="workspace-inner"><p class="eyebrow">{html.escape(eyebrow)}</p>{body}</div>'
         if page == "/":
-            # The shared heading precedes both columns, as in the supplied HTML.
-            # Keep it within the main landmark and the context after the body.
+            # The cover and recent reports span both of the working columns.
             layout = (
                 '<main class="workspace-layout workspace-layout--overview" id="main" tabindex="-1">'
-                f'{OVERVIEW_HEADER_HTML}<div class="workspace">{content}</div>{inspector_html}</main>'
+                f'{overview_plate(self._run_repository)}<div class="workspace">{content}</div>{inspector_html}</main>'
             )
+        elif page in ATLAS_VIEWS:
+            layout = f'<main class="workspace-layout workspace-layout--atlas" id="main" tabindex="-1">{body}</main>'
         else:
             layout = (
                 '<div class="workspace-layout"><main class="workspace" id="main" tabindex="-1">'
@@ -1311,17 +1315,15 @@ class LocalApplication:
             '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">'
             '<meta name="viewport" content="width=device-width,initial-scale=1">'
             f"<title>{html.escape(title)} · Finathink</title>"
-            '<meta name="theme-color" content="#f5f8fd">'
+            '<meta name="theme-color" content="#f5f1e9">'
             '<meta http-equiv="Content-Security-Policy" content="default-src \'self\'; img-src \'self\'; style-src \'self\' \'unsafe-inline\'; script-src \'self\'; connect-src \'self\'; form-action \'self\'">'
             f"<style>{_APP_CSS}{BLUE_WHITE_CSS}{_RESEARCH_JOBS_CSS if page == '/research/jobs' else ''}{_FACTOR_STUDY_CSS if page == '/research/experiments' else ''}{LEARNING_CSS if page in {'/research/learning', '/research/maintenance'} else ''}{ASSET_WORKSPACE_CSS if page.startswith('/library/') or page == '/research/experiments' else ''}{FACTOR_DETAIL_CSS if page == '/research/experiments' else ''}{DIAGNOSTIC_CSS if page == '/diagnostics' else ''}</style>{style_tags}{script_tags}</head><body>"
             '<a class="skip-link" href="#main">跳到主要内容</a>'
             '<div class="app-shell" data-finathink-shell>'
             f'<nav class="sidebar" id="shell-navigation" aria-label="主导航">{self._nav(clean_page)}</nav>'
             '<button type="button" class="shell-shade" data-shell-shade aria-label="关闭导航遮罩" tabindex="-1" hidden></button>'
-            '<div class="app-frame" data-shell-frame><header class="topbar" aria-label="Workspace context">'
-            f'<div class="topbar-context"><button type="button" class="shell-icon-button shell-menu" data-shell-menu aria-controls="shell-navigation" aria-label="展开导航" aria-expanded="false" hidden>{nav_icon("menu")}</button><span>工作空间 /</span><strong>{html.escape(title)}</strong></div>'
-            f'<div class="topbar-actions"><button type="button" class="shell-search-open" data-shell-search-open aria-controls="shell-search" aria-label="搜索功能入口" hidden>{nav_icon("search")}<span>搜索功能入口</span><kbd>⌘ K</kbd></button><span class="local-status">本地研究</span><a class="button" href="/research/jobs">新建研究</a></div></header>'
-            f'{layout}<footer class="footer-note shell-footer">本地优先 · 可追溯研究与学习 · PAPER-ONLY</footer>'
+            f'<div class="app-frame" data-shell-frame>{masthead(clean_page, nav_icon("menu"), nav_icon("search"))}'
+            f'{layout}<footer class="footer-note shell-footer">本地优先 · 可追溯研究与学习 · <span>PAPER-ONLY</span></footer>'
             f"</div></div>{shell_search_dialog()}</body></html>"
         )
 
@@ -1953,6 +1955,14 @@ class LocalApplication:
         clean = parsed.path.rstrip("/") or "/"
         if clean in {"/research/workbench", "/api/research/quant-workspace", "/api/research/quant-workspace/sources"}:
             return self._quant_workbench_route(method, clean, query)
+        from .research.atlas_routes import route as atlas_route
+
+        atlas_response = atlas_route(self, method, clean, query, body)
+        if atlas_response is not None:
+            return atlas_response
+        if clean.startswith("/api/research/learning/strategy/"):
+            from .research.strategy_learning_routes import route as strategy_learning_route
+            return strategy_learning_route(self, method, clean, query, body)
         from .research.knowledge_workspace import route as knowledge_route
 
         knowledge_response = knowledge_route(self, method, clean, query)
@@ -2118,7 +2128,7 @@ class LocalApplication:
             except FileNotFoundError:
                 return 404, "application/json", {"error": "asset not found"}
         if clean in {"/health", "/api/health"}:
-            return 200, "application/json", {"status": "ok", "service": "finahinking-local", "version": "0.1.0"}
+            return 200, "application/json", {"status": "ok", "service": "finahinking-local", "version": __version__}
         if clean == "/api/diagnostics":
             return 200, "application/json", self.diagnostics()
         if clean == "/api/overview" and method == "GET":
@@ -2793,7 +2803,7 @@ class LocalApplication:
         return (
             f'<section class="overview" data-finathink-overview data-overview-payload-url="/api/overview" aria-busy="false">'
             '<p class="loading-state" data-overview-loading aria-live="polite" hidden>正在读取研究概况…</p><p class="error-state" data-overview-error role="alert" aria-live="assertive" hidden></p><a class="button-secondary" data-overview-retry href="/" hidden>重新载入总览</a>'
-            '<section class="research-intro" aria-labelledby="research-intro-title"><h2 id="research-intro-title">从一个好问题，<span>走向可验证的结论。</span></h2><p>连接数据、数学、代码与实验，保留验证和反例。</p>'
+            '<section class="research-intro" aria-labelledby="research-intro-title"><h2 id="research-intro-title">建立研究问题</h2>'
             '<form class="question-composer" action="/research/jobs" method="get"><label for="overview-question">你想验证什么？</label><textarea id="overview-question" name="question" required maxlength="1000" rows="2" placeholder="例如：动量窗口改变后，换手、费用和历史回撤会怎样变化？"></textarea>'
             '<div class="composer-footer"><span>先配置数据与边界，提交后才运行。</span><button type="submit">建立研究 '
             f'{nav_icon("arrow")}</button></div></form><div class="question-suggestions" aria-label="研究问题建议">'

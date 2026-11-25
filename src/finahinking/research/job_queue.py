@@ -48,11 +48,43 @@ _SENSITIVE_VALUE = re.compile(
     re.IGNORECASE,
 )
 _SENSITIVE_SNAPSHOT_KEY = re.compile(r"(?:prompt|raw_response|provider_response)", re.IGNORECASE)
+_ZONE_NAME = re.compile(r"[A-Za-z][A-Za-z0-9_+-]*(?:/[A-Za-z0-9_+-]+)*")
 _TERMINAL = frozenset({JobStatus.FAILED.value, JobStatus.CANCELLED.value, JobStatus.COMPLETED.value})
 
 
+def _check_snapshot_fields(payload):
+    """Keep valid IANA names in the two typed panel contracts across the queue boundary."""
+    plan = payload["research_plan"]
+    spec = plan["validation_spec"] if isinstance(plan, dict) else {}
+    discovery = spec.get("discovery")
+    bindings = (spec.get("strategy_study"), discovery.get("inputs") if isinstance(discovery, dict) else None)
+    admitted = []
+    for binding in bindings:
+        contract = binding.get("contract") if isinstance(binding, dict) else None
+        zones = contract.get("timezones") if isinstance(contract, dict) else None
+        if not isinstance(zones, dict) or not any(isinstance(z, str) and "/" in z for z in zones.values()):
+            continue
+        from finahinking.data.panel_contracts import PanelContract
+
+        if not all(isinstance(z, str) and _ZONE_NAME.fullmatch(z) for z in zones.values()):
+            raise ValueError("面板时区必须是有效 IANA 地区名称")
+        PanelContract.from_dict(contract)  # Checks ZoneInfo, asset membership and the contract fingerprint.
+        admitted.append((contract, zones))
+    # Scan all keys and all other values with the normal privacy rules. The
+    # caller owns this detached JSON projection. Its serialized bytes retain
+    # the original, fingerprinted zone names.
+    for contract, zones in admitted:
+        contract["timezones"] = dict.fromkeys(zones, "UTC")
+    try:
+        _validate_runtime_value(payload, "request snapshot")
+    finally:
+        for contract, zones in admitted:
+            contract["timezones"] = zones
+
+
 def _snapshot_json(request: ResearchRequest) -> str:
-    payload = _validate_runtime_value(to_jsonable(request), "request snapshot")
+    payload = to_jsonable(request)
+    _check_snapshot_fields(payload)
     def reject_keys(value: object) -> None:
         if isinstance(value, dict):
             for key, item in value.items():

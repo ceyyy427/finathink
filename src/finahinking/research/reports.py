@@ -14,6 +14,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
+from finahinking.workbench_ui import REPORT_TEMPLATE
+
 from .contracts import ReportManifest, ResearchRunResult, RunEvent, stable_digest, to_jsonable
 from .report_sections import (
     build_method_factor_sections,
@@ -504,7 +506,7 @@ class ReportBundleWriter:
             files=files,
             source_snapshot={
                 "as_of": result.state.as_of,
-                "report_template": "blue-white.v1",
+                "report_template": REPORT_TEMPLATE,
                 "report_input_digests": inputs,
                 **({"method_factor_snapshot": factor_sections.metadata} if factor_sections is not None else {}),
                 "state_digest": stable_digest(result.state),

@@ -233,12 +233,13 @@ class LearningReviewService:
         return self.store.save(record, event)
 
     @staticmethod
-    def lineage(policy, snapshot, instrument, *, rerun_of=None):
+    def lineage(policy, snapshot, instrument, *, rerun_of=None, strategy_decision_at=None):
         import pandas as pd
 
-        signal_at = max(row.timestamp for row in snapshot.observations if row.instrument == instrument)
+        signal_at = (pd.Timestamp(strategy_decision_at) if strategy_decision_at is not None else
+                     max(row.timestamp for row in snapshot.observations if row.instrument == instrument))
         availability = policy.get("available_at")
-        return {"policy_ref": policy["policy_ref"], "runtime_fingerprint": policy["runtime_fingerprint"], "version": policy["version"], "parent_ref": policy["parent_ref"], "available_as_of": policy["available_as_of"], "available_at": availability, "retrospective": availability is not None and signal_at <= pd.Timestamp(availability), "paper_only": True, **({"rerun_of": rerun_of} if rerun_of else {})}
+        return {"policy_ref": policy["policy_ref"], "runtime_fingerprint": policy["runtime_fingerprint"], "version": policy["version"], "parent_ref": policy["parent_ref"], "available_as_of": policy["available_as_of"], "available_at": availability, "retrospective": availability is not None and signal_at <= pd.Timestamp(availability), "paper_only": True, **({"rerun_of": rerun_of} if rerun_of else {}), **({"strategy_decision_at": signal_at.isoformat()} if strategy_decision_at is not None else {})}
 
     def rerun(self, values):
         _object(values, ("idempotency_key", "run_id", "policy_ref", "snapshot_ref", "as_of"))

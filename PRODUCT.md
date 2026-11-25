@@ -33,7 +33,7 @@ Python 本地服务、浏览器工作台、SQLite 持久化队列与独立 Super
 
 ## Brand Commitments
 
-名称 Finathink，主要操作语言为中文。用户于 2026-10-27 指定 `Finathink-Codex-BlueWhite.html` 为新界面基准，替换旧深色视觉；默认采用其中的白色导航方向，不自行混合其他主题。
+名称 Finathink，主要操作语言为中文。研究总览、证据溯源、因子实验、运行复盘沿用用户提供的四幅研究图版，采用纸张底色、中文宋体标题、松绿色净值图与铁锈色比较标记。完整设计约定见 [DESIGN.md](DESIGN.md)。
 
 ## Evidence on Hand
 

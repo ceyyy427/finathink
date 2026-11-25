@@ -23,6 +23,9 @@ import { mountOverview } from './overview.js';
 import { mountProviderSettings, mountRunWorkspace } from './run-workspace.js';
 import { mountExperimentWorkspace } from './experiment-workspace.js';
 import { mountLearningReview } from './learning-review.js';
+import { mountStrategyLearning } from './strategy-learning.js';
+import { mountAtlasLabs } from './atlas-labs.js';
+import { mountAtlasReview } from './atlas-review.js';
 import { mountAppShell } from './app-shell.js';
 import { mountAssetWorkspace } from './asset-workspace.js';
 import { mountFactorDetail } from './factor-detail.js';
@@ -592,6 +595,9 @@ export function mountResearch(root, { payload, payloadUrl } = {}) {
 
 if (typeof document !== 'undefined') {
   mountAppShell(document);
+  document.querySelectorAll('[data-atlas-lab]').forEach(root => mountAtlasLabs(root));
+  document.querySelectorAll('[data-strategy-learning]').forEach(mountStrategyLearning);
+  document.querySelectorAll('[data-atlas-review]').forEach(mountAtlasReview);
   mountSavedPanelSelectors(document);
   document.querySelectorAll('[data-panel-workbench]').forEach(root => mountPanelWorkbench(root));
   document.querySelectorAll("[data-quant-workbench]").forEach(root => mountQuantWorkspace(root));

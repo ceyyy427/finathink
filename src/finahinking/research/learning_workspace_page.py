@@ -9,25 +9,33 @@ LEARNING_CSS = """
 [data-maintenance-facts] dd {margin:0;text-align:end;font-variant-numeric:tabular-nums}
 [data-maintenance-jobs] a {display:block;min-height:44px;align-content:center}
 
-:is([data-learning-workspace],[data-learning-reliability],[data-task-maintenance]) {min-width:0}
-:is([data-learning-workspace],[data-learning-reliability],[data-task-maintenance]) .form-grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:var(--space-4);align-items:end}
-:is([data-learning-workspace],[data-learning-reliability],[data-task-maintenance]) label {display:flex;flex-direction:column;gap:var(--space-2);min-width:0}
-:is([data-learning-workspace],[data-learning-reliability],[data-task-maintenance]) :is(input,select,textarea) {width:100%;min-width:0;font-size:1rem}
-:is([data-learning-workspace],[data-learning-reliability],[data-task-maintenance]) .learning-actions {display:flex;flex-wrap:wrap;gap:var(--space-3);align-items:center;margin-block:var(--space-4)}
-:is([data-learning-workspace],[data-learning-reliability],[data-task-maintenance]) .learning-ack {display:flex;flex-direction:row;align-items:flex-start}
-:is([data-learning-workspace],[data-learning-reliability],[data-task-maintenance]) .learning-ack input {width:auto;margin-block-start:5px}
-:is([data-learning-workspace],[data-learning-reliability],[data-task-maintenance]) :is(p,code,dd,button,a) {overflow-wrap:anywhere}
-:is([data-learning-workspace],[data-learning-reliability],[data-task-maintenance]) .learning-evidence {font-size:.875rem;color:var(--text-secondary)}
-:is([data-learning-workspace],[data-learning-reliability],[data-task-maintenance]) td {font-variant-numeric:tabular-nums}
-:is([data-learning-workspace],[data-learning-reliability],[data-task-maintenance]) button:disabled {opacity:.55;cursor:not-allowed}
-:is([data-learning-workspace],[data-learning-reliability],[data-task-maintenance]) .learning-rule {max-width:75ch;margin-block:var(--space-4)}
+:is([data-learning-workspace],[data-learning-reliability],[data-task-maintenance],[data-strategy-learning]) {min-width:0}
+:is([data-learning-workspace],[data-learning-reliability],[data-task-maintenance],[data-strategy-learning]) .form-grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:var(--space-4);align-items:end}
+:is([data-learning-workspace],[data-learning-reliability],[data-task-maintenance],[data-strategy-learning]) label {display:flex;flex-direction:column;gap:var(--space-2);min-width:0}
+:is([data-learning-workspace],[data-learning-reliability],[data-task-maintenance],[data-strategy-learning]) :is(input,select,textarea) {width:100%;min-width:0;font-size:1rem}
+:is([data-learning-workspace],[data-learning-reliability],[data-task-maintenance],[data-strategy-learning]) .learning-actions {display:flex;flex-wrap:wrap;gap:var(--space-3);align-items:center;margin-block:var(--space-4)}
+:is([data-learning-workspace],[data-learning-reliability],[data-task-maintenance],[data-strategy-learning]) .learning-ack {display:flex;flex-direction:row;align-items:flex-start}
+:is([data-learning-workspace],[data-learning-reliability],[data-task-maintenance],[data-strategy-learning]) .learning-ack input {width:auto;margin-block-start:5px}
+:is([data-learning-workspace],[data-learning-reliability],[data-task-maintenance],[data-strategy-learning]) :is(p,code,dd,button,a) {overflow-wrap:anywhere}
+:is([data-learning-workspace],[data-learning-reliability],[data-task-maintenance],[data-strategy-learning]) .learning-evidence {font-size:.875rem;color:var(--text-secondary)}
+:is([data-learning-workspace],[data-learning-reliability],[data-task-maintenance],[data-strategy-learning]) td {font-variant-numeric:tabular-nums}
+:is([data-learning-workspace],[data-learning-reliability],[data-task-maintenance],[data-strategy-learning]) button:disabled {opacity:.55;cursor:not-allowed}
+:is([data-learning-workspace],[data-learning-reliability],[data-task-maintenance],[data-strategy-learning]) .learning-rule {max-width:75ch;margin-block:var(--space-4)}
+[data-sl-window-detail] {white-space:normal;overflow-wrap:anywhere;max-width:70ch}
+[data-sl-window-detail] summary {cursor:pointer;min-height:44px;align-content:center}
+[data-sl-window-detail] dl {display:grid;grid-template-columns:minmax(6em,auto) minmax(0,1fr);gap:.2rem 1rem}
+[data-sl-window-detail] dd {margin:0;white-space:normal;overflow-wrap:anywhere}
+[data-sl-window-detail] li {margin-block:.35rem}
 [data-learning-detail] :is(h2,h3) {margin-block:var(--space-6) var(--space-3)}
 """
 
 
 def learning_workspace_page(csrf_token):
-    return f'''<section data-learning-workspace data-learning-state="EMPTY" lang="zh-CN">
-<h1>复盘与学习</h1><p><a href="#cohort-evidence">样本评估</a> · <a href="#paired-replay">成对版本复跑</a> · <a href="/research/maintenance">本地任务维护</a></p><p class="lede">用结算证据审视假设，让下一轮研究有据可循。</p>
+    from .strategy_learning_page import strategy_learning_page
+
+    return f'''<header lang="zh-CN"><h1>复盘与学习</h1><p><a href="#strategy-learning">策略账本与政策审核</a> · <a href="#cohort-evidence">样本评估</a> · <a href="#paired-replay">成对版本复跑</a> · <a href="/research/maintenance">本地任务维护</a></p><p class="lede">用结算证据审视假设，让下一轮研究有据可循。</p></header>
+{strategy_learning_page(csrf_token)}
+<section data-learning-workspace data-learning-state="EMPTY" lang="zh-CN">
 <p>复盘后先查看依据与修改预览，再决定批准或拒绝。批准只创建一个纸面配置版本；原运行、原报告和旧配置保持不变。</p>
 <input type="hidden" data-learning-csrf value="{html.escape(csrf_token, quote=True)}">
 <p role="status" aria-live="polite" data-learning-status>正在读取本地研究、数据快照与版本…</p>

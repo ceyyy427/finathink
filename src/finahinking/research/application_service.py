@@ -189,10 +189,24 @@ def run_local_research_stage(invocation, checkpoint_ref, publish_checkpoint, *, 
         return {"status": "blocked", "failure_kind": "SNAPSHOT_INTEGRITY_FAILED"}
     from .learning_review import LearningReviewService, LearningReviewStore
 
+    spec = request.research_plan.validation_spec
+    strategy_contract = None
     try:
-        policy_record = LearningReviewStore(queue, root, scope_id=request.research_plan.validation_spec["scope_id"]).policy(request.previous_policy_fingerprint, as_of=request.as_of)
-        lineage = LearningReviewService.lineage(policy_record, snapshot, request.instrument, rerun_of=request.research_plan.validation_spec.get("rerun_of"))
-        if request.research_plan.validation_spec.get("policy_fingerprint") != policy_record["runtime_fingerprint"] or request.research_plan.validation_spec.get("policy_lineage", lineage) != lineage:
+        if "strategy_study" in spec:
+            from finahinking.data.panel_contracts import PanelContract, panel_time
+
+            strategy_contract = PanelContract.from_dict(spec["strategy_study"]["contract"])
+            if (strategy_contract.snapshot_ref != snapshot.fingerprint or request.instrument != strategy_contract.instrument_ids[0]
+                    or panel_time(strategy_contract.observed_at[-1]).date() != request.as_of):
+                raise ValueError("策略合同与冻结的资产、日期或快照不一致")
+        policy_record = LearningReviewStore(queue, root, scope_id=spec["scope_id"]).policy(request.previous_policy_fingerprint, as_of=request.as_of)
+        # Queued requests from before the strategy clock was recorded retain
+        # their original policy-lineage identity.
+        decision_at = (strategy_contract.observed_at[-1] if strategy_contract is not None
+                       and "strategy_decision_at" in spec.get("policy_lineage", {}) else None)
+        lineage = LearningReviewService.lineage(policy_record, snapshot, request.instrument,
+                                                rerun_of=spec.get("rerun_of"), strategy_decision_at=decision_at)
+        if spec.get("policy_fingerprint") != policy_record["runtime_fingerprint"] or spec.get("policy_lineage", lineage) != lineage:
             raise ValueError("policy binding mismatch")
     except (KeyError, ValueError, TypeError, OSError):
         return {"status": "blocked", "failure_kind": "POLICY_CHANGED"}
@@ -213,12 +227,11 @@ def run_local_research_stage(invocation, checkpoint_ref, publish_checkpoint, *, 
             current = queue.get(record.job_id)
             return current.cancel_requested or current.status is not JobStatus.RUNNING or current.attempts != record.attempts or current.lease_token != record.lease_token
 
-    spec = request.research_plan.validation_spec
     binding = spec.get("factor_study")
     study = studies = None
     validation = None
     publication_before = None
-    panel_scope = None
+    panel_contract = strategy_contract.to_dict() if strategy_contract is not None else None
     if binding is not None:
         studies = FactorStudyStore(queue, scope_id=spec["scope_id"])
         study = studies.get(binding["study_id"])
@@ -238,9 +251,7 @@ def run_local_research_stage(invocation, checkpoint_ref, publish_checkpoint, *, 
             from .factor_discovery import verify_discovery_sources
 
             verify_discovery_sources(root, study["spec"]["multi_factor_discovery"])
-            if "panel_contract" in study["spec"]:
-                contract = study["spec"]["panel_contract"]
-                panel_scope = {name: contract[name] for name in ("instrument_ids", "timezones", "observed_at")}
+            panel_contract = study["spec"].get("panel_contract")
         if "strategy_study" in spec:
             require_active_research_source(root, "STRATEGY", spec["strategy_study"]["template_id"])
     except (KeyError, ValueError, sqlite3.Error):
@@ -256,6 +267,8 @@ def run_local_research_stage(invocation, checkpoint_ref, publish_checkpoint, *, 
                 frozen_discovery_candidate(study, validation)
         except (KeyError, OSError, TypeError, ValueError):
             return {"status": "blocked", "failure_kind": "CONTEXT_INTEGRITY_FAILED"}
+    panel_scope = ({name: panel_contract[name] for name in ("instrument_ids", "timezones", "observed_at")}
+                   if panel_contract is not None else None)
     tools = SnapshotResearchTools(snapshot, publication_before=publication_before, policy=policy_record["effective"],
                                   policy_lineage=lineage, panel_scope=panel_scope)
     driver, manager = OfflineDriver(), ResearchManager()
@@ -464,12 +477,28 @@ class ResearchApplicationService:
 
         return research_readiness(self, values)
 
+    def _strategy_lineage_at(self, binding, queue_key):
+        if binding is None:
+            return None
+        with self.queue._connect() as db:
+            row = db.execute("SELECT job_id FROM jobs WHERE idempotency_key=? AND task_type='research'",
+                             (queue_key,)).fetchone()
+        if row is not None:
+            frozen = self._request(self.queue.get(row["job_id"])).research_plan.validation_spec
+            if "strategy_study" in frozen and "strategy_decision_at" not in frozen.get("policy_lineage", {}):
+                # Recreate the original schema. The queue still verifies the
+                # digest of the entire newly constructed request on submission.
+                return None
+        return binding["contract"]["observed_at"][-1]
+
     def submit(self, values, *, factor_study=None, rerun_of=None, strategy_study=None, discovery=None):
         if not isinstance(values, dict):
             raise TypeError("research submission must be an object")
         if set(values) - {"idempotency_key", "snapshot_ref", "question", "instrument", "as_of", "model_config_ref", "budget", "materials", "allow_model_calls", "policy_ref"}:
             raise ValueError("research submission contains unsupported fields")
         key = _ref(values.get("idempotency_key"), "idempotency_key")
+        submission_digest = stable_digest({"scope": self.scope_id, "key": key})
+        queue_key = f"application:{submission_digest[:40]}"
         question = values.get("question")
         if not isinstance(question, str) or not question.strip() or len(question) > 2000:
             raise ValueError("research question must contain 1 to 2000 characters")
@@ -500,12 +529,14 @@ class ResearchApplicationService:
         policy = policy_record["effective"]
         if rerun_of is not None:
             _ref(rerun_of, "rerun_of")
-        lineage = self.learning.lineage(policy_record, snapshot, instrument, rerun_of=rerun_of)
+        decision_at = self._strategy_lineage_at(strategy_study, queue_key)
+        lineage = self.learning.lineage(policy_record, snapshot, instrument, rerun_of=rerun_of,
+                                        strategy_decision_at=decision_at)
         if factor_study is not None and policy_record["version"] != 0:
             raise ValueError("因子实验只能使用其预先冻结的基准配置")
         policy_fingerprint = stable_digest(policy)
         request = ResearchRequest(
-            run_id=f"research-{stable_digest({'scope': self.scope_id, 'key': key})[:24]}",
+            run_id=f"research-{submission_digest[:24]}",
             instrument=instrument, as_of=values.get("as_of"),
             research_plan=ResearchPlan(hypotheses=(question.strip(),), factor_ids=(policy["factor_id"],), validation_spec={"scope_id": self.scope_id, "execution_mode": "provider-grounded" if config is not None else "local-deterministic", "model_config_ref": selected_provider, "data_mode": snapshot.mode, "budget": budget, "policy_fingerprint": policy_fingerprint, "strategy_version": policy["strategy_version"], "policy_lineage": lineage, **({"rerun_of": rerun_of} if rerun_of else {})}),
             analyst_roles=_ROLES, asset_class="EQUITY_OR_ETF", workflow_version=WORKFLOW_VERSION,
@@ -563,7 +594,7 @@ class ResearchApplicationService:
                            "discovery": discovery})
             request = replace(request, research_plan=plan,
                               config_digest=stable_digest({"base": request.config_digest, "discovery": discovery}))
-        record = self.runtime.submit(request, idempotency_key=f"application:{stable_digest({'scope': self.scope_id, 'key': key})[:40]}", limits=limits)
+        record = self.runtime.submit(request, idempotency_key=queue_key, limits=limits)
         return self.get_job(record.job_id)
 
     def _method_store(self):

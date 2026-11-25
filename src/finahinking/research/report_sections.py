@@ -8,7 +8,7 @@ import math
 import re
 from dataclasses import dataclass
 
-from finahinking.workbench_ui import blue_white_report_css
+from finahinking.workbench_ui import REPORT_TEMPLATE, report_css
 
 from .contracts import stable_digest
 from .factor_validation import FactorValidationRun
@@ -83,7 +83,7 @@ def build_method_factor_sections(validation_run, loaded_methods, evidence_view, 
     evidence, lifecycle = _plain(evidence_view), _plain(lifecycle_view)
     steps = {step["stage_id"]: step for step in value["steps"]}
     bindings = value["bindings"]
-    metadata = {"template_version": "blue-white.v1", "validation_fingerprint": run.fingerprint,
+    metadata = {"template_version": REPORT_TEMPLATE, "validation_fingerprint": run.fingerprint,
         "binding_digest": value["binding_digest"], "factor_spec_fingerprint": bindings["factor_spec_fingerprint"],
         "snapshot_ref": bindings["snapshot_ref"], "attachment_ref": bindings["attachment_ref"],
         "runtime_policy_fingerprint": stable_digest(value["policy"]), "source_policy_fingerprint": bindings["source_policy_fingerprint"],
@@ -124,7 +124,7 @@ def render_factor_report_document(sections, *, run_id, question):
         ("methods", "方法与原式"), ("validation", "九步验证"), ("results", "实际结果"), ("sources", "来源"), ("admission", "用途"), ("limitations", "下一步")))
     csp = "default-src 'none'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'"
     return ('<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
-        f'<meta http-equiv="Content-Security-Policy" content="{esc(csp, quote=True)}"><title>Finathink 研究报告 · {esc(run_id)}</title><style>{blue_white_report_css()}</style></head>'
+        f'<meta http-equiv="Content-Security-Policy" content="{esc(csp, quote=True)}"><title>Finathink 研究报告 · {esc(run_id)}</title><style>{report_css()}</style></head>'
         f'<body><main><header class="report-header"><h1>Finathink 研究报告</h1><p>{esc(question)}</p><p class="meta">运行 {esc(run_id)} · 单文件离线阅读 · 原始证据可追溯</p></header>'
         f'<nav class="report-toc" aria-label="报告目录">{toc}</nav>{sections.html}<footer><p>方法、数据、政策和计算均使用此报告的冻结版本。离线打开不访问模型、数据 API 或 CDN。</p></footer></main></body></html>')
 
@@ -134,7 +134,7 @@ def theme_report_document(document):
     csp = "default-src 'none'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'"
     additions = ('<meta name="viewport" content="width=device-width,initial-scale=1">'
         f'<meta http-equiv="Content-Security-Policy" content="{html.escape(csp, quote=True)}">'
-        f'<style>{blue_white_report_css()}</style>')
+        f'<style>{report_css()}</style>')
     document = re.sub(r'<html lang="en">', '<html lang="zh-CN">', document, count=1)
     return document.replace('</head>', additions + '</head>', 1)
 

@@ -211,13 +211,17 @@ export function renderOverviewVisuals(root, normalized) {
   if (chartCanvas && normalized.activity_series.length) {
     chartCanvas.hidden = false;
     const instance = echarts.init(chartCanvas, null, { renderer: 'canvas' });
+    const palette = getComputedStyle(chartCanvas);
+    const axisColor = palette.getPropertyValue('--text-secondary').trim() || '#535f55';
+    const gridColor = palette.getPropertyValue('--border').trim() || '#d5d6ca';
+    const barColor = palette.getPropertyValue('--evidence').trim() || '#154f44';
     instance.setOption({
       animation: !reducedMotion(),
       grid: { top: 20, right: 16, bottom: 32, left: 42 },
       tooltip: { trigger: 'axis', confine: true },
-      xAxis: { type: 'category', data: normalized.activity_series.map((item) => item.date ?? '—'), axisLabel: { color: '#62728a' } },
-      yAxis: { type: 'value', minInterval: 1, axisLabel: { color: '#62728a' }, splitLine: { lineStyle: { color: '#e6ecf4' } } },
-      series: [{ type: 'bar', name: '记录数量', data: normalized.activity_series.map((item) => item.count ?? 0), itemStyle: { color: '#2563eb', borderRadius: [4, 4, 0, 0] } }],
+      xAxis: { type: 'category', data: normalized.activity_series.map((item) => item.date ?? '—'), axisLabel: { color: axisColor } },
+      yAxis: { type: 'value', minInterval: 1, axisLabel: { color: axisColor }, splitLine: { lineStyle: { color: gridColor } } },
+      series: [{ type: 'bar', name: '记录数量', data: normalized.activity_series.map((item) => item.count ?? 0), itemStyle: { color: barColor, borderRadius: [2, 2, 0, 0] } }],
     });
     setHidden(chart.querySelector?.('[data-overview-activity-series]'), true);
     root._finathinkOverviewChart = instance;

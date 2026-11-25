@@ -74,6 +74,12 @@ renamed repository's remote `main` through PR #2.
   gate evidence. A GitHub release is not claimed until a maintainer publishes
   the tagged artifact.
 
+## 0.2.4 - 2026-11-25
+
+- 研究图册提供总览、可交互的证据图、双窗口动量实验和逐期账本复盘。界面与新导出的离线 HTML 采用纸张色和松绿配色。
+- 股票、ETF 与混合纸面策略可观察已结算的可比窗口，审核有作用范围与生效时间的政策，核对原始策略与批准版本的冻结复跑。
+- [图册与结算指南](docs/STRATEGY_SETTLEMENT_ATLAS_GUIDE.md) · [界面规范](DESIGN.md)。
+
 ## 0.2.3 - 2026-11-24
 
 - 多候选因子研究按问题与反例组织公式，预览时显示去重、方向、费用、字段和试验预算。
