@@ -12,7 +12,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import pandas as pd
 
-from .research_fields import _json, _label
+from .research_fields import DATE_RESEARCH_FIELDS, _json, _label
 
 CURRENCIES = frozenset({'CNY', 'USD', 'HKD', 'EUR', 'JPY', 'GBP'})
 # kind, legal units, alignment. State values carry forward only after availability;
@@ -65,6 +65,11 @@ for _name in ('benchmark_return', 'strategy_return', 'total_return'):
 FIELD_PACKS = MappingProxyType({k: tuple(v) for k, v in _PACKS.items()})
 FIELD_DEFINITIONS = MappingProxyType({name: (pack, kind, frozenset(units), alignment)
     for pack, fields in _PACKS.items() for name, (kind, units, alignment) in fields.items()})
+PANEL_RULE_FIELDS = MappingProxyType({
+    'calendar_ref': ('is_session',), 'universe_ref': ('in_universe',),
+    'adjustment_ref': ('split_factor',), 'trade_rule_ref': ('trade_allowed', 'lot_size', 'settlement_days'),
+})
+NATIVE_PRICE_FIELDS = frozenset({'open', 'high', 'low', 'close', 'volume', 'amount', 'suspended'})
 MAX_PANEL_ROWS = 10000
 MAX_PANEL_BYTES = 1_000_000
 
@@ -152,10 +157,16 @@ class PanelFieldAttachment(JsonContract):
         for row in records:
             if not isinstance(row, Mapping) or not {'instrument', 'timestamp', 'available_at'} <= set(row):
                 raise ValueError('字段记录需要资产、观察时间和可用时间')
-            if set(row) - {'instrument', 'timestamp', 'available_at'} - set(units):
+            if set(row) - {'instrument', 'timestamp', 'available_at'} - set(units) - DATE_RESEARCH_FIELDS:
                 raise ValueError('记录包含未声明字段')
             item = {'instrument': instrument(row['instrument']), 'timestamp': panel_time(row['timestamp']).isoformat(),
                     'available_at': None if row['available_at'] is None else panel_time(row['available_at']).isoformat()}
+            for clock in set(row) & DATE_RESEARCH_FIELDS:
+                item[clock] = None if row[clock] is None else panel_time(row[clock]).isoformat()
+            observed = max(item['timestamp'], item.get('effective_from') or item['timestamp'])
+            available = item['available_at']
+            if available is not None:
+                available = max(available, item.get('announcement_at') or available, item.get('revision_at') or available)
             for name in set(row) & set(units):
                 val, kind = row[name], FIELD_DEFINITIONS[name][1]
                 if val is not None:
@@ -177,7 +188,7 @@ class PanelFieldAttachment(JsonContract):
                         raise ValueError('规则必须使用显式布尔值')
                     elif kind == 'text':
                         val = _label(val)
-                key = (item['instrument'], item['timestamp'], item['available_at'], name)
+                key = (item['instrument'], observed, available, name)
                 if key in seen:
                     raise ValueError('字段修订身份重复')
                 seen.add(key)

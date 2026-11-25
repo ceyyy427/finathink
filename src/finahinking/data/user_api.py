@@ -7,7 +7,7 @@ import json
 import math
 import socket
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from ipaddress import ip_address
 from typing import Any, Protocol
@@ -15,7 +15,13 @@ from urllib.parse import parse_qsl, urlencode, urljoin, urlsplit, urlunsplit
 
 from .connection_settings import DataCredentialStore
 from .field_mapping import normalize_records
-from .user_api_contracts import DataBatch, DataConnectionConfig, DataRequest
+from .user_api_contracts import (
+    DataBatch,
+    DataConnectionConfig,
+    DataRequest,
+    fingerprint_records,
+    request_cutoff,
+)
 
 MAX_RESPONSE_BYTES = 5 * 1024 * 1024
 MAX_RECORDS = 10_000
@@ -205,7 +211,7 @@ class JsonApiConnector:
                 raise DataConnectorError("transport", "data transport returned an invalid response")
             if not isinstance(response.body, bytes):
                 raise DataConnectorError("transport", "data transport returned an invalid body")
-            if (response.status_code in {408, 425, 429} or 500 <= response.status_code <= 599) and attempt + 1 < self.max_attempts:
+            if (response.status_code in {408, 425} or 500 <= response.status_code <= 599) and attempt + 1 < self.max_attempts:
                 continue
             if response.status_code in {401, 403}:
                 raise DataConnectorError("unauthorized", "data source rejected authentication", status_code=response.status_code)
@@ -292,7 +298,8 @@ class JsonApiConnector:
             as_of=request.as_of,
         )
 
-    def capture(self, request: DataRequest, store, *, units=None, asset_classes=None, adjustment="UNKNOWN") -> str:
+    def capture(self, request: DataRequest, store, *, units=None, asset_classes=None,
+                adjustment="UNKNOWN", base_ref=None) -> str:
         """Explicitly fetch once and retain an immutable replay reference."""
         from finahinking.data.units import snapshot_asset_classes, snapshot_units
         from finahinking.p8_2.data_sources import snapshot_from_batch
@@ -301,7 +308,31 @@ class JsonApiConnector:
             raise ValueError("请明确声明 RAW 原始价格或 UNKNOWN，不接受未来复权序列")
         declaration = snapshot_units(units)
         classes = snapshot_asset_classes(asset_classes)
-        return store.save(snapshot_from_batch(self.fetch(request), units=declaration, asset_classes=classes, adjustment=adjustment))
+        connection_ref = fingerprint_records([{
+            "connection_id": self.config.connection_id, "url": self.config.base_url,
+            "field_mapping": self.config.field_mapping, "records_path": self.config.records_path,
+            "source_declaration": self.config.source_declaration,
+        }])
+        if base_ref is not None:
+            from .price_extension import append_prices, extension_request
+
+            base = store.load(base_ref)
+            request, last = extension_request(request, base, connection_ref, declaration, classes, adjustment)
+            batch = self.fetch(request)
+            if batch.quality_issues:
+                raise ValueError("增量记录未通过字段检查，请核对连接映射与可用时间。")
+            if not batch.records:
+                return base.fingerprint
+            # A date range can return an update for some members of the universe.
+            updated_assets = {row.get("instrument") for row in batch.records}
+            update = snapshot_from_batch(batch, units=declaration, adjustment=adjustment,
+                                         asset_classes={key: kind for key, kind in classes.items() if key in updated_assets})
+            update = replace(update, provenance={**update.provenance, "asset_classes": classes,
+                                                  "connection_ref": connection_ref})
+            return store.save(append_prices(base, update, request, last, max_records=MAX_RECORDS))
+        snapshot = snapshot_from_batch(self.fetch(request), as_of=request_cutoff(request.as_of), units=declaration,
+                                       asset_classes=classes, adjustment=adjustment)
+        return store.save(replace(snapshot, provenance={**snapshot.provenance, "connection_ref": connection_ref}))
 
 
 __all__ = [

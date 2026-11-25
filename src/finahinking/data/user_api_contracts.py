@@ -12,7 +12,7 @@ import json
 import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, time
 from ipaddress import ip_address
 from itertools import pairwise
 from urllib.parse import parse_qsl, urlsplit
@@ -160,6 +160,16 @@ def _date_or_datetime(value: str | None, name: str) -> str | None:
     if parsed.tzinfo is None and "T" in value:
         raise ValueError(f"{name} datetime must include a timezone")
     return value
+
+
+def request_cutoff(value):
+    """Treat a date-only cutoff as inclusive UTC, and preserve explicit offsets."""
+    if value is None:
+        return None
+    stamp = value if isinstance(value, datetime) else datetime.fromisoformat(value)
+    if isinstance(value, str) and len(value) == 10 and value == stamp.date().isoformat():
+        return datetime.combine(stamp.date(), time.max, tzinfo=UTC)
+    return stamp if stamp.tzinfo is not None else stamp.replace(tzinfo=UTC)
 
 
 @dataclass(frozen=True, slots=True)

@@ -183,8 +183,11 @@ function mountDiscovery(root, fetcher) {
     preview.disabled = true;
     try {
       if (values.mode === 'saved') {
-        body.contract = JSON.parse(values.contract);
-        body.attachment_refs = JSON.parse(values.attachment_refs);
+        if (values.saved_panel_ref) body.saved_panel_ref = values.saved_panel_ref;
+        else {
+          body.contract = JSON.parse(values.contract);
+          body.attachment_refs = JSON.parse(values.attachment_refs);
+        }
       } else if (values.mode === 'sample') {
         const sample = await post(fetcher, '/api/research/discovery/sample', values.csrf, { question: values.question }, request.signal);
         body.contract = sample.contract;
@@ -199,7 +202,7 @@ function mountDiscovery(root, fetcher) {
       if (plan.hypothesis) output.append(element(doc, 'p', plan.hypothesis), element(doc, 'p', plan.falsification));
       const gaps = [...(plan.missing_fields || []), ...(plan.readiness_gaps || [])];
       if (gaps.length) output.append(element(doc, 'p', gaps.join(' · ')));
-      if (plan.status === 'NEEDS_DATA') output.append(link(doc, '打开数据就绪检查', '/settings/data-connections'));
+      if (plan.status === 'NEEDS_DATA') output.append(link(doc, '查看研究面板', '/research/panels'));
       if (plan.status === 'SOURCE_REVIEW_REQUIRED') output.append(link(doc, '查看来源审阅', '#qw-sources'));
       if (plan.status === 'READY' && /^[a-f0-9]{64}$/u.test(plan.fingerprint)) {
         pending = { request, body, csrf: values.csrf, fingerprint: plan.fingerprint, formIdentity: JSON.stringify(values),

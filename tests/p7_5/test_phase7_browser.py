@@ -7,6 +7,8 @@ __all__ = ["browser", "observed_page"]
 
 
 def test_factor_study_page_runs_frozen_test_and_reopens_verified_history(observed_page, tmp_path):
+    from playwright.sync_api import expect
+
     page, artifacts, diagnostics = observed_page
     app = LocalApplication(LocalAppConfig(db_path=str(tmp_path / "app.sqlite"), offline=True))
     server = create_server(app, host="127.0.0.1", port=0)
@@ -16,9 +18,12 @@ def test_factor_study_page_runs_frozen_test_and_reopens_verified_history(observe
     try:
         page.goto(base + "/research/experiments")
         root = page.locator('[data-experiment-workspace]')
-        root.locator('[data-study-sample]').click()
-        root.locator('[name="snapshot_ref"] option').nth(1).wait_for(state="attached")
         form = root.locator('[data-study-form]')
+        with page.expect_response(lambda response: response.url == base + "/api/research/experiments/sample"
+                                  and response.request.method == "POST") as captured:
+            root.locator('[data-study-sample]').click()
+        assert captured.value.status == 201
+        expect(form.locator('[name="snapshot_ref"]')).to_have_value(captured.value.json()["snapshot_ref"])
         form.locator('[name="recipe_id"]').select_option("close_reversal")
         form.locator('[name="question"]').fill("研究均值回归的窗口稳定性")
         form.locator('[name="windows"]').fill("3,5,8")

@@ -1147,6 +1147,7 @@ class LocalApplication:
             "/settings/providers": "模型接口",
             "/settings/data-sources": "数据来源",
             "/settings/data-connections": "数据接口",
+            "/research/panels": "研究面板",
             "/diagnostics": "诊断与恢复",
         }
 
@@ -1229,7 +1230,7 @@ class LocalApplication:
             ("研究", "nav-workspace", ("/", "/research/jobs", "/events", "/knowledge", "/research/experiments", "/strategy", "/research/learning")),
             ("资料", "nav-library", ("/library/methods", "/library/behavior", "/library/lessons")),
             ("学习", "nav-learn", ("/explore", "/quant", "/research", "/research/workbench", "/research/compare", "/workbench", "/ml", "/parameter", "/workspace", "/community", "/settings/engines", "/settings/data-sources")),
-            ("系统", "nav-system", ("/settings/data-connections", "/settings/providers", "/research/maintenance", "/diagnostics")),
+            ("系统", "nav-system", ("/research/panels", "/settings/data-connections", "/settings/providers", "/research/maintenance", "/diagnostics")),
         )
         icons = {"/": "overview", "/research/jobs": "codex", "/events": "events", "/knowledge": "knowledge", "/research/experiments": "factor", "/strategy": "strategy", "/research/learning": "report", "/settings/data-connections": "data"}
 
@@ -1704,6 +1705,18 @@ class LocalApplication:
                 service.snapshots.save(snapshot)
                 return 201, content_type, self._snapshot_summary(snapshot)
             if clean == "/api/research/snapshots/capture" and method == "POST":
+                if "base_ref" in values:
+                    if set(values) != {"base_ref", "end"}:
+                        raise ValueError("增量只接受原快照和新的截止日期。")
+                    base = service.snapshots.load(values["base_ref"])
+                    config = self._data_connections.get(base.provenance.get("connection_id"))
+                    request = DataRequest("prices", tuple(base.instruments), end=values["end"])
+                    reference = JsonApiConnector(config, self._data_connections.credentials, self._data_transport).capture(
+                        request, service.snapshots, units=base.provenance.get("units"),
+                        asset_classes=base.provenance.get("asset_classes"), adjustment=base.provenance.get("adjustment"),
+                        base_ref=values["base_ref"],
+                    )
+                    return 201, content_type, self._snapshot_summary(service.snapshots.load(reference))
                 if set(values) - {"connection_id", "instrument", "start", "end", "as_of", "price_currency", "volume_unit", "asset_classes", "adjustment"}:
                     raise ValueError("unsupported capture fields")
                 config = self._data_connections.get(values["connection_id"])
@@ -1722,6 +1735,8 @@ class LocalApplication:
         except KeyError:
             return 404, content_type, {"error": "未找到当前会话的研究任务或数据连接。"}
         except DataConnectorError as exc:
+            if exc.code == "rate_limited":
+                return 429, content_type, {"error": "数据接口正在限流，请按服务方提示稍后手动重试。", "code": exc.code}
             return 502, content_type, {"error": "数据获取失败，请检查连接、字段映射及数据权限。", "code": exc.code}
         except (ValueError, TypeError) as exc:
             from .p8_2.data_sources import MissingPriceFields
@@ -1731,6 +1746,12 @@ class LocalApplication:
                 return 422, content_type, {"error": str(exc)}
             if clean == "/api/research/snapshots/capture" and isinstance(exc, MissingPriceFields):
                 return 422, content_type, {"error": "数据缺少必要字段：" + "、".join(exc.fields) + "。请在数据接口中补齐字段映射，再获取快照。", "code": "MISSING_PRICE_FIELDS", "missing_fields": list(exc.fields)}
+            if clean == "/api/research/snapshots/capture" and "base_ref" in values:
+                from .research.contracts import _unsafe_public_text
+
+                message = str(exc)
+                if len(message) <= 160 and any("\u3400" <= char <= "\u9fff" for char in message) and not _unsafe_public_text(message):
+                    return 422, content_type, {"error": message}
             if clean.startswith("/api/research/learning"):
                 from .research.contracts import _unsafe_public_text
 
@@ -1855,7 +1876,7 @@ class LocalApplication:
             '<label>API Key 请求头名称（请求头认证时填写）<input name="auth_header" value="X-API-Key" maxlength="64"></label>'
             '<label>记录所在路径<input name="records_path" placeholder="data" maxlength="128"></label>'
             '<label>字段映射（左侧为平台字段，右侧改为你的 API 字段）<textarea name="field_mapping" rows="7">{"instrument":"ticker","timestamp":"time","open":"open","high":"high","low":"low","close":"price","volume":"volume","available_at":"available_at"}</textarea></label>'
-            '<button type="submit">保存数据接口</button></form><p class="field-help">保存不会下载数据。日频研究需要标的、观测时间、开高低收、成交量与数据可用时间；日期建议使用带时区的时间戳。映射不补造缺失的数据。</p><p><a href="/research/jobs">返回研究任务，获取数据快照</a></p></section>'
+            '<button type="submit">保存数据接口</button></form><p class="field-help">保存不会下载数据。日频行情需要标的、观测时间、开高低收、成交量与数据可用时间。日历、交易规则、财务或 ETF 字段可以单独配置接口。</p><p><a href="/research/panels">获取数据并准备研究面板</a> · <a href="/research/jobs">返回研究任务</a></p></section>'
             f'<section class="section"><h2>已保存的接口</h2><div class="grid">{cards}</div></section>'
         )
         return self.render_shell("/settings/data-connections", "数据接口", body, inspector=self._inspector("数据边界", {"模式": "用户自己的 API", "凭证": "仅保存引用", "读取": "用户明确发起"}, status="USER-OWNED"))
@@ -1945,6 +1966,11 @@ class LocalApplication:
         discovery_response = self._discovery_route(method, clean, body)
         if discovery_response is not None:
             return discovery_response
+        from .research.panel_routes import route as panel_route
+
+        panel_response = panel_route(self, method, clean, query, body)
+        if panel_response is not None:
+            return panel_response
         strategy_response = self._strategy_route(method, clean, body, query)
         if strategy_response is not None:
             return strategy_response

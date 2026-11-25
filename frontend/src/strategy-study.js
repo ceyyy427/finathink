@@ -32,7 +32,8 @@ export function mountStrategyStudy(form) {
       }
       const data = values.get('mode') === 'sample'
         ? await submit('/api/research/strategies/sample', { _csrf: csrf })
-        : { contract: JSON.parse(values.get('contract')), attachment_refs: JSON.parse(values.get('attachment_refs')) };
+        : values.get('saved_panel_ref') ? { saved_panel_ref: values.get('saved_panel_ref') }
+          : { contract: JSON.parse(values.get('contract')), attachment_refs: JSON.parse(values.get('attachment_refs')) };
       if (JSON.stringify([...new FormData(form)]) !== next) {
         status.textContent = '输入已改变，请核对后重新提交。';
         return;
@@ -41,8 +42,8 @@ export function mountStrategyStudy(form) {
         _csrf: csrf,
         idempotency_key: requestKey,
         template_id: values.get('template_id'),
-        contract: data.contract,
-        attachment_refs: data.attachment_refs,
+        ...(data.saved_panel_ref ? { saved_panel_ref: data.saved_panel_ref }
+          : { contract: data.contract, attachment_refs: data.attachment_refs }),
         parameters,
       });
       if (typeof result.job_id !== 'string' || !/^[a-zA-Z0-9_-]+$/.test(result.job_id)) {

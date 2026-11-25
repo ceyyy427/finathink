@@ -173,12 +173,12 @@ class ResearchFieldStore:
             raise ValueError("research field fingerprint is invalid")
         return self.root / f"{fingerprint}.json"
 
-    def _bound_snapshot(self, attachment):
-        try:
-            snapshot = self.snapshots.load(attachment.snapshot_ref)
-        except (OSError, ValueError) as exc:
-            raise ValueError("research fields are not bound to an available snapshot") from exc
-        instruments = set(snapshot.instruments)
+    def _bound_snapshot(self, attachment, instruments=None):
+        if instruments is None:
+            try:
+                instruments = set(self.snapshots.load(attachment.snapshot_ref).instruments)
+            except (OSError, ValueError) as exc:
+                raise ValueError("research fields are not bound to an available snapshot") from exc
         if any(item["instrument"] not in instruments for item in attachment.records):
             raise ValueError("research field instrument is outside its snapshot")
 
@@ -207,7 +207,7 @@ class ResearchFieldStore:
             temporary.unlink(missing_ok=True)
         return attachment.fingerprint
 
-    def load(self, fingerprint):
+    def _load(self, fingerprint, *, binding=None):
         path = self._path(fingerprint)
         if path.is_symlink() or self.root.is_symlink():
             raise ValueError("research field path is invalid")
@@ -217,13 +217,36 @@ class ResearchFieldStore:
             if len(encoded) > MAX_FIELD_BYTES:
                 raise ValueError("research field size limit exceeded")
             payload = json.loads(encoded)
+            if binding is not None and isinstance(payload, dict) and payload.get('snapshot_ref') != binding[0]:
+                return None
             from .panel_contracts import PanelFieldAttachment
 
             kind = PanelFieldAttachment if isinstance(payload, dict) and payload.get('schema_version') == PanelFieldAttachment.VERSION else ResearchFieldAttachment
             result = kind.from_dict(payload)
             if result.fingerprint != fingerprint:
                 raise ValueError("research field reference integrity mismatch")
-            self._bound_snapshot(result)
+            self._bound_snapshot(result, binding[1] if binding is not None else None)
             return result
         except (OSError, ValueError, TypeError, KeyError, RecursionError) as exc:
             raise ValueError("research field artifact is unavailable or invalid") from exc
+
+    def load(self, fingerprint):
+        return self._load(fingerprint)
+
+    def load_for_snapshot(self, snapshot, fingerprints):
+        binding = (snapshot.fingerprint, set(snapshot.instruments))
+        attachments = [self._load(value, binding=binding) for value in fingerprints]
+        if any(item is None for item in attachments):
+            raise ValueError("字段附件不属于所选快照，请重新选择。")
+        return attachments
+
+    def list_for_snapshot(self, snapshot):
+        """List valid artifacts bound to a verified snapshot, without loading it again per file."""
+        binding = (snapshot.fingerprint, set(snapshot.instruments))
+        for path in sorted(self.root.glob('*.json')):
+            try:
+                attachment = self._load(path.stem, binding=binding)
+            except ValueError:
+                continue
+            if attachment is not None:
+                yield attachment

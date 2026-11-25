@@ -4,6 +4,7 @@ import { mountFactorSuite } from './factor-suite.js';
 import { mountFactorLibrary } from './factor-library.js';
 import { mountLearningReliability } from './learning-reliability.js';
 import { mountTaskMaintenance } from './task-maintenance.js';
+import { mountPanelWorkbench, mountSavedPanelSelectors } from './panel-workbench.js';
 import { mountResearchReproduction } from './research-reproduction.js';
 import {
   CandlestickSeries,
@@ -591,6 +592,8 @@ export function mountResearch(root, { payload, payloadUrl } = {}) {
 
 if (typeof document !== 'undefined') {
   mountAppShell(document);
+  mountSavedPanelSelectors(document);
+  document.querySelectorAll('[data-panel-workbench]').forEach(root => mountPanelWorkbench(root));
   document.querySelectorAll("[data-quant-workbench]").forEach(root => mountQuantWorkspace(root));
   document.querySelectorAll("[data-qw-pool]").forEach(root => mountQuantPool(root));
   document.querySelectorAll('[data-strategy-study]').forEach(mountStrategyStudy);

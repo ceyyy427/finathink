@@ -20,6 +20,7 @@ no runtime or development package dependencies in this phase.
 | `ruff` | 0.16.9 | Static checks and formatting | MIT; Astral maintenance; update through reviewed lock refresh | P1 |
 | `jupyterlab` | 4.6.4 | Reproducible research workspace | BSD-3-Clause; Jupyter maintenance; update through reviewed lock refresh | P1 |
 | `ipykernel` | 7.4.0 | Notebook kernel | BSD-3-Clause; Jupyter maintenance; update through reviewed lock refresh | P1 |
+| `tornado` | 6.6.1 | HTTP runtime for the optional Jupyter environment | Apache-2.0; security minimum for the research extra | Phase 29 |
 | `setuptools` | 84.0.0 | PEP 517 build backend | MIT; PyPA maintenance; exact build pin in `pyproject.toml` and lock | P1 |
 
 Adding or upgrading a package requires a purpose, a compatibility note, a
