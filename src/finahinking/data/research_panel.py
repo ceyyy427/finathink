@@ -57,6 +57,25 @@ def field_clocks(row):
     return observed, available
 
 
+def native_observation_index(snapshot, timezones):
+    by_session = {}
+    for row in snapshot.observations:
+        zone = timezones.get(row.instrument)
+        if zone:
+            key = (row.instrument, row.timestamp.tz_convert(zone).date())
+            by_session.setdefault(key, []).append(row)
+    return by_session
+
+
+def native_quote_at(by_session, asset, decision_at, zone, snapshot_as_of):
+    if not zone:
+        return None
+    cutoff = min(decision_at, snapshot_as_of)
+    quotes = by_session.get((asset, decision_at.tz_convert(zone).date()), ())
+    return next((row for row in reversed(quotes) if row.timestamp <= cutoff
+                 and row.available_at is not None and row.available_at <= cutoff), None)
+
+
 def build_research_panel(snapshot, field_attachments, contract: PanelContract, *, include_availability=False):
     if not isinstance(snapshot, DatasetSnapshot) or not isinstance(contract, PanelContract):
         raise TypeError('需要类型化快照和面板合同')
@@ -110,9 +129,8 @@ def build_research_panel(snapshot, field_attachments, contract: PanelContract, *
         globals_.append('currency：快照单位未知，请重新声明并获取快照')
     if any(name in units and unit != 'UNKNOWN' and units[name] != unit for name, unit in declared_units.items()):
         raise ValueError('面板单位与快照声明不一致')
-    native = {}
-    for obs in snapshot.observations:
-        native.setdefault(obs.instrument, []).append(obs)
+    timezones = contract.timezones
+    native = native_observation_index(snapshot, timezones)
     index = pd.MultiIndex.from_product([pd.DatetimeIndex([panel_time(t) for t in contract.observed_at]), contract.instrument_ids],
                                       names=['observed_at', 'instrument'])
     columns = sorted(set(units) | {'is_session', 'in_universe', 'trade_allowed', 'lot_size', 'settlement_days', 'split_factor', 'suspended'})
@@ -123,14 +141,12 @@ def build_research_panel(snapshot, field_attachments, contract: PanelContract, *
         cutoff = min(time, snapshot.as_of)
         row = {name: None for name in columns}
         issues = list(globals_)
-        zone, currency = contract.timezones.get(asset), contract.currencies.get(asset)
+        zone, currency = timezones.get(asset), contract.currencies.get(asset)
         if not zone:
             issues.append('timezone：缺少资产时区')
         if currency not in {'CNY','USD','HKD','EUR','JPY','GBP'}:
             issues.append('currency：缺少资产币种')
-        candidates = [o for o in native.get(asset, ()) if zone and o.timestamp <= cutoff and o.available_at is not None
-                      and o.available_at <= cutoff and o.timestamp.tz_convert(zone).date() == time.tz_convert(zone).date()]
-        obs = max(candidates, key=lambda o: o.timestamp) if candidates else None
+        obs = native_quote_at(native, asset, time, zone, snapshot.as_of)
         clocks = {}
         for name in columns:
             if name in NATIVE_PRICE_FIELDS:

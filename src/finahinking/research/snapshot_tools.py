@@ -55,7 +55,8 @@ def local_research_policy():
 class SnapshotResearchTools(ResearchToolGateway):
     """Use the in-house engine; never resolve a missing input to a fixture."""
 
-    def __init__(self, snapshot: DatasetSnapshot, *, publication_before=None, policy=None, policy_lineage=None) -> None:
+    def __init__(self, snapshot: DatasetSnapshot, *, publication_before=None, policy=None, policy_lineage=None,
+                 panel_scope=None) -> None:
         if not isinstance(snapshot, DatasetSnapshot):
             raise TypeError("snapshot must be a DatasetSnapshot")
         # Defensive roundtrip also verifies nested content before it is used.
@@ -63,7 +64,11 @@ class SnapshotResearchTools(ResearchToolGateway):
         self.publication_before = pd.Timestamp(publication_before) if publication_before is not None else None
         if self.publication_before is not None and (pd.isna(self.publication_before) or self.publication_before.tzinfo is None):
             raise ValueError("publication boundary must be timezone-aware")
-        self.observations = tuple(item for item in self.snapshot.observations if self.publication_before is None or item.timestamp < self.publication_before)
+        self.panel_scope = panel_scope
+        self.observations = (self.panel_observations(self.snapshot, panel_scope, self.publication_before)
+                             if panel_scope is not None else tuple(
+                                 item for item in self.snapshot.observations
+                                 if self.publication_before is None or item.timestamp < self.publication_before))
         self.policy = dict(local_research_policy() if policy is None else policy)
         self.policy_lineage = dict(policy_lineage or {})
         self.analysis: dict = {}
@@ -89,6 +94,28 @@ class SnapshotResearchTools(ResearchToolGateway):
         parsed = date.fromisoformat(as_of)
         return pd.Timestamp(parsed, tz="UTC") + pd.Timedelta(days=1) - pd.Timedelta(nanoseconds=1)
 
+    @staticmethod
+    def panel_observations(snapshot, scope, publication_before):
+        from finahinking.data.research_panel import native_observation_index, native_quote_at
+
+        times = pd.DatetimeIndex(scope["observed_at"])
+        if publication_before is not None:
+            times = times[times < pd.Timestamp(publication_before)]
+        timezones = scope["timezones"]
+        native = native_observation_index(snapshot, timezones)
+        projected = []
+        for asset in scope["instrument_ids"]:
+            for decision_at in times:
+                quote = native_quote_at(native, asset, decision_at, timezones.get(asset), snapshot.as_of)
+                if quote is not None:
+                    projected.append(replace(quote, timestamp=decision_at))
+        return tuple(projected)
+
+    def _pit_available(self, boundary):
+        if self.panel_scope is not None:
+            return bool(self.observations) and all(item.available_at_time(boundary) for item in self.observations)
+        return self.snapshot.pit_available(boundary)
+
     def _execute_research(self, request: ResearchToolRequest, digest: str) -> ResearchToolResponse:
         if request.name != "research.inspect_dataset":
             return self._rejected(request.name, "tool is not implemented for selected snapshots", request_id=request.run_id, digest=digest)
@@ -97,7 +124,7 @@ class SnapshotResearchTools(ResearchToolGateway):
             boundary = self._boundary(request.args["as_of"])
         except (KeyError, TypeError, ValueError):
             return self._rejected(request.name, "as_of must be an ISO research date", request_id=request.run_id, digest=digest)
-        if not valid or not self.snapshot.pit_available(boundary):
+        if not valid or not self._pit_available(boundary):
             return ResearchToolResponse(
                 request_id=request.run_id, name=request.name, status=ResearchToolStatus.UNAVAILABLE,
                 failure_kind=FailureKind.DATA_UNAVAILABLE,
@@ -117,7 +144,7 @@ class SnapshotResearchTools(ResearchToolGateway):
     def _check_binding(self, parameters):
         if parameters.get("dataset_fingerprint") != self.snapshot.fingerprint:
             raise ValueError("selected dataset fingerprint mismatch")
-        if not self.snapshot.pit_available(self._boundary(parameters["as_of"])):
+        if not self._pit_available(self._boundary(parameters["as_of"])):
             raise ValueError("selected snapshot has unknown or future availability")
 
     def _backtest(self, parameters):
@@ -191,6 +218,8 @@ class SnapshotResearchTools(ResearchToolGateway):
         self.analysis["comparison_conditions"]["instrument"] = instrument
         if self.policy_lineage:
             self.analysis["policy_lineage"] = self.policy_lineage
+        if self.panel_scope is not None:
+            self.analysis["reproduction"]["panel_scope"] = self.panel_scope
         self.analysis["publication_scope"] = {"kind": "PRE_TEST_ONLY" if self.publication_before is not None else "FULL_SELECTED_PERIOD", "before_exclusive": self.publication_before.isoformat() if self.publication_before is not None else None}
         self.analysis["fingerprint"] = stable_digest(self.analysis)
         return self.analysis
@@ -251,7 +280,9 @@ class SnapshotResearchTools(ResearchToolGateway):
         }
         from .quant_evidence import compute_quant_evidence
 
-        self.analysis["quant_evidence"] = compute_quant_evidence(self.snapshot, parameters["as_of"], self.publication_before)
+        self.analysis["quant_evidence"] = compute_quant_evidence(
+            self.snapshot, parameters["as_of"], self.publication_before,
+            observations=self.observations if self.panel_scope is not None else None)
         self.risk_payload["allocation_fingerprint"] = proposal.fingerprint
         self.analysis["fingerprint"] = stable_digest({key: value for key, value in self.analysis.items() if key != "fingerprint"})
         return self.risk_payload

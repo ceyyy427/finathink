@@ -217,6 +217,7 @@ def workspace_page(payload, csrf, *, journey=None, updates=()):
 <a href="/research/strategies">策略与风险</a><a href="/research/pools">研究池</a><a href="/research/experiments">实验</a>
 <a href="/research/panels">研究面板</a><a href="/research/jobs">任务与报告</a><a href="/research/compare">对比与复现</a><a href="/library/sources">来源</a><a href="#qw-sources">来源审阅</a></nav>
 <section class="panel" id="qw-start"><h2>从研究问题开始</h2>
+<p><a href="/research/factor-suites#multi-factor-discovery">从问题生成多候选</a> · 先比较公式与反证，再冻结其中一条进行最终检验。</p>
 <form data-qw-discovery>
 <input type="hidden" name="csrf" value="{escape(csrf, quote=True)}">
 <label>研究问题<input name="question" value="{escape(heading, quote=True)}" maxlength="1000" list="qw-questions" required></label>

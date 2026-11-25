@@ -5,10 +5,11 @@ from html import escape
 from finahinking.data.panel_contracts import CURRENCIES
 
 
-def saved_panel_select():
-    return """<div data-panel-picker>
-<label for="saved-panel-ref">已保存面板</label>
-<select id="saved-panel-ref" name="saved_panel_ref" data-saved-panel-select>
+def saved_panel_select(field_id="saved-panel-ref", label="已保存面板"):
+    field_id, label = escape(field_id, quote=True), escape(label)
+    return f"""<div data-panel-picker>
+<label for="{field_id}">{label}</label>
+<select id="{field_id}" name="saved_panel_ref" data-saved-panel-select>
 <option value="">请选择研究面板</option></select>
 <p class="field-help"><a href="/research/panels">准备或查看研究面板</a></p></div>"""
 

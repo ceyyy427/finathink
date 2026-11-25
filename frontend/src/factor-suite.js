@@ -1,4 +1,5 @@
 import { readLocalJSON, userErrorMessage } from './local-request.js';
+import { mountFactorDiscovery } from './factor-discovery.js';
 const mounted = new WeakSet();
 export function mountFactorSuite(form) {
   if (mounted.has(form)) return;
@@ -8,6 +9,8 @@ export function mountFactorSuite(form) {
   style.textContent = '.suite-choices label{display:flex;align-items:flex-start;gap:8px;line-height:1.4;font-weight:500}.suite-choices input[type=checkbox]{width:18px;min-width:18px;max-width:18px;height:18px;min-height:18px;margin:1px 0;flex:none}';
   root.prepend(style);
   const csrf = form.querySelector('[name=csrf]').value;
+  const discovery = root.querySelector('[data-factor-discovery]');
+  if (discovery) mountFactorDiscovery(discovery);
   let key; let signature;
   form.addEventListener('submit', async event => {
     event.preventDefault();
@@ -47,6 +50,12 @@ export function mountFactorSuite(form) {
         const body = { _csrf: csrf };
         if (kind === 'freeze') body.candidate_id = new FormData(action).get('candidate_id');
         if (kind === 'test') { actionKey ||= 'test-' + crypto.randomUUID(); body.idempotency_key = actionKey; }
+        if (kind === 'review') {
+          const values = new FormData(action);
+          body.decision = values.get('decision');
+          body.reviewer_id = values.get('reviewer_id').trim();
+          body.use_scope = JSON.parse(action.querySelector('[data-suite-review-scope]').textContent);
+        }
         const url = kind === 'cancel' ? '/api/research/jobs/' + encodeURIComponent(action.dataset.job) + '/cancel' : '/api/research/experiments/' + encodeURIComponent(study) + '/' + kind;
         await readLocalJSON(fetch, url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
         location.reload();

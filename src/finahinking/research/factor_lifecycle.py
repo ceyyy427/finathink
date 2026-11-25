@@ -74,6 +74,12 @@ def _match(decision, evidence):
         raise ValueError("factor use scope does not match evaluation")
     if row["reproduction_scope"] == "FORMULA_FIXTURE" and decision.purpose != "FORMULA_RESEARCH":
         raise ValueError("formula fixture cannot approve investment research use")
+    if row.get("evidence_kind") == "MULTI_FACTOR_FINAL_TEST":
+        if decision.decision not in _FINAL or decision.purpose != "FORMULA_RESEARCH" or row["phase"] != "test" or not row.get("freeze_ref"):
+            raise ValueError("多候选检验只接受已冻结公式的明确研究审核。")
+        if decision.decision == "APPROVE_FOR_RESEARCH" and (row["status"] != "PASS" or row["reproduction_scope"] == "UNKNOWN_PANEL"):
+            raise ValueError("仅允许通过最终检验且数据模式明确的公式进入研究目录。")
+        return row
     if decision.decision in _FINAL:
         if (row["status"] != "COMPLETE" or row["phase"] != "test" or not row.get("settled")
                 or len(row["stages"]) != 9 or any(stage["status"] != "COMPLETE" for stage in row["stages"])):

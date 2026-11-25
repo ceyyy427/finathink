@@ -1540,16 +1540,23 @@ class LocalApplication:
             return 422, "application/json", {"error": "请核对模板、面板合同、附件与批准政策。"}
 
     def _factor_suite_route(self, method, clean, body, query):
-        if clean not in {"/research/factor-suites", "/api/research/factor-suites"}:
+        discovery = {"/api/research/factor-suites/discovery", "/api/research/factor-suites/discovery/preview"}
+        if clean not in {"/research/factor-suites", "/api/research/factor-suites", *discovery}:
             return None
+        from .research.factor_discovery import FactorDiscoveryInputError
+
         try:
             if method == "POST" and clean.startswith("/api/"):
                 denied = self._data_write_guard(body)
                 if denied is not None:
                     return denied
                 values = {k: v for k, v in (body or {}).items() if k != "_csrf"}
+                if clean in discovery:
+                    if clean.endswith("/preview"):
+                        return 200, "application/json", self.research_service.preview_factor_discovery(values)
+                    return 202, "application/json", self.research_service.create_factor_discovery(values)
                 return 202, "application/json", self.research_service.create_factor_suite(values)
-            if method != "GET":
+            if method != "GET" or clean in discovery:
                 return 405, "application/json", {"error": "请显式提交研究或读取已有评分。"}
             study_id = (query or {}).get("study", [None])[0]
             if clean.startswith("/api/"):
@@ -1558,7 +1565,13 @@ class LocalApplication:
                 return 200, "application/json", {"studies": [{"study_id": r["study_id"], "state": r["state"]} for r in self.research_service.factor_studies.list() if r["spec"].get("version") == "factor-workbench.suite.v1"]}
             from .research.factor_suite_page import suite_page
             return 200, "text/html; charset=utf-8", self.render_shell("/research/experiments", "因子检验", suite_page(self.research_service, self.csrf_token, study_id))
+        except FactorDiscoveryInputError as exc:
+            return 422, "application/json", {"error": str(exc)}
+        except (OSError, sqlite3.Error):
+            return 503, "application/json", {"error": "多候选研究材料暂时不可读取，请检查本地数据与存储。"}
         except (KeyError, TypeError, ValueError):
+            if clean in discovery:
+                return 422, "application/json", {"error": "请核对研究问题、已保存面板和市场标签，再预览并提交计划。"}
             return 422, "application/json", {"error": "研究输入或证据无效，请核对候选数量、数据合同和研究版本。"}
 
     def _factor_library_route(self, method, clean, body, query):
@@ -1680,8 +1693,10 @@ class LocalApplication:
                         return 202, content_type, service.test_factor_study(parts[0], values["idempotency_key"])
                     if parts[1] == "replay" and not values:
                         return 200, content_type, service.replay_snapshot_factor(parts[0])
-                    if parts[1] == "review" and set(values) == {"decision", "reviewer_id"}:
-                        return 200, content_type, service.review_factor_study(parts[0], values["decision"], values["reviewer_id"])
+                    review_fields = {"decision", "reviewer_id"}
+                    if parts[1] == "review" and set(values) in (review_fields, review_fields | {"use_scope"}):
+                        return 200, content_type, service.review_factor_study(
+                            parts[0], values["decision"], values["reviewer_id"], use_scope=values.get("use_scope"))
                 return 405, content_type, {"error": "use explicit study actions with supported fields"}
             if clean == "/api/research/jobs":
                 if method == "POST":
@@ -1740,9 +1755,10 @@ class LocalApplication:
             return 502, content_type, {"error": "数据获取失败，请检查连接、字段映射及数据权限。", "code": exc.code}
         except (ValueError, TypeError) as exc:
             from .p8_2.data_sources import MissingPriceFields
+            from .research.factor_discovery import FactorDiscoveryInputError
             from .research.factor_workbench import SnapshotFactorInputError
 
-            if isinstance(exc, SnapshotFactorInputError):
+            if isinstance(exc, (SnapshotFactorInputError, FactorDiscoveryInputError)):
                 return 422, content_type, {"error": str(exc)}
             if clean == "/api/research/snapshots/capture" and isinstance(exc, MissingPriceFields):
                 return 422, content_type, {"error": "数据缺少必要字段：" + "、".join(exc.fields) + "。请在数据接口中补齐字段映射，再获取快照。", "code": "MISSING_PRICE_FIELDS", "missing_fields": list(exc.fields)}

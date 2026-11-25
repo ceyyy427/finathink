@@ -144,6 +144,9 @@ class FactorStudyStore:
                 for asset in instruments:
                     claim_id = study_id if asset == instrument else study_id + ":" + asset
                     db.execute("INSERT INTO factor_test_claims VALUES (?,?,?,?,?)", (self.scope_id, claim_id, asset, start.value, end.value))
+                if "multi_factor_discovery" in row["spec"]:
+                    db.execute("INSERT INTO factor_suite_trials VALUES (?,?,?,?,'REGISTERED',NULL)",
+                               (self.scope_id, study_id, "test", row["candidate_id"]))
                 db.execute("UPDATE factor_studies SET test_key=?,state='TEST_RESERVED' WHERE scope_id=? AND study_id=?", (key, self.scope_id, study_id))
         return self.get(study_id)
 
@@ -189,6 +192,7 @@ class FactorStudyStore:
             db.execute("INSERT OR IGNORE INTO factor_suite_trials VALUES (?,?,?,?,'REGISTERED',NULL)",(self.scope_id,study_id,phase,factor_id))
             old=db.execute("SELECT * FROM factor_suite_trials WHERE scope_id=? AND study_id=? AND phase=? AND factor_id=?",(self.scope_id,study_id,phase,factor_id)).fetchone()
             if old['state']==state and old['result_ref']==result_ref:return
+            if old['state']=='CANCELLED':raise ValueError('已取消的试验不能重新执行')
             if old['state'] in {'PASS','FALSIFIED','NEEDS_DATA','EXECUTION_FAILED'}:
                 if state=='RUNNING':return  # a worker retry recomputes the immutable record
                 if old['state']!=state or old['result_ref']!=result_ref:raise ValueError('试验结果不能重写')

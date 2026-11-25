@@ -31,7 +31,7 @@ def _uncertainty(returns, intervals):
     return result
 
 
-def compute_quant_evidence(snapshot, as_of, publication_before=None):
+def compute_quant_evidence(snapshot, as_of, publication_before=None, *, observations=None):
     from .snapshot_tools import SnapshotResearchTools
 
     boundary = SnapshotResearchTools._boundary(as_of)
@@ -54,10 +54,11 @@ def compute_quant_evidence(snapshot, as_of, publication_before=None):
     def finish():
         result['fingerprint'] = stable_digest(result)
         return result
-    if len(snapshot.observations) > 20000 or len(snapshot.instruments) > 20:
+    inputs = snapshot.observations if observations is None else observations
+    if len(inputs) > 20000 or len({row.instrument for row in inputs}) > 20:
         result['blocking_reasons'] = ['RESOURCE_LIMIT']
         return finish()
-    rows = [row for row in snapshot.observations if cutoff is None or row.timestamp < cutoff]
+    rows = [row for row in inputs if cutoff is None or row.timestamp < cutoff]
     assets = sorted({row.instrument for row in rows})
     groups = {asset: [row for row in rows if row.instrument == asset] for asset in assets}
     units = snapshot.provenance.get('units', {})

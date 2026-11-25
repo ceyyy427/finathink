@@ -16,11 +16,28 @@ SAMPLE_SPEC = {'schema_version':'factor-validation-sample.v1','seed':2501,'asset
                'start':'2021-01-04','calendar':'business-day observations; synthetic, no exchange calendar',
                'generator':'integer-modular-v2','data_mode':'SAMPLE','price_basis':'RAW','variant':'baseline'}
 
+_DISCOVERY_FIXTURES = {
+    "trend_momentum": (2010, 2601), "reversal": (2011, 2602), "volatility_tail": (2012, 2603),
+    "liquidity_turnover": (2013, 2604), "value": (2014, 2605), "quality_profitability_accrual": (2015, 2606),
+    "growth_investment": (2016, 2607), "industry_style": (2017, 2608), "event_institutional": (2018, 2609),
+    "etf_macro": (2019, 2610),
+}
+
+
+def discovery_sample_spec(family):
+    year, seed = _DISCOVERY_FIXTURES[family]
+    return {**SAMPLE_SPEC, "sample_family": family, "start": f"{year}-01-04", "seed": seed,
+            "assets": 8, "observations": 100}
+
 
 class ValidationSample:
     def __init__(self, spec=None):
         self.spec = dict(SAMPLE_SPEC if spec is None else spec)
-        if (set(self.spec) != set(SAMPLE_SPEC) or self.spec['schema_version'] != SAMPLE_SPEC['schema_version']
+        family = self.spec.get("sample_family")
+        if "sample_family" in self.spec:
+            if not isinstance(family, str) or family not in _DISCOVERY_FIXTURES or self.spec != discovery_sample_spec(family):
+                raise ValueError("多候选研究样例必须使用固定家族规范。")
+        elif (set(self.spec) != set(SAMPLE_SPEC) or self.spec['schema_version'] != SAMPLE_SPEC['schema_version']
                 or self.spec['generator'] != SAMPLE_SPEC['generator'] or self.spec['data_mode'] != 'SAMPLE'
                 or type(self.spec['assets']) is not int or not 4 <= self.spec['assets'] <= 64
                 or type(self.spec['observations']) is not int or not 60 <= self.spec['observations'] <= 756
@@ -47,6 +64,8 @@ class ValidationSample:
         t,a=self._t,self._a
         shock=((t*37+a*53+self.spec['seed'])%97-48)/1000
         close=30+a*.2+t*.012+((t*13+a*17)%31)/15
+        if "sample_family" in self.spec:
+            close = close * (1 + shock / 2)
         if self.spec['variant']=='extreme_return':close=close*np.where((t==len(self.times)//2)&(a==0),.25,1.)
         if name=='close':values=close
         elif name=='open':values=close*(1-shock/4)

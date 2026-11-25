@@ -480,6 +480,12 @@ class ReportBundleWriter:
             section = discovery_section(analytics_payload["discovery"])
             tail = "</main>" if "</main>" in complete_document else "</body>"
             complete_document = complete_document.replace(tail, section + tail, 1)
+        if study and study.get("charter", {}).get("multi_factor_discovery"):
+            from .report_sections import multi_factor_discovery_section
+
+            section = multi_factor_discovery_section(study)
+            tail = "</main>" if "</main>" in complete_document else "</body>"
+            complete_document = complete_document.replace(tail, section + tail, 1)
         complete_path.write_text(complete_document, encoding="utf-8")
         activity_path = bundle / "activity.jsonl"
         if activity_path.exists():
