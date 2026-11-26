@@ -744,14 +744,15 @@ class ResearchApplicationService:
         except (OSError, ValueError):
             return None
 
-    def _reconcile(self, record, request):
+    def _reconcile(self, record, request, *, verified_publication=None):
         if record.status is not JobStatus.COMPLETED:
             return None
         try:
             return self.runs.get_run(request.run_id)
         except KeyError:
-            publication = verify_research_receipt(self.root, self.queue, record, record.result_ref)
-            index_verified_publication(self.root, publication)
+            if verified_publication is None:
+                verified_publication = verify_research_receipt(self.root, self.queue, record, record.result_ref)
+            index_verified_publication(self.root, verified_publication)
             return self.runs.get_run(request.run_id)
 
     def get_job(self, job_id):

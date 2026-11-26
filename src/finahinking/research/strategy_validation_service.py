@@ -148,6 +148,9 @@ class StrategyValidationService:
             publication = verify_research_receipt(
                 self.app.root, self.app.queue, record, record.result_ref
             )
+            entry = self.app._reconcile(record, request, verified_publication=publication)
+            if entry["report_status"] != "AVAILABLE" or entry["bundle"] != publication["bundle"]:
+                raise ValueError("验证记录与已发布的报告索引不一致")
             analytics = _read_json(
                 publication["bundle"] / "4_quant" / "analytics.json", max_bytes=16 * 1024 * 1024
             )

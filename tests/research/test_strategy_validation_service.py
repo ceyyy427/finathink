@@ -63,6 +63,15 @@ def test_frozen_studio_journey_through_worker(tmp_path):
         study_id = receipts[0][2]["study_id"]
         assert study_id == receipts[1][2]["study_id"]
         job = completed(service, study_id)
+        # Exercise the durable boundary where the worker receipt is committed
+        # but its report index has not yet been published by the supervisor.
+        service.close()
+        with service.runs._connect() as db:
+            db.execute(
+                "DELETE FROM research_run_index WHERE scope_id=? AND run_id=?",
+                (service.scope_id, job["run_id"]),
+            )
+        assert app.route("GET", job["report_url"])[0] == 404
         status, _, result = app.route("GET", API + "?study=" + study_id)
         assert status == 200, result
         assert result["status"] == "completed" and result["plan_fingerprint"] == ref
