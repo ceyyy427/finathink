@@ -24,6 +24,9 @@ def route(app, method, path, query, body):
         values = {key: value for key, value in body.items() if key != '_csrf'} if write else {}
         if suffix == '':
             return 200, 'application/json', {'packages': service.list()}
+        if suffix == '/pairs':
+            from .portable_learning import list_pairs
+            return 200, 'application/json', {'pairs': list_pairs(app.research_service)}
         if suffix == '/compare':
             if set(query) != {'left', 'right'} or any(len(value) != 1 for value in query.values()):
                 raise ValueError()
@@ -43,17 +46,19 @@ def route(app, method, path, query, body):
                         'report_url': '/research/' + entry['run_id']}
             return 200, 'application/json', {'comparison': compare_research(left['manifest']['source_snapshot'], right['manifest']['source_snapshot']), 'left': side(left), 'right': side(right)}
         if suffix == '/export':
-            if not {'run_id'} <= values.keys() or set(values) - {'run_id', 'include_data'}:
+            if set(values) - {'run_id', 'pair_id', 'data_scope', 'include_data'}:
                 raise ValueError()
             return 200, 'application/json', service.export(**values)
         if suffix == '/restore':
             if set(values) != {'package'}:
                 raise ValueError()
             return 201, 'application/json', service.restore(values['package'])
-        matched = re.fullmatch('/([a-f0-9]{64})(/recompute)?', suffix)
+        matched = re.fullmatch('/([a-f0-9]{64})(/recompute|/history)?', suffix)
         if matched:
             if values:
                 raise ValueError()
+            if matched[2] == '/history':
+                return 200, 'application/json', service.history(matched[1])
             return 200, 'application/json', service.recompute(matched[1]) if write else service.get(matched[1])
         return 404, 'application/json', {'error': '研究包入口不存在，请回到研究对比页。'}
     except KeyError:

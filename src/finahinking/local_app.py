@@ -2999,7 +2999,8 @@ class _Handler(BaseHTTPRequestHandler):
             return
         body_limit = 1_000_000
         if urlsplit(self.path).path == "/api/research/reproduction/restore":
-            body_limit = 8 * 1024 * 1024 + 64 * 1024
+            from .research.portable_package import MAX_BYTES
+            body_limit = MAX_BYTES + 64 * 1024
         if re.fullmatch(r"/api/research/jobs/[A-Za-z0-9_-]{1,128}/research-fields", urlsplit(self.path).path):
             from .data.research_fields import MAX_FIELD_BYTES
 
