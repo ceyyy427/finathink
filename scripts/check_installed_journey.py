@@ -110,6 +110,19 @@ def strategy_journey(get, post):
     result = job['strategy_study']['result']
     assert result['status'] == 'COMPLETE' and result['ledger']['fills']
     assert '策略研究与统一纸面账本' in get(job['report_url']).decode()
+    learning = '/api/research/learning/strategy'
+    receipt = post(learning + '/observations', {'run_id': job['run_id'], 'as_of': job['as_of'][:10]})
+    audit = post(learning + '/audits', {'observation_ref': receipt['observation_ref']})
+    assert audit['status'] == 'READY' and audit['scope']['asset_scope'] == 'MIXED'
+    proposal = post(learning + '/audits/' + audit['audit_id'] + '/propose', {})
+    change = learning + '/proposals/' + proposal['proposal_id']
+    approved = post(change + '/decision', {'decision': 'APPROVED',
+                    'rationale': '检查合成账本的可比窗口并验证独立配置。',
+                    'expected_preview_fingerprint': proposal['preview_fingerprint']})
+    pair = post(change + '/pair', {})
+    assert pair['sides']['candidate']['policy_ref'] == approved['policy']['policy_ref']
+    assert pair['fills_changed'] and '政策版本对照' in get('/research/atlas/runs?pair=' + pair['pair_id']).decode()
+
     decision = next(row for row in reversed(result['decisions']) if row['status'] == 'SCHEDULED')
     entry = post('/api/research/pools', {'pool_ref': 'installed-pool', 'job_id': job['job_id'],
         'decision_origin': 'QUANT_BASELINE', 'stage': 'DECISION',
@@ -270,7 +283,7 @@ def main():
         assert job['explanation']['outcome'] == 'AVAILABLE' and job['explanation']['evidence']
         report = get(job['report_url'])
         assert snapshot['snapshot_ref'].encode() in report and b'SAMPLE' in report
-        assert b'#f5f8fd' in report and b'Content-Security-Policy' in report
+        assert b'#f5f1e9' in report and b'Content-Security-Policy' in report
         assert b'data-research-explanation' in report
         assert job['elapsed_seconds'] >= 0
         from finahinking.research.application_service import ResearchApplicationService
@@ -338,7 +351,7 @@ def main():
             assert (restored_report.encode() if isinstance(restored_report, str) else restored_report) == report
         finally:
             reopened.close()
-    print('全新 wheel 安装 → 来源卡与因子库真实研究 → 真实 HTTP/独立 spawn 任务 → 蓝白报告 → 样本评估/成对复跑 → 私密备份恢复 → 重复迁移检查：通过。')
+    print('全新 wheel 安装 → 来源卡与因子库真实研究 → 真实 HTTP/独立 spawn 任务 → 离线研究报告 → 策略结算审核与成对复跑 → 样本评估 → 私密备份恢复 → 重复迁移检查：通过。')
     return 0
 
 

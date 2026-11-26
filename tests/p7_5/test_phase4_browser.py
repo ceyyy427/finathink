@@ -146,7 +146,7 @@ def test_overview_and_comparison_keep_shell_and_fit_viewports(http_app, observed
             assert page.get_by_role("navigation", name="主导航").is_visible()
             page.keyboard.press("Escape")
         else:
-            assert page.get_by_role("navigation", name="主导航").is_visible()
+            assert page.get_by_role("navigation", name="研究视图").is_visible()
         assert page.locator("main#main").is_visible()
         assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
         if path != "/":

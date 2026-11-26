@@ -78,7 +78,7 @@ def test_overview_dashboard_is_evidence_bound_and_has_no_data_fallbacks() -> Non
     page = app.route("GET", "/")[2]
     assert 'data-finathink-overview' in page
     assert 'data-overview-payload-url="/api/overview"' in page
-    assert 'class="overview-header"' in page
+    assert 'class="overview-header atlas-cover"' in page
     for label in ("事件样例", "已保存条目", "学习证据", "研究运行"):
         assert label in page
     for region in ('data-overview-chart', 'data-overview-topics', 'data-overview-heatmap', 'data-overview-comparison', 'data-overview-activity-series'):
@@ -99,7 +99,7 @@ def test_home_shell_exposes_human_questions_and_workspace_alias() -> None:
     app = LocalApplication(connection=sqlite3.connect(":memory:"))
     home = app.route("GET", "/")[2]
     workspace = app.route("GET", "/workspace")[2]
-    for phrase in ("你的研究，从这里继续。", "继续学习", "建立研究", "PAPER-ONLY"):
+    for phrase in ("研究总览", "继续学习", "建立研究", "PAPER-ONLY"):
         assert phrase in home
     assert "Personal continuity" in workspace
     assert "Research" in workspace and "Learning" in workspace

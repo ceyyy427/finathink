@@ -47,7 +47,10 @@ def test_first_use_sample_report_offline_file_backup_restore_and_corruption(tmp_
         page.wait_for_selector('[data-workspace-state="EMPTY"]')
         assert '尚无快照' in page.locator('[data-run-data-state]').inner_text()
         assert not app.research_service.snapshots.list_snapshots()
+        assert page.get_by_role('navigation', name='研究视图').is_visible()
+        page.get_by_role('button', name='展开导航').click()
         assert page.get_by_role('navigation', name='主导航').is_visible()
+        page.keyboard.press('Escape')
         for width, height in ((1440, 900), (1920, 1080), (375, 812)):
             page.set_viewport_size({'width': width, 'height': height})
             assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 2')

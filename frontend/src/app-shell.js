@@ -26,16 +26,16 @@ export function mountAppShell(doc) {
   const results = search?.querySelector('[data-shell-search-results]');
   const status = search?.querySelector('[data-shell-search-status]');
   if (!view || !nav || !frame || !menu || !close || !shade || !search || !input || !results) return;
-  const mobile = view.matchMedia('(max-width: 800px)');
-  const entries = [...nav.querySelectorAll('a.nav-link')].map((link) => ({ href: link.getAttribute('href'), label: link.textContent.trim() }));
+  const viewport = view.matchMedia('(max-width: 800px)');
+  const entries = [...root.querySelectorAll('.atlas-tabs a, #shell-navigation a.nav-link')].map((link) => ({ href: link.getAttribute('href'), label: link.textContent.trim() }));
   let opened = false;
   let searchPrevious = null;
 
   const updateNavigation = () => {
-    nav.inert = mobile.matches && !opened;
+    nav.inert = !opened;
     if (nav.inert) nav.setAttribute('aria-hidden', 'true');
     else nav.removeAttribute('aria-hidden');
-    frame.inert = mobile.matches && opened;
+    frame.inert = opened;
     menu.setAttribute('aria-expanded', String(opened));
     root.dataset.navigationOpen = String(opened);
     shade.hidden = !opened;
@@ -45,15 +45,14 @@ export function mountAppShell(doc) {
     const wasOpen = opened;
     opened = false;
     updateNavigation();
-    if (wasOpen && restore && mobile.matches) menu.focus();
+    if (wasOpen && restore) menu.focus();
   };
   const openNavigation = () => {
-    if (!mobile.matches) return;
     opened = true;
     updateNavigation();
     close.focus();
   };
-  const resize = () => closeNavigation(false);
+  const resize = () => closeNavigation();
   const onNavClick = (event) => {
     if (event.target.closest('a[href]')) closeNavigation(false);
   };
@@ -117,7 +116,7 @@ export function mountAppShell(doc) {
   close.addEventListener('click', closeNavigation);
   shade.addEventListener('click', closeNavigation);
   nav.addEventListener('click', onNavClick);
-  mobile.addEventListener('change', resize);
+  viewport.addEventListener('change', resize);
   searchOpen.addEventListener('click', openSearch);
   searchClose?.addEventListener('click', closeSearch);
   search.addEventListener('close', restoreSearchFocus);
@@ -131,7 +130,7 @@ export function mountAppShell(doc) {
     close.removeEventListener('click', closeNavigation);
     shade.removeEventListener('click', closeNavigation);
     nav.removeEventListener('click', onNavClick);
-    mobile.removeEventListener('change', resize);
+    viewport.removeEventListener('change', resize);
     searchOpen.removeEventListener('click', openSearch);
     searchClose?.removeEventListener('click', closeSearch);
     search.removeEventListener('close', restoreSearchFocus);

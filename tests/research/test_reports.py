@@ -78,7 +78,9 @@ def test_new_reports_are_themed_offline_and_old_publications_are_immutable(tmp_p
     manifest = writer.write(result, tmp_path, quant_analytics={"metrics": {"unknown": None}})
     path = tmp_path / result.state.run_id / "complete_report.html"
     before = hashlib.sha256(path.read_bytes()).hexdigest()
-    assert "#f5f8fd" in path.read_text() and "Content-Security-Policy" in path.read_text()
+    rendered = path.read_text(encoding="utf-8")
+    assert manifest.source_snapshot["report_template"] == "research-atlas.v1"
+    assert "#f5f1e9" in rendered and "Content-Security-Policy" in rendered
     assert writer.write(result, tmp_path).files == manifest.files
     assert hashlib.sha256(path.read_bytes()).hexdigest() == before
 

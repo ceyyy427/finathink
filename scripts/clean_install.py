@@ -64,6 +64,13 @@ assert quant['numeric_results']['sample_count'] >= 70
 assert quant['artifact_fingerprint']
 assert app.route('GET', '/api/strategy')[2]['execution'] == 'paper-only'
 assert app.route('GET', '/api/p8_2b/knowledge/ols')[2]['unit']['unit_id'] == 'ols'
+assert app.route('GET', '/research/atlas/factors')[0] == 200
+assert app.route('GET', '/research/atlas/evidence')[0] == 200
+assert app.route('GET', '/research/atlas/runs')[0] == 200
+assert app.route('GET', '/api/research/learning/strategy/sources')[2] == {'sources': []}
+assert app.route('GET', '/assets/research-serif.woff2')[2].startswith(b'wOF2')
+assert app.route('GET', '/assets/research-relief.svg')[1] == 'image/svg+xml'
+assert app.route('GET', '/assets/atlas-labs.css')[1].startswith('text/css')
 assert app.route('GET', '/assets/katex/katex.min.css')[0] == 200
 assert app.route('GET', '/assets/katex/fonts/KaTeX_Main-Regular.woff2')[0] == 200
 assert get_knowledge_unit('sharpe').unit_id == 'sharpe'

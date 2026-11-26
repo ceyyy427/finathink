@@ -1,4 +1,4 @@
-"""Blue-white shell on real HTTP, without replacing the research workflow."""
+"""Research atlas shell on real HTTP, without replacing the research workflow."""
 
 from __future__ import annotations
 
@@ -54,16 +54,16 @@ def test_reference_theme_preserves_real_counts_and_readable_brand(http_app, obse
         background: getComputedStyle(document.documentElement).backgroundColor,
         sidebar: getComputedStyle(document.querySelector('.sidebar')).backgroundColor,
         primary: getComputedStyle(document.querySelector('.composer-footer button')).backgroundColor,
-        brandFont: getComputedStyle(document.querySelector('.brand-name')).fontFamily,
+        brandFont: getComputedStyle(document.querySelector('.atlas-wordmark')).fontFamily,
         bodyFont: getComputedStyle(document.body).fontFamily,
         topbarHeight: document.querySelector('.topbar').getBoundingClientRect().height
     })""")
     diagnostics["metrics"]["theme"] = style
-    assert style["background"] == "rgb(245, 248, 253)"
-    assert style["sidebar"] == "rgb(255, 255, 255)"
-    assert style["primary"] == "rgb(37, 99, 235)"
-    assert style["brandFont"] == style["bodyFont"]
-    assert style["topbarHeight"] == 76
+    assert style["background"] == "rgb(245, 241, 233)"
+    assert style["sidebar"] == "rgb(251, 249, 243)"
+    assert style["primary"] == "rgb(21, 79, 68)"
+    assert "Georgia" in style["brandFont"] and style["brandFont"] != style["bodyFont"]
+    assert style["topbarHeight"] == 72
     page.screenshot(path=str(artifacts / "reference-theme-desktop.png"), full_page=True)
 
 
@@ -138,8 +138,8 @@ def test_mobile_navigation_traps_then_restores_focus_and_survives_resize(http_ap
     assert opener.evaluate("el => el === document.activeElement")
     opener.click()
     page.set_viewport_size({"width": 1440, "height": 900})
-    page.wait_for_function("() => !document.querySelector('[data-shell-frame]').inert && !document.querySelector('#shell-navigation').inert")
-    assert not nav.evaluate("el => el.inert")
+    page.wait_for_function("() => !document.querySelector('[data-shell-frame]').inert && document.querySelector('#shell-navigation').inert")
+    assert nav.evaluate("el => el.inert")
     assert not page.locator("[data-shell-frame]").evaluate("el => el.inert")
     assert page.evaluate("getComputedStyle(document.body).overflow") != "hidden"
     page.set_viewport_size({"width": 375, "height": 812})
@@ -160,7 +160,7 @@ def test_mobile_forms_and_navigation_have_readable_touch_targets(http_app, obser
             return {width: box.width, height: box.height, fontSize: parseFloat(getComputedStyle(el).fontSize)};
         };
         return {question: rect('#overview-question'), menu: rect('[data-shell-menu]'),
-            create: rect('.topbar-actions .button'), transition: getComputedStyle(document.querySelector('.sidebar')).transitionDuration};
+            create: rect('.composer-footer button'), transition: getComputedStyle(document.querySelector('.sidebar')).transitionDuration};
     }""")
     diagnostics["metrics"]["mobile"] = dimensions
     assert dimensions["question"]["fontSize"] >= 16
@@ -203,7 +203,7 @@ def test_existing_workspaces_keep_light_shell_and_fit_viewports(http_app, observ
         assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
         assert page.locator("[data-finathink-shell]").get_attribute("data-shell-enhanced") == "true"
         if width > 800:
-            assert page.get_by_role("navigation", name="主导航").is_visible()
+            assert page.get_by_role("navigation", name="研究视图").is_visible()
         else:
             assert page.get_by_role("button", name="展开导航", exact=True).is_visible()
         name = route.strip("/").replace("/", "-") or "overview"

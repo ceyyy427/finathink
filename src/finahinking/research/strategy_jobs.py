@@ -55,9 +55,8 @@ def prepare_strategy(service, values):
     return request, binding
 
 
-def execute_bound_strategy(snapshots, binding, snapshot, policy_record):
-    from .strategy_runner import execute_strategy
-
+def load_bound_strategy_panel(snapshots, binding, snapshot, policy_record):
+    """Resolve the immutable inputs used by the worker and audited paper replays."""
     catalog = StrategyCatalog()
     contract = PanelContract.from_dict(binding["contract"])
     if (binding["version"] != VERSION or contract.snapshot_ref != snapshot.fingerprint
@@ -70,8 +69,14 @@ def execute_bound_strategy(snapshots, binding, snapshot, policy_record):
     if panel.fingerprint != binding["panel_ref"]:
         raise ValueError("策略面板指纹不一致")
     classes = snapshot.provenance.get("asset_classes", {})
-    result = execute_strategy(binding["template_id"], panel, binding["parameters"],
-                              asset_classes={asset: classes.get(asset) for asset in contract.instrument_ids},
+    return panel, {asset: classes.get(asset) for asset in contract.instrument_ids}
+
+
+def execute_bound_strategy(snapshots, binding, snapshot, policy_record):
+    from .strategy_runner import execute_strategy
+
+    panel, classes = load_bound_strategy_panel(snapshots, binding, snapshot, policy_record)
+    result = execute_strategy(binding["template_id"], panel, binding["parameters"], asset_classes=classes,
                               policy=policy_record["effective"])
     return {"binding": binding, "snapshot_ref": snapshot.fingerprint, "data_mode": snapshot.mode,
             "result": result, "fingerprint": stable_digest({"binding": binding, "result": result}),

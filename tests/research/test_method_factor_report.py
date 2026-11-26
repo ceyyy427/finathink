@@ -25,7 +25,7 @@ from tests.research.test_factor_validation_pipeline import fixture_panel, select
 
 def api():
     name = "finahinking.research.report_sections"
-    assert importlib.util.find_spec(name) is not None, "blue-white factor report sections are missing"
+    assert importlib.util.find_spec(name) is not None, "atlas factor report sections are missing"
     return importlib.import_module(name)
 
 
@@ -79,7 +79,7 @@ def test_source_claims_and_unsafe_markup_are_separate_from_local_values(computed
 def test_document_is_self_contained_blue_white_and_has_no_automatic_requests(computed):
     sections = api().build_method_factor_sections(computed, methods(), None, None)
     document = api().render_factor_report_document(sections, run_id="offline-report", question="核对因子假设")
-    assert '<html lang="zh-CN"' in document and '#f5f8fd' in document and '#2563eb' in document
+    assert '<html lang="zh-CN"' in document and '#f5f1e9' in document and '#154f44' in document
     assert 'default-src &#x27;none&#x27;' in document or "default-src 'none'" in document
     assert '<script' not in document and '<link' not in document and '<img' not in document
     assert 'href="#' in document and '<details' in document and '<table' in document
@@ -102,7 +102,7 @@ def test_writer_uses_new_template_but_replays_never_rewrite_a_published_report(t
     manifest = ReportBundleWriter().write(result, tmp_path, quant_analytics=analysis)
     path = tmp_path / "offline-report" / "complete_report.html"
     original = hashlib.sha256(path.read_bytes()).hexdigest()
-    assert manifest.source_snapshot["report_template"] == "blue-white.v1"
+    assert manifest.source_snapshot["report_template"] == "research-atlas.v1"
     assert computed["fingerprint"] in path.read_text()
     assert verify_report_bundle(path.parent / "manifest.json").ok
     replay = ReportBundleWriter().write(result, tmp_path, quant_analytics=analysis)
