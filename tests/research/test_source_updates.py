@@ -1,5 +1,7 @@
 from dataclasses import replace
 
+import pytest
+
 from finahinking.research.source_contracts import SourceArtifact
 from finahinking.research.source_updates import compare_sources
 from tests.research.test_source_intake import _snapshot, source_tree
@@ -86,6 +88,10 @@ def test_old_report_and_replay_still_resolve_old_content(tmp_path, source_tree):
                                  "idempotency_key": "before-withdraw"})["job"]
         app.start()
         job = completed(app, job["job_id"])
+        from finahinking.research.strategy_validation_service import StrategyValidationService
+
+        studio = StrategyValidationService(app)
+        frozen = studio.preview(job["run_id"], {}, {})
         replay = ReproductionService(app)
         old_entry = app.runs.get_run(job["run_id"])
         report = old_entry["bundle"] / "complete_report.html"
@@ -100,6 +106,11 @@ def test_old_report_and_replay_still_resolve_old_content(tmp_path, source_tree):
         blocked = app.preview_discovery(values)
         assert blocked["status"] == "SOURCE_REVIEW_REQUIRED" and "candidates" not in blocked
         assert blocked["source_versions"] == [ref]
+        with pytest.raises(ValueError, match="撤回"):
+            studio.preview(job["run_id"], {}, {})
+        with pytest.raises(ValueError, match="撤回"):
+            studio.submit(job["run_id"], frozen["plan_fingerprint"])
+        assert studio.load(frozen["plan_fingerprint"]) == frozen
         assert app.get_job(job["job_id"])["report_status"] == "AVAILABLE"
         assert report.read_bytes() == before
         assert replay.recompute(saved["package_id"]) == original

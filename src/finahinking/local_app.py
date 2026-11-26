@@ -1135,6 +1135,7 @@ class LocalApplication:
             "/research/jobs": "研究任务",
             "/research/workbench": "量化研究工作台",
             "/research/experiments": "因子实验",
+            "/research/strategy-validation": "策略验证室",
             "/research/learning": "复盘与学习",
             "/research/maintenance": "本地任务维护",
             "/research/compare": "研究对比",
@@ -1230,7 +1231,7 @@ class LocalApplication:
     def _nav(self, page: str) -> str:
         names = self._page_names()
         groups = (
-            ("研究", "nav-workspace", ("/", "/research/jobs", "/events", "/knowledge", "/research/experiments", "/strategy", "/research/learning")),
+            ("研究", "nav-workspace", ("/", "/research/jobs", "/events", "/knowledge", "/research/experiments", "/strategy", "/research/strategy-validation", "/research/learning")),
             ("资料", "nav-library", ("/library/methods", "/library/behavior", "/library/lessons")),
             ("学习", "nav-learn", ("/explore", "/quant", "/research", "/research/workbench", "/research/compare", "/workbench", "/ml", "/parameter", "/workspace", "/community", "/settings/engines", "/settings/data-sources")),
             ("系统", "nav-system", ("/research/panels", "/settings/data-connections", "/settings/providers", "/research/maintenance", "/diagnostics")),
@@ -1304,7 +1305,7 @@ class LocalApplication:
                 '<main class="workspace-layout workspace-layout--overview" id="main" tabindex="-1">'
                 f'{overview_plate(self._run_repository)}<div class="workspace">{content}</div>{inspector_html}</main>'
             )
-        elif page in ATLAS_VIEWS:
+        elif page in ATLAS_VIEWS or page == "/research/strategy-validation":
             layout = f'<main class="workspace-layout workspace-layout--atlas" id="main" tabindex="-1">{body}</main>'
         else:
             layout = (
@@ -1955,6 +1956,12 @@ class LocalApplication:
         clean = parsed.path.rstrip("/") or "/"
         if clean in {"/research/workbench", "/api/research/quant-workspace", "/api/research/quant-workspace/sources"}:
             return self._quant_workbench_route(method, clean, query)
+        if clean.startswith(("/research/strategy-validation", "/api/research/strategy-validation")):
+            from .research.strategy_validation_routes import route as studio_route
+
+            response = studio_route(self, method, clean, query, body)
+            if response is not None:
+                return response
         from .research.atlas_routes import route as atlas_route
 
         atlas_response = atlas_route(self, method, clean, query, body)
@@ -2939,6 +2946,8 @@ class _Handler(BaseHTTPRequestHandler):
         else:
             raw = json.dumps(payload, sort_keys=True, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
+        if status == 303 and isinstance(payload, str) and re.fullmatch(r"/research/strategy-validation\?(?:study|source_job)=[A-Za-z0-9_-]+", payload):
+            self.send_header("Location", payload)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(raw)))
         self.send_header("Cache-Control", "no-store")

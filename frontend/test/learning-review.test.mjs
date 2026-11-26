@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeLearningReview } from '../src/learning-review.js';
+import { normalizeLearningReview, singleAssetReviewSources } from '../src/learning-review.js';
 
 const digest = 'a'.repeat(64);
 const review = { review_id: `learning-${'b'.repeat(32)}`, run_id: 'research-example', status: 'PENDING_REVIEW', paper_only: true, source_snapshot_ref: digest, evidence_snapshot_ref: digest, observed_snapshot_ref: digest, parent_policy_ref: digest, proposal_digest: digest, preview_fingerprint: digest, preview: { proposal_digest: digest, policy_fingerprint: digest }, observation: { equity: 9900, net_return: -0.01, horizon_observations: 5 } };
@@ -23,4 +23,11 @@ test('factor monitoring is labeled separately and cannot impersonate a settlemen
   assert.equal(normalizeLearningReview(value), value);
   assert.throws(() => normalizeLearningReview({ ...value, settlement: { invented: true } }));
   assert.throws(() => normalizeLearningReview({ ...value, proposal: { ...value.proposal, factor_weight_updates: { foo: 1 } } }));
+});
+
+test('single-asset review lists only available ordinary publications', () => {
+  const source = { run_id: 'ordinary', status: 'completed', report_status: 'AVAILABLE' };
+  const jobs = [source, { ...source, status: 'running' }, { ...source, report_status: 'INVALID' },
+    ...['factor_study', 'strategy_study', 'strategy_validation'].map(key => ({ ...source, [key]: {} }))];
+  assert.deepEqual(singleAssetReviewSources(jobs), [source]);
 });

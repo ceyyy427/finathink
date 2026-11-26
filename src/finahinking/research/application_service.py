@@ -191,7 +191,15 @@ def run_local_research_stage(invocation, checkpoint_ref, publish_checkpoint, *, 
 
     spec = request.research_plan.validation_spec
     strategy_contract = None
+    studio = None
     try:
+        if "strategy_validation" in spec:
+            from finahinking.data.panel_contracts import PanelContract
+
+            from .strategy_validation_service import worker_inputs
+
+            studio = worker_inputs(root, queue, request, spec["strategy_validation"])
+            strategy_contract = PanelContract.from_dict(studio[1]["binding"]["contract"])
         if "strategy_study" in spec:
             from finahinking.data.panel_contracts import PanelContract, panel_time
 
@@ -360,6 +368,12 @@ def run_local_research_stage(invocation, checkpoint_ref, publish_checkpoint, *, 
 
         tools.analysis["strategy_study"] = execute_bound_strategy(
             SnapshotStore(root / "snapshots"), spec["strategy_study"], snapshot, policy_record)
+    if studio is not None:
+        from .strategy_validation_service import evaluate
+
+        if budget is not None:
+            budget.charge_experiments(studio[0]["evaluation_units"])
+        tools.analysis["strategy_validation"] = evaluate(*studio)
     if discovery is not None:
         product = tools.analysis["factor_study" if binding is not None else "strategy_study"]
         model = tools.analysis.get("model_research", {})
@@ -491,7 +505,7 @@ class ResearchApplicationService:
                 return None
         return binding["contract"]["observed_at"][-1]
 
-    def submit(self, values, *, factor_study=None, rerun_of=None, strategy_study=None, discovery=None):
+    def submit(self, values, *, factor_study=None, rerun_of=None, strategy_study=None, discovery=None, strategy_validation=None):
         if not isinstance(values, dict):
             raise TypeError("research submission must be an object")
         if set(values) - {"idempotency_key", "snapshot_ref", "question", "instrument", "as_of", "model_config_ref", "budget", "materials", "allow_model_calls", "policy_ref"}:
@@ -523,13 +537,17 @@ class ResearchApplicationService:
             if not isinstance(raw_budget, dict) or raw_budget.get("max_attempts", 1) != 1:
                 raise ValueError("online research has one attempt; resubmit explicitly after failure")
             raw_budget = {"max_attempts": 1, "max_provider_calls": 6, **raw_budget}
-        limits = self._limits(raw_budget, factor_study=factor_study is not None)
+        limits = self._limits(raw_budget, factor_study=factor_study is not None or strategy_validation is not None)
         budget = asdict(limits)
         policy_record = self.learning.store.policy(values.get("policy_ref"), as_of=values.get("as_of"))
         policy = policy_record["effective"]
         if rerun_of is not None:
             _ref(rerun_of, "rerun_of")
         decision_at = self._strategy_lineage_at(strategy_study, queue_key)
+        if strategy_validation is not None:
+            if any(x is not None for x in (config, strategy_study, factor_study, discovery, rerun_of)):
+                raise ValueError("独立策略验证只使用已发布的纸面账本")
+            decision_at = strategy_validation["decision_at"]
         lineage = self.learning.lineage(policy_record, snapshot, instrument, rerun_of=rerun_of,
                                         strategy_decision_at=decision_at)
         if factor_study is not None and policy_record["version"] != 0:
@@ -544,6 +562,12 @@ class ResearchApplicationService:
             snapshot_ref=snapshot.fingerprint,
             previous_policy_fingerprint=policy_record["policy_ref"],
         )
+        if strategy_validation is not None:
+            from dataclasses import replace
+
+            plan = replace(request.research_plan, validation_spec={**request.research_plan.validation_spec,
+                           "strategy_validation": strategy_validation})
+            request = replace(request, research_plan=plan, config_digest=stable_digest([request.config_digest, strategy_validation]))
         if factor_study is not None:
             from dataclasses import replace
 
@@ -774,6 +798,7 @@ class ResearchApplicationService:
                 journal = ModelCallJournal(journal_path, job_id=record.job_id, run_id=request.run_id, request_digest=stable_digest(request), attempt=max(1, record.attempts), scope_id=self.scope_id)
                 calls = journal.records(terminal=record.status in {JobStatus.COMPLETED, JobStatus.CANCELLED, JobStatus.FAILED})
             model_research = {**(model_research or {}), "calls": calls, "usage_status": "UNKNOWN" if any(item["dispatched"] and item["usage"] is None for item in calls) else "RECORDED" if calls else "NOT_STARTED", "aggregate_counts": runtime_metrics}
+        validation = request.research_plan.validation_spec.get("strategy_validation")
         payload = redact_public_payload({
             "schema_version": 1, "paper_only": True, "execution_mode": request.research_plan.validation_spec.get("execution_mode", "local-deterministic"),
             "data_mode": source.get("data_mode", request.research_plan.validation_spec.get("data_mode", "UNKNOWN")),
@@ -785,7 +810,9 @@ class ResearchApplicationService:
             "factor_study": factor_study,
             **({"discovery": source["discovery"]} if report_status == "AVAILABLE" and "discovery" in source else {}),
             **({"strategy_study": source["strategy_study"]} if report_status == "AVAILABLE" and "strategy_study" in source else {}),
-            "risk_portfolio": source.get("risk_portfolio"),
+            **({"strategy_validation": source.get("strategy_validation", {"run_id": validation["source_run"],
+                "plan_fingerprint": validation["plan_ref"]})} if validation else {}),
+            "risk_portfolio": None if validation else source.get("risk_portfolio"),
             "policy_ref": request.previous_policy_fingerprint or request.research_plan.validation_spec["policy_fingerprint"],
             "policy_lineage": source.get("policy_lineage", request.research_plan.validation_spec.get("policy_lineage")),
             "budget": request.research_plan.validation_spec["budget"], "attempts": record.attempts,
@@ -796,7 +823,7 @@ class ResearchApplicationService:
             "stages": [{"name": stage, "status": "FAILED" if stage == failed_stage else "RUNNING" if record.status is JobStatus.RUNNING and state is not None and stage == state.current_state.value else "COMPLETE" if stage in history else "PENDING"} for stage in _STAGES],
             "failure_kind": failure or publication_error, "failure_stage": failed_stage,
             "report_status": report_status, "report_url": f"/research/{request.run_id}/report/complete" if report_status == "AVAILABLE" else None,
-            "run_url": f"/research/{request.run_id}", "metrics": metrics,
+            "run_url": f"/research/{request.run_id}", "metrics": {} if validation else metrics,
             "runtime_metrics": runtime_metrics,
             "retry_at": _utc(record.available_at) if record.status is JobStatus.RETRYABLE else None,
             "checkpoint_available": state is not None,

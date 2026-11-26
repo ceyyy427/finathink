@@ -92,7 +92,7 @@ export function renderExplanation(root, job) {
   for (const item of value.evidence ?? []) {
     // Only link to this run's published document and known evidence sections.
     const prefix = `/research/${job.run_id}/report/complete#`;
-    if (job.report_status !== 'AVAILABLE' || typeof item.href !== 'string' || !item.href.startsWith(prefix) || !['source', 'quant-metrics', 'risk-portfolio', 'model-research', 'identity', 'factor-study'].includes(item.href.slice(prefix.length))) continue;
+    if (job.report_status !== 'AVAILABLE' || typeof item.href !== 'string' || !item.href.startsWith(prefix) || !['source', 'quant-metrics', 'risk-portfolio', 'model-research', 'identity', 'factor-study', 'sv-results', 'sv-portfolio'].includes(item.href.slice(prefix.length))) continue;
     const li = node(root, 'li'); const link = node(root, 'a', item.label); link.href = item.href; li.append(link);
     if (Object.hasOwn(item, 'value')) li.append(node(root, 'span', `：${item.value == null ? '未提供' : item.value}`));
     evidence.append(li);

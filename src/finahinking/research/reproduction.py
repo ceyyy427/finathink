@@ -20,6 +20,7 @@ _FIELDS = {'schema_version', 'run_id', 'original_dataset', 'as_of', 'instrument'
 _WORKFLOW_DEPENDENCIES = {
     "factor_study": "FACTOR_WORKFLOW_DEPENDENCIES",
     "strategy_study": "STRATEGY_WORKFLOW_DEPENDENCIES",
+    "strategy_validation": "STRATEGY_VALIDATION_WORKFLOW_DEPENDENCIES",
     "model_text": "MODEL_MATERIALS_AND_AUTHORIZATION",
     "discovery": "DISCOVERY_BLUEPRINT_DEPENDENCIES",
 }
@@ -154,7 +155,7 @@ def validate_package(package):
     if not isinstance(coverage, dict) or set(coverage) - {"baseline", "quant_evidence", *_WORKFLOW_DEPENDENCIES} or any(coverage.get(key) != 'INCLUDED' for key in package['expected']):
         raise ValueError('复现覆盖清单无效。')
     if any(status != ('INCLUDED' if key in {'baseline', 'quant_evidence'} else 'REQUIRES_ORIGINAL_WORKFLOW') for key, status in coverage.items()) or {key for key, status in coverage.items() if status == 'INCLUDED'} != set(package['expected']):
-        raise ValueError('复现覆盖必须与已携带的确定性产物完全一致；模型与因子研究需要原工作流。')
+        raise ValueError('复现覆盖清单须注明已携带的计算产物以及依赖原工作流的产物。')
     expected_missing = ([] if package['snapshot'] is not None else ['NORMALIZED_DATA'])
     expected_missing.extend(code for key, code in _WORKFLOW_DEPENDENCIES.items() if key in coverage)
     if package['missing_dependencies'] != expected_missing:

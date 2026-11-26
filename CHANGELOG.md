@@ -74,6 +74,12 @@ renamed repository's remote `main` through PR #2.
   gate evidence. A GitHub release is not claimed until a maintainer publishes
   the tagged artifact.
 
+## 0.2.5 - 2026-11-25
+
+- 新增策略验证室。可从已发布纸面账本冻结参数网格、三个滚动样本外窗口、费用、滑点和成交量上限，并在后台复跑和保留各窗结果。
+- 策略报告现可核对原账本的持仓、现金、公司行动、费用、滑点、行业与因子覆盖、压力情景和有界权重。网页与离线 HTML 共用相同证据。
+- 研究记录、解释、复现包和差异对比可识别验证任务，追溯原始策略与冻结方案。
+
 ## 0.2.4 - 2026-11-25
 
 - 研究图册提供总览、可交互的证据图、双窗口动量实验和逐期账本复盘。界面与新导出的离线 HTML 采用纸张色和松绿配色。

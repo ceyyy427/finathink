@@ -78,3 +78,22 @@ test('method callback accepts bounded bound JSON, never an executable blob', () 
   assert.throws(() => parseMethodResponse(JSON.stringify({ ...value, package_digest: 'other' })));
   assert.throws(() => parseMethodResponse('x'.repeat(131073)));
 });
+
+test('reopening a studio job uses its frozen plan through the studio', async () => {
+  let restoreClick;
+  const button = { addEventListener: (_, callback) => { restoreClick = callback; }, setAttribute() {} };
+  const root = { dataset: {}, querySelector: selector => selector === '[data-run-restore]' ? button : null,
+    querySelectorAll: () => [] };
+  const routed = [];
+  const location = { href: 'http://localhost/research/jobs?job_id=job-1', assign: url => routed.push(url) };
+  const fetcher = async url => url === '/api/research/jobs/job-1'
+    ? response({ ...job, status: 'completed', strategy_validation: { plan_fingerprint: 'b'.repeat(64) } })
+    : response({ snapshots: [], jobs: [], connections: [] });
+  const instance = mountRunWorkspace(root, { fetcher, location });
+  try {
+    await instance.ready;
+    assert.equal(button.textContent, '打开冻结验证方案');
+    restoreClick();
+    assert.deepEqual(routed, ['/research/strategy-validation?study=job-1']);
+  } finally { instance.stop(); }
+});

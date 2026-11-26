@@ -451,8 +451,8 @@ def _approved_risk(metrics, weights, policy):
     return checks
 
 
-def execute_strategy(template_id, panel, parameters, *, asset_classes, policy):
-    """Select at the current cutoff and apply permitted weights on the next bar."""
+def execute_strategy(template_id, panel, parameters, *, asset_classes, policy, account_start=None):
+    """Select causally and execute on the next bar. Earlier panel rows can warm signals."""
     from .strategy_catalog import StrategyCatalog, bind_parameters
     from .strategy_risk import evaluate_risk_rules, strategy_risk_inputs
     from .strategy_selection import select_strategy
@@ -477,6 +477,11 @@ def execute_strategy(template_id, panel, parameters, *, asset_classes, policy):
         account = PaperAccount(panel, asset_classes, policy)
     except StrategyDataError as exc:
         return {**result, "status": "NEEDS_DATA", "reason": str(exc), "decisions": [], "ledger": None, "benchmark": None}
+    if account_start is not None:
+        if account_start not in account.times:
+            raise ValueError("account start must be a declared observation")
+        account.times = account.times[account.times >= account_start]
+        result["account_start"] = account.times[0].isoformat()
     bad_rows = {
         (row["observed_at"], row["instrument"])
         for row in panel.audit["row_reasons"]
@@ -503,15 +508,23 @@ def execute_strategy(template_id, panel, parameters, *, asset_classes, policy):
         weights = _approved_targets(selection.get("target_weights", {}), quotes, policy)
         involved = {asset for asset, weight in weights.items() if weight > 0} | set(current)
         pit_valid = not any((time.isoformat(), asset) in bad_rows for asset in involved)
+        prior_equity = [row["equity"] for row in account.marks[:-1]]
+        if account_start is not None and not prior_equity:
+            # A fresh fold opens at known cash with no market exposure or drawdown.
+            prior_equity = [account.config.starting_cash]
         metrics = strategy_risk_inputs(
-            prefix, weights, [row["equity"] for row in account.marks[:-1]],
-            mark["equity"], asset_classes, pit_valid=pit_valid, current_weights=current,
+            prefix, weights, prior_equity,
+            mark["equity"], asset_classes, pit_valid=pit_valid, current_weights=current, include_warmup=account_start is not None,
         )
         risk = evaluate_risk_rules(rules, metrics)
         approved_checks = _approved_risk(metrics, weights, policy)
+        lookback_warmup = selection.get("lookback_warmup", False)
         if status == "READY" and idx + 1 < len(account.times):
             blocked = [rule for rule in [*risk, *approved_checks] if rule["action"] == "GATE" and rule["status"] != "PASS"]
             if blocked:
+                lookback_warmup = metrics.get("price_history_warmup", False) and all(
+                    r["metric"] in {"volatility", "tail_loss", "collinearity"} and r["status"] == "NEEDS_DATA"
+                    for r in blocked)
                 status = "NEEDS_DATA" if any(rule["status"] == "NEEDS_DATA" for rule in blocked) else "BLOCKED_RISK"
             else:
                 pending = (time, weights)
@@ -521,6 +534,7 @@ def execute_strategy(template_id, panel, parameters, *, asset_classes, policy):
             "observed_at": time.isoformat(), "status": status, "target_weights": weights,
             "reason": selection.get("reason"), "diagnostics": selection.get("diagnostics", {}),
             "risk": risk, "approved_policy_checks": approved_checks,
+            **({"lookback_warmup": True} if account_start is not None and lookback_warmup else {}),
         })
     ledger = account.result()
     benchmark = _benchmark(account, template["benchmark"])

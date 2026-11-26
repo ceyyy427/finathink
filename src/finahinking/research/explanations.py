@@ -80,7 +80,16 @@ def research_explanation(job):
             # Specialized factor reports have their own evidence sections.
             anchor = "identity" if isinstance(job["factor_study"].get("validation_run"), dict) else "factor-study"
             evidence = [{"label": "冻结章程与因子验证报告", "href": base + "#" + anchor}]
-    if published and job.get("strategy_study"):
+    studio = job.get("strategy_validation")
+    if published and studio:
+        headline = "策略验证报告已发布"
+        conclusion = "报告逐窗记录样本外验证状态、训练选参和执行情景，并核对原策略账本的组合风险。"
+        evidence = [
+            {"label": "滚动样本外窗口与执行情景", "href": base + "#sv-results"},
+            {"label": "原策略账本与风险归因", "href": base + "#sv-portfolio"},
+        ]
+        next_steps = ["查看各窗口的成交、理论研究或数据缺口，再核对原账本的费用与组合约束。"]
+    elif published and job.get("strategy_study"):
         result = job["strategy_study"]["result"]
         count = len((result.get("ledger") or {}).get("fills", []))
         headline = "策略研究已发布"
@@ -97,6 +106,8 @@ def research_explanation(job):
     conditions = [f'{job.get("data_mode", "UNKNOWN")} 数据 · 标的 {job.get("instrument", "未记录")} · 截止日 {job.get("as_of", "未记录")}',
                   "按观测周期解释；交易日历未经验证，不推断年化表现。",
                   "纸面研究保留单位、容量与来源限制；数据声明不等于外部验证。"]
+    if studio:
+        conditions[0] = f'{job.get("data_mode", "UNKNOWN")} 数据 · 来源策略运行 {studio.get("run_id", "未记录")} · 截止日 {job.get("as_of", "未记录")}'
     if job.get("data_mode") in {"SAMPLE", "SYNTHETIC"}:
         conditions.append("SAMPLE / SYNTHETIC 是演示数据，不是市场表现证据。")
     for role in study.get("roles", ()):

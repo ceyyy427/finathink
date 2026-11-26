@@ -101,16 +101,18 @@ def _liquidity(latest, changes, equity):
 
 def _history_risks(frame, targets):
     if not targets:
-        return None, None, None
+        return None, None, None, False
     try:
         prices = adjusted_price_matrix(frame, list(targets), 61)
     except StrategyDataUnavailable:
-        return None, None, None
-    if len(prices) < 7 or prices.isna().any().any():
-        return None, None, None
+        return None, None, None, False
+    if prices.isna().any().any():
+        return None, None, None, False
     returns = prices.pct_change(fill_method=None).iloc[1:]
     if not np.isfinite(returns).all().all():
-        return None, None, None
+        return None, None, None, False
+    if len(prices) < 7:
+        return None, None, None, True
     weights = np.array(list(targets.values()))
     portfolio_returns = returns.to_numpy() @ weights
     volatility = _number(np.std(portfolio_returns, ddof=1))
@@ -120,7 +122,7 @@ def _history_risks(frame, targets):
         pairs = np.abs(returns.corr().to_numpy()[np.triu_indices(len(targets), 1)])
         if np.isfinite(pairs).all():
             corr = float(pairs.max())
-    return volatility, tail, corr
+    return volatility, tail, corr, False
 
 
 def _drawdowns(equity_curve, current):
@@ -137,7 +139,7 @@ def _drawdowns(equity_curve, current):
 
 
 def strategy_risk_inputs(panel_prefix, target_weights, equity_curve, equity, asset_classes, *, pit_valid,
-                         current_weights=None):
+                         current_weights=None, include_warmup=False):
     """Derive metrics from the known prefix and earlier paper equity marks."""
     targets = {asset: weight for asset, weight in target_weights.items() if weight != 0}
     current_weights = {} if current_weights is None else current_weights
@@ -150,9 +152,10 @@ def strategy_risk_inputs(panel_prefix, target_weights, equity_curve, equity, ass
     changes = {asset: targets.get(asset, 0.0) - current_weights.get(asset, 0.0) for asset in names}
     changes = {asset: delta for asset, delta in changes.items() if abs(delta) > 1e-12}
     marked_equity = _number(equity)
-    volatility, tail, collinearity = _history_risks(panel_prefix, targets)
+    volatility, tail, collinearity, lookback_warmup = _history_risks(panel_prefix, targets)
     drawdown, logic_loss = _drawdowns(equity_curve, marked_equity)
     return {
+        **({'price_history_warmup': True} if include_warmup and lookback_warmup else {}),
         'pit_valid': pit_valid,
         'financial_anomaly': _financial(latest, targets, asset_classes),
         'tradeable': _tradeable(latest, changes),

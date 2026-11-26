@@ -110,6 +110,21 @@ def strategy_journey(get, post):
     result = job['strategy_study']['result']
     assert result['status'] == 'COMPLETE' and result['ledger']['fills']
     assert '策略研究与统一纸面账本' in get(job['report_url']).decode()
+    studio = '/api/research/strategy-validation'
+    assert '策略验证室' in get('/research/strategy-validation').decode()
+    assert b'.sv-page' in get('/assets/strategy-validation.css')
+    plan = post(studio + '/preview', {'run_id': job['run_id']})
+    queued = post(studio + '/run', {'run_id': job['run_id'], 'plan_fingerprint': plan['plan_fingerprint']})
+    deadline = time.monotonic() + 90
+    while time.monotonic() < deadline:
+        evidence = json.loads(get(studio + '?study=' + queued['study_id']))
+        if evidence['status'] in {'completed', 'failed', 'cancelled'}:
+            break
+        time.sleep(.25)
+    assert evidence['status'] == 'completed', evidence
+    assert len(evidence['walkforward']['windows']) == 3
+    assert evidence['portfolio']['ledger_digest'] == plan['original_ledger']
+    assert plan['plan_fingerprint'] in get(evidence['report_url']).decode()
     learning = '/api/research/learning/strategy'
     receipt = post(learning + '/observations', {'run_id': job['run_id'], 'as_of': job['as_of'][:10]})
     audit = post(learning + '/audits', {'observation_ref': receipt['observation_ref']})
