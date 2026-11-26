@@ -12,6 +12,10 @@ class StrategyDataUnavailable(ValueError):
     """A declared input or comparable window is unavailable."""
 
 
+class StrategyLookbackWarmup(StrategyDataUnavailable):
+    """Every required price is known, but the declared lookback has not elapsed."""
+
+
 def asset_kind(value):
     if value in ('EQUITY', 'STOCK'):
         return 'equity'
@@ -58,8 +62,10 @@ def adjusted_price_matrix(frame, names, periods):
 
 def _prices(frame, latest, window):
     values = adjusted_price_matrix(frame, latest.index, window + 1)
-    if len(values) < window + 1 or values.isna().any().any():
+    if values.isna().any().any():
         raise StrategyDataUnavailable('同窗拆分中性价格缺少完整观察')
+    if len(values) < window + 1:
+        raise StrategyLookbackWarmup('同窗拆分中性价格缺少完整观察')
     return values
 
 
@@ -296,6 +302,8 @@ def select_strategy(template, panel_prefix, parameters, asset_classes, previous_
         weights = _allocate(raw, parameters)
     except np.linalg.LinAlgError:
         return _result('NEEDS_DATA', reason='已知样本无法估计回归')
+    except StrategyLookbackWarmup as exc:
+        return {**_result('NEEDS_DATA', reason=str(exc)), 'lookback_warmup': True}
     except StrategyDataUnavailable as exc:
         return _result('NEEDS_DATA', reason=str(exc))
     return _result('READY', weights, reason='生成纸面目标权重' if weights else '无符合选择条件的资产，保留现金',

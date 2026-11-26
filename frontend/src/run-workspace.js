@@ -110,7 +110,11 @@ export function mountRunWorkspace(root, { fetcher = globalThis.fetch, location =
       if (button.dataset.historyJob === job.job_id) button.textContent = historyLabel(job);
     }
     renderExplanation(root, job);
-    const restore = query('[data-run-restore]'); if (restore) restore.disabled = false;
+    const restore = query('[data-run-restore]');
+    if (restore) {
+      restore.disabled = false;
+      restore.textContent = job.strategy_validation ? '打开冻结验证方案' : '沿用基础输入';
+    }
     text('[data-guide-step="run"]', `03 运行研究 · ${LABELS[job.status]}`);
     text('[data-guide-step="report"]', `04 阅读报告 · ${job.report_status === 'AVAILABLE' ? '可阅读' : '待生成'}`);
     root.dataset.jobStatus = job.status;
@@ -133,7 +137,7 @@ export function mountRunWorkspace(root, { fetcher = globalThis.fetch, location =
     const stages = query('[data-run-stages]');
     if (stages) stages.replaceChildren(...job.stages.map((stage) => { const node = element('li', `${STAGES[stage.name]} · ${stage.status}`); node.dataset.stageStatus = stage.status; return node; }));
     const metrics = query('[data-run-metrics]');
-    if (metrics) metrics.replaceChildren(...Object.entries(job.metrics).flatMap(([key, value]) => [element('dt', key.replaceAll('_', ' ')), element('dd', value == null ? '未提供' : new Intl.NumberFormat('zh-CN', { maximumFractionDigits: 6 }).format(value))]));
+    if (metrics) metrics.replaceChildren(...Object.entries(job.strategy_validation ? {} : job.metrics).flatMap(([key, value]) => [element('dt', key.replaceAll('_', ' ')), element('dd', value == null ? '未提供' : new Intl.NumberFormat('zh-CN', { maximumFractionDigits: 6 }).format(value))]));
     const cancel = query('[data-run-cancel]'); if (cancel) cancel.disabled = TERMINAL.has(job.status) || job.cancel_requested === true;
     for (const [selector, url] of [['[data-run-report]', job.report_url], ['[data-run-detail]', job.report_status === 'AVAILABLE' ? job.run_url : null]]) {
       const link = query(selector); if (link) { link.hidden = !url; if (url) link.setAttribute('href', url); else link.removeAttribute('href'); }
@@ -144,7 +148,7 @@ export function mountRunWorkspace(root, { fetcher = globalThis.fetch, location =
     selectedId = id; lastJob = null; clearError();
     query('[data-run-restore]')?.setAttribute('disabled', '');
     for (const selector of ['[data-run-explanation]', '[data-run-call-records]', '[data-run-model-roles]', '[data-run-synthesis]', '[data-run-stages]']) query(selector)?.replaceChildren();
-    for (const selector of ['[data-run-identity]', '[data-run-failure]', '[data-run-data-note]', '[data-run-model-summary]']) text(selector, '');
+    for (const selector of ['[data-run-identity]', '[data-run-failure]', '[data-run-data-note]', '[data-run-model-summary]', '[data-run-restore-note]']) text(selector, '');
     query('[data-run-cancel]')?.setAttribute('disabled', '');
     for (const selector of ['[data-run-report]', '[data-run-detail]']) { const link = query(selector); if (link) link.hidden = true; }
     root.dataset.jobStatus = 'loading';
@@ -254,7 +258,12 @@ export function mountRunWorkspace(root, { fetcher = globalThis.fetch, location =
     catch (error) { showError(error); button.disabled = false; }
   });
   query('[data-run-restore]')?.addEventListener('click', () => {
-    if (!lastJob || !form) return;
+    if (!lastJob) return;
+    if (lastJob.strategy_validation) {
+      location.assign('/research/strategy-validation?study=' + encodeURIComponent(lastJob.job_id));
+      return;
+    }
+    if (!form) return;
     for (const name of ['snapshot_ref', 'instrument', 'as_of', 'question']) form.elements.namedItem(name).value = lastJob[name] ?? '';
     form.elements.namedItem('max_wall_seconds').value = lastJob.budget?.max_wall_seconds ?? 120;
     form.elements.namedItem('model_config_ref').value = lastJob.model_config_ref ?? 'offline';

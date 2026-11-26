@@ -208,3 +208,44 @@ def test_blocked_receipts_preserve_each_declared_product(original):
         receipt = manager.recompute(package['package_id'])
         assert receipt['status'] == 'BLOCKED'
         assert receipt['products'] == {'baseline':'BLOCKED','quant_evidence':'BLOCKED', 'factor_study':'REQUIRES_ORIGINAL_WORKFLOW'}
+
+
+def test_published_studio_replay_covers_baseline_and_records_missing_strategy_workflow(tmp_path):
+    from types import SimpleNamespace
+
+    from finahinking.research.reproduction_routes import BASE, route
+    from finahinking.research.strategy_validation_service import StrategyValidationService
+    from tests.research.test_strategy_worker import completed
+
+    service = ResearchApplicationService(tmp_path / 'original', allow_model_calls=False)
+    target = ResearchApplicationService(tmp_path / 'restored', allow_model_calls=False)
+    try:
+        service.start()
+        sample = service.create_strategy_sample()
+        job = service.run_strategy_template({**{k: sample[k] for k in ('contract', 'attachment_refs')},
+                                             'template_id': 'equal-weight', 'idempotency_key': 'portable-studio'})
+        original_run = completed(service, job['job_id'])['run_id']
+        studio = StrategyValidationService(service)
+        plan = studio.preview(original_run, {'train_size': 8, 'test_size': 4, 'parameter_values': [5]}, {})
+        queued = studio.submit(original_run, plan['plan_fingerprint'])
+        published = completed(service, queued['job_id'])
+        status, _, comparison = route(SimpleNamespace(research_service=service), 'GET', BASE + '/compare',
+                                      {'left': [original_run], 'right': [published['run_id']]}, {})
+        assert status == 200 and comparison['comparison']['status'] == 'INCOMPATIBLE'
+        assert comparison['comparison']['metric_differences'] == {}
+        assert comparison['right']['strategy_validation']['conditions']['parameters']['grid'] == [5]
+        assert comparison['right']['report_url'].endswith('/report/complete')
+        assert 'quant_evidence' not in comparison['right']
+        manager = reproduction(target)
+        package = reproduction(service).export(published['run_id'], include_data=True)
+        assert package['product_coverage']['strategy_validation'] == 'REQUIRES_ORIGINAL_WORKFLOW'
+        assert package['missing_dependencies'] == ['STRATEGY_VALIDATION_WORKFLOW_DEPENDENCIES']
+        manager.restore(package)
+        receipt = manager.recompute(package['package_id'])
+        assert receipt['status'] == 'PARTIAL', receipt
+        assert receipt['products']['baseline'] == receipt['products']['quant_evidence'] == 'MATCHED'
+        assert receipt['products']['strategy_validation'] == 'REQUIRES_ORIGINAL_WORKFLOW'
+        assert target.list_jobs()['total'] == 0
+    finally:
+        target.close()
+        service.close()

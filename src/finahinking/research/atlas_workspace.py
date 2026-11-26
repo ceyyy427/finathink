@@ -58,6 +58,8 @@ def _title(entry):
         return _titles().get(study.get('binding', {}).get('template_id'), '纸面策略研究')
     if entry['report_status'] == 'AVAILABLE':
         source = entry['manifest'].get('source_snapshot', {})
+        if source.get('strategy_validation'):
+            return '策略样本外验证'
         if source.get('factor_study'):
             return '因子检验'
         if source.get('discovery'):
@@ -224,6 +226,7 @@ def render_runs(repo, query):
     actions = ['<a href="/research/strategies">纸面策略</a>']
     if entry and entry['report_status'] == 'AVAILABLE':
         if _strategy(entry):
+            actions.append(f'<a href="/research/strategy-validation?{urlencode({"run": selected})}">验证样本外表现</a>')
             actions.append(f'<a href="/research/learning?{urlencode({"strategy_run": selected})}#strategy-learning">观察与结算</a>')
         if 'complete_report.html' in entry['manifest'].get('files', {}):
             actions.append(f'<a class="atlas-report" download="Finathink-{escape(selected)}.html" href="/research/{quote(selected,safe="")}/report/complete">导出离线报告 ↓</a>')

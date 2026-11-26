@@ -88,3 +88,67 @@ def test_same_controlled_recipe_is_known_without_optional_method_attachment():
     a['factor_study'] = {'phase': 'VALIDATION', 'charter': {'version': 'factor-workbench.v1',
         'recipe_id': 'close_reversal', 'recipe_version': 'v1', 'windows': [3, 5, 8]}}
     assert compare(a, copy.deepcopy(a))['status'] == 'COMPATIBLE'
+
+
+def studio_source():
+    from finahinking.research.research_differences import validation_comparison_summary
+
+    plan = {
+        'source': {'panel_ref': 'panel', 'policy_digest': 'policy'}, 'original_ledger': 'ledger',
+        'original_report': 'published', 'studio_version': 'studio.v1', 'run_id': 'paper-run', 'template_id': 'equal-weight',
+        'plan_fingerprint': 'f' * 64, 'objective': 'net_return', 'method': 'walk-forward.v1',
+        'selection_rule': 'MAX_TRAIN_SCORE', 'stability_rule': 'GRID', 'account_initialization': 'FRESH_CASH',
+        'warmup': 'TRAIN', 'parameter': 'rebalance_every', 'parameter_values': [3, 5], 'windows': [
+            {'index': 1, 'train_start': '2025-01-02', 'test_start': None, 'test_observations': 0}],
+        'options': {'stability_tolerance': .002, 'train_size': 32, 'test_size': 16},
+        'scenarios': [{'id': 'baseline', 'fee_bps': 5., 'max_volume_participation': .01}],
+        'portfolio': {'target_exposure': .8, 'max_single_weight': .4},
+    }
+    return {**source(), 'strategy_validation': validation_comparison_summary(plan)}
+
+
+def test_same_studio_plan_describes_actual_validation_conditions_and_suppresses_auxiliary_baseline():
+    compare, _ = modules()
+    a = studio_source()
+    b = copy.deepcopy(a)
+    b['quant_analytics']['metrics'] = {'total_return': .7}
+    result = compare(a, b)
+    assert result['status'] == 'COMPATIBLE' and result['metric_differences'] == {}
+    assert '逐窗收益' in result['basis']
+    categories = {row['id']: row['right'] for row in result['categories']}
+    assert categories['parameters']['grid'] == [3, 5]
+    assert categories['costs']['execution_scenarios'][0]['fee_bps'] == 5.
+    assert categories['risk']['portfolio']['target_exposure'] == .8
+    assert categories['data']['source_run'] == 'paper-run'
+    assert compare(a, source())['status'] == 'INCOMPATIBLE'
+    assert compare(source(), a)['metric_differences'] == {}
+
+
+@pytest.mark.parametrize(('category', 'key', 'change'), [
+    ('data', 'ledger', 'new ledger'), ('method', 'objective', 'spread'),
+    ('parameters', 'grid', [3, 5, 7]), ('risk', 'portfolio', {'target_exposure': .9}),
+    ('costs', 'execution_scenarios', [{'id': 'lower_capacity', 'max_volume_participation': .001}]),
+])
+def test_different_studio_sources_grids_settings_and_costs_are_incomparable(category, key, change):
+    compare, _ = modules()
+    a = studio_source()
+    b = copy.deepcopy(a)
+    b['strategy_validation']['conditions'][category][key] = change
+    result = compare(a, b)
+    assert result['status'] == 'INCOMPATIBLE' and result['metric_differences'] == {}
+    assert next(row['status'] for row in result['categories'] if row['id'] == category) == 'CHANGED'
+
+
+def test_archived_studio_identity_remains_distinguishable_from_baseline_and_new_freezes():
+    compare, _ = modules()
+    a = source()
+    a['strategy_validation'] = {'run_id': 'paper-1', 'template_id': 'equal-weight', 'plan_fingerprint': 'f' * 64}
+    assert compare(a, a)['status'] == 'UNKNOWN' and compare(a, a)['metric_differences'] == {}
+    assert compare(a, source())['status'] == 'INCOMPATIBLE'
+    detailed = studio_source()
+    detailed['strategy_validation'].update(a['strategy_validation'])
+    assert compare(a, detailed)['status'] == 'UNKNOWN'
+    for key, value in [('run_id', 'paper-2'), ('plan_fingerprint', 'b' * 64)]:
+        b = copy.deepcopy(a)
+        b['strategy_validation'][key] = value
+        assert compare(a, b)['status'] == 'INCOMPATIBLE'

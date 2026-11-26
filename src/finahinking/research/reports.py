@@ -469,7 +469,20 @@ class ReportBundleWriter:
             status_model["policy_lineage"] = analytics_payload.get("policy_lineage")
             status_model["publication_scope"] = analytics_payload.get("publication_scope")
         complete_path = bundle / "complete_report.html"
-        if factor_sections is not None:
+        studio = analytics_payload.get("strategy_validation") if analytics_payload else None
+        if studio:
+            from importlib.resources import files as package_files
+
+            from .research_differences import validation_comparison_summary
+            from .strategy_validation_page import render_validation_report
+
+            css = package_files("finahinking").joinpath("_package_data/assets/strategy-validation.css").read_text(encoding="utf-8")
+            report = render_validation_report(studio["plan"], {**studio, "status": "completed", "study_id": result.state.run_id,
+                        "run_id": studio["plan"]["run_id"], "plan_fingerprint": studio["plan"]["plan_fingerprint"]})
+            complete_document = theme_report_document('<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">'
+                '<meta name="viewport" content="width=device-width,initial-scale=1"><title>策略验证报告 · Finathink</title></head><body><main>' + report + '</main></body></html>')
+            complete_document = complete_document.replace("</head>", "<style>" + css + "</style></head>", 1)
+        elif factor_sections is not None:
             complete_document = render_factor_report_document(factor_sections, run_id=result.state.run_id,
                 question=study.get("charter", {}).get("question", "按冻结章程核对因子假设"))
         elif study and study.get("charter", {}).get("snapshot_factor"):
@@ -517,6 +530,7 @@ class ReportBundleWriter:
                 **({"factor_study": analytics_payload["factor_study"]} if analytics_payload and analytics_payload.get("factor_study") else {}),
                 **({"risk_portfolio": analytics_payload["risk_portfolio"]} if analytics_payload and analytics_payload.get("risk_portfolio") else {}),
                 **({"discovery": analytics_payload["discovery"]} if analytics_payload and analytics_payload.get("discovery") else {}),
+                **({"strategy_validation": validation_comparison_summary(studio["plan"])} if studio else {}),
                 **({"strategy_study": analytics_payload["strategy_study"]} if analytics_payload and analytics_payload.get("strategy_study") else {}),
                 **({"quant_evidence": analytics_payload["quant_evidence"]} if analytics_payload and analytics_payload.get("quant_evidence") else {}),
                 **({"reproduction": analytics_payload["reproduction"]} if analytics_payload and analytics_payload.get("reproduction") else {}),

@@ -33,6 +33,10 @@ def route(app, method, path, query, body):
                 raise ValueError()
             def side(entry):
                 source = entry['manifest']['source_snapshot']
+                if 'strategy_validation' in source:
+                    return {'run_id': entry['run_id'], 'data_mode': source.get('data_mode', 'UNKNOWN'),
+                            'strategy_validation': source['strategy_validation'],
+                            'report_url': '/research/' + entry['run_id'] + '/report/complete'}
                 return {'run_id': entry['run_id'], 'data_mode': source.get('data_mode', 'UNKNOWN'),
                         'quant_evidence': source.get('quant_evidence'),
                         'factor_surfaces': source.get('factor_study', {}).get('surfaces', []),

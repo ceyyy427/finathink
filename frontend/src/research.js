@@ -1,4 +1,5 @@
 import { mountQuantPool, mountQuantWorkspace } from './quant-workspace.js';
+import { mountStrategyValidation } from './strategy-validation.js';
 import { mountStrategyStudy } from './strategy-study.js';
 import { mountFactorSuite } from './factor-suite.js';
 import { mountFactorLibrary } from './factor-library.js';
@@ -602,6 +603,7 @@ if (typeof document !== 'undefined') {
   document.querySelectorAll('[data-panel-workbench]').forEach(root => mountPanelWorkbench(root));
   document.querySelectorAll("[data-quant-workbench]").forEach(root => mountQuantWorkspace(root));
   document.querySelectorAll("[data-qw-pool]").forEach(root => mountQuantPool(root));
+  document.querySelectorAll('[data-strategy-validation]').forEach(mountStrategyValidation);
   document.querySelectorAll('[data-strategy-study]').forEach(mountStrategyStudy);
   document.querySelectorAll('[data-suite-form]').forEach(form => mountFactorSuite(form));
   document.querySelectorAll('[data-learning-reliability]').forEach(root => { mountLearningReliability(root); });

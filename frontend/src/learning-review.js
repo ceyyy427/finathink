@@ -7,6 +7,11 @@ const STATES = new Set(['PENDING_REVIEW', 'APPROVED', 'REJECTED', 'KEEP_POLICY']
 const ACTIVE = new Set(['queued', 'running', 'retryable']);
 const labels = { PENDING_REVIEW: '待审核', APPROVED: '已批准', REJECTED: '已拒绝', KEEP_POLICY: '保留原配置' };
 
+export function singleAssetReviewSources(jobs) {
+  return jobs.filter(job => job.status === 'completed' && job.report_status === 'AVAILABLE'
+    && !job.factor_study && !job.strategy_study && !job.strategy_validation);
+}
+
 export function normalizeLearningReview(value) {
   if (!value || !/^learning-[0-9a-f]{32}$/.test(value.review_id ?? '') || !/^[A-Za-z0-9_-]+$/.test(value.run_id ?? '') || value.paper_only !== true || !STATES.has(value.status)) throw new TypeError('复盘身份或状态无效。');
   const monitoring = value.source_kind === 'FACTOR_VALIDATION_MONITORING';
@@ -111,7 +116,7 @@ export function mountLearningReview(root, { fetcher = globalThis.fetch, interval
     const [reviews, versions, data, jobs] = await Promise.all([request('/api/research/learning'), request('/api/research/learning/policies'), request('/api/research/snapshots'), request('/api/research/jobs')]);
     if (disposed) return;
     snapshots = data.snapshots; policies = versions.policies;
-    const completed = jobs.jobs.filter((item) => item.status === 'completed' && item.report_status === 'AVAILABLE' && !item.factor_study);
+    const completed = singleAssetReviewSources(jobs.jobs);
     const runOptions = completed.map((item) => [item.run_id, `${item.instrument} · ${item.question} · ${item.run_id}`]);
     for (const target of [form.elements.run_id, rerunForm.elements.run_id]) options(target, runOptions, '请选择已有完整报告的研究');
     const dataOptions = snapshots.map((item) => [item.snapshot_ref, `${item.mode} · ${item.instruments.join(', ')} · ${item.record_count}行 · ${item.as_of.slice(0, 10)} · ${item.snapshot_ref.slice(0, 12)}`]);

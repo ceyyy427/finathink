@@ -130,3 +130,17 @@ def test_offline_summary_uses_recorded_selected_instrument_not_a_snapshot_guess(
     assert f'标的 {expected}' in summary
     assert '标的 AAA' not in summary
     assert manifest.source_snapshot.get('instrument') == selection.get('instrument')
+
+
+def test_validation_job_links_to_windows_and_published_ledger_without_adopting_baseline_metrics():
+    summary = explain(job(status="completed", report_status="AVAILABLE", metrics={"total_return": .42},
+                          risk_portfolio={"execution_status": "PENDING_NEXT_OBSERVATION"},
+                          strategy_validation={"plan_fingerprint": "b"*64, "run_id": "original"}))
+    assert "策略验证" in summary["headline"]
+    assert "样本外" in summary["conclusion"]
+    assert [row["href"] for row in summary["evidence"]] == [
+        "/research/research-one/report/complete#sv-results",
+        "/research/research-one/report/complete#sv-portfolio",
+    ]
+    assert not any("value" in row for row in summary["evidence"])
+    assert "尚未成交" not in summary["conclusion"]

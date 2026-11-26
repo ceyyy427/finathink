@@ -203,7 +203,7 @@ class LearningReviewService:
         if len(rows) != 1:
             raise ValueError("原研究运行不存在或不属于当前工作区")
         job = self.app.get_job(rows[0]["job_id"])
-        if job["status"] != "completed" or job["report_status"] != "AVAILABLE" or job.get("factor_study") is not None or job.get("strategy_study") is not None:
+        if job["status"] != "completed" or job["report_status"] != "AVAILABLE" or job.get("factor_study") is not None or job.get("strategy_study") is not None or job.get("strategy_validation") is not None:
             raise ValueError("请使用普通纸面研究报告进行单资产结算复盘")
         entry = self.app.runs.get_run(run_id)
         request = self.app._request(self.app.queue.get(job["job_id"]))
