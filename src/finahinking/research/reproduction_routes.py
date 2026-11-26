@@ -53,10 +53,17 @@ def route(app, method, path, query, body):
             if set(values) != {'package'}:
                 raise ValueError()
             return 201, 'application/json', service.restore(values['package'])
-        matched = re.fullmatch('/([a-f0-9]{64})(/recompute|/history)?', suffix)
+        matched = re.fullmatch('/([a-f0-9]{64})(/recompute|/history|/differences)?', suffix)
         if matched:
             if values:
                 raise ValueError()
+            if matched[2] == '/differences':
+                if (set(query) - {'product', 'page', 'receipt_id'} or not {'product', 'page'} <= set(query)
+                        or any(len(value) != 1 for value in query.values())
+                        or not re.fullmatch(r'0|[1-9][0-9]{0,9}', query['page'][0])):
+                    raise ValueError()
+                return 200, 'application/json', service.differences(
+                    matched[1], query['product'][0], int(query['page'][0]), query.get('receipt_id', [None])[0])
             if matched[2] == '/history':
                 return 200, 'application/json', service.history(matched[1])
             return 200, 'application/json', service.recompute(matched[1]) if write else service.get(matched[1])

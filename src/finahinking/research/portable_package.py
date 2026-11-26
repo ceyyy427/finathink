@@ -4,6 +4,7 @@ import hashlib
 import html
 import json
 import re
+from functools import partial
 
 from . import portable_factors, portable_learning, portable_strategy
 from .contracts import stable_digest
@@ -40,6 +41,11 @@ def _sha(data):
     return hashlib.sha256(data).hexdigest()
 
 
+def _public_reference(url):
+    # The Alpha101 recipe's published bibliography also includes this fixed paper version.
+    return bool(_PUBLIC_CODE.fullmatch(url)) or url == 'https://arxiv.org/abs/1601.00991v3'
+
+
 def _public(value):
     # Published usage uses numeric token counts. Never treat free-form strings as counts.
     if isinstance(value, dict):
@@ -53,7 +59,7 @@ def _public(value):
             _public(item)
     else:
         if isinstance(value, str):
-            if any(not _PUBLIC_CODE.fullmatch(url) for url in _URL.findall(value)):
+            if any(not _public_reference(url) for url in _URL.findall(value)):
                 raise ValueError('导出内容包含非公开来源地址。')
             value = _URL.sub('[公开代码引用]', value)
         _sanitize_public(value)
@@ -73,7 +79,7 @@ def _check_report(item):
     # CSS namespaces are identifiers in published report styles, not user data sources.
     document = html.unescape(raw.decode('utf-8'))
     for url in _URL.findall(document):
-        if not (_PUBLIC_CODE.fullmatch(url) or url in {'http://www.w3.org/2000/svg', 'http://www.w3.org/1999/xlink'}):
+        if not (_public_reference(url) or url in {'http://www.w3.org/2000/svg', 'http://www.w3.org/1999/xlink'}):
             raise ValueError('历史报告包含非公开来源地址。')
     remaining = _URL.sub('', document)
     if _SECRET_TEXT.search(remaining) or _ABSOLUTE_PATH.search(remaining):
@@ -128,7 +134,7 @@ def freeze(manager, run_id, pair_id):
         kind = next((key for key in ('strategy_validation', 'strategy_study', 'factor_study') if analytics.get(key)), 'research')
         inputs, expected, pending = None, {}, []
         try:
-            core = manager.export_legacy(run_id, True, published_only=True)
+            core = manager.export_legacy(run_id, True)
         except (FileNotFoundError, PortableUnavailable) as exc:
             pending.append('NORMALIZED_DATA' if isinstance(exc, FileNotFoundError) else str(exc))
             core = manager.export_legacy(run_id, False)
@@ -254,7 +260,7 @@ def validate(package):
         raise ValueError('工作流包的冻结材料结构无效。') from exc
 
 
-def replay(service, package):
+def replay(service, package, *, on_difference=None):
     from .reproduction import _policy_supported, compute_baseline
 
     body = json.loads(package['archive'])
@@ -273,7 +279,8 @@ def replay(service, package):
         try:
             actual = json.loads(_json(compute()))
             for key, recorded in expected.items():
-                rows[key] = compare_product(recorded, actual[key])
+                collect = None if on_difference is None else partial(on_difference, key)
+                rows[key] = compare_product(recorded, actual[key], on_difference=collect)
         except PortableUnavailable as exc:
             reasons.append(str(exc))
         except (ValueError, TypeError, KeyError, ArithmeticError):
@@ -288,8 +295,12 @@ def replay(service, package):
         if inputs is not None:
             if kind in _PAIRS:
                 compare(body['expected'], lambda: portable_learning.replay_pair(service, inputs))
+            elif kind == 'factor_study':
+                compare(body['expected'], lambda: portable_factors.replay_run(service, inputs, kind, published_identity=expected_identity))
             else:
                 compare(body['expected'], lambda: _adapter(kind).replay_run(service, inputs, kind))
+    if kind == 'factor_study' and inputs is not None:
+        rows['factor_study']['reproduction_scope'] = portable_factors.reproduction_scope(inputs)
     states = {row['status'] for row in rows.values()}
     status = ('DIFFERENT' if 'DIFFERENT' in states else 'BLOCKED' if 'REPRODUCED' not in states else
               'PARTIAL' if 'BLOCKED' in states else 'REPRODUCED')
@@ -305,8 +316,11 @@ def history(package):
     evidence = {key: value for key, value in [('model_text', body['model']), ('discovery', body['discovery'])]
                 if value is not None}
     kind = package['kind']
-    if kind == 'factor_study' and inputs.get('review'):
-        evidence['factor_review'] = inputs['review']
+    if kind == 'factor_study':
+        if inputs.get('review'):
+            evidence['factor_review'] = inputs['review']
+        if inputs.get('method'):
+            evidence['method_proposal'] = inputs['method']
     elif kind == 'strategy_pair':
         evidence['learning_approval'] = inputs['decision']
     elif kind == 'research_pair':

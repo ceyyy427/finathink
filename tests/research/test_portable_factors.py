@@ -117,6 +117,18 @@ def test_published_factor_replays_in_clean_workspace(tmp_path, kind, monkeypatch
             restored = destination.restore(exported)["package_id"]
             history = destination.history(restored)
             assert history["evidence"]["factor_review"] == inputs["review"]
+            for name in ("factor_ref", "evaluation_fingerprint", "universe_ref", "policy_fingerprint"):
+                tampered = copy.deepcopy(inputs)
+                tampered["review"]["use_event"]["decision"][name] = "a" * 64
+                with pytest.raises(ValueError, match="审核事件"):
+                    portable_factors.validate_run(tampered)
+            tampered = copy.deepcopy(inputs)
+            frozen = tampered["settings"]["discovery"]["frozen"]
+            frozen["family_ref"] = "a" * 64
+            frozen["fingerprint"] = stable_digest({k: v for k, v in frozen.items() if k != "fingerprint"})
+            tampered["receipt"]["settings_ref"] = stable_digest(tampered["settings"])
+            with pytest.raises(ValueError, match="家族"):
+                portable_factors.validate_run(tampered)
             assert len(history["artifacts"]) == 2
             assert destination.recompute(restored)["products"]["factor_study"]["status"] == "REPRODUCED"
             assert not clean.factor_studies.list() and not clean.factor_uses.list()

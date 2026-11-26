@@ -114,7 +114,7 @@ def test_missing_source_snapshot_preserves_history_but_blocks_computation(origin
         dest = ReproductionService(target)
         restored = dest.restore(package)
         receipt = dest.recompute(restored['package_id'])
-        assert restored['history_count'] == 1 and receipt['status'] == 'BLOCKED'
+        assert restored['history_count'] == 1 and not restored['data_included'] and receipt['status'] == 'BLOCKED'
         assert receipt['missing_dependencies'] == ['NORMALIZED_DATA']
         assert receipt['products']['baseline'] == {'status': 'BLOCKED'}
         assert len(dest.history(restored['package_id'])['artifacts']) == 1

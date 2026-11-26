@@ -8,6 +8,7 @@ import re
 
 from finahinking.p8_2.contracts import DatasetSnapshot, MarketObservation
 
+from . import portable_difference_pages
 from .contracts import stable_digest
 from .reports import _sanitize_public
 from .research_identity import execution_identity
@@ -194,6 +195,7 @@ class ReproductionService:
         self.service = service
         with service.queue._connect() as db:
             db.execute('CREATE TABLE IF NOT EXISTS research_packages (scope_id TEXT NOT NULL, package_id TEXT NOT NULL, payload TEXT NOT NULL, receipt TEXT, receipt_digest TEXT, PRIMARY KEY(scope_id,package_id))')
+            portable_difference_pages.initialize(db)
 
     def source(self, run_id):
         entry = self.service.runs.get_run(run_id)
@@ -215,13 +217,19 @@ class ReproductionService:
 
     def export(self, run_id=None, include_data=False, *, data_scope=None, pair_id=None):
         if data_scope is None and pair_id is None and run_id is not None:
-            return self.export_legacy(run_id, include_data)
+            from .portable_inputs import PortableUnavailable
+            try:
+                return self.export_legacy(run_id, include_data)
+            except PortableUnavailable as exc:
+                if str(exc) != 'BASELINE_SAMPLE_SIZE':
+                    raise
+                raise ValueError('迁移复算需要 4 至 5000 条已发表观测。') from exc
         if data_scope != 'workflow' or include_data is not True or (run_id is None) == (pair_id is None):
             raise ValueError('请选择一项研究或学习对照并明确同意导出已发表的工作流数据。')
         from .portable_package import freeze
         return freeze(self, run_id, pair_id)
 
-    def export_legacy(self, run_id, include_data=False, *, published_only=False):
+    def export_legacy(self, run_id, include_data=False):
         if type(include_data) is not bool:
             raise ValueError('请明确选择是否携带标准化数据。')
         entry, analytics = self.source(run_id)
@@ -232,7 +240,7 @@ class ReproductionService:
         if include_data:
             snapshot = self.service.snapshots.load(analytics['dataset_fingerprint'])
             compact = _portable_snapshot(snapshot, frozen['publication_before'], panel_scope=frozen.get("panel_scope"),
-                                         as_of=analytics["as_of"] if published_only else None)
+                                         as_of=analytics["as_of"])
         expected = products(analytics)
         coverage = {key: 'INCLUDED' for key in expected}
         missing = [] if include_data else ['NORMALIZED_DATA']
@@ -276,13 +284,21 @@ class ReproductionService:
         package, receipt = self._load(reference)
         summary = {key: package[key] for key in ('package_id', 'run_id', 'schema_version', 'product_coverage', 'missing_dependencies')}
         workflow = package['schema_version'] == 'research-package.v2'
-        return {**summary, 'receipt': receipt, 'data_included': workflow or package['snapshot'] is not None,
-                'history_count': len(json.loads(package['archive'])['history']) if workflow else 0}
+        if workflow:
+            archive = json.loads(package['archive'])
+            included = archive['inputs'] is not None or (archive['core'] or {}).get('snapshot') is not None
+            return {**summary, 'receipt': receipt, 'data_included': included, 'history_count': len(archive['history'])}
+        return {**summary, 'receipt': receipt, 'data_included': package['snapshot'] is not None, 'history_count': 0}
 
     def history(self, reference):
         package, _ = self._load(reference)
         from .portable_package import VERSION, history
         return history(package) if package['schema_version'] == VERSION else {'artifacts': [], 'evidence': {}}
+
+    def differences(self, reference, product, page, receipt_id=None):
+        with self.service.queue._connect() as db:
+            return portable_difference_pages.read_page(db, self.service.scope_id, _ref(reference), product, page,
+                                                       _ref(receipt_id) if receipt_id is not None else None)
 
     def list(self):
         with self.service.queue._connect() as db:
@@ -293,7 +309,10 @@ class ReproductionService:
         package, saved = self._load(reference)
         if package['schema_version'] == 'research-package.v2':
             from .portable_package import replay
-            return self._save_receipt(reference, replay(self.service, package))
+            with self.service.queue._connect() as db:
+                pages = portable_difference_pages.DifferencePages(db)
+                receipt = replay(self.service, package, on_difference=pages.add)
+                return pages.save(self.service.scope_id, receipt)
         current = execution_identity(local_research_policy())
         if saved and saved.get('runtime_identity') == current:
             return saved

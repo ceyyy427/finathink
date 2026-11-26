@@ -2,11 +2,12 @@
 
 import base64
 import hashlib
+import html
 
 from finahinking.data.panel_contracts import reference
 
 from .application_service import verify_research_receipt
-from .contracts import stable_digest
+from .contracts import stable_digest, to_jsonable
 from .job_queue import JobStatus, _ref
 
 _COMPLETE = "complete_report.html"
@@ -48,6 +49,57 @@ def freeze_report(app, run_id):
             "publication": {**witness, "fingerprint": stable_digest(witness)}}
 
 
+def factor_publication_proof(app, study, receipt_digest):
+    from .application_service import _read_json
+    from .reports import redact_public_payload
+
+    job = app.queue.get(study["test_job_id"])
+    proof = {"request": to_jsonable(app._request(job)), "publication": _read_json(app.root / "results" / (receipt_digest + ".json"))}
+    if proof != redact_public_payload(proof):
+        from .portable_inputs import PortableUnavailable
+
+        raise PortableUnavailable("FACTOR_PUBLICATION_PROOF_UNAVAILABLE")
+    return proof
+
+
+def verified_factor_scope(proof, receipt):
+    publication, request = proof["publication"], proof["request"]
+    binding = request["research_plan"]["validation_spec"]
+    if (stable_digest(publication) != receipt["test_publication"] or stable_digest(request) != publication["request_digest"]
+            or request["run_id"] != publication["run_id"] or request["run_id"] != receipt["test_run"]
+            or publication["snapshot_ref"] != request["snapshot_ref"] or request["snapshot_ref"] != receipt["snapshot_ref"]
+            or binding["factor_study"] != {"phase": "test", "spec_ref": receipt["spec_ref"], "study_id": receipt["study_id"]}
+            or binding["execution_mode"] != "local-deterministic" or binding["model_config_ref"] != "offline"):
+        raise ValueError("冻结因子未绑定同一原发表回执和研究章程。")
+    return _ref(binding["scope_id"], "scope_id")
+
+
+def _factor_document(items, inputs):
+    receipt = inputs["receipt"]
+    documents = {row["publication"]["run_id"]: row for row in items}
+    for phase in ("validation", "test"):
+        run = receipt[phase + "_run"]
+        if run not in documents:
+            raise ValueError("缺少因子测试的原始发表报告。")
+        document = documents[run]
+        if "method" in inputs:
+            markers = [f'<dt>{label}</dt><dd>{receipt[phase + suffix]}</dd>' for label, suffix in (
+                ("validation_fingerprint", "_evaluation"), ("binding_digest", "_binding"))]
+            if phase == "test" and inputs["origin"]["publication"]["manifest_digest"] != document["publication"]["manifest_digest"]:
+                raise ValueError("方法测试回执引用的原发表清单不一致。")
+        elif inputs.get("settings", {}).get("discovery"):
+            frozen = inputs["settings"]["discovery"]
+            trial = frozen["trial"]["fingerprint"] if phase == "test" else frozen["frozen"]["trial_ref"]
+            if phase == "test" and frozen["origin"]["publication"]["manifest_digest"] != document["publication"]["manifest_digest"]:
+                raise ValueError("因子回执引用的原发表清单不一致。")
+            markers = [f'"digest": "{trial}"', f'"spec_ref": "{receipt["spec_ref"]}"', f'"family_ref": "{frozen["frozen"]["family_ref"]}"']
+        else:
+            return
+        published = html.unescape(base64.b64decode(document["content_base64"], validate=True).decode("utf-8"))
+        if not all(marker in published for marker in markers):
+            raise ValueError("冻结评估指纹或试验家族与原始因子报告不一致。")
+
+
 def validate_history(items, kind, source_id, inputs):
     """Bind the checked bytes to their archived origin and independently frozen workflow refs."""
     by_run = {}
@@ -71,6 +123,8 @@ def validate_history(items, kind, source_id, inputs):
         return
     expected = []
     if kind == "factor_study":
+        if "method" in inputs or inputs.get("settings", {}).get("discovery"):
+            _factor_document(items, inputs)
         for phase in ("validation", "test"):
             receipt = inputs["receipt"]
             expected.append((receipt[phase + "_run"], "receipt_digest", receipt[phase + "_publication"]))

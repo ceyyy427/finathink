@@ -11,6 +11,7 @@ from finahinking.data.panel_contracts import PanelContract, panel_time, referenc
 from finahinking.data.research_fields import ResearchFieldStore
 from finahinking.data.research_panel import build_research_panel
 
+from . import portable_method_factor
 from .contracts import stable_digest, to_jsonable
 from .factor_catalog_loader import get_research_recipe
 from .factor_library import FactorLibrary
@@ -20,6 +21,7 @@ from .factor_study_suite import VERSION as SUITE_VERSION
 from .factor_validation import factor_validation_policy
 from .factor_validation_sample import ValidationSample
 from .factor_workbench import METHOD_VERSION, compute_study, study_frame
+from .portable_history import factor_publication_proof, verified_factor_scope
 from .portable_inputs import PortableUnavailable, freeze_inputs, rebuild_inputs
 from .portable_knowledge import knowledge_items, knowledge_refs
 from .reports import redact_public_payload
@@ -103,9 +105,13 @@ def _published(app, study, phase):
     _require(job.status is JobStatus.COMPLETED, "最终测试与验证都须有已发表回执。")
     verified = verify_research_receipt(app.root, app.queue, job, job.result_ref)
     report = verified["manifest"]["source_snapshot"]["factor_study"]
+    charter = redact_public_payload(study["spec"])
+    if charter["version"] == portable_method_factor.WORKFLOW:
+        binding = charter["method_binding"]
+        binding["method_manifest_snapshot"] = binding.pop("loaded_methods")["manifest"]
     _require(report["phase"] == phase.upper() and report["study_id"] == study["study_id"]
              and report["spec_ref"] == study["spec_ref"] and report["snapshot_ref"] == study["spec"]["snapshot_ref"]
-             and report["charter"] == redact_public_payload(study["spec"]), "因子回执与研究章程不一致。")
+             and report["charter"] == charter, "因子回执与研究章程不一致。")
     publication = verified["manifest"]["source_snapshot"]
     return report, verified["manifest"]["run_id"], job.result_ref.split(":", 1)[1], publication.get("discovery")
 
@@ -115,7 +121,7 @@ def _review(app, study, run_id):
         return None
     decision, reviewer, study_id = study["review_decision"], study["reviewer_id"], study["study_id"]
     event = None
-    if "multi_factor_discovery" in study["spec"]:
+    if "multi_factor_discovery" in study["spec"] or study["spec"]["version"] == portable_method_factor.WORKFLOW:
         # Resolve the original immutable event even if this use scope was monitored or retired later.
         key = "study-review-" + stable_digest([study_id, decision, reviewer])[:32]
         event_ref = "factor-use-" + stable_digest([app.scope_id, key])
@@ -128,7 +134,7 @@ def _review(app, study, run_id):
             "decision": decision, "reviewer": reviewer, "use_event": event}
 
 
-def _check_review(review, receipt):
+def _check_review(review, receipt, scope):
     if review is None:
         return
     _keys(review, {"study_id", "run_id", "candidate_id", "decision", "reviewer", "use_event"})
@@ -137,6 +143,7 @@ def _check_review(review, receipt):
              "审核记录与冻结研究不一致。")
     _identifier(review["reviewer"])
     event = review["use_event"]
+    _require((scope is None) == (event is None), "审核事件的适用范围与最终测试不一致。")
     if event is not None:
         from .factor_lifecycle import FactorUseDecision
 
@@ -144,11 +151,64 @@ def _check_review(review, receipt):
         decision = FactorUseDecision(**event["decision"])
         _identifier(event["scope_id"])
         panel_time(event["created_at"])
-        _require(type(event["sequence"]) is int and event["sequence"] > 0
-                 and event["event_ref"] == "factor-use-" + stable_digest([event["scope_id"], decision.idempotency_key])
-                 and (decision.decision, decision.reviewer, decision.run_ref, decision.factor_id)
-                 == (review["decision"], review["reviewer"], review["run_id"], review["candidate_id"])
-                 and list(decision.time_domain) == receipt["test_period"], "归档审核事件未绑定原冻结结果。")
+        key = "study-review-" + stable_digest([receipt["study_id"], review["decision"], review["reviewer"]])[:32]
+        _require(event["scope_id"] == scope["scope_id"], "审核事件不属于原工作区。")
+        expected = {**{k: v for k, v in scope.items() if k != "scope_id"}, "factor_id": review["candidate_id"], "decision": review["decision"], "reviewer": review["reviewer"],
+                    "run_ref": review["run_id"], "time_domain": receipt["test_period"], "idempotency_key": key}
+        _require(decision.to_dict() == expected and type(event["sequence"]) is int and event["sequence"] > 0
+                 and event["event_ref"] == "factor-use-" + stable_digest([event["scope_id"], decision.idempotency_key]), "归档审核事件未绑定原冻结结果。")
+
+
+def _discovery_scope(inputs, assets, chosen):
+    from .factor_discovery import PURPOSE, VERSION
+
+    settings, receipt, parameters = inputs["settings"], inputs["receipt"], inputs["parameters"]
+    audit, data = settings["discovery"], inputs["data"]
+    _keys(audit, {"frozen", "trial", "plan", "origin"})
+    _keys(audit["origin"], {"request", "publication"})
+    scope_id = verified_factor_scope(audit["origin"], receipt)
+    plan = audit["plan"]
+    frozen, trial = audit["frozen"], audit["trial"]
+    _identifier(plan["market"])
+    _require(plan["fingerprint"] == stable_digest({k: v for k, v in plan.items() if k != "fingerprint"})
+             and frozen["plan_ref"] == plan["fingerprint"] and plan["schema_version"] == VERSION and plan["purpose"] == PURPOSE,
+             "多候选研究计划与发表试验不匹配。")
+    original_items = knowledge_items(None, [row for candidate in plan["candidates"] for row in candidate["knowledge_refs"]])
+    _require(all(row in inputs["knowledge_items"] for row in original_items), "冻结研究缺少原始候选知识来源。")
+    _keys(frozen, {"spec_ref", "plan_ref", "factor_id", "factor_spec", "formula_fingerprint", "direction", "cost",
+                   "candidate_fingerprint", "parameters", "trial_ref", "family_ref", "test_period", "fingerprint"})
+    for record in (frozen, trial):
+        _require(record["fingerprint"] == stable_digest({k: v for k, v in record.items() if k != "fingerprint"}),
+                 "冻结回执或最终试验指纹不符。")
+    instrument_ids = list(assets)
+    if data["contract"] is None:
+        source = {"sample_spec": settings["sample"], "sample_fingerprint": settings["sample_fingerprint"],
+                  "sample_content_digest": settings["sample_content"], "data_mode": settings["data_mode"]}
+        selection = settings["sample_fingerprint"]
+    else:
+        source = {"panel_contract": data["contract"], "attachment_refs": sorted(row["original_ref"] for row in data["attachments"]),
+                  "data_mode": settings["data_mode"]}
+        selection = data["contract"]["universe_ref"]
+    family = stable_digest({"family_key": VERSION, "source": source, "policy": settings["policy"]})
+    validation_policy = stable_digest({**settings["policy"], "direction": settings["direction"]})
+    factor = FactorLibrary().spec(chosen["id"])
+    _require(frozen["spec_ref"] == receipt["spec_ref"] and frozen["candidate_fingerprint"] == receipt["candidate_fingerprint"]
+             and frozen["parameters"] == parameters and frozen["trial_ref"] == parameters["trial_ref"]
+             and frozen["factor_spec"] == trial["factor_spec"] == factor.to_dict()
+             and frozen["factor_id"] == trial["factor_id"] == receipt["candidate_id"]
+             and frozen["family_ref"] == family and trial["family"] == FactorLibrary().get(chosen["id"])["family"]
+             and frozen["formula_fingerprint"] == trial["formula_fingerprint"] == chosen["formula_fingerprint"]
+             and frozen["direction"] == trial["direction"] == settings["direction"] and frozen["plan_ref"] == trial["question_ref"]
+             and frozen["cost"] == {k: settings["policy"][k] for k in ("fee_bps", "slippage_bps")}
+             and frozen["test_period"] == receipt["test_period"] and trial["phase"] == "test"
+             and trial["record_id"] == f'{receipt["study_id"]}:test:{factor.factor_id}'
+             and trial["policy_fingerprint"] == receipt["policy_fingerprint"] and trial["validation_policy_fingerprint"] == validation_policy
+             and trial["snapshot_ref"] == receipt["snapshot_ref"] and trial["data_mode"] == settings["data_mode"],
+             "多候选最终试验与冻结因子、家族、样本切分或政策不一致。")
+    universe = {"market": plan["market"], "instrument_ids": instrument_ids, "selection_ref": selection, "data_mode": settings["data_mode"]}
+    return {"scope_id": scope_id, "factor_ref": factor.fingerprint, "evaluation_fingerprint": trial["fingerprint"], "market": plan["market"],
+            "universe_ref": stable_digest(universe), "purpose": PURPOSE, "policy_fingerprint": stable_digest(
+                {"research_policy": receipt["policy_fingerprint"], "validation_policy": validation_policy})}
 
 
 def _canonical_setup(study, validation, test):
@@ -186,6 +246,7 @@ def _canonical_setup(study, validation, test):
                         data_mode=spec["data_mode"], sample=spec.get("sample_spec"),
                         sample_fingerprint=spec.get("sample_fingerprint"), sample_content=spec.get("sample_content_digest"))
         if "multi_factor_discovery" in spec:
+            settings["discovery"] = {"frozen": test["freeze_receipt"], "trial": trial, "plan": spec["multi_factor_discovery"]}
             from .factor_discovery import frozen_discovery_candidate
 
             _require(frozen_discovery_candidate(study, validation) == test["freeze_receipt"], "多候选冻结回执不一致。")
@@ -235,12 +296,18 @@ def freeze_run(app, run_id, analytics, product="factor_study"):
         raise PortableUnavailable("FACTOR_TEST_NOT_PUBLISHED")
     study = app.factor_studies.get(test["study_id"])
     spec = study["spec"]
-    if spec["version"] not in {METHOD_VERSION, SUITE_VERSION, LIBRARY_VERSION}:
+    if spec["version"] not in {METHOD_VERSION, SUITE_VERSION, LIBRARY_VERSION, portable_method_factor.WORKFLOW}:
         raise PortableUnavailable("FACTOR_WORKFLOW_DEPENDENCIES")
     validation, validation_run, validation_publication, _ = _published(app, study, "validation")
     verified, test_run, test_publication, discovery = _published(app, study, "test")
     _require(verified == test and test_run == run_id and study["test_key"] is not None, "最终测试回执不属于此报告。")
+    if spec["version"] == portable_method_factor.WORKFLOW:
+        return portable_method_factor.freeze(app, study, validation, test, {
+            "validation_run": validation_run, "test_run": test_run, "validation_publication": validation_publication,
+            "test_publication": test_publication}, _review(app, study, run_id))
     formulas, chosen, settings, sources, parameters = _canonical_setup(study, validation, test)
+    if "discovery" in settings:
+        settings["discovery"]["origin"] = factor_publication_proof(app, study, test_publication)
     winner = next(row for row in validation["experiments"] if row["experiment_id"] == study["candidate_id"])
     candidate_refs = [ref for candidate in spec.get("multi_factor_discovery", {}).get("candidates", [])
                       for ref in candidate["knowledge_refs"]]
@@ -288,6 +355,7 @@ def freeze_run(app, run_id, analytics, product="factor_study"):
 def _decode(inputs, product):
     _keys(inputs, {"version", "workflow", "receipt", "data", "settings", "parameters", "formulas", "sources", "review", "winner", "knowledge_items"})
     workflow = inputs["workflow"]
+    scope = None
     _require(product == "factor_study" and inputs["version"] == _VERSION
              and workflow in {METHOD_VERSION, SUITE_VERSION, LIBRARY_VERSION}, "不支持的冻结因子包版本。")
     receipt, settings, formulas = inputs["receipt"], inputs["settings"], inputs["formulas"]
@@ -330,7 +398,6 @@ def _decode(inputs, product):
         _keys(item, {"item_id", "digest"})
         _identifier(item["item_id"])
         reference(item["digest"])
-    _check_review(inputs["review"], receipt)
     ref = inputs["data"]["original_snapshot"]
     _require(ref == receipt["snapshot_ref"] and receipt["data_ref"] == stable_digest(inputs["data"])
              and receipt["experiment_ref"] == stable_digest(inputs["parameters"])
@@ -401,7 +468,9 @@ def _decode(inputs, product):
             _keys(settings["policy"], factor_validation_policy())
             factor_validation_policy(**settings["policy"])
         else:
-            _keys(settings, {"policy", "direction", "data_mode", "sample", "sample_fingerprint", "sample_content"})
+            multi = set(parameters) != {"factor_id"}
+            _keys(settings, {"policy", "direction", "data_mode", "sample", "sample_fingerprint", "sample_content"}
+                  | ({"discovery"} if multi else set()))
             _require(settings["policy"] == POLICY and type(settings["direction"]) is int
                      and settings["direction"] in (-1, 1) and candidate == chosen["id"]
                      and parameters.get("factor_id") == chosen["id"]
@@ -422,6 +491,9 @@ def _decode(inputs, product):
                 mode = {"CAPTURED": "USER_DATA", "LIVE": "USER_DATA", "SYNTHETIC": "SAMPLE", "SAMPLE": "SAMPLE"}
                 _require(settings["sample_fingerprint"] is None and settings["sample_content"] is None
                          and settings["data_mode"] == mode.get(snapshot.mode, "UNKNOWN"), "面板数据类型不符。")
+            if multi:
+                assets = list(sample.assets if contract is None else contract.instrument_ids)
+                scope = _discovery_scope(inputs, assets, chosen)
         times = pd.DatetimeIndex(contract.observed_at) if contract is not None else sample.times
     split = purged_walk_forward(times, horizon=settings.get("label_horizon", 1), embargo=settings.get("embargo", 1),
                                 n_splits=settings.get("n_splits", 2))
@@ -429,14 +501,28 @@ def _decode(inputs, product):
              and receipt["test_period"] == [times[split["validation_end"]].isoformat(), times[-1].isoformat()]
              and receipt["sample_period"] == [times[0].isoformat(), times[-1].isoformat()],
              "因子数据与原冻结样本切分不一致。")
+    _check_review(inputs["review"], receipt, scope)
     return snapshot, attachments, contract, chosen
 
 
 def validate_run(inputs, product="factor_study"):
-    _decode(inputs, product)
+    if product == "factor_study" and inputs.get("workflow") == portable_method_factor.WORKFLOW:
+        portable_method_factor.decode(inputs)
+    else:
+        _decode(inputs, product)
 
 
-def replay_run(app, inputs, product="factor_study"):
+def reproduction_scope(inputs):
+    if inputs["workflow"] == portable_method_factor.WORKFLOW:
+        return "NINE_STAGE_METHOD_TEST"
+    if inputs["workflow"] == SUITE_VERSION:
+        return "MULTI_CANDIDATE_TEST" if "discovery" in inputs["settings"] else "FACTOR_SUITE_TEST"
+    return "SAVED_PANEL_FACTOR_TEST" if inputs["workflow"] == LIBRARY_VERSION else "FROZEN_RECIPE_TEST"
+
+
+def replay_run(app, inputs, product="factor_study", *, published_identity=None):
+    if product == "factor_study" and inputs.get("workflow") == portable_method_factor.WORKFLOW:
+        return portable_method_factor.replay(app, inputs, published_identity=published_identity)
     snapshot, attachments, contract, chosen = _decode(inputs, product)
     _resolve_formulas(inputs, app.root)
     workflow, receipt, settings = inputs["workflow"], inputs["receipt"], inputs["settings"]

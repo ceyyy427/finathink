@@ -89,3 +89,57 @@ def test_approved_learning_pair_is_selectable_and_both_sides_replay(app_http, ob
     review = json.loads(approval.value.path().read_bytes())["learning_approval"]
     assert review == service.learning.get(pair["binding"]["review_id"])
     assert service.list_jobs()["total"] == jobs
+
+
+def test_inspect_saved_differences_beyond_the_preview(app_http, observed_page):
+    from finahinking.research.reproduction import ReproductionService
+    from tests.research.test_portable_package import reseal, reseal_core
+
+    page, _, _ = observed_page
+    app = app_http[0]
+    manager = ReproductionService(app.research_service)
+    run = completed(app, "paged-differences")
+    package = manager.export(run, include_data=True, data_scope="workflow")
+    contents = json.loads(package["archive"])
+    core = contents["core"]
+    core["expected"]["baseline"]["metrics"].update({f"input_{i:03d}": i for i in range(115)})
+    reseal_core(core)
+    ref = manager.restore(reseal(package, contents))["package_id"]
+    assert manager.recompute(ref)["status"] == "DIFFERENT"
+    enter(app_http, page)
+    receipt = page.locator("[data-repro-receipt]")
+    receipt.get_by_text("基线回测与风险 · 查看摘要与差异", exact=True).click()
+    receipt.get_by_role("button", name="查看全部差异").click()
+    table = receipt.get_by_role("table", name="已保存的逐项差异")
+    expect(table).to_contain_text("/metrics/input_099")
+    receipt.get_by_role("button", name="下一页差异").click()
+    expect(table).to_contain_text("/metrics/input_114")
+    expect(receipt.get_by_role("button", name="下一页差异")).to_be_disabled()
+    receipt.get_by_role("button", name="上一页差异").click()
+    expect(table).to_contain_text("/metrics/input_000")
+
+
+def test_method_test_receipt_names_frozen_proposal_scope(app_http, observed_page):
+    from tests.research.test_method_factor_journey import prepared as external_method
+    from tests.research.test_method_factor_journey import wait_study
+
+    page, _, _ = observed_page
+    app = app_http[0].research_service
+    job, handoff, accepted, _, field = external_method(app)
+    app.attach_research_fields(job["job_id"], field)
+    app.start()
+    study = app.create_method_factor_study(job["job_id"], handoff, accepted["artifact_ref"],
+                                          attachment_ref=field.fingerprint, idempotency_key="browser-nine-stages")
+    sid = study["study_id"]
+    validation = wait_study(app, sid, "validation")
+    app.freeze_factor_study(sid, validation["validation"]["ranking"][0])
+    app.test_factor_study(sid, "browser-nine-stages-final")
+    tested = wait_study(app, sid, "test")
+    enter(app_http, page)
+    page.get_by_label("左侧研究", exact=True).select_option(tested["test_job"]["run_id"])
+    workflow_scope(page)
+    export_restore(page, "导出左侧研究包")
+    coverage = page.get_by_role("table", name="每项产物的复现范围")
+    expect(coverage.get_by_role("row").filter(has_text="已接受的方法提案 · 九步最终测试")).to_contain_text("已复现")
+    page.get_by_role("button", name="读取历史文件清单").click()
+    expect(page.locator("[data-repro-history-list]")).to_contain_text("已接收的因子方法提案")

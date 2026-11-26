@@ -57,13 +57,20 @@ function renderComparison(root, value) {
   root.querySelector('[data-repro-evidence]').replaceChildren(evidence(root, value.left, '左侧证据'), evidence(root, value.right, '右侧证据'));
 }
 const PRODUCTS = {
-  factor_review: '因子审核记录', historical_reports: '历史报告原件', baseline: '基线回测与风险', quant_evidence: '多资产量化证据', factor_study: '冻结因子测试',
+  method_proposal: '已接收的因子方法提案', factor_review: '因子审核记录', historical_reports: '历史报告原件', baseline: '基线回测与风险', quant_evidence: '多资产量化证据', factor_study: '冻结因子测试',
   strategy_study: '策略纸面账本', strategy_validation: '策略滚动验证与组合归因',
   strategy_ledger: '纸面策略账本', strategy_benchmark: '策略基准', strategy_decisions: '策略决策记录',
   strategy_result: '策略运行结果', strategy_validation_plan: '策略验证方案', strategy_walkforward: '滚动样本外验证',
   strategy_portfolio: '组合归因', model_text: '模型文字与调用记录', discovery: '研究计划与分析师证据',
   learning_approval: '学习审核与政策', learning_baseline: '原政策复跑', learning_candidate: '候选政策复跑',
   learning_comparison: '成对差异',
+};
+const FACTOR_SCOPES = {
+  NINE_STAGE_METHOD_TEST: '已接受的方法提案 · 九步最终测试',
+  MULTI_CANDIDATE_TEST: '多候选研究 · 冻结公式的最终测试',
+  FACTOR_SUITE_TEST: '因子组 · 冻结候选的最终评分',
+  SAVED_PANEL_FACTOR_TEST: '已保存面板 · 因子评估与纸面账本',
+  FROZEN_RECIPE_TEST: '冻结公式和参数 · 样本外评估',
 };
 const resultLabel = status => ({
   REPRODUCED: '已复现', AVAILABLE: '已就绪', INCOMPLETE: '等待两侧复跑', RUNNING: '计算中', ARCHIVED: '已归档原证据', SOURCE_WITHDRAWN: '来源已撤回',
@@ -74,6 +81,25 @@ const needsLabel = code => ({
   FACTOR_SOURCE_VERSION_UNAVAILABLE: '因子来源版本不一致',
   STRATEGY_DEFINITION_MISMATCH: '策略或风控规则的定义已改变',
   STRATEGY_VERSION_MISMATCH: '策略运行内核版本不同',
+  ENGINE_VERSION_MISMATCH: '量化计算内核版本不同',
+  METHOD_SOURCE_VERSION_UNAVAILABLE: '缺少原方法使用的资源版本',
+  METHOD_ACCEPTED_ARTIFACT_UNAVAILABLE: '缺少已接收的方法提案',
+  METHOD_FACTOR_FIELD_ATTACHMENT_UNAVAILABLE: '缺少九步骤测试使用的字段附件',
+  METHOD_FACTOR_CODE_VERSION_MISMATCH: '九步骤测试的原生代码版本不同',
+  STRATEGY_STUDIO_VERSION_MISMATCH: '策略验证室的版本不同',
+  LEARNING_VERSION_MISMATCH: '学习政策的执行版本不同',
+  DISCOVERY_KNOWLEDGE_VERSION_UNAVAILABLE: '缺少原研究使用的知识条目版本',
+  FACTOR_ATTACHMENT_MISSING: '缺少因子测试使用的字段附件',
+  BASELINE_SAMPLE_SIZE: '基础复算需要 4 至 5000 条已发表价格观测',
+  STRATEGY_SOURCE_MATERIAL_MISSING: '缺少原策略的价格或字段附件',
+  WORKFLOW_SOURCE_MATERIAL_MISSING: '缺少原工作流使用的价格或字段附件',
+  STRATEGY_REPORT_UNAVAILABLE: '原策略报告缺失或未通过校验',
+  STRATEGY_EXECUTION_IDENTITY_MISSING: '原策略报告缺少执行版本',
+  STRATEGY_STUDIO_PUBLICATION_MISSING: '未找到策略验证室的发表回执',
+  STRATEGY_PANEL_CONTENT_MISMATCH: '重建的策略面板与发表面板不同',
+  STRATEGY_ATTACHMENT_IDENTITY_AMBIGUOUS: '未能唯一对应原策略字段附件',
+  STRATEGY_ORIGINAL_LEDGER_MISMATCH: '重算账本与原账本的指纹不同',
+  FROZEN_INPUT_UNSUPPORTED: '本机计算内核未能使用包内的冻结材料',
 }[code] || NEEDS[code] || code);
 
 export function exportRequest(runId, includeData, scope, pairId) {
@@ -94,6 +120,55 @@ function download(root, name, blob) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+function differencePages(root, saved, product, result) {
+  const region = el(root, 'div');
+  const output = el(root, 'div');
+  const status = el(root, 'p');
+  status.setAttribute('role', 'status');
+  const previous = el(root, 'button', '上一页差异');
+  const next = el(root, 'button', '查看全部差异');
+  for (const button of [previous, next]) {
+    button.type = 'button';
+    button.className = 'button-secondary';
+  }
+  previous.hidden = true;
+  let page = -1;
+  let receiptId = saved.receipt.receipt_id;
+  let hasMore = true;
+  async function read(index) {
+    previous.disabled = next.disabled = true;
+    status.textContent = '正在读取已保存的差异…';
+    try {
+      const params = new URLSearchParams({product, page: String(index)});
+      if (receiptId) params.set('receipt_id', receiptId);
+      const response = await readLocalJSON(globalThis.fetch, BASE+'/'+saved.package_id+'/differences?'+params);
+      if (!region.isConnected) return;
+      if (response.product !== product || response.page !== index || response.total !== result.difference_count
+          || (receiptId && response.receipt_id !== receiptId)) {
+        throw new Error('复算回执已经更新，请重新读取差异。');
+      }
+      receiptId = response.receipt_id;
+      page = index;
+      hasMore = response.has_more;
+      const first = page * response.page_size + 1;
+      status.textContent = '共 '+response.total+' 处差异，当前显示第 '+first+' 至 '+(first+response.differences.length-1)+' 处。';
+      output.replaceChildren(table(root, '已保存的逐项差异', ['字段路径', '原值', '复算值'],
+        response.differences.map(item => [item.path, item.expected, item.actual])));
+      previous.hidden = false;
+      next.textContent = '下一页差异';
+    } catch (error) {
+      status.textContent = userErrorMessage(error);
+    } finally {
+      previous.disabled = page <= 0;
+      next.disabled = !hasMore;
+    }
+  }
+  previous.addEventListener('click', () => read(page-1));
+  next.addEventListener('click', () => read(page+1));
+  region.append(previous, next, status, output);
+  return region;
+}
+
 function renderReceipt(root, saved) {
   const panel = root.querySelector('[data-repro-receipt]');
   panel.replaceChildren();
@@ -106,7 +181,7 @@ function renderReceipt(root, saved) {
   const rows = Object.entries(saved.product_coverage).map(([key, coverage]) => {
     const result = products[key];
     const status = typeof result === 'string' ? result : result?.status || (r && coverage === 'INCLUDED' ? 'BLOCKED' : coverage);
-    return [PRODUCTS[key] || key, resultLabel(status)];
+    return [FACTOR_SCOPES[result?.reproduction_scope] || PRODUCTS[key] || key, resultLabel(status)];
   });
   panel.append(table(root, '每项产物的复现范围', ['产物', '结果'], rows));
   for (const [key, result] of Object.entries(products)) {
@@ -121,6 +196,9 @@ function renderReceipt(root, saved) {
     if (result.differences?.length) {
       section.append(table(root, '存在差异的字段', ['字段路径', '原值', '复算值'],
         result.differences.map(item => [item.path, item.expected, item.actual])));
+      if (result.full_differences_available && result.difference_count > result.differences.length) {
+        section.append(differencePages(root, saved, key, result));
+      }
     }
     panel.append(section);
   }
