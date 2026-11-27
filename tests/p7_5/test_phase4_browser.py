@@ -72,7 +72,7 @@ def http_app(request):
 @pytest.fixture
 def observed_page(browser, request):
     artifact_root = Path(os.environ.get("FINATHINK_BROWSER_ARTIFACT_DIR", ".superpowers/sdd/2026-10-26-finathink-product-completion-roadmap/browser-artifacts"))
-    artifacts = artifact_root / request.node.name.replace("/", "-")
+    artifacts = artifact_root.resolve() / request.node.name.replace("/", "-")
     artifacts.mkdir(parents=True, exist_ok=True)
     diagnostics = {"errors": [], "metrics": {}}
     context = browser.new_context(viewport={"width": 1440, "height": 900}, device_scale_factor=1, **getattr(request, "param", {}))
