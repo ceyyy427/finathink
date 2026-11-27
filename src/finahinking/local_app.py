@@ -1136,6 +1136,7 @@ class LocalApplication:
             "/research/workbench": "量化研究工作台",
             "/research/experiments": "因子实验",
             "/research/strategy-validation": "策略验证室",
+            "/research/model-workbench": "模型与 Codex 研究台",
             "/research/learning": "复盘与学习",
             "/research/maintenance": "本地任务维护",
             "/research/compare": "研究对比",
@@ -1231,7 +1232,7 @@ class LocalApplication:
     def _nav(self, page: str) -> str:
         names = self._page_names()
         groups = (
-            ("研究", "nav-workspace", ("/", "/research/jobs", "/events", "/knowledge", "/research/experiments", "/strategy", "/research/strategy-validation", "/research/learning")),
+            ("研究", "nav-workspace", ("/", "/research/jobs", "/research/model-workbench", "/events", "/knowledge", "/research/experiments", "/strategy", "/research/strategy-validation", "/research/learning")),
             ("资料", "nav-library", ("/library/methods", "/library/behavior", "/library/lessons")),
             ("学习", "nav-learn", ("/explore", "/quant", "/research", "/research/workbench", "/research/compare", "/workbench", "/ml", "/parameter", "/workspace", "/community", "/settings/engines", "/settings/data-sources")),
             ("系统", "nav-system", ("/research/panels", "/settings/data-connections", "/settings/providers", "/research/maintenance", "/diagnostics")),
@@ -1305,7 +1306,7 @@ class LocalApplication:
                 '<main class="workspace-layout workspace-layout--overview" id="main" tabindex="-1">'
                 f'{overview_plate(self._run_repository)}<div class="workspace">{content}</div>{inspector_html}</main>'
             )
-        elif page in ATLAS_VIEWS or page == "/research/strategy-validation":
+        elif page in ATLAS_VIEWS or page in {"/research/strategy-validation", "/research/model-workbench"}:
             layout = f'<main class="workspace-layout workspace-layout--atlas" id="main" tabindex="-1">{body}</main>'
         else:
             layout = (
@@ -1813,7 +1814,7 @@ class LocalApplication:
             '<label>研究模板<select data-run-template><option value="">保留自己填写的问题</option><option value="baseline">基础复核：动量、费用与历史回撤</option><option value="risk">风险复核：成本、容量与损失情景</option><option value="materials">材料研究：基本面、新闻与情绪证据</option></select></label><p class="field-help">模板只填入研究问题，不改变基线算法。材料分析另需模型配置与明确授权。</p>'
             f'<label>研究问题<textarea id="research-question" name="question" required maxlength="2000" rows="3">{html.escape(question)}</textarea></label>{notice}'
             '<label>执行配置<select id="research-model" name="model_config_ref"><option value="offline">本地确定性流程 / 不调用模型</option></select></label>'
-            '<p><a href="/settings/providers">配置用户自己的模型接口</a></p>'
+            '<p><a href="/research/model-workbench">预览模型材料、授权调用与 Codex 交接</a> · <a href="/settings/providers">配置用户自己的模型接口</a></p>'
             '<details><summary>补充基本面、新闻、情绪或学习材料</summary><p class="field-help">可选 JSON 数组，每条包含 role、instrument、summary、source_label、observed_at、available_at、authorized:true。时间需带时区；最多 16 条，每条摘要最多 2000 字。没有对应材料的角色会显示资料不足。</p><label>已授权材料摘要（JSON）<textarea id="research-materials" name="materials" rows="5" maxlength="40000" placeholder="[]"></textarea></label></details>'
             '<label class="model-consent"><input type="checkbox" name="allow_model_calls" value="true">我授权向所选模型发送研究问题、标的、最近最多 16 条行情及上述材料摘要，并承担调用费用。在线任务不自动重试。</label>'
             '<label>墙钟上限（秒，最多 300）<input id="research-budget" name="max_wall_seconds" type="number" min="5" max="300" value="120" required></label>'
@@ -1823,7 +1824,7 @@ class LocalApplication:
             '<p data-run-empty>还没有研究任务。先选择快照并提交研究。</p><p data-run-state></p><div data-run-explanation class="research-explanation"></div><p data-run-budget></p><p data-run-identity class="snapshot-fingerprint"></p><details><summary>技术阶段与状态码</summary><ol class="research-stage-list" data-run-stages></ol></details>'
             '<details><summary>技术指标、模型记录与完整限制</summary><p class="field-help" data-run-data-note></p><p data-run-model-summary></p><ul class="overview-list" data-run-call-records></ul><ul class="overview-list" data-run-model-roles></ul><div data-run-synthesis></div><dl data-run-metrics></dl></details><p data-run-failure></p><div class="action-row"><button type="button" data-run-cancel disabled>取消任务</button><button type="button" class="button-secondary" data-run-restore disabled>沿用基础输入</button><a data-run-report hidden>打开完整 HTML 报告</a><a data-run-detail hidden>查看研究档案</a></div><p data-run-restore-note role="status"></p></section>'
             '<section class="panel section"><h2>最近的后台任务</h2><p>刷新页面或重启服务后，可从这里继续查看；相同提交标识不会重复排队。</p><ul class="overview-list" data-run-history></ul><div class="action-row"><button type="button" class="button-secondary" data-run-history-prev disabled>上一页任务</button><span data-run-history-page role="status"></span><button type="button" class="button-secondary" data-run-history-next disabled>下一页任务</button></div><a href="/research/compare">比较已发布的研究</a></section>'
-            '<section class="panel section" data-method-handoff><h2>方法交接与受控因子研究</h2><p>为当前任务按需加载方法并导出交接包。外部工具负责推理，回传只接受有绑定的 JSON；这里不会自动调用 Codex 或执行模型代码。</p>'
+            '<section class="panel section" data-method-handoff><h2>方法交接与受控因子研究</h2><p>为当前任务按需加载方法并导出交接包。<a href="/research/model-workbench">在模型与 Codex 研究台</a>可授权执行器领取任务、核对回传与查看证据。</p>'
             '<p role="status" aria-live="polite" data-method-status>先选择一个已保存的研究任务。</p><button type="button" data-method-export disabled>导出因子研究交接包</button>'
             '<details><summary>查看交接包与方法指纹</summary><label>可复制给外部研究工具的 JSON<textarea data-method-package rows="8" readonly></textarea></label></details>'
             '<form data-method-result-form><label>外部结果 JSON<textarea name="response" rows="6" maxlength="131072" required></textarea></label><button type="submit" data-method-accept disabled>校验并保存回传</button></form>'
@@ -1956,6 +1957,12 @@ class LocalApplication:
         clean = parsed.path.rstrip("/") or "/"
         if clean in {"/research/workbench", "/api/research/quant-workspace", "/api/research/quant-workspace/sources"}:
             return self._quant_workbench_route(method, clean, query)
+        if clean == "/research/model-workbench" or clean.startswith("/api/research/model-workbench"):
+            from .research.model_workbench_routes import route as model_workbench_route
+
+            response = model_workbench_route(self, method, clean, query, body)
+            if response is not None:
+                return response
         if clean.startswith(("/research/strategy-validation", "/api/research/strategy-validation")):
             from .research.strategy_validation_routes import route as studio_route
 
@@ -2708,7 +2715,7 @@ class LocalApplication:
                 for item in payload.get("providers", []) if isinstance(item, Mapping)
             )
             return (f'<h1>模型接口</h1><p class="lede">使用用户自己的兼容模型服务。保存配置不调用模型；凭证在调用前从明确指定的环境变量或已有系统 Keychain 引用读取。</p><section class="settings-grid">{cards}</section>'
-                    '<section class="card section"><h2>新增兼容接口</h2><form class="form-grid" data-provider-form>'
+                    '<section class="card section"><h2>新增兼容接口</h2><p><a href="/research/model-workbench">在研究台查看各角色的模型和发送材料</a></p><form class="form-grid" data-provider-form>'
                     f'<input type="hidden" data-provider-csrf value="{self.csrf_token}">'
                     '<label>配置标识（小写字母、数字、短横线或下划线）<input name="provider_id" required maxlength="64" placeholder="my-model"></label>'
                     '<label>兼容协议<select name="adapter_kind"><option value="openai_compatible">OpenAI-compatible</option><option value="deepseek_compatible">DeepSeek-compatible</option></select></label>'

@@ -94,6 +94,7 @@ def research_view_model(run_state: ResearchRunState, manifest: ReportManifest | 
             "data_limitations": snapshot.get("data_limitations", []),
             "mode": "USER_API" if snapshot.get("model_research", {}).get("execution_mode") == "provider-grounded" else "OFFLINE",
             "model_research": snapshot.get("model_research"),
+            **({"model_workbench": snapshot["model_workbench"]} if snapshot.get("model_workbench") else {}),
             "factor_study": snapshot.get("factor_study"),
             **({"strategy_study": snapshot["strategy_study"]} if "strategy_study" in snapshot else {}),
             "risk_portfolio": snapshot.get("risk_portfolio"),
@@ -394,6 +395,36 @@ def render_status_wall_html(model: Mapping[str, Any], *, title: str = "Finathink
         if isinstance(library, Mapping):
             details = {key: library.get(key) for key in ("factor_spec", "formula_fingerprint", "panel_fingerprint", "policy_fingerprint", "validation_policy_fingerprint", "source_card_ids", "status", "missing_reason", "evaluations", "backtest", "use_status")}
             evidence_html += '<section aria-labelledby="library-evidence"><h2 id="library-evidence">因子库定义与量化证据</h2><p>公式、输入面板、策略规则与来源引用绑定当前运行；测试数据保持一次性读取。</p><details><summary>查看每资产 IC、衰减与纸面净值账本</summary><pre>' + esc(json.dumps(details, ensure_ascii=False, sort_keys=True)) + '</pre></details></section>'
+    accounting = safe.get("model_workbench")
+    if isinstance(accounting, Mapping):
+        labels = {"OFFLINE": "本地确定性流程", "NOT_SENT": "未发送", "SENT": "已发送",
+                  "UNKNOWN": "未知", "RECORDED": "已记录", "NOT_CALLED": "未调用",
+                  "ACCEPTED": "协议通过", "PARTIAL": "部分完成", "REJECTED": "协议未通过",
+                  "NOT_APPLICABLE": "不适用", "NO_EVIDENCE": "缺少已发表证据",
+                  "REVIEW_REQUIRED": "待核对原材料", "SOURCE_MATCHED": "字面事实匹配", "SOURCE_MISMATCH": "与所引来源不符"}
+        rows = "".join(
+            f'<tr><th scope="row">{esc(r["role"])}</th><td>{esc(r["model"])}</td>'
+            + "".join(f'<td>{esc(labels.get(r[k], r[k]))}</td>' for k in
+                      ("dispatch_status", "usage_status", "protocol_status", "semantic_status")) + '</tr>'
+            for r in accounting["roles"])
+        citation_rows = "".join(
+            f'<tr><th scope="row">{esc(role["role"])}</th><td>{esc(check["claim_index"] + 1)}</td>'
+            f'<td>{esc(labels.get(check["status"], check["status"]))}</td>'
+            f'<td><code>{esc(citation["evidence_ref"])}</code></td><td>{esc(labels.get(citation["status"], citation["status"]))}</td></tr>'
+            for role in accounting["roles"] for check in role.get("semantic_checks", ())
+            for citation in check.get("citation_checks", ()))
+        citation_table = (('<details><summary>逐条引用核对</summary><table><thead><tr><th>角色</th><th>观察</th>'
+                           '<th>观察判定</th><th>证据引用</th><th>引用核对</th></tr></thead>'
+                           f'<tbody>{citation_rows}</tbody></table></details>') if citation_rows else "")
+        units = accounting["usage"]["total_units"]
+        total = "未知" if units is None else esc(units)
+        usage_text = (f'已发送 {esc(accounting["dispatched_calls"])} 次。服务端报告的总用量为 {total}。'
+                      if accounting["dispatched_calls"] else '本次研究未调用外部模型。')
+        evidence_html += (f'<section aria-labelledby="model-calls"><h2 id="model-calls">模型调用与来源核对</h2>'
+                          f'<p>{usage_text}</p>'
+                          '<table><thead><tr><th>角色</th><th>配置模型</th><th>发送</th><th>用量</th>'
+                          f'<th>响应协议</th><th>研究观察</th></tr></thead><tbody>{rows}</tbody></table>{citation_table}'
+                          '<p>来源核对仅覆盖所引摘要原文及带日期的收盘价、成交量陈述。其他解释需人工核对。</p></section>')
     if isinstance(model_research, Mapping):
         roles = "".join(f'<li><strong>{esc(item.get("role"))} · {esc(item.get("status"))}</strong><p>{esc(" / ".join(item.get("claims", [])))}</p></li>' for item in model_research.get("roles", []))
         synthesis = model_research.get("synthesis", {})

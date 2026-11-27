@@ -1,7 +1,7 @@
 import { readLocalJSON, userErrorMessage } from './local-request.js';
 
-export function parseMethodResponse(text) {
-  if (typeof text !== 'string' || new TextEncoder().encode(text).length > 131072) throw new TypeError('回传 JSON 最多128 KiB。');
+export function parseMethodResponse(text, maxKiB = 128) {
+  if (typeof text !== 'string' || new TextEncoder().encode(text).length > maxKiB * 1024) throw new TypeError('回传 JSON 最多' + maxKiB + ' KiB。');
   const value = JSON.parse(text);
   if (value?.schema_version !== 'method-result.v1' || !/^[0-9a-f]{64}$/.test(value.package_digest ?? '')) throw new TypeError('请提供完整的 method-result.v1 绑定结果。');
   return value;

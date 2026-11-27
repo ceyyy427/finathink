@@ -175,3 +175,27 @@ def test_actual_journal_projection_distinguishes_active_finished_cancelled_and_u
     assert result['schema_acceptance']['rate'] is None and prepared.records(terminal=True)[0]['status']=='NOT_SENT'
     compared=quality.compare([active['job_id'],cancelled['job_id'],unsent['job_id']])
     assert [row['metrics']['schema_acceptance']['rate'] for row in compared['items']]==[1,None,None]
+
+
+@pytest.mark.parametrize(('fault', 'confirmed'), [('timeout-before-dispatch-backup', 0), ('timeout-after-analysts', 1)])
+def test_fixed_quality_evaluation_keeps_partial_receipts_and_unknown_denominators(quality, monkeypatch, fault, confirmed):
+    from finahinking.research.runtime_service import ResearchRuntimeService
+    from tests.research.test_model_workbench_runtime import copy_journal, run_controlled_stage
+
+    app = quality.service
+    monkeypatch.setenv('FINAHINK_TEST_KEY', 'only-in-controlled-test')
+    (app.root / 'controlled-fault').write_text(fault)
+    app.runtime = ResearchRuntimeService(app.queue, stage_runners={'local_research': run_controlled_stage}, autostart=False)
+    job_id = quality.submit(values(case='sparse'))['job_id']
+    app.start()
+    assert wait_for(app, job_id)['status'] == 'failed'
+    app.close()
+    copy_journal(app.root / 'earlier.sqlite3', app.root / 'model-calls.sqlite3')
+    result = quality.evaluate(job_id)
+    assert result['status'] == 'PARTIAL'
+    metrics = result['metrics']
+    schema = metrics['schema_acceptance']
+    assert schema['attempted'] is schema['rate'] is schema['unknown'] is schema['not_sent'] is None
+    assert schema['accepted'] == schema['known_attempted'] == confirmed and schema['known_not_sent'] == 0
+    assert metrics['usage'] == {'known_total_units': confirmed * 48, 'unknown_calls': None, 'total_units': None}
+    assert metrics['model_duration_ms'] is None

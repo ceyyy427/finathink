@@ -7,7 +7,6 @@ import re
 from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from pathlib import Path
-from threading import RLock
 
 from .codex_bridge import CodexBridge, CodexTaskEnvelope
 from .context_bundle import ResearchContextBundle, merge_method_context
@@ -28,6 +27,14 @@ _SECRET_KEYS = {"api_key", "authorization", "password", "credential", "secret", 
                 "file_path", "path", "source_code", "pickle", "exec", "eval", "__import__"}
 _SECRET_NORMALIZED_KEYS = {re.sub(r"[^a-z0-9]", "", key) for key in _SECRET_KEYS}
 _OUTPUT_SCHEMAS = {"ResearchPlan": "research-plan.v1", "FactorProposal": "factor-proposal.v1"}
+
+
+class ProtectedFactorHandoff(ValueError):
+    code = "FROZEN_TEST_WINDOW"
+    status_code = 403
+
+    def __init__(self):
+        super().__init__("该因子研究仍保护样本外材料。请从正式发表的冻结测试任务打开交接。")
 
 
 def _json(value):
@@ -91,6 +98,9 @@ class MethodHandoffPackage:
     def to_dict(self):
         return json.loads(self._json)
 
+    def to_json(self):
+        return self._json
+
     @property
     def envelope(self):
         return CodexTaskEnvelope(**self.to_dict()["envelope"])
@@ -125,21 +135,24 @@ def _rejected(envelope, failure):
     return CodexBridge._outcome(envelope, status="REJECTED", failure_kind=failure)
 
 
-def _evidence_members(value, allowed):
+def _evidence_members(value, allowed, cited=None):
     if isinstance(value, dict):
         for name, item in value.items():
             if name in {"evidence_refs", "supporting_evidence_refs"}:
                 if (not isinstance(item, list) or not all(isinstance(ref, str) for ref in item)
                         or not set(item) <= allowed):
                     raise ValueError("artifact evidence is outside the authorized input index")
-            elif name in {"evidence_bindings", "evidence_index"} and (
-                not isinstance(item, dict) or not set(item) <= allowed
-            ):
-                raise ValueError("artifact evidence binding is outside the authorized input index")
-            _evidence_members(item, allowed)
+                if cited is not None:
+                    cited.update(item)
+            elif name in {"evidence_bindings", "evidence_index"}:
+                if not isinstance(item, dict) or not set(item) <= allowed:
+                    raise ValueError("artifact evidence binding is outside the authorized input index")
+                if cited is not None:
+                    cited.update(item)
+            _evidence_members(item, allowed, cited)
     elif isinstance(value, list):
         for item in value:
-            _evidence_members(item, allowed)
+            _evidence_members(item, allowed, cited)
 
 
 def _outputs(package, response, *, allowed_evidence_refs=None):
@@ -255,7 +268,6 @@ class MethodHandoffStore:
     def __init__(self, root, queue):
         self.root = Path(root)
         self.queue = queue
-        self._lock = RLock()
 
     @staticmethod
     def _digest(reference):
@@ -292,13 +304,26 @@ class MethodHandoffStore:
             if self._read(path) != value:
                 raise ValueError("immutable method artifact conflict") from None
 
-    def export(self, package):
+    def export(self, package, *, job_id=None):
         if not isinstance(package, MethodHandoffPackage):
             raise TypeError("package must be a MethodHandoffPackage")
         digest = stable_digest(package.envelope.to_dict())
         self._save(self._path("method-handoffs", digest), package.to_dict())
         CodexBridge(queue=self.queue).enqueue(package.envelope)
+        if job_id is not None:
+            self.bind_job(job_id, f"method-handoff:{digest}", package)
         return f"method-handoff:{digest}"
+
+    def bind_job(self, job_id, reference, package):
+        digest = self._digest(reference)
+        with self.queue._connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            db.execute("""INSERT OR IGNORE INTO codex_handoffs(envelope_digest,job_id,package_digest,packet_bytes)
+                          SELECT envelope_digest,?,?,? FROM external_dispatches WHERE envelope_digest=?""",
+                       (job_id, package.package_digest, len(package.to_json().encode()), digest))
+            row = db.execute("SELECT job_id,package_digest FROM codex_handoffs WHERE envelope_digest=?", (digest,)).fetchone()
+            if row is None or (row["job_id"], row["package_digest"]) != (job_id, package.package_digest):
+                raise ValueError("方法交接与研究任务的绑定不一致")
 
     def load(self, reference):
         digest = self._digest(reference)
@@ -308,6 +333,10 @@ class MethodHandoffStore:
         return package
 
     def _receipt(self, reference):
+        return self.verified_result(reference)[0]
+
+    def verified_result(self, reference):
+        """Read the receipt and its typed bodies as one fully validated result."""
         path = self._path("method-results", self._digest(reference))
         if not path.exists():
             record = self.queue.external_dispatch(self._digest(reference))
@@ -316,7 +345,7 @@ class MethodHandoffStore:
                 if not path.exists():
                     raise ValueError("accepted method receipt is unavailable")
             else:
-                return None
+                return None, []
         receipt = self._read(path)
         package = self.load(reference)
         if (set(receipt) != {"schema_version", "package_digest", "response_digest", "artifacts", "result", "outcome"}
@@ -338,7 +367,7 @@ class MethodHandoffStore:
             or record["output_digest"] != outcome.output_digest or record["status"] != outcome.status
         ):
             raise ValueError("method queue receipt binding mismatch")
-        return receipt
+        return receipt, outputs
 
     def _artifact_outputs(self, package, receipt):
         if not isinstance(receipt["artifacts"], list) or len(receipt["artifacts"]) > 2:
@@ -381,48 +410,56 @@ class MethodHandoffStore:
 
     def artifacts(self, reference):
         self.status(reference)
-        package = self.load(reference)
-        receipt = self._receipt(reference)
+        receipt, outputs = self.verified_result(reference)
         if receipt is None:
             return ()
-        if receipt["package_digest"] != package.package_digest:
-            raise ValueError("method result package binding is invalid")
-        outputs = self._artifact_outputs(package, receipt)
         return tuple({**item, "payload": output["payload"]}
                      for item, output in zip(receipt["artifacts"], outputs, strict=True))
 
     def accept(self, reference, response):
-        with self._lock:
-            package = self.load(reference)
-            digest = self._digest(reference)
-            if self.queue.external_dispatch(digest) is None:
-                return _rejected(package.envelope, "UNKNOWN_HANDOFF")
-            outcome = accept_method_result(package, response,
-                                           allowed_evidence_refs=tuple(package.context.evidence_index))
-            if response is None or outcome.status == "REJECTED":
-                return outcome
-            normalized = _normalized_response(package, response)
-            response_digest = stable_digest(normalized)
-            prior = self._receipt(reference)
-            if prior is not None and prior["response_digest"] != response_digest:
-                return _rejected(package.envelope, "METHOD_RESULT_CONFLICT")
-            artifacts = []
-            for output in _outputs(package, response):
-                document = {"schema_version": "method-output.v1", "package_digest": package.package_digest,
-                            "task_id": package.envelope.task_id, "output": output}
-                artifact_digest = stable_digest(document)
-                self._save(self._path("method-artifacts", artifact_digest), document)
-                artifacts.append({"artifact_ref": f"artifact:method-{artifact_digest}",
-                                  "artifact_type": output["artifact_type"], "artifact_digest": artifact_digest,
-                                  "content_digest": output["content_digest"]})
-            receipt = {"schema_version": "method-receipt.v1", "package_digest": package.package_digest,
-                       "response_digest": response_digest, "artifacts": artifacts,
-                       "result": normalized["result"], "outcome": to_jsonable(outcome)}
-            try:
-                self._save(self._path("method-results", digest), receipt)
-            except ValueError:
-                return _rejected(package.envelope, "METHOD_RESULT_CONFLICT")
-            self.queue.record_external_result(digest, status=outcome.status,
-                result_digest=response_digest, failure_kind=outcome.failure_kind,
-                output_digest=outcome.output_digest)
+        package = self.load(reference)
+        digest = self._digest(reference)
+        if self.queue.external_dispatch(digest) is None:
+            return _rejected(package.envelope, "UNKNOWN_HANDOFF")
+        outcome = accept_method_result(package, response, allowed_evidence_refs=package.context.evidence_index)
+        if response is None or outcome.status == "REJECTED":
             return outcome
+        normalized = _normalized_response(package, response)
+        prior = self._receipt(reference)
+        if prior is not None and prior["response_digest"] != stable_digest(normalized):
+            return _rejected(package.envelope, "METHOD_RESULT_CONFLICT")
+        with self.queue._connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            owner = db.execute("""SELECT c.operation_id,j.status,j.cancel_requested FROM codex_handoffs c
+                                  JOIN jobs j ON j.job_id=c.job_id WHERE c.envelope_digest=?""", (digest,)).fetchone()
+            if owner and owner["operation_id"] is not None:
+                return _rejected(package.envelope, "EXECUTOR_OWNS_HANDOFF")
+            if owner and prior is None and (owner["cancel_requested"] or owner["status"] == "cancelled"):
+                return _rejected(package.envelope, "PARENT_CANCELLED")
+            if owner and prior is None and owner["status"] == "failed":
+                return _rejected(package.envelope, "PARENT_FAILED")
+            return self.publish_validated(db, reference, package, normalized, outcome)
+
+    def publish_validated(self, db, reference, package, normalized, outcome):
+        """Publish the immutable receipt under its manual or leased queue transaction."""
+        digest = self._digest(reference)
+        response_digest = stable_digest(normalized)
+        artifacts = []
+        for output in normalized["output_artifacts"]:
+            document = {"schema_version": "method-output.v1", "package_digest": package.package_digest,
+                        "task_id": package.envelope.task_id, "output": output}
+            artifact_digest = stable_digest(document)
+            self._save(self._path("method-artifacts", artifact_digest), document)
+            artifacts.append({"artifact_ref": f"artifact:method-{artifact_digest}",
+                              "artifact_type": output["artifact_type"], "artifact_digest": artifact_digest,
+                              "content_digest": output["content_digest"]})
+        receipt = {"schema_version": "method-receipt.v1", "package_digest": package.package_digest,
+                   "response_digest": response_digest, "artifacts": artifacts,
+                   "result": normalized["result"], "outcome": to_jsonable(outcome)}
+        try:
+            self._save(self._path("method-results", digest), receipt)
+        except ValueError:
+            return _rejected(package.envelope, "METHOD_RESULT_CONFLICT")
+        self.queue.record_external_result(digest, status=outcome.status, result_digest=response_digest,
+            failure_kind=outcome.failure_kind, output_digest=outcome.output_digest, connection=db)
+        return outcome

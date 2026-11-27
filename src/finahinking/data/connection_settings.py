@@ -64,6 +64,9 @@ class MacOSKeychainBackend:
         except (OSError, subprocess.SubprocessError):
             raise KeychainError("system credential storage is unavailable") from None
 
+    def has(self, label: str) -> bool:
+        return self._run(["find-generic-password", "-a", self._account, "-s", label]).returncode == 0
+
     def get(self, label: str) -> str | None:
         result = self._run(["find-generic-password", "-a", self._account, "-s", label, "-w"])
         if result.returncode != 0:
@@ -106,6 +109,9 @@ class KeychainDataCredentialStore:
         if not isinstance(ref, DataSourceCredentialRef) or ref.keychain_label is None:
             return False
         try:
+            presence_check = getattr(self._backend, "has", None)
+            if presence_check is not None:
+                return presence_check(ref.keychain_label)
             return self._backend.get(ref.keychain_label) is not None
         except KeychainError:
             return False

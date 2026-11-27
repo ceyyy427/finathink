@@ -1,0 +1,69 @@
+{
+  "schema_version": "model-workbench-check.v1",
+  "data": "BUILT_IN_SYNTHETIC_SAMPLE",
+  "execution": "LIVE_CODEX",
+  "research": {
+    "status": "completed",
+    "dispatch_status": "OFFLINE",
+    "protocol_status": "NOT_APPLICABLE",
+    "semantic_status": "NOT_APPLICABLE",
+    "semantic_summary": {
+      "checked_claims": 0,
+      "matched_claims": 0,
+      "scope": "LITERAL_SOURCE_OBSERVATIONS"
+    },
+    "usage": {
+      "known_total_units": 0,
+      "status": "NOT_CALLED",
+      "total_units": 0,
+      "unknown_calls": 0
+    }
+  },
+  "codex": {
+    "research_plan": {
+      "factor_ids": [],
+      "hypotheses": [
+        "在 SYNTH 合成样本中，若当前收盘价高于三个观测间隔前的收盘价，则在下一观测收盘买入并持有一个观测间隔的正动量规则，其留出期平均单期净收益将高于同期始终持有 SYNTH 的基准。信号为零或为负时持有现金。"
+      ],
+      "required_datasets": [],
+      "risk_policy_version": "risk.v1",
+      "validation_spec": {
+        "evidence_refs": [
+          "evidence:dc65f7c5cde164d5ae2b00663d3e0290e123191b170059859726f00d41138396"
+        ],
+        "falsification": "若有效留出期的平均单期净收益差小于或等于零，则该样本上的增量动量假设被否证。若时点或价格缺失导致无法形成配对比较，则记为数据不足。",
+        "limitations": [
+          "材料标注 24 条记录，但实际列出 16 条。方案仅使用显式列出的记录，留出期最多包含五个收盘到收盘的收益区间。",
+          "完整快照已随题可见，按时间划出的留出段仅能作为示范，无法视为独立盲测。若两组仓位路径完全相同，本样本也无法辨别信号的择时价值。",
+          "该合成样本只有一个标的。收盘价用于模拟成交，固定费用属于研究假设，材料未提供可验证成交、价差或市场冲击数据。"
+        ],
+        "paper_only": true,
+        "validation": "用 2026 年 1 月 10 日至 17 日的可见记录检查字段与信号定义，冻结三间隔窗口、零阈值、执行时点、基准和费用。将 1 月 18 日作为隔离日，保留 1 月 19 日至 25 日作一次性留出检验。首个留出信号使用截至 1 月 19 日且按逐条 available_at 已可用的收盘价，于 1 月 20 日收盘调整仓位，最晚于 1 月 25 日收盘平仓。两组从现金起步，在同一收盘价和持有区间下比较，现金收益设为零。两组均按每次实际仓位变动的名义金额扣除单边 10 个基点的假设交易成本，包含建仓和平仓，连续持仓期间不重复收费。主指标为动量规则减去基准的平均单期净收益差。该方案仅作纸面设计，尚未执行。"
+      }
+    },
+    "client": "codex-cli 0.171.0-alpha.13.2",
+    "status": "COMPLETED",
+    "package_digest": "9a12d8be7c72857578ca49d5d5661fd3b539e5212652e49ad1cc95226fa0533d",
+    "protocol_status": "ANALYZED",
+    "semantic_status": "TYPED_EVIDENCE_VERIFIED",
+    "artifact_types": [
+      "ResearchPlan"
+    ],
+    "artifact_refs": [
+      "artifact:method-398bdf2a10a592592ceedb9db1543df0779ff96552d83a26d0283baa4d3a4c52"
+    ],
+    "evidence_refs": [
+      "evidence:dc65f7c5cde164d5ae2b00663d3e0290e123191b170059859726f00d41138396"
+    ],
+    "execution_accounting": {
+      "claim_limit": 1,
+      "external_model_requests": null,
+      "worker_claims": 1
+    },
+    "usage": {
+      "bytes_used": 17714,
+      "provider_calls": 1,
+      "usage_state": "UNKNOWN"
+    }
+  }
+}

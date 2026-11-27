@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from .contracts import AgentOutcome, stable_digest
+from .job_queue import ExternalDispatchOwnedError
 
 _FORBIDDEN_CAPABILITY_PARTS = frozenset(
     {"account", "broker", "call", "cancel", "execute", "filesystem", "live", "network", "order", "shell", "tool", "write"}
@@ -225,20 +226,21 @@ class CodexBridge:
                 return self._outcome(envelope, status=persisted["status"], failure_kind=persisted.get("failure_kind"), output_digest=persisted.get("output_digest", ""))
         outcome = self.accept_result(envelope, result)
         if outcome.status not in {"EXTERNAL_HANDOFF_REQUIRED", "REJECTED"}:
+            if self._queue is not None:
+                try:
+                    self._queue.record_external_result(
+                        digest, status=outcome.status, result_digest=stable_digest(result),
+                        failure_kind=outcome.failure_kind, output_digest=outcome.output_digest,
+                    )
+                except ExternalDispatchOwnedError:
+                    self._accepted.discard(digest)
+                    return self._outcome(envelope, status="REJECTED", failure_kind="EXECUTOR_OWNS_HANDOFF")
             self._outcomes[digest] = outcome
             record = self._dispatches.get(digest)
             if record is not None:
                 self._dispatches[digest] = CodexDispatchRecord(
                     record.task_id, record.envelope_digest, outcome.status, record.external_ref,
                     outcome.output_digest,
-                )
-            if self._queue is not None:
-                self._queue.record_external_result(
-                    digest,
-                    status=outcome.status,
-                    result_digest=stable_digest(result),
-                    failure_kind=str(outcome.failure_kind) if outcome.failure_kind is not None else None,
-                    output_digest=outcome.output_digest,
                 )
         return outcome
 

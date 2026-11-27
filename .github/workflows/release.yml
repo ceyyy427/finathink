@@ -44,7 +44,8 @@ jobs:
           python -m pip wheel --no-deps --wheel-dir dist .
           python scripts/clean_install.py --wheel "$(find dist -name 'finathink-*.whl' -print -quit)" --examples-output dist/finathink-phase33-examples.zip
           git archive --format=tar.gz --output="dist/finathink-${GITHUB_REF_NAME}.tar.gz" "$GITHUB_SHA"
-          (cd dist && sha256sum -- ./*.whl ./*.tar.gz ./*.zip > SHA256SUMS && sha256sum --check SHA256SUMS)
+          cp docs/verification/phase34-codex-synthetic.json dist/finathink-codex-synthetic-receipt.json
+          (cd dist && sha256sum -- ./*.whl ./*.tar.gz ./*.zip ./*.json > SHA256SUMS && sha256sum --check SHA256SUMS)
       - uses: actions/upload-artifact@v4
         with:
           name: release-dist

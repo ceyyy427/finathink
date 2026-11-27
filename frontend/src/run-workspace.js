@@ -12,9 +12,17 @@ const STAGES = { RECEIVED: '接收任务', IDENTIFIED: '识别标的', DATA_CHEC
 export function modelCallSummary(job) {
   if (job.execution_mode !== 'provider-grounded') return '本地离线流程 · 不调用模型。';
   const study = job.model_research; const calls = study?.calls ?? [];
-  const dispatched = calls.filter((item) => item.dispatched).length;
+  const dispatched = study?.known_dispatched_calls ?? calls.filter((item) => item.dispatched === true).length;
+  if (study?.journal_issue || calls.some((item) => item.dispatched == null)) {
+    return `材料研究 · ${job.model_config_ref} · 出站总次数未知，已确认出站 ${dispatched} 次。总用量未知，模型观察待复核。`;
+  }
   const usage = study?.usage_status === 'UNKNOWN' ? '中断或未确认的用量未知，不能按零计费。' : '用量以已返回记录为准；费用以用户服务账单为准。';
   return `材料研究 · ${job.model_config_ref} · 已登记 ${calls.length} 次调用尝试，出站记录 ${dispatched} 条；${usage}模型观察待复核。`;
+}
+
+export function modelCallUnits(call) {
+  if (call.dispatched == null) return '未知';
+  return call.dispatched ? call.usage?.total_units ?? '未知' : '未出站';
 }
 
 export function normalizeJobSummary(value) {
@@ -128,7 +136,7 @@ export function mountRunWorkspace(root, { fetcher = globalThis.fetch, location =
     const study = job.model_research;
     text('[data-run-model-summary]', modelCallSummary(job));
     const calls = query('[data-run-call-records]');
-    if (calls) calls.replaceChildren(...(study?.calls ?? []).map((item) => element('li', `${item.role} · ${item.model} · ${item.status} · 上下文 ${item.context_bytes} B · ${item.duration_ms == null ? '耗时未确认' : `${item.duration_ms} ms`} · 用量 ${!item.dispatched ? '未出站' : item.usage?.total_units ?? '未知'}`)));
+    if (calls) calls.replaceChildren(...(study?.calls ?? []).map((item) => element('li', `${item.role} · ${item.model} · ${item.status} · 上下文 ${item.context_bytes} B · ${item.duration_ms == null ? '耗时未确认' : `${item.duration_ms} ms`} · 用量 ${modelCallUnits(item)}`)));
     const roles = query('[data-run-model-roles]');
     if (roles) roles.replaceChildren(...(study?.roles ?? []).map((item) => element('li', `${item.role} · ${item.status} · ${(item.claims ?? []).join(' / ')} ${(item.limitations ?? []).join(' / ')}`)));
     const synthesis = query('[data-run-synthesis]');

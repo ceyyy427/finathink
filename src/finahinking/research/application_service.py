@@ -8,9 +8,10 @@ import re
 import sqlite3
 import tempfile
 import uuid
-from dataclasses import asdict
+from dataclasses import asdict, dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from finahinking.data.snapshot_store import SnapshotStore
 
@@ -27,6 +28,9 @@ from .factor_study_store import FactorStudyStore
 from .job_queue import JobQueue, JobStatus, _ref
 from .run_repository import RunRepository
 from .run_store import ResearchRunStore, _decode_event, _decode_state
+
+if TYPE_CHECKING:
+    from .runtime_service import RuntimeLimits
 
 WORKFLOW_VERSION = "local-research.v1"
 _ROLES = ("fundamentals", "technical", "sentiment", "news", "learning")
@@ -51,10 +55,12 @@ def _utc(timestamp):
 
 
 def _identity(request):
+    spec = request.research_plan.validation_spec if isinstance(request.research_plan, ResearchPlan) else {}
+    models = spec.get("model_workbench", {}).get("role_model_refs", {})
     return CheckpointIdentity(
         instrument=request.instrument, as_of=request.as_of,
         dataset_snapshot={"fingerprint": request.snapshot_ref}, analyst_set=request.analyst_roles,
-        role_model_map={role: "offline/fixture-v1" for role in request.analyst_roles},
+        role_model_map={role: models.get(role, "offline/fixture-v1") for role in request.analyst_roles},
         skill_versions={"workflow": WORKFLOW_VERSION}, workflow_version=request.workflow_version,
         depth=1, rounds=1, config_digest=request.config_digest,
         research_plan_digest=stable_digest(request.research_plan),
@@ -233,7 +239,8 @@ def run_local_research_stage(invocation, checkpoint_ref, publish_checkpoint, *, 
     class Control:
         def is_cancelled(self, run_id):
             current = queue.get(record.job_id)
-            return current.cancel_requested or current.status is not JobStatus.RUNNING or current.attempts != record.attempts or current.lease_token != record.lease_token
+            return (current.cancel_requested or current.status is not JobStatus.RUNNING or current.attempts != record.attempts
+                    or current.lease_token != record.lease_token or current.lease_until is None or current.lease_until <= queue._clock())
 
     binding = spec.get("factor_study")
     study = studies = None
@@ -280,6 +287,7 @@ def run_local_research_stage(invocation, checkpoint_ref, publish_checkpoint, *, 
     tools = SnapshotResearchTools(snapshot, publication_before=publication_before, policy=policy_record["effective"],
                                   policy_lineage=lineage, panel_scope=panel_scope)
     driver, manager = OfflineDriver(), ResearchManager()
+    inputs = None
     if spec.get("execution_mode") == "provider-grounded":
         if not allow_model_calls:
             return {"status": "blocked", "failure_kind": "OUTBOUND_DISABLED"}
@@ -301,11 +309,19 @@ def run_local_research_stage(invocation, checkpoint_ref, publish_checkpoint, *, 
             if not config.enabled or config.provider_id != spec["model_config_ref"]:
                 raise ValueError()
             journal = ModelCallJournal(root / "model-calls.sqlite3", job_id=record.job_id, run_id=request.run_id, request_digest=stable_digest(request), attempt=record.attempts, scope_id=spec["scope_id"])
-            driver = GroundedApiDriver(snapshot, config, materials=inputs["materials"], transport=ProviderHttpTransport(), credential_store=LocalProviderCredentialStore(), call_journal=journal)
+            driver = GroundedApiDriver(snapshot, config, materials=inputs["materials"], transport=ProviderHttpTransport(), credential_store=LocalProviderCredentialStore(), call_journal=journal,
+                                       can_dispatch=lambda: not Control().is_cancelled(request.run_id))
             manager = GroundedResearchManager(driver)
             if budget is not None:
                 budget.charge_bytes(len(json.dumps(inputs).encode("utf-8")))
         except (KeyError, ValueError, OSError, TypeError):
+            return {"status": "blocked", "failure_kind": "CONTEXT_INTEGRITY_FAILED"}
+    if "model_workbench" in spec:
+        from .model_workbench import verify_bound_preview
+
+        try:
+            verify_bound_preview(root, request, snapshot, inputs)
+        except (OSError, KeyError, TypeError, ValueError):
             return {"status": "blocked", "failure_kind": "CONTEXT_INTEGRITY_FAILED"}
     discovery = spec.get("discovery")
     discovery_driver = None
@@ -349,9 +365,14 @@ def run_local_research_stage(invocation, checkpoint_ref, publish_checkpoint, *, 
         tools.analysis["model_research"] = {
             "execution_mode": "provider-grounded", "provider": spec["model_config_ref"],
             "calls": journal.records(terminal=True), "context_input_ref": spec["context_input_ref"],
-            "roles": [{"role": report.role, "status": report.status, "claims": list(report.claims), "evidence_refs": list(report.evidence_refs), "limitations": list(report.limitations)} for report in result.state.analyst_reports],
+            "roles": [{"role": report.role, "status": report.status, "model_ref": report.model_ref, "claims": list(report.claims), "evidence_refs": list(report.evidence_refs), "limitations": list(report.limitations)} for report in result.state.analyst_reports],
             "synthesis": driver.synthesis_summary,
             "limitations": ["Citation membership verifies input binding, not semantic truth. Model observations do not set financial metrics or policy."]}
+    if "model_workbench" in spec:
+        from .model_workbench_evidence import publication_accounting
+
+        tools.analysis["model_workbench"] = publication_accounting(
+            request, snapshot, inputs, tools.analysis.get("model_research", {}), result.state.analyst_reports)
     if binding is not None:
         from .factor_workbench import compute_study
 
@@ -407,6 +428,14 @@ def index_verified_publication(root, publication):
     scope = request.research_plan.validation_spec["scope_id"]
     repository = RunRepository(Path(root) / "research-index.sqlite3", report_root=Path(root) / "reports", scope_id=scope)
     repository.record_result(publication["result"], publication["manifest"], bundle=publication["bundle"], created_at=publication["created_at"], started_at=publication["started_at"], finished_at=publication["finished_at"], strategy_version=request.research_plan.validation_spec["strategy_version"], policy_fingerprint=request.research_plan.validation_spec["policy_fingerprint"])
+
+
+@dataclass(frozen=True)
+class PreparedSubmission:
+    request: ResearchRequest
+    queue_key: str
+    limits: RuntimeLimits
+    model_inputs: dict | None
 
 
 class ResearchApplicationService:
@@ -506,6 +535,14 @@ class ResearchApplicationService:
         return binding["contract"]["observed_at"][-1]
 
     def submit(self, values, *, factor_study=None, rerun_of=None, strategy_study=None, discovery=None, strategy_validation=None):
+        prepared = self._prepare_submission(values, factor_study=factor_study, rerun_of=rerun_of,
+                                            strategy_study=strategy_study, discovery=discovery,
+                                            strategy_validation=strategy_validation)
+        return self._enqueue_prepared(prepared)
+
+    def _prepare_submission(self, values, *, factor_study=None, rerun_of=None, strategy_study=None,
+                            discovery=None, strategy_validation=None, snapshot=None, provider_config=None):
+        """Resolve a submission once, without writing inputs or waking the queue."""
         if not isinstance(values, dict):
             raise TypeError("research submission must be an object")
         if set(values) - {"idempotency_key", "snapshot_ref", "question", "instrument", "as_of", "model_config_ref", "budget", "materials", "allow_model_calls", "policy_ref"}:
@@ -519,12 +556,17 @@ class ResearchApplicationService:
         selected_provider = values.get("model_config_ref", "offline")
         config = None
         if selected_provider != "offline":
-            config = self.provider_configs.get(selected_provider)
+            config = provider_config if provider_config is not None else self.provider_configs.get(selected_provider)
+            if config is not None and config.provider_id != selected_provider:
+                raise ValueError("selected provider does not match the prepared settings")
             if not self.allow_model_calls or values.get("allow_model_calls") is not True or config is None or not config.enabled or config.adapter_kind == "offline" or config.endpoint is None or config.credential_ref is None:
                 raise ValueError("select a configured provider and explicitly authorize model calls")
         elif values.get("materials"):
             raise ValueError("select and authorize a model before supplying role materials")
-        snapshot = self.snapshots.load(values.get("snapshot_ref"))
+        if snapshot is None:
+            snapshot = self.snapshots.load(values.get("snapshot_ref"))
+        if snapshot.fingerprint != values.get("snapshot_ref"):
+            raise ValueError("selected snapshot fingerprint mismatch")
         instrument = values.get("instrument")
         if instrument not in snapshot.instruments:
             raise ValueError("selected snapshot does not contain the requested instrument")
@@ -563,19 +605,13 @@ class ResearchApplicationService:
             previous_policy_fingerprint=policy_record["policy_ref"],
         )
         if strategy_validation is not None:
-            from dataclasses import replace
-
             plan = replace(request.research_plan, validation_spec={**request.research_plan.validation_spec,
                            "strategy_validation": strategy_validation})
             request = replace(request, research_plan=plan, config_digest=stable_digest([request.config_digest, strategy_validation]))
         if factor_study is not None:
-            from dataclasses import replace
-
             plan = replace(request.research_plan, validation_spec={**request.research_plan.validation_spec, "factor_study": factor_study})
             request = replace(request, research_plan=plan, config_digest=stable_digest({"base": request.config_digest, "factor_study": factor_study}))
         if strategy_study is not None:
-            from dataclasses import replace
-
             from .source_updates import require_active_research_source
 
             require_active_research_source(self.root, "STRATEGY", strategy_study["template_id"])
@@ -586,9 +622,8 @@ class ResearchApplicationService:
                            "strategy_study": strategy_study})
             request = replace(request, research_plan=plan,
                               config_digest=stable_digest({"base": request.config_digest, "strategy_study": strategy_study}))
+        inputs = None
         if config is not None:
-            from dataclasses import replace
-
             from .context_bundle import build_context_bundle, normalize_materials
 
             materials = normalize_materials(values.get("materials", []), request)
@@ -603,22 +638,31 @@ class ResearchApplicationService:
                     raise ValueError("模型配置或资料已经改变，请重新预览")
                 inputs["discovery_provider"] = discovery["blueprint"]["provider"]
             reference = _model_input_digest(inputs)
+            plan = replace(request.research_plan, validation_spec={**request.research_plan.validation_spec, "context_input_ref": reference})
+            request = replace(request, research_plan=plan, config_digest=stable_digest({"base": request.config_digest, "context_input_ref": reference}))
+        if discovery is not None:
+            plan = replace(request.research_plan, validation_spec={**request.research_plan.validation_spec,
+                           "discovery": discovery})
+            request = replace(request, research_plan=plan,
+                              config_digest=stable_digest({"base": request.config_digest, "discovery": discovery}))
+        return PreparedSubmission(request, queue_key, limits, inputs)
+
+    def _enqueue_prepared(self, prepared, *, model_workbench=None):
+        request = prepared.request
+        inputs = prepared.model_inputs
+        if inputs is not None:
+            reference = request.research_plan.validation_spec["context_input_ref"]
             target = self.root / "model-inputs" / f"{reference}.json"
             try:
                 _write_private_json(target, inputs)
             except FileExistsError:
                 if _model_input_digest(_read_json(target)) != reference:
                     raise ValueError("model input integrity mismatch") from None
-            plan = replace(request.research_plan, validation_spec={**request.research_plan.validation_spec, "context_input_ref": reference})
-            request = replace(request, research_plan=plan, config_digest=stable_digest({"base": request.config_digest, "context_input_ref": reference}))
-        if discovery is not None:
-            from dataclasses import replace
-
+        if model_workbench is not None:
             plan = replace(request.research_plan, validation_spec={**request.research_plan.validation_spec,
-                           "discovery": discovery})
-            request = replace(request, research_plan=plan,
-                              config_digest=stable_digest({"base": request.config_digest, "discovery": discovery}))
-        record = self.runtime.submit(request, idempotency_key=queue_key, limits=limits)
+                                                                  "model_workbench": model_workbench})
+            request = replace(request, research_plan=plan, config_digest=stable_digest([request.config_digest, model_workbench]))
+        record = self.runtime.submit(request, idempotency_key=prepared.queue_key, limits=prepared.limits)
         return self.get_job(record.job_id)
 
     def _method_store(self):
@@ -652,6 +696,32 @@ class ResearchApplicationService:
                 raise ValueError("数据、方法或政策已改变，请重新预览")
         return discovery["blueprint"]
 
+    def _method_request(self, record):
+        """A factor validation job must never disclose its reserved final window."""
+        from .method_handoff import ProtectedFactorHandoff
+
+        request = self._request(record)
+        binding = request.research_plan.validation_spec.get("factor_study")
+        if binding is None:
+            return request
+        if not isinstance(binding, dict) or record.status is not JobStatus.COMPLETED or binding.get("phase") != "test":
+            raise ProtectedFactorHandoff()
+        try:
+            study = self.factor_studies.get(binding["study_id"])
+            if (study["test_job_id"] != record.job_id or not study["test_key"] or not study["candidate_id"]
+                    or study["spec_ref"] != binding["spec_ref"]):
+                raise ProtectedFactorHandoff()
+            published = verify_research_receipt(self.root, self.queue, record, record.result_ref)
+            result = published["manifest"]["source_snapshot"]["factor_study"]
+            if (result["phase"] != "TEST" or result["study_id"] != study["study_id"]
+                    or result["spec_ref"] != binding["spec_ref"] or result["snapshot_ref"] != request.snapshot_ref
+                    or result["selected_candidate"] != study["candidate_id"]
+                    or result["state"] != "TEST_EVALUATED" or not result.get("test_evaluation")):
+                raise ProtectedFactorHandoff()
+        except (KeyError, OSError, ValueError, TypeError):
+            raise ProtectedFactorHandoff() from None
+        return request
+
     def export_method_handoff(self, job_id, route_request):
         """Explicit local export; it performs no provider call or market fetch."""
         from .asset_catalog import ResearchAssetCatalog
@@ -662,7 +732,7 @@ class ResearchApplicationService:
         from .method_router import select_methods
 
         record = self.queue.get(job_id)
-        request = self._request(record)
+        request = self._method_request(record)
         discovery = self._discovery_handoff(request, record)
         snapshot = self.snapshots.load(request.snapshot_ref)
         catalog = ResearchAssetCatalog.packaged()
@@ -691,12 +761,12 @@ class ResearchApplicationService:
         task = AgentTask("research", f"method-{digest[:32]}", digest,
                          capabilities=("paper_only", "structured_output", "evidence_refs", "reasoning"))
         package = build_method_handoff(task, context, loaded)
-        reference = self._method_store().export(package)
+        reference = self._method_store().export(package, job_id=job_id)
         return self.get_method_handoff(job_id, reference)
 
     def _bound_method_handoff(self, job_id, reference, *, current=False):
         record = self.queue.get(job_id)
-        request = self._request(record)
+        request = self._method_request(record)
         discovery = self._discovery_handoff(request, record, current=current)
         store = self._method_store()
         package = store.load(reference)
@@ -704,6 +774,27 @@ class ResearchApplicationService:
         if (context["run_id"] != request.run_id or context["dataset_fingerprint"] != request.snapshot_ref
                 or (discovery and context.get("knowledge_background", {}).get("blueprint_ref") != discovery["fingerprint"])):
             raise KeyError(reference)
+        methods = context.pop("method_context")
+        expected = stable_digest({"request": request, "context": stable_digest(context),
+                                  "methods": stable_digest(methods)})
+        if package.envelope.input_digest != expected:
+            raise ValueError("方法交接与冻结研究输入的指纹不一致")
+        if current:
+            from .asset_catalog import ResearchAssetCatalog
+
+            self.snapshots.load(request.snapshot_ref)
+            source = request.research_plan.validation_spec.get("context_input_ref")
+            if source:
+                if not isinstance(source, str) or not re.fullmatch(r"[0-9a-f]{64}", source):
+                    raise ValueError("模型材料引用无效")
+                if _model_input_digest(_read_json(self.root / "model-inputs" / f"{source}.json")) != source:
+                    raise ValueError("冻结的模型材料已改变")
+            catalog = ResearchAssetCatalog.packaged()
+            for item in methods["manifest"]["loaded"]:
+                ref = catalog.get_resource(item["resource_id"])
+                if (ref.version != item["version"] or ref.sha256 != item["sha256"]
+                        or catalog.read_text(ref.resource_id) != methods["bodies"][ref.resource_id]):
+                    raise ValueError("冻结的方法或许可资源已改变")
         return store, package
 
     def get_method_handoff(self, job_id, reference):
@@ -715,7 +806,8 @@ class ResearchApplicationService:
                 "summary": method_handoff_activity(package, state["status"])}
 
     def accept_method_handoff(self, job_id, reference, response):
-        store, _ = self._bound_method_handoff(job_id, reference, current=True)
+        store, package = self._bound_method_handoff(job_id, reference, current=True)
+        store.bind_job(job_id, reference, package)
         outcome = store.accept(reference, response)
         return {"outcome": to_jsonable(outcome),
                 "summary": self.get_method_handoff(job_id, reference)["summary"],
@@ -791,14 +883,24 @@ class ResearchApplicationService:
         runtime_metrics = self.queue.load_metrics(record.job_id) or {}
         model_research = source.get("model_research")
         if request.research_plan.validation_spec.get("execution_mode") == "provider-grounded":
-            from .model_call_journal import ModelCallJournal
+            from .model_call_journal import ModelCallJournal, reconcile_model_calls
 
             calls = []
             journal_path = self.root / "model-calls.sqlite3"
-            if journal_path.exists():
-                journal = ModelCallJournal(journal_path, job_id=record.job_id, run_id=request.run_id, request_digest=stable_digest(request), attempt=max(1, record.attempts), scope_id=self.scope_id)
-                calls = journal.records(terminal=record.status in {JobStatus.COMPLETED, JobStatus.CANCELLED, JobStatus.FAILED})
-            model_research = {**(model_research or {}), "calls": calls, "usage_status": "UNKNOWN" if any(item["dispatched"] and item["usage"] is None for item in calls) else "RECORDED" if calls else "NOT_STARTED", "aggregate_counts": runtime_metrics}
+            journal_status = "NOT_CREATED"
+            terminal = record.status in {JobStatus.COMPLETED, JobStatus.CANCELLED, JobStatus.FAILED}
+            if journal_path.exists() or journal_path.is_symlink():
+                try:
+                    calls = ModelCallJournal.read_existing(
+                        journal_path, scope_id=self.scope_id, job_id=record.job_id, run_id=request.run_id,
+                        request_digest=stable_digest(request), terminal=terminal)
+                    journal_status = "AVAILABLE"
+                except (OSError, sqlite3.Error, ValueError, TypeError):
+                    journal_status = "UNAVAILABLE"
+            published_calls = (model_research or {}).get("calls") if report_status == "AVAILABLE" else None
+            accounting = reconcile_model_calls(calls, journal_status, attempts=record.attempts, terminal=terminal, failure=failure,
+                                               metrics=runtime_metrics, published_calls=published_calls)
+            model_research = {**(model_research or {}), **accounting, "aggregate_counts": runtime_metrics}
         validation = request.research_plan.validation_spec.get("strategy_validation")
         payload = redact_public_payload({
             "schema_version": 1, "paper_only": True, "execution_mode": request.research_plan.validation_spec.get("execution_mode", "local-deterministic"),

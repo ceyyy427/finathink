@@ -30,6 +30,7 @@ import { mountAtlasReview } from './atlas-review.js';
 import { mountAppShell } from './app-shell.js';
 import { mountAssetWorkspace } from './asset-workspace.js';
 import { mountFactorDetail } from './factor-detail.js';
+import { mountModelWorkbench } from './model-workbench.js';
 import { mountInterfaceDiagnostics } from './interface-diagnostics.js';
 
 echarts.use([LineChart, GridComponent, TooltipComponent, CanvasRenderer]);
@@ -609,6 +610,7 @@ if (typeof document !== 'undefined') {
   document.querySelectorAll('[data-learning-reliability]').forEach(root => { mountLearningReliability(root); });
   document.querySelectorAll('[data-task-maintenance]').forEach(root => { mountTaskMaintenance(root); });
   document.querySelectorAll('[data-reproduction-workspace]').forEach(root => { mountResearchReproduction(root); });
+  document.querySelectorAll('[data-model-workbench]').forEach(root => mountModelWorkbench(root));
   document.querySelectorAll('[data-interface-workspace]').forEach((root) => { mountInterfaceDiagnostics(root); });
   document.querySelectorAll('[data-asset-workspace]').forEach((root) => { mountAssetWorkspace(root); });
   document.querySelectorAll('[data-factor-detail]').forEach((root) => { mountFactorDetail(root); });

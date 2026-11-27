@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "finathink"
-version = "0.2.7"
+version = "0.2.8"
 description = "Finathink — Financial Research Optimizer for governed, auditable research"
 requires-python = ">=3.11"
 dependencies = ["numpy>=2.0,<3", "pandas>=2.2,<4"]
@@ -13,6 +13,7 @@ dependencies = ["numpy>=2.0,<3", "pandas>=2.2,<4"]
 finahinking = "finahinking.local_app:main"
 finathink = "finahinking.local_app:main"
 finathink-state = "finahinking.maintenance:main"
+finathink-codex = "finahinking.research.codex_operator:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=8,<10", "ruff>=0.8,<1", "playwright>=1.61,<1.62"]

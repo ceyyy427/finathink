@@ -74,6 +74,11 @@ renamed repository's remote `main` through PR #2.
   gate evidence. A GitHub release is not claimed until a maintainer publishes
   the tagged artifact.
 
+## 0.2.8 - 2026-11-27
+
+- 模型与 Codex 研究台支持按角色预览发送材料，核对模型与预算后授权单次研究。任务记录分别展示传输状态、用量、原始证据匹配与需复核的观察。
+- Codex 可以领取已授权的冻结任务，回传带证据引用和否证条件的纸面研究方案。手动文件交接与执行器共用任务归属、类型和内容摘要校验。重启后可查询回执。[研究台使用指南](docs/MODEL_CODEX_WORKBENCH_GUIDE.md)
+
 ## 0.2.7 - 2026-11-27
 
 - 纸面策略使用固定顺序计算收益、波动率和资产共线性，同一组冻结输入在 Linux 和 macOS 上可接受同一份原始策略、验证方案与学习审批指纹。
