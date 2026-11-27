@@ -1,0 +1,48 @@
+name: Cross-platform research replay
+
+on:
+  workflow_call:
+    inputs:
+      artifact:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  replay:
+    name: Replay Linux research packages on macOS
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.artifact }}
+          path: dist
+      - name: Install standalone Python manager
+        run: |
+          python3 -m venv "$RUNNER_TEMP/uv-bootstrap"
+          "$RUNNER_TEMP/uv-bootstrap/bin/python" -m pip install --only-binary=:all: uv==0.13.10
+      - name: Rebuild the recorded environment and replay the downloaded ZIP
+        shell: python3 {0}
+        run: |
+          import json
+          import os
+          import subprocess
+          from pathlib import Path
+          from zipfile import ZipFile
+
+          bundle = Path('dist/finathink-phase33-examples.zip')
+          wheel, = Path('dist').glob('finathink-*.whl')
+          with ZipFile(bundle) as archive:
+              deps = json.loads(archive.read('receipts/research.json'))['runtime_identity']['dependencies']
+          temp = Path(os.environ['RUNNER_TEMP'])
+          subprocess.run([
+              temp / 'uv-bootstrap/bin/uv', 'run', '--isolated', '--no-project', '--managed-python',
+              '--python', deps['python'], '--with', str(wheel.resolve()),
+              '--with', 'numpy==' + deps['numpy'], '--with', 'pandas==' + deps['pandas'],
+              'python', '-I', 'scripts/check_installed_journey.py',
+              '--state-root', temp / 'finathink-replay', '--verify-examples', bundle
+          ], check=True)

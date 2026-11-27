@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import math
+from itertools import combinations
 from numbers import Real
+from statistics import stdev
 
 import numpy as np
 
@@ -99,11 +101,35 @@ def _liquidity(latest, changes, equity):
     return _number(max(fractions))
 
 
+def _max_abs_correlation(rows):
+    """Maximum absolute Pearson correlation on the complete shared window."""
+    unit_columns = []
+    for column in zip(*rows, strict=True):
+        if min(column) == max(column):
+            return None
+        # Power-of-two scaling preserves the input precision, including tiny
+        # differences in near-constant series. Center before taking the norm.
+        exponent = math.frexp(max(map(abs, column)))[1]
+        scaled = [math.ldexp(value, -exponent) for value in column]
+        offsets = [value - scaled[0] for value in scaled]
+        mean_offset = math.fsum(offsets) / len(offsets)
+        centered = [value - mean_offset for value in offsets]
+        norm = math.sqrt(math.fsum(value * value for value in centered))
+        unit_columns.append([value / norm for value in centered])
+
+    # Explicit binary64 products avoid platform-specific fused reductions in
+    # native correlation kernels. These values enter published strategy hashes.
+    correlations = (abs(math.fsum(x * y for x, y in zip(left, right, strict=True)))
+                    for left, right in combinations(unit_columns, 2))
+    return min(1.0, max(correlations))
+
+
 def _history_risks(frame, targets):
     if not targets:
         return None, None, None, False
     try:
-        prices = adjusted_price_matrix(frame, list(targets), 61)
+        assets = sorted(targets)
+        prices = adjusted_price_matrix(frame, assets, 61)
     except StrategyDataUnavailable:
         return None, None, None, False
     if prices.isna().any().any():
@@ -113,15 +139,13 @@ def _history_risks(frame, targets):
         return None, None, None, False
     if len(prices) < 7:
         return None, None, None, True
-    weights = np.array(list(targets.values()))
-    portfolio_returns = returns.to_numpy() @ weights
-    volatility = _number(np.std(portfolio_returns, ddof=1))
-    tail = _number(empirical_cvar(portfolio_returns.tolist()))
-    corr = None
-    if len(targets) >= 2:
-        pairs = np.abs(returns.corr().to_numpy()[np.triu_indices(len(targets), 1)])
-        if np.isfinite(pairs).all():
-            corr = float(pairs.max())
+    rows = returns.to_numpy().tolist()
+    weights = [targets[asset] for asset in assets]
+    portfolio_returns = [math.fsum(value * weight for value, weight in zip(row, weights, strict=True))
+                         for row in rows]
+    volatility = _number(stdev(portfolio_returns))
+    tail = _number(empirical_cvar(portfolio_returns))
+    corr = _max_abs_correlation(rows) if len(assets) >= 2 else None
     return volatility, tail, corr, False
 
 

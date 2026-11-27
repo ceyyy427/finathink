@@ -92,9 +92,29 @@ jobs:
       - name: Build smoke
         run: |
           python -m pip wheel --no-deps --wheel-dir dist .
-          python scripts/clean_install.py --wheel "$(find dist -name 'finathink-*.whl' -print -quit)"
+          options=()
+          if [[ "${{ matrix.python-version }}" == "3.11" ]]; then
+            options+=(--examples-output dist/finathink-phase33-examples.zip)
+          fi
+          python scripts/clean_install.py --wheel "$(find dist -name 'finathink-*.whl' -print -quit)" "${options[@]}"
+      - name: Share the Linux wheel and examples
+        if: matrix.python-version == '3.11'
+        uses: actions/upload-artifact@v4
+        with:
+          name: portable-linux-examples
+          if-no-files-found: error
+          retention-days: 7
+          path: |
+            dist/*.whl
+            dist/finathink-phase33-examples.zip
       - name: Diff whitespace
         run: git diff --check
+
+  portable-replay:
+    needs: test
+    uses: ./.github/workflows/replay-examples.yml
+    with:
+      artifact: portable-linux-examples
 
   quant-and-migrations:
     runs-on: ubuntu-latest
