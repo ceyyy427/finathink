@@ -37,23 +37,22 @@ def run_controlled_stage(invocation, checkpoint_ref, publish_checkpoint):
 
     root = Path(os.environ["FINATHINK_QUEUE_PATH"]).parent
     fault = (root / "controlled-fault").read_text()
-    if fault == "hold-before-budget":
+    if fault == "preflight-backup":
         from finahinking.research.model_call_journal import ModelCallJournal
 
         begin_call = ModelCallJournal.begin
 
-        def hold_prepared(journal, record):
-            copy_journal(journal.path, root / "earlier.sqlite3")
+        def snapshot_prepared(journal, record):
             call_id = begin_call(journal, record)
-            (root / "prepared-before-budget").touch()
-            time.sleep(30)
+            copy_journal(journal.path, root / "earlier.sqlite3")
             return call_id
 
-        ModelCallJournal.begin = hold_prepared
-    if fault in {"timeout-before-dispatch-backup", "timeout-after-analysts"}:
+        ModelCallJournal.begin = snapshot_prepared
+        os.environ.pop("FINAHINK_TEST_KEY")
+    if fault in {"timeout-before-dispatch-backup", "timeout-after-analysts", "hold-before-dispatch-backup", "hold-after-analysts"}:
         from finahinking.research.model_call_journal import ModelCallJournal
 
-        if fault == "timeout-before-dispatch-backup":
+        if fault in {"timeout-before-dispatch-backup", "hold-before-dispatch-backup"}:
             original_dispatch = ModelCallJournal.dispatched
 
             def snapshot_before_dispatch(journal, call_id, request_bytes):
@@ -85,7 +84,8 @@ def run_controlled_stage(invocation, checkpoint_ref, publish_checkpoint):
             if fault in {"timeout", "timeout-before-dispatch-backup"} or (
                     fault == "timeout-after-analysts" and self.context["role"] == "research"):
                 raise TimeoutError()
-            if fault == "hold":
+            if fault in {"hold", "hold-before-dispatch-backup"} or (
+                    fault == "hold-after-analysts" and self.context["role"] == "research"):
                 time.sleep(30)
             source = self.context["materials"][0]
             if isinstance(source["summary"], str):
@@ -406,25 +406,46 @@ def test_reconciled_dns_failure_preserves_proven_zero_after_a_budget_charge(work
     assert evidence["dispatch_status"] == "NOT_SENT" and evidence["usage_status"] == "NOT_CALLED"
 
 
-def test_cancelled_worker_preserves_its_prepared_marker_but_an_earlier_empty_journal_is_unknown(workbench):
+def test_a_returned_workers_zero_budget_confirms_a_retained_prepared_marker(workbench):
     app = workbench.service
-    _, job_id = launch(workbench, "openai_compatible", "hold-before-budget")
-    prepared = app.root / "prepared-before-budget"
+    _, job_id = launch(workbench, "openai_compatible", "preflight-backup")
+    job = wait_for(app, job_id)
+    assert job["status"] == "failed" and job["runtime_metrics"]["provider_calls"] == 0
+    assert "local_research" in job["runtime_metrics"]["stage_durations"]
+    assert job["model_research"]["calls"][0]["status"] == "NOT_CONFIGURED"
+    app.close()
+    copy_journal(app.root / "earlier.sqlite3", app.root / "model-calls.sqlite3")
+    evidence = workbench.evidence(job_id)
+    assert evidence["dispatch_status"] == "NOT_SENT" and evidence["usage_status"] == "NOT_CALLED"
+    assert evidence["calls"][0]["status"] == "NOT_SENT" and evidence["calls"][0]["dispatched"] is False
+    assert not list(app.root.glob("wire-*.json"))
+
+
+@pytest.mark.parametrize(("fault", "role", "confirmed"), [
+    ("hold-before-dispatch-backup", "technical", 0), ("hold-after-analysts", "research", 1),
+])
+def test_cancelled_workers_default_zero_does_not_confirm_restored_receipts(workbench, fault, role, confirmed):
+    app = workbench.service
+    _, job_id = launch(workbench, "openai_compatible", fault)
+    wire = app.root / f"wire-{role}.json"
     deadline = time.monotonic() + 20
-    while not prepared.exists() and time.monotonic() < deadline:
+    while not wire.exists() and time.monotonic() < deadline:
         time.sleep(.05)
-    assert prepared.exists()
+    assert wire.exists()
     app.cancel(job_id)
     assert wait_for(app, job_id)["status"] == "cancelled"
     app.close()
-    assert not list(app.root.glob("wire-*.json"))
     before = workbench.evidence(job_id)
-    assert before["dispatch_status"] == "NOT_SENT" and before["usage_status"] == "NOT_CALLED"
-    assert before["calls"][0]["status"] == "NOT_SENT" and before["calls"][0]["dispatched"] is False
+    assert before["dispatch_status"] == "SENT" and before["usage_status"] == "UNKNOWN"
+    assert any(c["role"] == role and c["dispatched"] is True for c in before["calls"])
     copy_journal(app.root / "earlier.sqlite3", app.root / "model-calls.sqlite3")
     job = app.get_job(job_id)
     assert job["attempts"] == 1 and job["runtime_metrics"]["provider_calls"] == 0
+    assert not job["runtime_metrics"]["stage_durations"]
     assert job["model_research"]["usage_status"] == "UNKNOWN"
     after = workbench.evidence(job_id)
-    assert after["dispatch_status"] == "UNKNOWN" and after["dispatched_calls"] is None
-    assert {r["usage_status"] for r in after["roles"] if r["expected_call"]} == {"UNKNOWN"}
+    assert after["dispatched_calls"] is None and after["known_dispatched_calls"] == confirmed
+    assert after["usage"]["known_total_units"] == confirmed * 48 and after["usage"]["total_units"] is None
+    assert next(r for r in after["roles"] if r["role"] == role)["dispatch_status"] == "UNKNOWN"
+    if not confirmed:
+        assert after["dispatch_status"] == "UNKNOWN" and after["calls"][0]["dispatched"] is None

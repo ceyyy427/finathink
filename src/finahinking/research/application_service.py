@@ -888,17 +888,17 @@ class ResearchApplicationService:
             calls = []
             journal_path = self.root / "model-calls.sqlite3"
             journal_status = "NOT_CREATED"
+            terminal = record.status in {JobStatus.COMPLETED, JobStatus.CANCELLED, JobStatus.FAILED}
             if journal_path.exists() or journal_path.is_symlink():
                 try:
                     calls = ModelCallJournal.read_existing(
                         journal_path, scope_id=self.scope_id, job_id=record.job_id, run_id=request.run_id,
-                        request_digest=stable_digest(request),
-                        terminal=record.status in {JobStatus.COMPLETED, JobStatus.CANCELLED, JobStatus.FAILED})
+                        request_digest=stable_digest(request), terminal=terminal)
                     journal_status = "AVAILABLE"
                 except (OSError, sqlite3.Error, ValueError, TypeError):
                     journal_status = "UNAVAILABLE"
             published_calls = (model_research or {}).get("calls") if report_status == "AVAILABLE" else None
-            accounting = reconcile_model_calls(calls, journal_status, attempts=record.attempts, failure=failure,
+            accounting = reconcile_model_calls(calls, journal_status, attempts=record.attempts, terminal=terminal, failure=failure,
                                                metrics=runtime_metrics, published_calls=published_calls)
             model_research = {**(model_research or {}), **accounting, "aggregate_counts": runtime_metrics}
         validation = request.research_plan.validation_spec.get("strategy_validation")

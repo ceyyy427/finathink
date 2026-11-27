@@ -29,7 +29,7 @@ def model_call_usage(calls, *, incomplete=False):
             "status": "UNKNOWN" if incomplete or missing else "RECORDED" if totals else "NOT_CALLED"}
 
 
-def reconcile_model_calls(calls, journal_status, *, attempts, failure, metrics, published_calls=None):
+def reconcile_model_calls(calls, journal_status, *, attempts, terminal, failure, metrics, published_calls=None):
     """Reconcile scoped receipts with the worker's independent budget counters and publication."""
     charged = metrics.get("provider_calls", 0)
     # Each grounded adapter invocation permits one attempt. DNS and TLS happen
@@ -41,13 +41,15 @@ def reconcile_model_calls(calls, journal_status, *, attempts, failure, metrics, 
         sent_ids if call.get("dispatched") else call_ids) for call in published_calls or ())
     # A supervisor may persist default zero counters when a worker is killed.
     # A returned local stage or a known pre-provider gate certifies a real zero.
-    zero_proven = not charged and not published_calls and (
-        not attempts or failure in _BEFORE_PROVIDER or "local_research" in metrics.get("stage_durations", {}))
-    gap = charged > accounted or archive_gap or (attempts and not calls and not zero_proven)
+    returned_stage = "local_research" in metrics.get("stage_durations", {})
+    stopped_before_provider = not attempts or failure in _BEFORE_PROVIDER
+    zero_proven = not charged and not published_calls and (stopped_before_provider or returned_stage)
+    receipt_gap = charged > accounted or archive_gap
+    interrupted = terminal and not stopped_before_provider and not returned_stage and published_calls is None
     issue = None
     if journal_status == "UNAVAILABLE" and not zero_proven:
         issue = "CALL_JOURNAL_UNAVAILABLE"
-    elif gap:
+    elif receipt_gap or interrupted or (attempts and not calls and not zero_proven):
         issue = "CALL_JOURNAL_INCOMPLETE"
         journal_status = "INCOMPLETE"
     if issue:
@@ -56,8 +58,13 @@ def reconcile_model_calls(calls, journal_status, *, attempts, failure, metrics, 
         calls = [{**call, "observed_status": "PREPARED", "dispatched": None, "status": "UNKNOWN"}
                  if not call["dispatched"] and call["status"] in {"PREPARED", "NOT_SENT"} else call for call in calls]
     usage = model_call_usage(calls, incomplete=issue is not None)
+    # A witnessed dispatch survives an interrupted worker, even when the
+    # exact count is unknown. Contradictory or absent receipts remain unknown.
+    dispatched = "SENT" if sent_ids else "NOT_SENT"
+    if issue and (receipt_gap or not sent_ids):
+        dispatched = "UNKNOWN"
     return {"calls": calls, "journal_status": journal_status, "journal_issue": issue,
-            "dispatch_status": "UNKNOWN" if issue else "SENT" if sent_ids else "NOT_SENT",
+            "dispatch_status": dispatched,
             "known_dispatched_calls": len(sent_ids), "dispatched_calls": None if issue else len(sent_ids),
             "usage_status": "NOT_STARTED" if usage["status"] == "NOT_CALLED" else usage["status"], "usage": usage}
 
