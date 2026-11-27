@@ -8,6 +8,10 @@ from contextlib import ExitStack, contextmanager
 from pathlib import Path
 
 
+class CodexProcessError(ValueError):
+    """Public, fixed setup messages for the operator before the task is claimed."""
+
+
 class _PosixProcess:
     def __init__(self, command, cwd, stdin, env):
         self.command = command
@@ -130,7 +134,7 @@ def _windows_command(command, job):
         # cmd expands %NAME% even inside quotes. Reject shell syntax in local
         # paths before claiming, including characters npm could reparse via %*.
         if any(any(char in value for char in "%!^&|<>()\r\n") for value in arguments):
-            raise ValueError("Codex 或临时目录的路径含 cmd 特殊字符，请使用原生 Codex exe 或更换目录。")
+            raise CodexProcessError("Codex 或临时目录的路径含 cmd 特殊字符，请使用原生 Codex exe 或更换目录。")
         image = job.system_cmd()
         arguments = subprocess.list2cmdline(arguments)
         return image, f'{subprocess.list2cmdline([image])} /d /v:off /s /c "{arguments}"'
@@ -236,10 +240,10 @@ def prepared_process(command, *, cwd, stdin, env):
         try:
             process = _WindowsProcess(command, cwd, stdin, env)
         except (OSError, ImportError, AttributeError) as error:
-            raise ValueError("无法为 Codex 建立受控 Windows 进程树，请在支持作业对象的终端中重试。") from error
+            raise CodexProcessError("无法为 Codex 建立受控 Windows 进程树，请在支持作业对象的终端中重试。") from error
         try:
             yield process
         finally:
             process.close()
     else:
-        raise ValueError("此操作系统无法建立受控的 Codex 进程树。")
+        raise CodexProcessError("此操作系统无法建立受控的 Codex 进程树。")

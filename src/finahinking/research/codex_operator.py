@@ -237,10 +237,11 @@ def main(argv=None):
     if args.run:
         from .codex_cli_worker import run_once
         from .codex_client_profile import CodexClientProfileError
+        from .codex_process import CodexProcessError
 
         try:
             receipt = run_once(backend)
-        except CodexClientProfileError as error:
+        except (CodexClientProfileError, CodexProcessError) as error:
             parser.exit(1, str(error) + "\n")
         except (ValueError, KeyError, OSError, TypeError, http.client.HTTPException):
             parser.exit(1, "未取得有效回执，请在本地研究台查看授权与执行状态。\n")

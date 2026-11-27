@@ -23,6 +23,8 @@ def score_quality(job, contexts, expected_roles):
     source = job.get('model_research') or {}
     calls = source.get('calls', [])
     dispatched = [call for call in calls if call.get('dispatched') is True]
+    incomplete = bool(source.get('journal_issue')) or any(call.get('dispatched') is None for call in calls)
+    not_sent = sum(call.get('dispatched') is False for call in calls)
     unknown = sum(call.get('status') in {'UNKNOWN', 'PENDING', 'DISPATCHED'} for call in dispatched)
     accepted = sum(call.get('status') == 'READY' for call in dispatched)
     roles = source.get('roles', [])
@@ -37,15 +39,18 @@ def score_quality(job, contexts, expected_roles):
     known_units = [call['usage']['total_units'] for call in dispatched
                    if isinstance(call.get('usage'), dict) and type(call['usage'].get('total_units')) is int and call['usage']['total_units'] >= 0]
     durations = [call['duration_ms'] for call in dispatched if type(call.get('duration_ms')) is int and call['duration_ms'] >= 0]
-    return {'schema_acceptance': {'attempted': len(dispatched), 'accepted': accepted, 'unknown': unknown,
-                                  'not_sent': sum(call.get('dispatched') is not True for call in calls),
-                                  'rate': None if unknown else _rate(accepted, len(dispatched))},
+    schema = {'attempted': len(dispatched), 'accepted': accepted, 'unknown': unknown,
+              'not_sent': not_sent, 'rate': None if unknown else _rate(accepted, len(dispatched))}
+    if incomplete:
+        schema.update(attempted=None, unknown=None, not_sent=None, rate=None,
+                      known_attempted=len(dispatched), known_not_sent=not_sent)
+    return {'schema_acceptance': schema,
             'citations': {'valid': valid, 'observed': len(references), 'rate': _rate(valid, len(references))},
             'insufficient_data': {'correct': correct, 'observed': present, 'expected': len(expected),
                                   'rate': _rate(correct, len(expected)) if present == len(expected) else None},
-            'usage': {'known_total_units': sum(known_units), 'unknown_calls': len(dispatched)-len(known_units),
-                      'total_units': sum(known_units) if dispatched and len(known_units) == len(dispatched) and not unknown else None},
-            'model_duration_ms': sum(durations) if dispatched and len(durations) == len(dispatched) and not unknown else None,
+            'usage': {'known_total_units': sum(known_units), 'unknown_calls': None if incomplete else len(dispatched)-len(known_units),
+                      'total_units': sum(known_units) if dispatched and len(known_units) == len(dispatched) and not (unknown or incomplete) else None},
+            'model_duration_ms': sum(durations) if dispatched and len(durations) == len(dispatched) and not (unknown or incomplete) else None,
             'estimated_cost': None, 'disagreements': list(synthesis.get('disagreements', []))}
 
 
@@ -148,7 +153,12 @@ class QualityEvaluation:
                 raise ValueError('模型调用与固定任务上下文不一致。')
         invalid = job.get('failure_kind') == 'PUBLICATION_INVALID'
         metrics = score_quality({} if invalid else job, contexts, case['expected_roles'])
-        status = 'UNAVAILABLE' if invalid else 'EVALUATED' if job['status'] == 'completed' else 'PARTIAL' if source.get('calls') else 'NOT_STARTED'
+        if invalid:
+            status = 'UNAVAILABLE'
+        elif source.get('journal_issue'):
+            status = 'PARTIAL'
+        else:
+            status = 'EVALUATED' if job['status'] == 'completed' else 'PARTIAL' if source.get('calls') else 'NOT_STARTED'
         spec = request.research_plan.validation_spec
         conditions = {'case_digest': case['case_digest'], 'snapshot_ref': request.snapshot_ref, 'policy_fingerprint': spec['policy_fingerprint'],
                       'policy_ref': request.previous_policy_fingerprint, 'workflow_version': request.workflow_version, 'budget': spec['budget']}

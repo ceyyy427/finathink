@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createJobObserver, modelCallSummary, mountRunWorkspace, normalizeJob } from '../src/run-workspace.js';
+import { createJobObserver, modelCallSummary, modelCallUnits, mountRunWorkspace, normalizeJob } from '../src/run-workspace.js';
 
 const job = { schema_version: 1, paper_only: true, execution_mode: 'local-deterministic', job_id: 'job-1', run_id: 'research-1', snapshot_ref: 'a'.repeat(64), status: 'running', state: 'QUANT_VALIDATION', attempts: 1, stages: [], metrics: {}, report_url: null, run_url: '/research/research-1' };
 const response = (value) => ({ ok: true, json: async () => value });
@@ -10,6 +10,17 @@ test('an interrupted dispatched attempt is displayed as unknown usage, not zero 
   assert.match(text, /1 次调用/);
   assert.match(text, /未知/);
   assert.doesNotMatch(text, /0 次调用/);
+});
+
+test('a restored call journal shows the confirmed subtotal and preserves uncertain individual dispatches', () => {
+  const calls = [{ dispatched: true, usage: { total_units: 48 } }, { dispatched: null, usage: null }];
+  const text = modelCallSummary({ ...job, execution_mode: 'provider-grounded', model_config_ref: 'desk',
+    model_research: { calls, journal_issue: 'CALL_JOURNAL_INCOMPLETE', known_dispatched_calls: 1, usage_status: 'UNKNOWN' } });
+  assert.match(text, /出站总次数未知/);
+  assert.match(text, /已确认出站 1 次/);
+  assert.equal(modelCallUnits(calls[0]), 48);
+  assert.equal(modelCallUnits(calls[1]), '未知');
+  assert.equal(modelCallUnits({ dispatched: false }), '未出站');
 });
 
 test('job contract preserves server metrics and verifies report identity', () => {

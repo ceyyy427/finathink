@@ -40,7 +40,7 @@ def run_once(worker):
     check_client_profile()
     binary = shutil.which("codex")
     if binary is None:
-        raise ValueError("请先安装 Codex CLI 并在本地登录。")
+        raise CodexClientProfileError("请先安装 Codex CLI 并在本地登录。")
     with tempfile.TemporaryDirectory(prefix="finathink-codex-", dir="/tmp" if os.name == "posix" else None) as directory:
         root = Path(directory)
         schema, result = root / "schema.json", root / "plan.json"

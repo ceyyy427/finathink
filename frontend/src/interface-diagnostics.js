@@ -94,9 +94,11 @@ function renderQuality(root, value) {
   const m = value.metrics; const a = m.schema_acceptance; const c = m.citations; const missing = m.insufficient_data;
   panel.replaceChildren(element(root, 'h3', `${CASE_COPY[value.case_id]} · ${QUALITY_COPY[value.status]}`), element(root, 'p', `SAMPLE · ${value.provider_id} · 任务状态 ${value.job_status}`));
   panel.append(table(root, '本次任务的观察与分母', ['指标', '计数', '结果'], [
-    ['结构接受', `${a.accepted} / ${a.attempted}`, rate(a.rate)], ['输入引用归属', `${c.valid} / ${c.observed}`, rate(c.rate)],
+    ['结构接受', `${count(a.accepted)} / ${count(a.attempted)}`, rate(a.rate)], ['输入引用归属', `${c.valid} / ${c.observed}`, rate(c.rate)],
     ['缺失材料识别', `${missing.correct} / ${missing.expected}（已观察 ${missing.observed}）`, rate(missing.rate)],
-    ['调用结果未知 / 未发送', `${a.unknown} / ${a.not_sent}`, '独立保留'], ['总用量', count(m.usage.total_units), `已知 ${count(m.usage.known_total_units)}，未知 ${count(m.usage.unknown_calls)} 次`],
+    ['调用结果未知 / 未发送', `${count(a.unknown)} / ${count(a.not_sent)}`, '独立保留'],
+    ...(a.known_attempted == null ? [] : [['已确认发送 / 已确认未发送', `${count(a.known_attempted)} / ${count(a.known_not_sent)}`, '回执不完整']]),
+    ['总用量', count(m.usage.total_units), `已知 ${count(m.usage.known_total_units)}，未知 ${count(m.usage.unknown_calls)} 次`],
     ['模型调用耗时合计', count(m.model_duration_ms)+' ms', '各调用耗时之和'], ['费用', '未知', '未推断单价'],
   ]));
   if (m.disagreements?.length) { const d = element(root, 'details'); d.dataset.qualitySection = 'disagreements'; d.append(element(root, 'summary', '查看已记录的分歧')); const ul = element(root, 'ul'); m.disagreements.forEach(text => ul.append(element(root, 'li', text))); d.append(ul); panel.append(d); }
