@@ -39,10 +39,11 @@ jobs:
           with ZipFile(bundle) as archive:
               deps = json.loads(archive.read('receipts/research.json'))['runtime_identity']['dependencies']
           temp = Path(os.environ['RUNNER_TEMP'])
-          subprocess.run([
-              temp / 'uv-bootstrap/bin/uv', 'run', '--isolated', '--no-project', '--managed-python',
-              '--python', deps['python'], '--with', str(wheel.resolve()),
-              '--with', 'numpy==' + deps['numpy'], '--with', 'pandas==' + deps['pandas'],
-              'python', '-I', 'scripts/check_installed_journey.py',
-              '--state-root', temp / 'finathink-replay', '--verify-examples', bundle
-          ], check=True)
+          uv = temp / 'uv-bootstrap/bin/uv'
+          env = temp / 'finathink-venv'
+          python = env / 'bin/python'
+          subprocess.run([uv, 'venv', '--managed-python', '--python', deps['python'], env], check=True)
+          subprocess.run([uv, 'pip', 'install', '--link-mode', 'copy', '--python', python, wheel,
+                          'numpy==' + deps['numpy'], 'pandas==' + deps['pandas']], check=True)
+          subprocess.run([python, '-I', 'scripts/check_installed_journey.py',
+                          '--state-root', temp / 'finathink-replay', '--verify-examples', bundle], check=True)
