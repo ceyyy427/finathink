@@ -395,7 +395,21 @@ def _stability(spec, frames, policy, index, split):
                 key=lambda row: (row["metric"] is None, -(row["metric"] or 0), row["parameters"]["window"]))]}
 
 
-def run_factor_validation(spec, panel, policy, *, gateway) -> FactorValidationRun:
+def _matches_code_version(expected, published_identity):
+    current = _code_commit()
+    if expected == current:
+        return True
+    known = expected if current == "unknown" else current
+    if "unknown" not in {current, expected} or not re.fullmatch(r"[a-f0-9]{40}|[a-f0-9]{64}", known) or published_identity is None:
+        return False
+    from .research_identity import execution_identity
+    from .snapshot_tools import local_research_policy
+
+    # Wheels carry source bytes and dependencies but may have no Git metadata.
+    return execution_identity(local_research_policy()) == published_identity
+
+
+def run_factor_validation(spec, panel, policy, *, gateway, published_identity=None) -> FactorValidationRun:
     if not isinstance(panel, FactorPanel):
         raise TypeError("typed factor panel required")
     policy = factor_validation_policy(**policy)
@@ -465,7 +479,7 @@ def run_factor_validation(spec, panel, policy, *, gateway) -> FactorValidationRu
         value["fingerprint"] = stable_digest(value)
         return FactorValidationRun.from_dict(value)
 
-    if not permitted or policy["code_version"] != _code_commit():
+    if not permitted or not _matches_code_version(policy["code_version"], published_identity):
         return finish("BLOCKED_CONTROL")
     missing = panel.missing_inputs(spec.required_fields)
     if family_audit is not None and family_audit["status"] != "READY":

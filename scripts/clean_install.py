@@ -23,6 +23,7 @@ def _run(command: list[str], *, cwd: Path) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--wheel", type=Path, help="use an existing wheel instead of building one")
+    parser.add_argument("--examples-output", type=Path, help="write the six verified synthetic workflow examples to this ZIP")
     args = parser.parse_args()
     with tempfile.TemporaryDirectory(prefix="finahinking-clean-install-") as directory:
         work = Path(directory)
@@ -77,7 +78,10 @@ assert get_knowledge_unit('sharpe').unit_id == 'sharpe'
 app.close()
 """
         _run([str(python), "-c", probe], cwd=work)
-        _run([str(python), str(ROOT / 'scripts' / 'check_installed_journey.py'), '--state-root', str(work / 'first-use')], cwd=work)
+        journey = [str(python), str(ROOT / 'scripts' / 'check_installed_journey.py'), '--state-root', str(work / 'first-use')]
+        if args.examples_output is not None:
+            journey.extend(['--examples-output', str(args.examples_output.resolve())])
+        _run(journey, cwd=work)
         print(f"clean wheel install smoke passed: {wheel.name}")
     return 0
 

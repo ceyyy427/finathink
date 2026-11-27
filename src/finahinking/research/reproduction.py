@@ -8,6 +8,7 @@ import re
 
 from finahinking.p8_2.contracts import DatasetSnapshot, MarketObservation
 
+from . import portable_difference_pages
 from .contracts import stable_digest
 from .reports import _sanitize_public
 from .research_identity import execution_identity
@@ -46,13 +47,13 @@ def _digest(value):
     return stable_digest(_canonical_numbers(value))
 
 
-def _encode(value):
+def _encode(value, limit=MAX_PACKAGE_BYTES):
     try:
         encoded = json.dumps(_canonical_numbers(value), sort_keys=True, ensure_ascii=False, allow_nan=False, separators=(',', ':'))
     except (ValueError, TypeError, RecursionError) as exc:
         raise ValueError('研究包必须是有限、非递归的 JSON 数据。') from exc
-    if len(encoded.encode()) > MAX_PACKAGE_BYTES:
-        raise ValueError('研究包超过 8 MiB，请缩小研究样本。')
+    if len(encoded.encode()) > limit:
+        raise ValueError(f'研究包超过 {limit // (1024 * 1024)} MiB，请缩小研究样本。')
     return encoded
 
 
@@ -79,13 +80,20 @@ def products(analytics):
     return result
 
 
-def _portable_snapshot(snapshot, cutoff, *, panel_scope=None):
+def _portable_snapshot(snapshot, cutoff, *, panel_scope=None, as_of=None):
     import pandas as pd
     if panel_scope is not None:
         rows = SnapshotResearchTools.panel_observations(snapshot, panel_scope, cutoff)
     else:
         rows = [row for row in snapshot.observations if cutoff is None or row.timestamp < pd.Timestamp(cutoff)]
+    if as_of is not None:
+        boundary = SnapshotResearchTools._boundary(as_of)
+        rows = [row for row in rows if row.available_at_time(boundary)
+                and (cutoff is None or row.available_at < pd.Timestamp(cutoff))]
     if not 4 <= len(rows) <= 5000:
+        if as_of is not None:
+            from .portable_inputs import PortableUnavailable
+            raise PortableUnavailable('BASELINE_SAMPLE_SIZE')
         raise ValueError('迁移复算需要 4 至 5000 条已发表观测。')
     provenance = snapshot.provenance
     classes = provenance.get('asset_classes', {})
@@ -135,7 +143,11 @@ def _policy_supported(policy):
     return 'learning_policy_ref' not in policy or bool(re.fullmatch('[a-f0-9]{64}', str(policy['learning_policy_ref'])))
 
 
-def validate_package(package):
+def validate_package(package, *, legacy_only=False):
+    if not legacy_only and isinstance(package, dict) and package.get('schema_version') == 'research-package.v2':
+        from .portable_package import validate
+        validate(package)
+        return package
     encoded = _encode(package)
     package = json.loads(encoded)
     if not isinstance(package, dict) or set(package) != _FIELDS or package['schema_version'] != 'research-package.v1':
@@ -183,6 +195,7 @@ class ReproductionService:
         self.service = service
         with service.queue._connect() as db:
             db.execute('CREATE TABLE IF NOT EXISTS research_packages (scope_id TEXT NOT NULL, package_id TEXT NOT NULL, payload TEXT NOT NULL, receipt TEXT, receipt_digest TEXT, PRIMARY KEY(scope_id,package_id))')
+            portable_difference_pages.initialize(db)
 
     def source(self, run_id):
         entry = self.service.runs.get_run(run_id)
@@ -202,7 +215,21 @@ class ReproductionService:
             raise ValueError('量化产物校验失败。')
         return entry, json.loads(raw)
 
-    def export(self, run_id, include_data=False):
+    def export(self, run_id=None, include_data=False, *, data_scope=None, pair_id=None):
+        if data_scope is None and pair_id is None and run_id is not None:
+            from .portable_inputs import PortableUnavailable
+            try:
+                return self.export_legacy(run_id, include_data)
+            except PortableUnavailable as exc:
+                if str(exc) != 'BASELINE_SAMPLE_SIZE':
+                    raise
+                raise ValueError('迁移复算需要 4 至 5000 条已发表观测。') from exc
+        if data_scope != 'workflow' or include_data is not True or (run_id is None) == (pair_id is None):
+            raise ValueError('请选择一项研究或学习对照并明确同意导出已发表的工作流数据。')
+        from .portable_package import freeze
+        return freeze(self, run_id, pair_id)
+
+    def export_legacy(self, run_id, include_data=False):
         if type(include_data) is not bool:
             raise ValueError('请明确选择是否携带标准化数据。')
         entry, analytics = self.source(run_id)
@@ -212,7 +239,8 @@ class ReproductionService:
         compact = None
         if include_data:
             snapshot = self.service.snapshots.load(analytics['dataset_fingerprint'])
-            compact = _portable_snapshot(snapshot, frozen['publication_before'], panel_scope=frozen.get("panel_scope"))
+            compact = _portable_snapshot(snapshot, frozen['publication_before'], panel_scope=frozen.get("panel_scope"),
+                                         as_of=analytics["as_of"])
         expected = products(analytics)
         coverage = {key: 'INCLUDED' for key in expected}
         missing = [] if include_data else ['NORMALIZED_DATA']
@@ -236,7 +264,7 @@ class ReproductionService:
             if not found:
                 if db.execute('SELECT count(*) FROM research_packages WHERE scope_id=?', (self.service.scope_id,)).fetchone()[0] >= 20:
                     raise ValueError('当前工作区已有 20 个迁移包，请在独立工作区继续。')
-                db.execute('INSERT INTO research_packages(scope_id,package_id,payload) VALUES(?,?,?)', (self.service.scope_id, package['package_id'], _encode(package)))
+                db.execute('INSERT INTO research_packages(scope_id,package_id,payload) VALUES(?,?,?)', (self.service.scope_id, package['package_id'], _storage_json(package)))
         return self.get(package['package_id'])
 
     def _load(self, reference):
@@ -254,7 +282,23 @@ class ReproductionService:
 
     def get(self, reference):
         package, receipt = self._load(reference)
-        return {key: package[key] for key in ('package_id', 'run_id', 'product_coverage', 'missing_dependencies')} | {'receipt': receipt, 'data_included': package['snapshot'] is not None}
+        summary = {key: package[key] for key in ('package_id', 'run_id', 'schema_version', 'product_coverage', 'missing_dependencies')}
+        workflow = package['schema_version'] == 'research-package.v2'
+        if workflow:
+            archive = json.loads(package['archive'])
+            included = archive['inputs'] is not None or (archive['core'] or {}).get('snapshot') is not None
+            return {**summary, 'receipt': receipt, 'data_included': included, 'history_count': len(archive['history'])}
+        return {**summary, 'receipt': receipt, 'data_included': package['snapshot'] is not None, 'history_count': 0}
+
+    def history(self, reference):
+        package, _ = self._load(reference)
+        from .portable_package import VERSION, history
+        return history(package) if package['schema_version'] == VERSION else {'artifacts': [], 'evidence': {}}
+
+    def differences(self, reference, product, page, receipt_id=None):
+        with self.service.queue._connect() as db:
+            return portable_difference_pages.read_page(db, self.service.scope_id, _ref(reference), product, page,
+                                                       _ref(receipt_id) if receipt_id is not None else None)
 
     def list(self):
         with self.service.queue._connect() as db:
@@ -263,6 +307,12 @@ class ReproductionService:
 
     def recompute(self, reference):
         package, saved = self._load(reference)
+        if package['schema_version'] == 'research-package.v2':
+            from .portable_package import replay
+            with self.service.queue._connect() as db:
+                pages = portable_difference_pages.DifferencePages(db)
+                receipt = replay(self.service, package, on_difference=pages.add)
+                return pages.save(self.service.scope_id, receipt)
         current = execution_identity(local_research_policy())
         if saved and saved.get('runtime_identity') == current:
             return saved
@@ -278,21 +328,35 @@ class ReproductionService:
                    'model_called': False, 'paper_only': True}
         blockers = set(missing) - set(_WORKFLOW_DEPENDENCIES.values())
         if not blockers:
-            snapshot = _snapshot(package['snapshot'])
-            tools = SnapshotResearchTools(snapshot, policy=package['policy'], publication_before=package['publication_before'])
-            tools.run_id = 'portable-recompute'
-            arguments = {'dataset_fingerprint': snapshot.fingerprint, 'instrument': package['instrument'],
-                         'as_of': package['as_of'], 'factor_ids': [package['policy']['factor_id']]}
             try:
-                tools._backtest(arguments)
-                tools._risk(arguments)
-                actual = products(tools.analysis)
+                actual = compute_baseline(package)
                 receipt['products'] = {key: 'MATCHED' if _digest(actual.get(key)) == _digest(value) else 'DIFFERENT' for key, value in package['expected'].items()}
                 receipt['products'].update({key: value for key, value in package['product_coverage'].items() if value != 'INCLUDED'})
                 receipt['computed_digests'] = {key: _digest(actual.get(key)) for key in package['expected']}
                 receipt['status'] = 'DIFFERENT' if 'DIFFERENT' in receipt['products'].values() else 'PARTIAL' if missing else 'MATCHED'
             except (ValueError, TypeError, KeyError, ArithmeticError):
                 receipt['missing_dependencies'].append('INPUT_UNSUPPORTED')
+        return self._save_receipt(reference, receipt)
+
+    def _save_receipt(self, reference, receipt):
+        encoded = json.dumps(receipt, ensure_ascii=False, allow_nan=False, separators=(',', ':'))
         with self.service.queue._connect() as db:
-            db.execute('UPDATE research_packages SET receipt=?,receipt_digest=? WHERE scope_id=? AND package_id=?', (_encode(receipt), stable_digest(receipt), self.service.scope_id, reference))
+            db.execute('UPDATE research_packages SET receipt=?,receipt_digest=? WHERE scope_id=? AND package_id=?',
+                       (encoded, stable_digest(receipt), self.service.scope_id, reference))
         return receipt
+
+
+def _storage_json(package):
+    from .portable_package import MAX_BYTES, VERSION
+    return _encode(package, MAX_BYTES if package['schema_version'] == VERSION else MAX_PACKAGE_BYTES)
+
+
+def compute_baseline(package):
+    snapshot = _snapshot(package['snapshot'])
+    tools = SnapshotResearchTools(snapshot, policy=package['policy'], publication_before=package['publication_before'])
+    tools.run_id = 'portable-recompute'
+    arguments = {'dataset_fingerprint': snapshot.fingerprint, 'instrument': package['instrument'],
+                 'as_of': package['as_of'], 'factor_ids': [package['policy']['factor_id']]}
+    tools._backtest(arguments)
+    tools._risk(arguments)
+    return products(tools.analysis)

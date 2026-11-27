@@ -1,6 +1,7 @@
 """Strategy catalogue and real browser submission."""
 
 import pytest
+from playwright.sync_api import expect
 
 from tests.p7_5.test_phase4_browser import browser, http_app, observed_page
 
@@ -31,7 +32,7 @@ def test_strategy_submit_from_browser(http_app, observed_page):
     with page.expect_response(lambda r: r.url == base + "/api/research/strategies" and r.request.method == "POST") as submitted:
         page.get_by_role("button", name="提交纸面策略研究").click()
     assert submitted.value.status == 202
-    assert page.get_by_role("link", name="打开后台任务").is_visible()
+    expect(page.get_by_role("link", name="打开后台任务")).to_be_visible()
     from tests.research.test_strategy_worker import completed
 
     job = completed(app.research_service, submitted.value.json()["job_id"])
