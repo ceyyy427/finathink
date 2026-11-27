@@ -2,6 +2,7 @@
 
 import importlib.util
 import json
+import math
 from pathlib import Path
 
 import numpy as np
@@ -140,6 +141,33 @@ def test_missing_financials_remain_needs_data_and_do_not_assert_anomaly():
     assert results['financial-abnormality']['status'] == 'NEEDS_DATA'
     assert results['financial-abnormality']['value'] is None
     assert json.dumps(results, allow_nan=False)
+
+
+def test_risk_correlation_preserves_small_spreads_and_requires_every_pair():
+    from finahinking.research.strategy_risk import _max_abs_correlation
+
+    x, y = (1., 2., 3.), (2., 1., 4.)
+    expected = math.sqrt(3 / 7)
+    for scale in (math.ldexp(1., -1000), 1., math.ldexp(1., 1000)):
+        rows = [(scale * a, -scale * b) for a, b in zip(x, y, strict=True)]
+        assert _max_abs_correlation(rows) == pytest.approx(expected, abs=2e-15, rel=0)
+    close = [1 + i * math.ulp(1.) for i in y]
+    assert _max_abs_correlation(list(zip(x, close, strict=True))) == pytest.approx(expected, abs=2e-15, rel=0)
+    assert _max_abs_correlation([(a, b, -a) for a, b in zip(x, y, strict=True)]) == pytest.approx(1.)
+    assert _max_abs_correlation([(a, b, 1.) for a, b in zip(x, y, strict=True)]) is None
+
+
+def test_strategy_history_risk_is_independent_of_asset_order():
+    from finahinking.research.strategy_risk import strategy_risk_inputs
+
+    frame, classes = panel_fixture()
+    weights = {'A': .4, 'B': .35, 'C': .25}
+    def compute(targets):
+        return strategy_risk_inputs(frame, targets, [10000], 10000., classes, pit_valid=True)
+    forward = compute(weights)
+    reverse = compute(dict(reversed(weights.items())))
+    for metric in ('collinearity', 'tail_loss', 'volatility'):
+        assert math.isfinite(forward[metric]) and forward[metric] == reverse[metric]
 
 
 def test_financial_single_factor_needs_only_its_declared_ratio_inputs():

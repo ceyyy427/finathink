@@ -326,18 +326,67 @@ Python {deps['python']}，NumPy {deps['numpy']}，pandas {deps['pandas']}。运�
             for name, data in files.items():
                 archive.writestr(name, data)
             archive.writestr('SHA256SUMS', sums)
-        with ZipFile(staged) as archive:
-            assert set(archive.namelist()) == set(files) | {'SHA256SUMS'}
-            for row in archive.read('SHA256SUMS').decode('ascii').splitlines():
-                expected, name = row.split('  ', 1)
-                assert sha256(archive.read(name)).hexdigest() == expected, name
-            with http_workspace(root / 'examples-import' / 'app.sqlite3') as (_, _, post):
-                base = '/api/research/reproduction'
-                sample = json.loads(archive.read('packages/research.json'))
-                restored = post(base + '/restore', {'package': sample})
-                receipt = post(base + '/' + restored['package_id'] + '/recompute', {})
-                assert receipt == json.loads(archive.read('receipts/research.json'))
+        verify_examples(staged, root / 'examples-import', same_host=True)
         staged.replace(output)
+
+
+def verify_examples(archive_path, root, *, same_host=False):
+    """Restore each published file in its own empty workspace."""
+    names = {'README.md'} | {f'{directory}/{kind}.json' for kind in EXAMPLE_NAMES
+                             for directory in ('packages', 'receipts')}
+    with ZipFile(archive_path) as archive:
+        assert sorted(archive.namelist()) == sorted(names | {'SHA256SUMS'})
+        sums = []
+        for row in archive.read('SHA256SUMS').decode('ascii').splitlines():
+            digest, name = row.split('  ', 1)
+            assert name in names and sha256(archive.read(name)).hexdigest() == digest, name
+            sums.append(name)
+        assert sorted(sums) == sorted(names)
+        for kind in EXAMPLE_NAMES:
+            _verify_example(archive, kind, root / kind, same_host)
+
+
+def _verify_example(archive, kind, root, same_host):
+    from finahinking.research.strategy_learning import StrategyLearningService
+
+    with http_workspace(root / 'app.sqlite3') as (target, get, post):
+        base = '/api/research/reproduction'
+        assert json.loads(get(base))['packages'] == []
+        policies = target.research_service.learning.policies()
+        package = json.loads(archive.read(f'packages/{kind}.json'))
+        published = json.loads(archive.read(f'receipts/{kind}.json'))
+        restored = post(base + '/restore', {'package': package})
+        assert package['kind'] == kind and restored['package_id'] == published['package_id'] == package['package_id']
+        path = base + '/' + restored['package_id']
+        receipt = post(path + '/recompute', {})
+        assert receipt['status'] == published['status'] == 'REPRODUCED', (kind, receipt)
+        assert not receipt['missing_dependencies'] and not receipt['version_differences']
+        assert receipt['runtime_identity'] == published['runtime_identity']
+        assert receipt['paper_only'] is True and receipt['model_called'] is False
+        assert receipt['products'].keys() == published['products'].keys()
+        if same_host:
+            assert receipt == published, kind
+        fields = 0
+        for key, reference in published['products'].items():
+            product = receipt['products'][key]
+            if key == 'historical_reports':
+                assert product['status'] == reference['status'] == 'ARCHIVED'
+                continue
+            assert product['status'] == reference['status'] == 'REPRODUCED', (kind, key, product)
+            assert product['difference_count'] == reference['difference_count'] == 0
+            assert product['fields_checked'] == reference['fields_checked'] > 0
+            assert product['expected_digest'] == reference['expected_digest']
+            fields += product['fields_checked']
+        reports = json.loads(get(path + '/history'))['artifacts']
+        assert reports == json.loads(package['archive'])['history'] and reports and fields, kind
+        for report in reports:
+            contents = base64.b64decode(report['content_base64'], validate=True)
+            assert sha256(contents).hexdigest() == report['sha256'], (kind, report['name'])
+        print(f'{kind}: fields={fields} archived_reports={len(reports)} differences=0', flush=True)
+        assert len(json.loads(get(base))['packages']) == 1
+        assert target.research_service.list_jobs()['total'] == 0
+        assert target.research_service.learning.policies() == policies
+        assert StrategyLearningService(target.research_service).store.list('policy') == []
 
 
 def portable_journey(root, source_get, source_post, cases, *, collect_examples=False):
@@ -380,11 +429,16 @@ def portable_journey(root, source_get, source_post, cases, *, collect_examples=F
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--state-root', required=True, type=Path)
-    parser.add_argument('--examples-output', type=Path, help='write importable examples generated from this fresh fixture workspace')
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument('--examples-output', type=Path, help='write importable examples generated from this fresh fixture workspace')
+    mode.add_argument('--verify-examples', type=Path, help='restore and replay every example in a published ZIP')
     args = parser.parse_args()
     assert Path(finahinking.__file__).resolve().is_relative_to(Path(sys.prefix).resolve()), 'must import the installed wheel in the clean venv'
     root = args.state_root.resolve()
     root.mkdir(mode=0o700)
+    if args.verify_examples:
+        verify_examples(args.verify_examples, root)
+        return 0
     db = root / 'original' / 'app.sqlite3'
     with http_workspace(db) as (app, get, post):
         first_use = get('/research/jobs').decode()

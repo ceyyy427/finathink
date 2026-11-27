@@ -74,6 +74,11 @@ renamed repository's remote `main` through PR #2.
   gate evidence. A GitHub release is not claimed until a maintainer publishes
   the tagged artifact.
 
+## 0.2.7 - 2026-11-27
+
+- 纸面策略使用固定顺序计算收益、波动率和资产共线性，同一组冻结输入在 Linux 和 macOS 上可接受同一份原始策略、验证方案与学习审批指纹。
+- 发布前将 Linux 构建的 wheel 和六份示例传到独立的 macOS 环境，核对研究包、逐项复算回执和归档报告的 SHA-256。使用步骤见[研究迁移与复现指南](docs/RESEARCH_REPRODUCTION_GUIDE.md)。
+
 ## 0.2.6 - 2026-11-26
 
 - 研究对比工作台支持选择已发表的数据和工作流材料。在新工作区可以重算普通研究、已冻结并发表的因子测试、策略账本和策略验证室结果。

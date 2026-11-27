@@ -12,7 +12,7 @@ from finahinking.quant.interfaces import BacktestConfig, Trade
 
 from .contracts import stable_digest
 
-VERSION = "strategy-runner.v1"
+VERSION = "strategy-runner.v2"
 EPSILON = 1e-9
 CORPORATE_ACTION_FIELDS = ("split_factor", "cash_dividend")
 PRICE_LIMIT_FIELDS = ("limit_rule_version", "limit_up_price", "limit_down_price")
