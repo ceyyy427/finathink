@@ -31,6 +31,7 @@ _REASONS = {
     "AUTHORIZATION_REQUIRED": "请先预览冻结材料与预算，再明确授权一次执行。",
     "OFFLINE_MODE": "当前服务仅限离线研究。启用外部模型调用后可授权 Codex 执行。",
     "RESEARCH_RUNNING": "本地研究正在使用任务预算。研究完成后可查看余量并授权。",
+    "PROVIDER_RESEARCH_PENDING": "此模型研究已获授权，调用和字节预算留给原任务。请在研究完成后查看余量并授权 Codex。",
     "PARENT_CANCELLED": "所属研究任务已取消。",
     "PARENT_FAILED": "所属研究任务已失败，请查看任务记录。",
     "STALE_INPUTS": "冻结的任务、数据、方法或材料已改变。请重新预览并创建交接。",
@@ -48,7 +49,6 @@ _REASONS = {
     "BYTE_LIMIT": "回传超出已授权的总字节数。",
     "CANCELLED_BY_USER": "用户已取消此次执行。",
     "RESULT_UNAVAILABLE": "执行收据或其冻结产物未通过完整性校验。",
-    "FROZEN_TEST_WINDOW": "当前因子任务仍保护样本外窗口；完成冻结测试后才可外发。",
 }
 
 
@@ -216,7 +216,9 @@ class CodexWorkbench:
                 "lease_until": row["lease_until"], "finished_at": row["finished_at"],
                 "usage": {"provider_calls": int(sent), "bytes_used": (
                     row["packet_bytes"] + row["response_bytes"] if sent else 0),
-                    "usage_state": "UNKNOWN" if sent else "NOT_SENT"}}
+                    "usage_state": "UNKNOWN" if sent else "NOT_SENT"},
+                "execution_accounting": {"worker_claims": int(sent), "claim_limit": 1,
+                                         "external_model_requests": None if sent else 0}}
         if include_artifacts:
             review_status = "VERIFIED" if artifacts else "NOT_RETURNED"
             review_failure = None
@@ -252,7 +254,8 @@ class CodexWorkbench:
         local_bytes = local.get("bytes_used", 0)
         usage_unavailable = bool(parent["attempts"] and not local and parent["status"] != "running")
         journal_path = self.service.root / "model-calls.sqlite3"
-        if request.research_plan.validation_spec.get("execution_mode") == "provider-grounded":
+        provider_parent = request.research_plan.validation_spec.get("execution_mode") == "provider-grounded"
+        if provider_parent:
             from .model_call_journal import ModelCallJournal
 
             if journal_path.exists() or journal_path.is_symlink():
@@ -264,7 +267,7 @@ class CodexWorkbench:
                         usage_unavailable = True
                     local_calls = max(local_calls, len(sent))
                     local_bytes = max(local_bytes, sum(call["request_bytes"] for call in sent))
-                except (ValueError, TypeError, OSError, sqlite3.Error):
+                except (ValueError, TypeError, IndexError, KeyError, OSError, OverflowError, sqlite3.Error):
                     usage_unavailable = True
             elif parent["attempts"] or local_calls:
                 usage_unavailable = True
@@ -288,11 +291,10 @@ class CodexWorkbench:
             reason = "PARENT_CANCELLED"
         elif parent["status"] == "failed":
             reason = "PARENT_FAILED"
+        elif provider_parent and parent["status"] in {"queued", "retryable", "running"}:
+            reason = "PROVIDER_RESEARCH_PENDING"
         elif parent["status"] == "running":
             reason = "RESEARCH_RUNNING"
-        elif (study := request.research_plan.validation_spec.get("factor_study")) and (
-                study["phase"] != "test" or parent["status"] != "completed"):
-            reason = "FROZEN_TEST_WINDOW"
         elif calls < 1 or byte_count <= row["packet_bytes"] or seconds < 1:
             reason = "BUDGET_EXHAUSTED"
         return maximum, reason, deadline
@@ -429,7 +431,9 @@ class CodexWorkbench:
             if now >= row["lease_until"]:
                 self._finish(db, row, "TIMED_OUT", "AUTHORIZATION_EXPIRED", row["lease_until"])
                 raise CodexWorkbenchError("AUTHORIZATION_EXPIRED")
-            maximum, _, _ = self._available(db, row, self._job(job_id), exclude=operation_id)
+            maximum, reason, _ = self._available(db, row, self._job(job_id), exclude=operation_id)
+            if reason == "PROVIDER_RESEARCH_PENDING":
+                raise CodexWorkbenchError(reason)
             until = now + min(row["max_wall_seconds"], maximum["max_wall_seconds"])
             if until <= now:
                 self._finish(db, row, "TIMED_OUT", "AUTHORIZATION_EXPIRED", now)

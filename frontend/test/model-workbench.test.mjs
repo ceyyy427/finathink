@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { boundResponse, workerCommand } from '../src/model-workbench.js';
-import { citationRows, jobApi, jobUrl, usageText } from '../src/model-workbench-view.js';
+import { citationRows, dispatchText, jobApi, jobUrl, usageText } from '../src/model-workbench-view.js';
 
 test('a manual return belongs to the displayed packet and stays within its byte bound', () => {
   const digest = 'a'.repeat(64);
@@ -19,6 +19,13 @@ test('receipt usage preserves unavailable, partially reported and genuine zero c
   assert.equal(usageText({}), '未知');
   assert.equal(usageText({ total_units: null, generated_units: 0 }), '输出 0');
   assert.equal(usageText({ generated_units: 2, total_units: 10, input_units: 8 }), '输入 8 / 输出 2 / 合计 10');
+});
+
+test('a missing dispatch marker remains visibly distinct from confirmed pre-dispatch cancellation', () => {
+  assert.equal(dispatchText(null), '未知');
+  assert.equal(dispatchText(undefined), '未知');
+  assert.equal(dispatchText(false), '未发送');
+  assert.equal(dispatchText(true), '已发送');
 });
 
 test('native navigation preserves the complete selected packet reference', () => {

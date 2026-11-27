@@ -10,17 +10,9 @@ from .application_service import _model_input_digest, _read_json, verify_researc
 from .context_bundle import ROLES
 from .contracts import stable_digest
 from .job_queue import JobStatus
+from .model_call_journal import model_call_usage
 from .model_workbench import _DIGEST, VERSION, role_projection, verify_bound_preview
 from .reports import redact_public_payload
-
-
-def _usage(calls):
-    sent = [c for c in calls if c["dispatched"]]
-    known = [(c["usage"] or {}).get("total_units") for c in sent]
-    missing = known.count(None)
-    subtotal = sum(v for v in known if v is not None)
-    return {"known_total_units": subtotal, "unknown_calls": missing, "total_units": None if missing else subtotal,
-            "status": "NOT_CALLED" if not sent else "UNKNOWN" if missing else "RECORDED"}
 
 
 def _protocol(calls, expected):
@@ -91,10 +83,12 @@ def _inputs(app, request):
     return value
 
 
-def _role_evidence(view, calls, source_report, *, offline, verified, conflict, instrument):
+def _role_evidence(view, calls, source_report, *, offline, verified, conflict, instrument, journal_incomplete=False):
     role = view["role"]
     observed = [c for c in calls if c["role"] == role]
     expected = int(view.get("expected_call", False))
+    uncertain = journal_incomplete and (expected or "expected_call" not in view) and (
+        not observed or any(call["dispatched"] is None for call in observed))
     claims = list(source_report.get("claims", ())) if verified else []
     refs = list(source_report.get("evidence_refs", ())) if verified else []
     checks = []
@@ -108,9 +102,9 @@ def _role_evidence(view, calls, source_report, *, offline, verified, conflict, i
             "role_status": source_report.get("status") if verified else None,
             "context_fingerprint": view.get("context_fingerprint"), "expected_call": bool(expected),
             "call_ids": [c["call_id"] for c in observed],
-            "dispatch_status": "OFFLINE" if offline else "SENT" if any(c["dispatched"] for c in observed) else "NOT_SENT",
-            "protocol_status": "NOT_APPLICABLE" if offline else "CONFLICT" if conflict else _protocol(observed, expected),
-            "semantic_status": "CONFLICT" if conflict else semantics, "usage_status": _usage(observed)["status"],
+            "dispatch_status": "OFFLINE" if offline else "UNKNOWN" if uncertain else "SENT" if any(c["dispatched"] for c in observed) else "NOT_SENT",
+            "protocol_status": "NOT_APPLICABLE" if offline else "CONFLICT" if conflict else "UNKNOWN" if uncertain else _protocol(observed, expected),
+            "semantic_status": "CONFLICT" if conflict else semantics, "usage_status": model_call_usage(observed, incomplete=uncertain)["status"],
             "claims": claims, "evidence_refs": refs, "limitations": list(source_report.get("limitations", ())) if verified else [],
             "semantic_checks": checks}
 
@@ -157,7 +151,7 @@ def publication_accounting(request, snapshot, inputs, study, reports):
         roles.append({k: row[k] for k in ("role", "model", "model_ref", "call_ids", "dispatch_status",
                                            "usage_status", "protocol_status", "semantic_status", "semantic_checks")})
     return {"preview_digest": request.research_plan.validation_spec["model_workbench"]["preview_digest"],
-            "roles": roles, "dispatched_calls": sum(c["dispatched"] for c in calls), "usage": _usage(calls),
+            "roles": roles, "dispatched_calls": sum(c["dispatched"] for c in calls), "usage": model_call_usage(calls),
             "expected_calls": sum(v["expected_call"] for v in projections)}
 
 
@@ -168,16 +162,14 @@ def job_evidence(app, job_id):
     offline = spec["execution_mode"] != "provider-grounded"
     binding = spec.get("model_workbench")
     job = app.get_job(job_id)
-    calls = (job.get("model_research") or {}).get("calls", [])
+    accounting = job.get("model_research") or {}
+    calls = accounting.get("calls", [])
     archived = {}
     publication = None
     issues = []
-    journal_status = (job.get("model_research") or {}).get("journal_status")
-    if journal_status == "UNAVAILABLE" or (journal_status == "NOT_CREATED" and record.attempts and
-            record.status in {JobStatus.CANCELLED, JobStatus.FAILED} and job["failure_kind"] not in {
-                "OUTBOUND_DISABLED", "SNAPSHOT_INTEGRITY_FAILED", "CONTEXT_INTEGRITY_FAILED", "POLICY_CHANGED",
-                "REQUEST_UNAVAILABLE", "WORKER_START_FAILED"}):
-        issues.append("CALL_JOURNAL_UNAVAILABLE")
+    journal_issue = accounting.get("journal_issue")
+    if journal_issue:
+        issues.append(journal_issue)
     if record.status is JobStatus.COMPLETED:
         try:
             publication = verify_research_receipt(app.root, app.queue, record, record.result_ref, verify_input=True)
@@ -239,18 +231,10 @@ def job_evidence(app, job_id):
                 break
     conflict = any(reason.endswith("CONFLICT") for reason in issues)
     verified = publication is not None and not issues
-    roles = [_role_evidence(v, calls, results.get(v["role"], {}), offline=offline,
-                            verified=verified, conflict=conflict, instrument=request.instrument) for v in views]
+    roles = [_role_evidence(v, calls, results.get(v["role"], {}), offline=offline, verified=verified,
+                            conflict=conflict, instrument=request.instrument, journal_incomplete=bool(journal_issue)) for v in views]
     expected = sum(r["expected_call"] for r in roles)
-    sent_count = sum(c["dispatched"] for c in calls)
-    usage = _usage(calls)
-    missing_journal = ("CALL_JOURNAL_UNAVAILABLE" in issues or "CALL_JOURNAL_CONFLICT" in issues) and not calls
-    if missing_journal:
-        usage = {"known_total_units": 0, "unknown_calls": None, "total_units": None, "status": "UNKNOWN"}
-        for row in roles:
-            if row["expected_call"] or row["material_status"] == "UNKNOWN":
-                row.update(dispatch_status="UNKNOWN", usage_status="UNKNOWN",
-                           protocol_status="CONFLICT" if conflict else "UNKNOWN")
+    usage = model_call_usage([]) if offline else accounting["usage"]
     observed = [r for r in roles if r["semantic_checks"]]
     semantics = "NO_EVIDENCE"
     if observed:
@@ -265,9 +249,11 @@ def job_evidence(app, job_id):
         "execution_mode": spec["execution_mode"], "data_mode": spec["data_mode"], "selection": selection, "budget": spec["budget"],
         "attempts": record.attempts, "preview_ref": (binding or {}).get("preview_ref"), "preview_digest": (binding or {}).get("preview_digest"),
         "consent_status": "FROZEN_PREVIEW" if binding else "LEGACY_SUBMISSION", "request_digest": stable_digest(request),
-        "dispatch_status": "OFFLINE" if offline else "UNKNOWN" if missing_journal else "SENT" if sent_count else "NOT_SENT",
-        "dispatched_calls": None if missing_journal else sent_count, "expected_calls": expected, "usage_status": usage["status"], "usage": usage,
-        "protocol_status": "NOT_APPLICABLE" if offline else "CONFLICT" if conflict else "UNKNOWN" if missing_journal else _protocol(calls, expected),
+        "dispatch_status": "OFFLINE" if offline else accounting["dispatch_status"],
+        "dispatched_calls": 0 if offline else accounting["dispatched_calls"],
+        "known_dispatched_calls": 0 if offline else accounting["known_dispatched_calls"],
+        "expected_calls": expected, "usage_status": usage["status"], "usage": usage,
+        "protocol_status": "NOT_APPLICABLE" if offline else "CONFLICT" if conflict else "UNKNOWN" if journal_issue else _protocol(calls, expected),
         "semantic_status": "NOT_APPLICABLE" if offline else "CONFLICT" if conflict else semantics,
         "semantic_summary": {"checked_claims": sum(len(r["semantic_checks"]) for r in roles),
                              "matched_claims": sum(c["status"] == "SOURCE_MATCHED" for r in roles for c in r["semantic_checks"]),

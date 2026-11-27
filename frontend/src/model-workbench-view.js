@@ -29,6 +29,7 @@ const labels = {
   SOURCE_MISMATCH: '与所引来源不符', FROZEN_PREVIEW: '已授权冻结预览', LEGACY_SUBMISSION: '较早版本的提交',
   PUBLICATION_INVALID: '已发布文件未通过完整性校验', FROZEN_INPUT_INVALID: '冻结输入未通过校验',
   CALL_BINDING_CONFLICT: '调用与冻结输入不一致', CALL_JOURNAL_CONFLICT: '调用日志与归档不一致',
+  CALL_JOURNAL_INCOMPLETE: '调用日志缺少本次尝试的回执', CALL_JOURNAL_UNAVAILABLE: '调用日志无法读取',
   MODEL_PUBLICATION_MISSING: '已发布报告缺少模型回执', ROLE_EVIDENCE_CONFLICT: '角色引用与报告不一致',
   LEGACY_DISCOVERY_CONTEXT: '早期发现任务使用其他研究上下文', SCHEMA_ERROR: '返回结构有误', NON_JSON: '返回格式有误',
   HTTP_ERROR: '远端请求失败', TRANSPORT: '传输失败', RESOURCE_LIMIT: '超出预算',
@@ -197,6 +198,12 @@ export function usageText(usage) {
   return counts.length ? counts.map(key => keys[key] + ' ' + usage[key]).join(' / ') : '未知';
 }
 
+export function dispatchText(dispatched) {
+  if (dispatched === true) return '已发送';
+  if (dispatched === false) return '未发送';
+  return '未知';
+}
+
 export function citationRows(checks) {
   return checks.flatMap(check => {
     const claim = String(check.claim_index + 1);
@@ -238,6 +245,7 @@ export function renderJob(container, job) {
       ['实际派发', label(job.dispatch_status)], ['用量记录', label(job.usage_status, '未知')],
       ['协议校验', label(job.protocol_status)], ['语义证据', label(job.semantic_status)],
       ['预期调用', job.expected_calls], ['实际发送次数', job.dispatched_calls ?? '未知'],
+      ['已确认发送次数', job.dispatched_calls == null ? job.known_dispatched_calls : null],
       ['授权依据', label(job.consent_status)], ['报告状态', job.report_status === 'AVAILABLE' ? '已发布' : label(job.report_status)], ['失败原因', job.failure_kind ? label(job.failure_kind) : null]]),
   ];
   if (selected.snapshot_ref) content.push(digest('行情快照指纹', selected.snapshot_ref));
@@ -250,18 +258,19 @@ export function renderJob(container, job) {
   if (job.synthesis?.hypotheses?.length) content.push(detail('研究经理的待验证假设', bullets(job.synthesis.hypotheses)));
   if (job.synthesis?.disagreements?.length) content.push(detail('研究经理记录的分歧', bullets(job.synthesis.disagreements)));
   if (job.usage) content.push(facts([['总用量（单位）', job.usage.total_units ?? '未知'],
-    ['已记录单位', job.usage.known_total_units], ['用量未知的调用', job.usage.unknown_calls]]));
+    ['已记录单位', job.usage.known_total_units], ['用量未知的调用', job.usage.unknown_calls ?? '未知']]));
   if (job.budget) content.push(detail('本次任务的冻结预算', budgetFacts(job.budget)));
   if (job.roles?.length) content.push(node('h3', '角色证据', 'mw-subheading'), ...reportRows(job.roles));
   content.push(node('h3', '模型调用回执', 'mw-subheading'));
   if (job.calls?.length) {
     content.push(table('逐次调用回执', ['研究角色', '角色模型', '派发', '协议结果', '用量（单位）', '耗时'],
-      job.calls.map(call => [roleNames[call.role] || call.role, call.model, call.dispatched ? '已发送' : '未发送', call.status === 'READY' ? '格式已接受' : label(call.status),
+      job.calls.map(call => [roleNames[call.role] || call.role, call.model, dispatchText(call.dispatched), call.status === 'READY' ? '格式已接受' : label(call.status),
         usageText(call.usage), call.duration_ms == null ? '未知' : call.duration_ms + ' ms'])));
     for (const call of job.calls) {
       content.push(detail('调用详情 · ' + (roleNames[call.role] || call.role),
         digest('调用编号', call.call_id), digest('上下文指纹', call.context_fingerprint),
-        facts([['开始时间', call.started_at], ['尝试序号', call.attempt], ['请求字节', call.request_bytes], ['上下文字节', call.context_bytes]])));
+        facts([['开始时间', call.started_at], ['尝试序号', call.attempt], ['日志留存状态', call.observed_status ? label(call.observed_status) : null],
+          ['请求字节', call.request_bytes], ['上下文字节', call.context_bytes]])));
     }
   } else {
     content.push(note(job.dispatch_status === 'OFFLINE' ? '本地离线研究没有外部模型调用。' : '当前尚无模型调用回执。'));
@@ -345,11 +354,14 @@ export function renderPacket(container, worker, packet) {
   }
   for (const artifact of packet.artifacts || []) content.push(returnedArtifact(artifact));
   container.replaceChildren(...content);
-  const limitsView = facts([['调用上限', limits.max_provider_calls == null ? null : limits.max_provider_calls + ' 次'],
+  if (packet.budget_status === 'USAGE_UNAVAILABLE') {
+    container.append(note('以往调用的用量无法核实，目前无法授权新的执行额度。'));
+  }
+  const limitsView = facts([['执行器领取上限', limits.max_provider_calls == null ? null : limits.max_provider_calls + ' 次'],
     ['字节上限', limits.max_bytes], ['时长上限', limits.max_wall_seconds == null ? null : limits.max_wall_seconds + ' 秒']]);
   const state = [limitsView];
   if (packet.operation_id) {
-    state.push(digest('执行器任务编号', packet.operation_id), facts([['实际领取次数', packet.usage?.provider_calls],
+    state.push(digest('执行器任务编号', packet.operation_id), facts([['实际领取次数', packet.execution_accounting?.worker_claims ?? packet.usage?.provider_calls],
       ['已用字节', packet.usage?.bytes_used], ['模型用量', label(packet.usage?.usage_state, '未知')]]));
     if (Number.isFinite(packet.lease_until)) state.push(note('领取或回传截止于 ' + new Date(packet.lease_until * 1000).toISOString() + '。'));
   }

@@ -148,7 +148,7 @@ def model_workbench_page(csrf, settings, handoffs=(), *, query=None):
 <h3 class="mw-subheading">本地任务历史</h3><ul class="mw-history" data-mw-history>{_history(settings.get("history", ()))}</ul></section>
 <section id="mw-codex" class="mw-section" aria-labelledby="mw-codex-heading"><div class="mw-section-heading"><h2 id="mw-codex-heading" tabindex="-1">Codex 交接</h2></div>
 <p class="mw-lede">把所选任务的快照、证据引用与研究方法冻结成一个包，可手动交给 Codex，也可授权已接入的执行器领取一次。</p>
-<form data-mw-freeze class="mw-inline"><label>交接用途<select name="purpose"><option value="research">研究计划</option><option value="factor-mining">因子提案</option><option value="backtest">回测验收</option></select></label>
+<form data-mw-freeze class="mw-inline"><label>选取研究方法<select name="purpose"><option value="research">一般研究</option><option value="factor-mining">因子挖掘</option><option value="backtest">回测检验</option></select></label>
 <button class="mw-primary" type="submit" disabled>冻结交接包</button></form>
 <p data-mw-handoff-status class="mw-message" role="status" aria-live="polite">先从任务记录中选择或提交一项研究。</p>
 <ul class="mw-history" data-mw-handoffs>{package_links}</ul>
@@ -161,8 +161,8 @@ def model_workbench_page(csrf, settings, handoffs=(), *, query=None):
 <details class="mw-fold"><summary>回传格式与证据要求</summary><p class="mw-note">在 <code>result</code> 中引用包内的 <code>task_id</code>、<code>role</code>、<code>input_digest</code> 和证据引用。顶层须携带 <code>package_digest</code>。可在 <code>output_artifacts</code> 中提交研究计划或因子提案，并附上内容指纹。</p></details>
 <form data-mw-manual><label>类型化结果 JSON<textarea name="response" class="mw-codebox" rows="5" maxlength="262144" required spellcheck="false"></textarea></label>
 <button type="submit" class="mw-primary" disabled>校验并保存回传</button></form></section>
-<section><h3>执行器领取</h3><p class="mw-note">授权后，已接入的执行器可以在下列限制内领取此包。派发与回传分别记录。</p>
-<div data-mw-worker-state></div><div data-mw-command-block hidden><p class="mw-note">在本机终端运行命令即可启动只读 Codex 研究，结果会回传到此任务。</p><label>Codex 执行器命令<input data-mw-command class="mw-codebox" readonly spellcheck="false"></label><button type="button" class="mw-secondary" data-mw-command-copy>复制命令</button></div><form data-mw-worker><label class="mw-check"><input name="authorized" type="checkbox" required disabled>我授权执行器按此包指纹和上限领取一次任务。</label>
+<section><h3>执行器领取</h3><p class="mw-note">执行器按所选方法返回一份纸面研究计划。因子提案可通过左侧的手动回传提交。授权允许执行器领取一次。外部客户端自行管理模型请求、重试和计费，还会附上系统指令及临时目录、时区等运行信息。</p>
+<div data-mw-worker-state></div><div data-mw-command-block hidden><p class="mw-note">在本机终端运行命令即可启动只读 Codex 研究，生成的研究计划会回传到此任务。</p><label>Codex 执行器命令<input data-mw-command class="mw-codebox" readonly spellcheck="false"></label><button type="button" class="mw-secondary" data-mw-command-copy>复制命令</button></div><form data-mw-worker><label class="mw-check"><input name="authorized" type="checkbox" required disabled>我授权执行器按此包指纹和上限领取一次任务。</label>
 <div class="mw-actions"><button type="submit" class="mw-primary" disabled>授权一次领取</button>
 <button type="button" class="mw-secondary" data-mw-worker-cancel disabled>取消执行器任务</button></div></form></section></div>
 </div></section>{_material_template()}</article>'''

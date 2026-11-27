@@ -145,3 +145,18 @@ jobs:
       - run: python -m pip install -e '.[dev,research]'
       - name: Notebook gate
         run: python -m jupyter nbconvert --to notebook --execute --output /tmp/finathink_research_workflow_executed.ipynb notebooks/01_research_workflow.ipynb
+
+  windows-codex-process:
+    name: Windows Codex process containment
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install worker test runtime
+        run: python -m pip install -e . pytest
+      - name: Run native Windows process-tree tests
+        run: python -m pytest -q tests/research/test_codex_process_windows.py

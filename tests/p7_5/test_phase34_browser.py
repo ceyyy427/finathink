@@ -32,7 +32,7 @@ def submit_preview(page):
 
 
 def freeze(page, purpose="research"):
-    page.get_by_label("交接用途").select_option(purpose)
+    page.get_by_label("选取研究方法").select_option(purpose)
     page.get_by_role("button", name="冻结交接包").click()
     expect(page.locator("[data-mw-packet-heading]")).to_be_focused()
     return MethodHandoffPackage.from_dict(json.loads(page.locator("[data-mw-packet]").input_value()))

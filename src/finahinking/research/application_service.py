@@ -704,7 +704,7 @@ class ResearchApplicationService:
         binding = request.research_plan.validation_spec.get("factor_study")
         if binding is None:
             return request
-        if record.status is not JobStatus.COMPLETED or binding.get("phase") != "test":
+        if not isinstance(binding, dict) or record.status is not JobStatus.COMPLETED or binding.get("phase") != "test":
             raise ProtectedFactorHandoff()
         try:
             study = self.factor_studies.get(binding["study_id"])
@@ -883,7 +883,7 @@ class ResearchApplicationService:
         runtime_metrics = self.queue.load_metrics(record.job_id) or {}
         model_research = source.get("model_research")
         if request.research_plan.validation_spec.get("execution_mode") == "provider-grounded":
-            from .model_call_journal import ModelCallJournal
+            from .model_call_journal import ModelCallJournal, reconcile_model_calls
 
             calls = []
             journal_path = self.root / "model-calls.sqlite3"
@@ -897,11 +897,10 @@ class ResearchApplicationService:
                     journal_status = "AVAILABLE"
                 except (OSError, sqlite3.Error, ValueError, TypeError):
                     journal_status = "UNAVAILABLE"
-            sent = [call for call in calls if call["dispatched"]]
-            usage_status = ("UNKNOWN" if journal_status == "UNAVAILABLE" else "NOT_STARTED" if not sent else
-                            "RECORDED" if all("total_units" in (call["usage"] or {}) for call in sent) else "UNKNOWN")
-            model_research = {**(model_research or {}), "calls": calls, "journal_status": journal_status,
-                              "usage_status": usage_status, "aggregate_counts": runtime_metrics}
+            published_calls = (model_research or {}).get("calls") if report_status == "AVAILABLE" else None
+            accounting = reconcile_model_calls(calls, journal_status, attempts=record.attempts, failure=failure,
+                                               metrics=runtime_metrics, published_calls=published_calls)
+            model_research = {**(model_research or {}), **accounting, "aggregate_counts": runtime_metrics}
         validation = request.research_plan.validation_spec.get("strategy_validation")
         payload = redact_public_payload({
             "schema_version": 1, "paper_only": True, "execution_mode": request.research_plan.validation_spec.get("execution_mode", "local-deterministic"),

@@ -454,11 +454,17 @@ class JobQueue:
     @staticmethod
     def codex_budget(db, job_id, now, *, exclude=None):
         """Spent or reserved allowance shared by the research worker and typed handoffs."""
-        rows = db.execute("SELECT * FROM codex_handoffs WHERE job_id=? AND operation_id IS NOT NULL", (job_id,))
+        # An older workspace may already have an unclaimed grant for a
+        # provider job. Its allowance stays with that job until publication.
+        rows = db.execute("""SELECT c.*, (c.status='AUTHORIZED' AND j.status IN ('queued','retryable','running')
+                             AND json_extract(s.payload,'$.research_plan.validation_spec.execution_mode')='provider-grounded')
+                             AS awaiting_provider FROM codex_handoffs c JOIN jobs j ON j.job_id=c.job_id
+                             LEFT JOIN request_snapshots s ON s.task_ref=j.task_ref
+                             WHERE c.job_id=? AND c.operation_id IS NOT NULL""", (job_id,))
         calls = byte_count = 0
         seconds = 0.0
         for row in rows:
-            if row["operation_id"] == exclude:
+            if row["operation_id"] == exclude or row["awaiting_provider"]:
                 continue
             reserved = row["status"] in {"AUTHORIZED", "DISPATCHED"} and now < row["lease_until"]
             if reserved:

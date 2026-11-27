@@ -70,6 +70,7 @@ def test_scoped_single_use_dispatch_and_evidence_survive_restart(app):
     assert status["semantic_status"] == "TYPED_EVIDENCE_VERIFIED"
     assert status["evidence_refs"] == answer["response"]["result"]["evidence_refs"]
     assert status["artifact_types"] == ["ResearchPlan"]
+    assert status["execution_accounting"] == {"worker_claims": 1, "claim_limit": 1, "external_model_requests": None}
     assert status["usage"] == {"provider_calls": 1, "bytes_used": packet["packet_bytes"] + len(
         json.dumps(answer["response"], ensure_ascii=False, separators=(",", ":")).encode()), "usage_state": "UNKNOWN"}
     reopened = ResearchApplicationService(app.root, scope_id="owner")
@@ -429,3 +430,249 @@ def test_tightening_a_claimed_wall_budget_fences_late_result(app):
         desk.complete(job, op, result(packet))
     status = desk.status(job, op)
     assert status["status"] == "TIMED_OUT" and status["lease_until"] == status["claimed_at"] + 1
+
+
+def _accepted_pair(app, mode):
+    desk = CodexWorkbench(app)
+    job, ref = handoff(app)
+    preview = desk.preview(job, ref)
+    package = MethodHandoffPackage.from_dict(preview["package"])
+    returned = response_for(package)
+    plan = artifact_for(package)
+    plan["payload"]["hypotheses"] = ["根据冻结样本检验研究假设"]
+    plan["payload"]["validation_spec"]["evidence_refs"] = returned["result"]["evidence_refs"]
+    plan["content_digest"] = stable_digest(plan["payload"])
+    returned["output_artifacts"] = [plan, artifact_for(package, "FactorProposal")]
+    if mode == "manual":
+        assert app.accept_method_handoff(job, ref, returned)["outcome"]["status"] == "READY"
+    else:
+        op = desk.authorize(job, approval(preview))["operation_id"]
+        packet = desk.claim(job, op, {})
+        assert desk.complete(job, op, {"lease_token": packet["lease_token"], "response": returned})["status"] == "COMPLETED"
+    return job, ref, returned
+
+
+@pytest.mark.parametrize("mode", ["manual", "worker"])
+def test_verified_artifact_bodies_reopen_only_for_the_selected_job(app, mode):
+    job, ref, returned = _accepted_pair(app, mode)
+    restored = ResearchApplicationService(app.root, scope_id="owner")
+    foreign = ResearchApplicationService(app.root, scope_id="another")
+    try:
+        desk = CodexWorkbench(restored)
+        assert "artifacts" not in desk.list(job)["handoffs"][0]
+        review = desk.preview(job, ref)
+        assert review["artifact_review_status"] == "VERIFIED"
+        items = {item["artifact_type"]: item for item in review["artifacts"]}
+        for output in returned["output_artifacts"]:
+            item = items[output["artifact_type"]]
+            assert item["payload"] == output["payload"]
+            assert item["content_digest"] == stable_digest(item["payload"])
+            assert item["evidence_refs"] == returned["result"]["evidence_refs"]
+        assert items["ResearchPlan"]["evidence_scope"] == "ARTIFACT"
+        assert items["FactorProposal"]["evidence_scope"] == "RESULT"
+        other = restored.submit(payload(restored, key="another-input"))["job_id"]
+        with pytest.raises(KeyError):
+            desk.preview(other, ref)
+        with pytest.raises(KeyError):
+            CodexWorkbench(foreign).preview(job, ref)
+    finally:
+        restored.close()
+        foreign.close()
+
+
+def test_review_pair_enforces_aggregate_utf8_boundary_and_hides_a_corrupted_sibling(app, monkeypatch):
+    from finahinking.research import codex_workbench
+
+    job, ref, _ = _accepted_pair(app, "worker")
+    desk = CodexWorkbench(app)
+    original = desk.preview(job, ref)
+    encoded = json.dumps(original["artifacts"], ensure_ascii=False)
+    assert len(encoded.encode()) > len(encoded)
+    with monkeypatch.context() as patch:
+        patch.setattr(codex_workbench, "_MAX_REVIEW_BYTES", len(encoded.encode()))
+        assert desk.preview(job, ref)["artifacts"] == original["artifacts"]
+        patch.setattr(codex_workbench, "_MAX_REVIEW_BYTES", len(encoded.encode()) - 1)
+        refused = desk.preview(job, ref)
+        assert refused["artifact_review_status"] == "UNAVAILABLE" and refused["artifacts"] == []
+        assert refused["artifact_review_failure"] == "ARTIFACT_PREVIEW_LIMIT"
+    damaged = original["artifacts"][-1]
+    path = app._method_store()._path("method-artifacts", damaged["artifact_digest"])
+    document = json.loads(path.read_bytes())
+    document["output"]["payload"]["hypotheses"] = ["changed after acceptance"]
+    path.write_text(json.dumps(document))
+    refused = desk.preview(job, ref)
+    assert refused["artifacts"] == [] and refused["artifact_review_status"] == "UNAVAILABLE"
+    assert refused["artifact_review_failure"] == "RESULT_UNAVAILABLE" and refused["semantic_status"] == "NOT_EVALUATED"
+    assert "changed after acceptance" not in json.dumps(refused)
+
+
+@pytest.mark.parametrize("damage", ["empty", "missing", "malformed"])
+def test_cannot_recreate_or_zero_unknown_prior_provider_usage_on_preview(app, damage):
+    from finahinking.research.model_call_journal import ModelCallJournal
+    from finahinking.research.provider_config import ProviderConfig
+    from finahinking.research.provider_status import ProviderCredentialRef
+
+    app.provider_configs.save(ProviderConfig("desk", "openai_compatible", "gpt-4.1",
+        endpoint="https://models.example.com/v1", credential_ref=ProviderCredentialRef("desk", env_var="CONTROLLED_CODEX_TEST")))
+    job = app.submit({**payload(app), "model_config_ref": "desk", "allow_model_calls": True})["job_id"]
+    _, ref = handoff(app, job)
+    desk = CodexWorkbench(app)
+    before = desk.preview(job, ref)
+    assert not before["eligible"] and before["reason_code"] == "PROVIDER_RESEARCH_PENDING"
+    parent = app.queue.claim("controlled", job_id=job)
+    frozen = app._request(parent)
+    path = app.root / "model-calls.sqlite3"
+    ledger = ModelCallJournal(path, job_id=job, run_id=frozen.run_id, request_digest=stable_digest(frozen),
+                              attempt=1, scope_id=app.scope_id)
+    call = ledger.begin({"role": "technical", "model": "gpt-4.1",
+                         "context_fingerprint": "1" * 64, "context_bytes": 32})
+    ledger.dispatched(call, 64)
+    app.queue.save_metrics(SimpleNamespace(run_id=job, provider_calls=1, bytes_used=64))
+    app.queue.cancel_and_release(job)
+    if damage == "missing":
+        path.unlink()
+    else:
+        path.write_bytes(b"" if damage == "empty" else b"not-a-database")
+    expected = path.read_bytes() if path.exists() else None
+    for _ in range(2):
+        preview = desk.preview(job, ref)
+        assert preview["reason_code"] == preview["budget_status"] == "USAGE_UNAVAILABLE" and not preview["eligible"]
+        with pytest.raises(CodexWorkbenchError) as failure:
+            desk.authorize(job, approval(before))
+        assert failure.value.code == "USAGE_UNAVAILABLE"
+        assert (path.read_bytes() if path.exists() else None) == expected
+
+
+def test_factor_holdout_is_undisclosed_on_legacy_and_workbench_routes_until_its_published_test(app, tmp_path, monkeypatch):
+    from finahinking.local_app import LocalAppConfig, LocalApplication
+    from finahinking.p8_2.data_sources import FixtureMarketDataSource
+    from finahinking.research.method_handoff import ProtectedFactorHandoff
+    from tests.research.test_factor_study_application import values, wait_study
+
+    snapshot = FixtureMarketDataSource(points=240).snapshot("AAA")
+    created = app.create_factor_study(values(app.snapshots.save(snapshot)))
+    job = created["validation_job"]["job_id"]
+    study_id = created["study_id"]
+    route = MethodRouteRequest(purposes=("factor-mining",))
+    desk = CodexWorkbench(app)
+    assert desk.list(job)["handoffs"] == [] and desk.list(job)["status"] == "FROZEN_TEST_WINDOW"
+    with pytest.raises(ProtectedFactorHandoff):
+        app.export_method_handoff(job, route)
+    # Reproduce a workspace upgraded with an already-exported Phase 12 packet
+    # and a prior manual receipt containing real held-out fixture observations.
+    with monkeypatch.context() as old:
+        old.setattr(app, "_method_request", app._request)
+        export = app.export_method_handoff(job, route)
+        ref = export["handoff_ref"]
+        package = MethodHandoffPackage.from_dict(export["package"])
+        returned = response_for(package)
+        returned["output_artifacts"] = [artifact_for(package)]
+        assert app.accept_method_handoff(job, ref, returned)["outcome"]["status"] == "READY"
+    sealed = package.context.to_dict()["materials"][0]["summary"]["observations"]
+    assert sealed[-1]["timestamp"] == snapshot.observations[-1].timestamp.isoformat()
+    for read in (lambda: app.get_method_handoff(job, ref), lambda: app.method_handoff_artifacts(job, ref),
+                 lambda: app.accept_method_handoff(job, ref, returned), lambda: desk.preview(job, ref)):
+        with pytest.raises(ProtectedFactorHandoff):
+            read()
+    # LocalApplication exercises the existing routes alongside the workbench
+    # routes. Both endpoints receive exactly the same scoped object.
+    web = LocalApplication(LocalAppConfig(db_path=str(tmp_path / "http.sqlite3"), session_id=app.scope_id))
+    web._research_application = app
+    try:
+        for base, slot in ((f"/api/research/jobs/{job}", "methods"),
+                           (f"/api/research/model-workbench/jobs/{job}", "handoffs")):
+            for method, suffix, data in (("POST", "", {"purposes": ["factor-mining"]}),
+                                          ("GET", "/" + ref, {}),
+                                          ("POST", "/" + ref + "/result", {"response": returned})):
+                code, _, body = web.route(method, f"{base}/{slot}{suffix}", body={"_csrf": web.csrf_token, **data})
+                assert code >= 400
+                assert sealed[-1]["timestamp"] not in str(body) and package.package_digest not in str(body)
+        code, _, listing = web.route("GET", f"/api/research/model-workbench/jobs/{job}/handoffs")
+        assert code == 200 and listing["handoffs"] == [] and ref not in str(listing)
+        app.start()
+        validation = wait_study(app, study_id, "validation")
+        assert validation["state"] == "VALIDATED"
+        with pytest.raises(ProtectedFactorHandoff):
+            desk.preview(job, ref)
+        app.freeze_factor_study(study_id, validation["validation"]["ranking"][0])
+        app.close()
+        pending = app.test_factor_study(study_id, "freeze-then-test")
+        test_job = pending["test_job"]["job_id"]
+        with pytest.raises(ProtectedFactorHandoff):
+            app.export_method_handoff(test_job, route)
+        app.start()
+        final = wait_study(app, study_id, "test")
+        assert final["test_job"]["report_status"] == "AVAILABLE"
+        exported = app.export_method_handoff(test_job, route)
+        assert desk.preview(test_job, exported["handoff_ref"])["package_digest"] == exported["package_digest"]
+        assert desk.list(job)["handoffs"] == []
+        with pytest.raises(ProtectedFactorHandoff):
+            app.get_method_handoff(job, ref)
+        publication = app.runs.get_run(final["test_job"]["run_id"])
+        (publication["bundle"] / "complete_report.html").write_text("corrupted publication")
+        assert desk.list(test_job)["handoffs"] == []
+        with pytest.raises(ProtectedFactorHandoff):
+            desk.preview(test_job, exported["handoff_ref"])
+    finally:
+        web.close()
+
+
+@pytest.mark.parametrize("ceiling,restored_grant", [(2, False), (3, True)])
+def test_provider_publication_keeps_its_two_authorized_calls_before_codex_allocates(app, monkeypatch, ceiling, restored_grant):
+    from finahinking.research.application_service import verify_research_receipt
+    from finahinking.research.model_workbench import ModelWorkbench
+    from finahinking.research.provider_config import ProviderConfig
+    from finahinking.research.provider_status import ProviderCredentialRef
+    from finahinking.research.runtime_service import ResearchRuntimeService
+    from tests.research.test_application_service import wait_for
+    from tests.research.test_model_workbench import approval as model_approval
+    from tests.research.test_model_workbench_runtime import run_controlled_stage
+
+    monkeypatch.setenv("FINAHINK_TEST_KEY", "only-in-controlled-test")
+    app.provider_configs.save(ProviderConfig("desk", "openai_compatible", "gpt-4.1",
+        endpoint="https://models.example.com/v1", credential_ref=ProviderCredentialRef("desk", env_var="FINAHINK_TEST_KEY")))
+    (app.root / "controlled-fault").write_text("")
+    app.runtime = ResearchRuntimeService(app.queue, stage_runners={"local_research": run_controlled_stage}, autostart=False)
+    model = ModelWorkbench(app)
+    plan = model.preview({"snapshot_ref": "sample", "question": "Check the last available close.",
+                          "model_config_ref": "desk", "budget": {"max_provider_calls": ceiling}})
+    assert plan["status"] == "READY" and plan["expected_calls"] == 2
+    job = model.authorize(model_approval(plan))["job_id"]
+    _, ref = handoff(app, job)
+    desk = CodexWorkbench(app)
+    if restored_grant:
+        # Earlier queues may contain retryable provider jobs with a durable
+        # authorization created before their own provider work started.
+        with app.queue._connect() as db:
+            db.execute("UPDATE jobs SET status='retryable' WHERE job_id=?", (job,))
+    pending = desk.preview(job, ref)
+    assert pending["reason_code"] == "PROVIDER_RESEARCH_PENDING" and not pending["eligible"]
+    assert "原任务" in pending["reason"] and "完成后" in pending["reason"]
+    with pytest.raises(CodexWorkbenchError) as denied:
+        desk.authorize(job, approval(pending))
+    assert denied.value.code == "PROVIDER_RESEARCH_PENDING"
+    assert desk.list(job)["handoffs"][0]["operation_id"] is None
+    if restored_grant:
+        old_op = "codex-op-" + "f" * 32
+        with app.queue._connect() as db:
+            db.execute("""UPDATE codex_handoffs SET operation_id=?,status='AUTHORIZED',max_bytes=?,
+                          max_wall_seconds=30,authorized_at=?,lease_until=? WHERE job_id=?""",
+                       (old_op, pending["limits"]["max_bytes"], app.queue._clock(), app.queue._clock() + 90, job))
+        with pytest.raises(CodexWorkbenchError) as claim:
+            desk.claim(job, old_op, {})
+        assert claim.value.code == "PROVIDER_RESEARCH_PENDING"
+    assert app.runtime._supervisor._make_handle(app.queue.get(job)).invocation.budget["max_provider_calls"] == ceiling
+    app.start()
+    published = wait_for(app, job)
+    assert published["status"] == "completed" and published["report_status"] == "AVAILABLE"
+    record = app.queue.get(job)
+    verified = verify_research_receipt(app.root, app.queue, record, record.result_ref)
+    assert verified["request"].run_id == published["run_id"]
+    evidence = model.evidence(job)
+    assert evidence["dispatched_calls"] == 2 and evidence["protocol_status"] == "ACCEPTED"
+    if restored_grant:
+        packet = desk.claim(job, old_op, {})
+        assert packet["status"] == "DISPATCHED"
+        assert desk.complete(job, old_op, result(packet))["protocol_status"] == "READY"
+    else:
+        assert desk.preview(job, ref)["reason_code"] == "BUDGET_EXHAUSTED"

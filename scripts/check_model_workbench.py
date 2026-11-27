@@ -86,7 +86,7 @@ def codex_run(client, url, path, directory):
         raise ValueError("无法重新读取已核验的研究方案。")
     return {"research_plan": plans[0]["payload"], "client": subprocess.check_output([codex, "--version"], text=True).strip(),
             **{k: record[k] for k in ("status", "package_digest", "protocol_status", "semantic_status",
-                                      "artifact_types", "artifact_refs", "evidence_refs", "usage")}}
+                                      "artifact_types", "artifact_refs", "evidence_refs", "execution_accounting", "usage")}}
 
 
 def main(argv=None):

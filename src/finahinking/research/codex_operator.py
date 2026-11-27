@@ -101,8 +101,8 @@ class LocalClient:
         self.port = origin.port
         self.csrf = None
 
-    def _request(self, method, path, payload=None):
-        conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=8)
+    def _request(self, method, path, payload=None, *, timeout=8):
+        conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=timeout)
         try:
             wire = None if payload is None else json.dumps(payload, ensure_ascii=False).encode()
             conn.request(method, path, wire, {"Content-Type": "application/json"} if wire is not None else {})
@@ -116,8 +116,8 @@ class LocalClient:
         finally:
             conn.close()
 
-    def get(self, path):
-        return json.loads(self._request("GET", path))
+    def get(self, path, *, timeout=8):
+        return json.loads(self._request("GET", path, timeout=timeout))
 
     def post(self, path, data):
         if not self.csrf:
@@ -236,9 +236,12 @@ def main(argv=None):
         parser.error(str(error))
     if args.run:
         from .codex_cli_worker import run_once
+        from .codex_client_profile import CodexClientProfileError
 
         try:
             receipt = run_once(backend)
+        except CodexClientProfileError as error:
+            parser.exit(1, str(error) + "\n")
         except (ValueError, KeyError, OSError, TypeError, http.client.HTTPException):
             parser.exit(1, "未取得有效回执，请在本地研究台查看授权与执行状态。\n")
         print(json.dumps(receipt, ensure_ascii=False))

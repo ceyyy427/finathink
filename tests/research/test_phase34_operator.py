@@ -73,6 +73,7 @@ def test_direct_worker_reads_frozen_input_and_fences_the_child_process(tmp_path,
     from tests.research.test_method_handoff import package
 
     frozen = package()
+    monkeypatch.setenv("CODEX_HOME", str(tmp_path))
     binary = tmp_path / "codex"
     outcome = 'raise SystemExit(12)' if scenario == "cli_exit" else (
         'time.sleep(8)' if scenario == "cancel" else
@@ -83,6 +84,8 @@ assert 'FINATHINK_PRIVATE_PROVIDER_VALUE' not in os.environ
 args = sys.argv[1:]
 assert args[args.index('--sandbox') + 1] == 'read-only'
 assert '--ignore-user-config' in args and '--ignore-rules' in args and '--ephemeral' in args
+assert '--strict-config' in args and 'skip_host_skill_discovery' in args and 'skill_search' in args
+assert 'skills.include_instructions=false' in args and 'project_doc_max_bytes=0' in args
 assert 'shell_tool' in args and 'unified_exec' in args and 'web_search="disabled"' in args
 target = Path(args[args.index('--output-last-message')+1])
 packet = json.loads(sys.stdin.read().split('JSON object.\\n', 1)[1])
@@ -104,7 +107,7 @@ plan = {'hypothesis':'Prices will persist for five days.', 'validation':'Freeze 
             self.client = self
             self.calls = []
 
-        def get(self, path):
+        def get(self, path, *, timeout=8):
             assert path == self.path
             return {"status": "CANCELLED" if scenario == "cancel" else "DISPATCHED",
                     "lease_until": time.time() + 10}
@@ -123,3 +126,61 @@ plan = {'hypothesis':'Prices will persist for five days.', 'validation':'Freeze 
     assert len(worker.calls) == (1 if scenario == "cancel" else 2)
     if scenario == "cancel":
         assert time.monotonic() - began < 4
+
+
+def test_slow_status_read_does_not_extend_the_external_process_lease(tmp_path, monkeypatch):
+    import os
+    import sys
+    import time
+
+    from finahinking.research.codex_cli_worker import run_once
+    from tests.research.test_method_handoff import package
+
+    marker = tmp_path / "overran"
+    monkeypatch.setenv("CODEX_HOME", str(tmp_path))
+    binary = tmp_path / "codex"
+    binary.write_text(f"#!{sys.executable}\nimport time\nfrom pathlib import Path\n"
+                      f"time.sleep(1.1)\nPath({str(marker)!r}).touch()\n", encoding="utf-8")
+    binary.chmod(0o700)
+    monkeypatch.setenv("PATH", str(tmp_path) + os.pathsep + os.environ["PATH"])
+
+    class SlowWorkbench:
+        path = "/fixed"
+
+        def __init__(self):
+            self.client = self
+            self.package = package()
+            self.expiry = time.time() + 0.7
+            self.reads = 0
+
+        def get(self, path, *, timeout=8):
+            self.reads += 1
+            if self.reads == 2:
+                assert timeout <= 0.7
+                time.sleep(1.5)
+            return {"status": "TIMED_OUT" if time.time() >= self.expiry else "DISPATCHED", "lease_until": self.expiry}
+
+        def call(self, name, args):
+            assert name == "read_research_task"
+
+    assert run_once(SlowWorkbench())["status"] == "TIMED_OUT"
+    assert not marker.exists()
+
+
+@pytest.mark.parametrize("marker", ["AGENTS.md", "AGENTS.override.md"])
+def test_cli_rejects_global_instructions_before_claiming(tmp_path, monkeypatch, marker):
+    from finahinking.research.codex_cli_worker import run_once
+    from finahinking.research.codex_client_profile import (
+        CodexClientProfileError,
+        check_client_profile,
+    )
+
+    monkeypatch.setenv("CODEX_HOME", str(tmp_path))
+    (tmp_path / marker).write_text("Private local instructions")
+    class Unclaimed:
+        def call(self, *_args):
+            pytest.fail("The client has not been cleared to receive the packet")
+    with pytest.raises(CodexClientProfileError, match="全局指令"):
+        run_once(Unclaimed())
+    (tmp_path / marker).write_bytes(b"")
+    check_client_profile()
