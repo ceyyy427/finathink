@@ -1,0 +1,64 @@
+{
+  "schema_version": "model-workbench-check.v1",
+  "data": "BUILT_IN_SYNTHETIC_SAMPLE",
+  "execution": "LIVE_CODEX",
+  "research": {
+    "status": "completed",
+    "dispatch_status": "OFFLINE",
+    "protocol_status": "NOT_APPLICABLE",
+    "semantic_status": "NOT_APPLICABLE",
+    "semantic_summary": {
+      "checked_claims": 0,
+      "matched_claims": 0,
+      "scope": "LITERAL_SOURCE_OBSERVATIONS"
+    },
+    "usage": {
+      "known_total_units": 0,
+      "status": "NOT_CALLED",
+      "total_units": 0,
+      "unknown_calls": 0
+    }
+  },
+  "codex": {
+    "research_plan": {
+      "factor_ids": [],
+      "hypotheses": [
+        "在 SYNTH 合成样本中，若当日收盘价高于三个观测日前的收盘价，则下一观测日收盘买入、再下一观测日收盘退出。假设这一多头或现金规则在时间留出段的扣费后累计收益严格高于同一期间持续持有 SYNTH 的基准。"
+      ],
+      "required_datasets": [],
+      "risk_policy_version": "risk.v1",
+      "validation_spec": {
+        "evidence_refs": [
+          "evidence:d068d7202e09f64b85aef701cebb0756ee38350a664c596035e2b5ca020fd4be"
+        ],
+        "falsification": "在数据与成本参数完整的前提下，若最终留出段的扣费后累计收益差（动量规则减持续持有）小于或等于零，则否证该规则在此留出段具有净增量收益的假设。",
+        "limitations": [
+          "材料标注 24 条记录，正文只列出 16 条观测。本计划仅使用可见记录。",
+          "样本仅涵盖单一合成标的和一段总体上涨的短序列，且整段已在材料中披露。时间留出可以约束信号时序，但无法提供盲测证据或支持对真实市场的外推。",
+          "样本缺少报价、成交明细和实际费用。收盘价仅作纸面成交代理，无法验证滑点、成交可行性或容量。"
+        ],
+        "paper_only": true,
+        "validation": "拟将 2026 年 1 月 10 日至 17 日用于字段、时点和窗口检查，18 日留作隔离，19 日至 25 日作为一次性最终留出段，日期均为 UTC。预先冻结三观测日窗口和零阈值。每个信号只使用当时已可用的收盘价。首个信号于 19 日收盘数据可用后生成，20 日收盘开始记账，25 日收盘统一平仓。缺少有效窗口时持现金，现金收益设为零。基准于 20 日收盘建仓并持有至 25 日收盘。两者使用相同的收盘成交代理和事先冻结的单边综合成本 c 个基点，每次按实际成交名义金额乘以 c/10000 扣费，计入建仓和期末平仓，连续持仓不重复扣费。材料未给出 c，正式比较须待该参数预先绑定。计划尚未执行。"
+      }
+    },
+    "client": "codex-cli 0.171.0-alpha.13.2",
+    "status": "COMPLETED",
+    "package_digest": "052b4e263852b420387b495e8def195422dc8ae0c3f6b3de3976927bc6e637db",
+    "protocol_status": "ANALYZED",
+    "semantic_status": "TYPED_EVIDENCE_VERIFIED",
+    "artifact_types": [
+      "ResearchPlan"
+    ],
+    "artifact_refs": [
+      "artifact:method-be4e055060a033a0b6f03779626dda01d02fd33a9244f5d69dae358de9682368"
+    ],
+    "evidence_refs": [
+      "evidence:d068d7202e09f64b85aef701cebb0756ee38350a664c596035e2b5ca020fd4be"
+    ],
+    "usage": {
+      "bytes_used": 17655,
+      "provider_calls": 1,
+      "usage_state": "UNKNOWN"
+    }
+  }
+}

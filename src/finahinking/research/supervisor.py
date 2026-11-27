@@ -531,9 +531,18 @@ class ResearchSupervisor:
         if timeout <= 0:
             raise RuntimeLimitExceeded()
         totals = self.queue.load_metrics(job.job_id) or {}
+        # A Codex authorization reserves its allowance before this attempt can
+        # claim the job. New reservations wait while the attempt is running.
+        with self.queue._connect() as db:
+            external = self.queue.codex_budget(db, job.job_id, time.time())
+        if external["wall_seconds"]:
+            local_seconds = sum(totals.get("stage_durations", {}).values())
+            timeout = min(timeout, budget["max_wall_seconds"] - local_seconds - external["wall_seconds"])
+            if timeout <= 0:
+                raise RuntimeLimitExceeded()
         for limit, metric in (("max_provider_calls", "provider_calls"), ("max_bytes", "bytes_used"), ("max_experiments", "experiments")):
             if budget.get(limit) is not None:
-                budget[limit] = max(0, budget[limit] - int(totals.get(metric, 0)))
+                budget[limit] = max(0, budget[limit] - int(totals.get(metric, 0)) - external.get(metric, 0))
         invocation = WorkerInvocation(
             job_id=job.job_id,
             task_ref=job.task_ref,

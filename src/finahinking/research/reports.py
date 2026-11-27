@@ -462,6 +462,8 @@ class ReportBundleWriter:
             status_model["data_limitations"] = analytics_payload.get("limitations", [])
             status_model["source_metadata"] = analytics_payload.get("source_metadata", {})
             status_model["model_research"] = analytics_payload.get("model_research")
+            if analytics_payload.get("model_workbench"):
+                status_model["model_workbench"] = analytics_payload["model_workbench"]
             status_model["factor_study"] = analytics_payload.get("factor_study")
             status_model["risk_portfolio"] = analytics_payload.get("risk_portfolio")
             if analytics_payload.get("strategy_study"):
@@ -527,6 +529,7 @@ class ReportBundleWriter:
                 **status_snapshot,
                 **({"data_mode": analytics_payload.get("data_mode", "UNKNOWN"), "data_limitations": analytics_payload.get("limitations", []), "source_metadata": analytics_payload.get("source_metadata", {})} if analytics_payload else {}),
                 **({"model_research": analytics_payload["model_research"]} if analytics_payload and analytics_payload.get("model_research") else {}),
+                **({"model_workbench": analytics_payload["model_workbench"]} if analytics_payload and analytics_payload.get("model_workbench") else {}),
                 **({"factor_study": analytics_payload["factor_study"]} if analytics_payload and analytics_payload.get("factor_study") else {}),
                 **({"risk_portfolio": analytics_payload["risk_portfolio"]} if analytics_payload and analytics_payload.get("risk_portfolio") else {}),
                 **({"discovery": analytics_payload["discovery"]} if analytics_payload and analytics_payload.get("discovery") else {}),

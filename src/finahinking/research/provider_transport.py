@@ -43,9 +43,15 @@ class ProviderHttpTransport:
         return tuple(row[4][0] for row in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM))
 
     def _connect(self, host, address, timeout):
-        return _PinnedHttpsConnection(host, address, timeout)
+        connection = _PinnedHttpsConnection(host, address, timeout)
+        try:
+            connection.connect()
+        except Exception:
+            connection.close()
+            raise
+        return connection
 
-    def request(self, method, url, *, headers, json, timeout):
+    def request(self, method, url, *, headers, json, timeout, on_dispatch=None):
         if method != "POST" or _endpoint(url) is None or isinstance(timeout, bool) or not 0 < timeout <= 30:
             raise ValueError("provider request is not allowed")
         if not isinstance(headers, dict) or set(headers) - {"Authorization", "Accept", "Content-Type"}:
@@ -63,6 +69,10 @@ class ProviderHttpTransport:
             if not addresses or any(not ipaddress.ip_address(address).is_global or ipaddress.ip_address(address).is_multicast for address in addresses):
                 raise ValueError("provider target is not public")
             connection = self._connect(parsed.hostname, addresses[0], float(timeout))
+            if on_dispatch is not None:
+                # DNS and authenticated TLS have succeeded. A crash after this
+                # point can leave delivery and billed usage unknown.
+                on_dispatch(len(body))
             connection.request("POST", parsed.path or "/", body=body, headers=headers)
             response = connection.getresponse()
             if not 200 <= response.status < 300:

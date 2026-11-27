@@ -7,6 +7,7 @@ package resources and local product routes imported exclusively from the wheel.
 from __future__ import annotations
 
 import argparse
+import json
 import subprocess
 import sys
 import tempfile
@@ -72,12 +73,23 @@ assert app.route('GET', '/api/research/learning/strategy/sources')[2] == {'sourc
 assert app.route('GET', '/assets/research-serif.woff2')[2].startswith(b'wOF2')
 assert app.route('GET', '/assets/research-relief.svg')[1] == 'image/svg+xml'
 assert app.route('GET', '/assets/atlas-labs.css')[1].startswith('text/css')
+assert app.route('GET', '/assets/model-workbench.css')[1].startswith('text/css')
+assert app.route('GET', '/research/model-workbench')[0] == 200
 assert app.route('GET', '/assets/katex/katex.min.css')[0] == 200
 assert app.route('GET', '/assets/katex/fonts/KaTeX_Main-Regular.woff2')[0] == 200
 assert get_knowledge_unit('sharpe').unit_id == 'sharpe'
 app.close()
 """
         _run([str(python), "-c", probe], cwd=work)
+        # Discovery must work from the installed console script with no running app.
+        operator = python.with_name("finathink-codex" + (".exe" if python.suffix == ".exe" else ""))
+        discover = {"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}}
+        discovery = subprocess.run([str(operator), "--url", "http://127.0.0.1:1", "--job", "installed-check",
+            "--operation", "codex-op-" + "0" * 32], input=json.dumps(discover) + "\n", text=True,
+            capture_output=True, timeout=15, check=True, cwd=work)
+        assert {t["name"] for t in json.loads(discovery.stdout)["result"]["tools"]} == {
+            "read_research_task", "submit_research_plan", "report_research_failure"}
+        _run([str(python), str(ROOT / 'scripts' / 'check_model_workbench.py')], cwd=work)
         journey = [str(python), str(ROOT / 'scripts' / 'check_installed_journey.py'), '--state-root', str(work / 'first-use')]
         if args.examples_output is not None:
             journey.extend(['--examples-output', str(args.examples_output.resolve())])

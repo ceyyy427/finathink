@@ -40,6 +40,10 @@ class JobStatus(str, Enum):
     EXTERNAL_WAITING = "external_waiting"
 
 
+class ExternalDispatchOwnedError(ValueError):
+    """A worker authorization owns further writes to this method handoff."""
+
+
 _PUBLIC_REF = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$")
 _SENSITIVE_REF = re.compile(r"(?:api[-_]?key|secret|token|password|credential|authorization|prompt|endpoint|raw_response)", re.IGNORECASE)
 _SENSITIVE_VALUE = re.compile(
@@ -225,6 +229,25 @@ class JobQueue:
                     failure_kind TEXT,
                     output_digest TEXT NOT NULL DEFAULT ''
                 );
+                CREATE TABLE IF NOT EXISTS codex_handoffs (
+                    envelope_digest TEXT PRIMARY KEY REFERENCES external_dispatches(envelope_digest),
+                    job_id TEXT NOT NULL REFERENCES jobs(job_id),
+                    package_digest TEXT NOT NULL,
+                    operation_id TEXT UNIQUE,
+                    status TEXT NOT NULL DEFAULT 'AWAITING_AUTHORIZATION',
+                    packet_bytes INTEGER NOT NULL,
+                    max_bytes INTEGER,
+                    max_wall_seconds REAL,
+                    authorized_at REAL,
+                    lease_until REAL,
+                    lease_digest TEXT,
+                    claimed_at REAL,
+                    finished_at REAL,
+                    response_bytes INTEGER NOT NULL DEFAULT 0,
+                    callback_digest TEXT,
+                    failure_kind TEXT
+                );
+                CREATE INDEX IF NOT EXISTS codex_handoffs_job ON codex_handoffs(job_id);
                 CREATE TABLE IF NOT EXISTS job_events (
                     sequence INTEGER PRIMARY KEY AUTOINCREMENT,
                     job_id TEXT NOT NULL,
@@ -408,16 +431,46 @@ class JobQueue:
             row = db.execute("SELECT * FROM external_dispatches WHERE envelope_digest=?", (envelope_digest,)).fetchone()
             return None if row is None else dict(zip(row.keys(), row))
 
-    def record_external_result(self, envelope_digest: str, *, status: str, result_digest: str, failure_kind: str | None, output_digest: str) -> None:
+    def record_external_result(self, envelope_digest: str, *, status: str, result_digest: str, failure_kind: str | None, output_digest: str, connection=None) -> None:
+        if connection is not None:
+            self._store_external_result(connection, envelope_digest, status, result_digest, failure_kind, output_digest)
+            return
         with self._connect() as db:
-            row = db.execute("SELECT * FROM external_dispatches WHERE envelope_digest=?", (envelope_digest,)).fetchone()
-            if row is None:
-                raise KeyError("unknown external dispatch")
-            if row["status"] not in {JobStatus.EXTERNAL_WAITING.value, JobStatus.QUEUED.value}:
-                return
-            db.execute("UPDATE external_dispatches SET status=?, result_digest=?, failure_kind=?, output_digest=? WHERE envelope_digest=?", (status, result_digest, failure_kind, output_digest, envelope_digest))
-            db.execute("UPDATE jobs SET status=?, result_ref=?, updated_at=? WHERE task_digest=? AND task_type='external'", (JobStatus.COMPLETED.value, result_digest, float(self._clock()), envelope_digest))
-            db.commit()
+            db.execute("BEGIN IMMEDIATE")
+            self._store_external_result(db, envelope_digest, status, result_digest, failure_kind, output_digest)
+
+    def _store_external_result(self, db, digest, status, result_digest, failure_kind, output_digest):
+        row = db.execute("SELECT status FROM external_dispatches WHERE envelope_digest=?", (digest,)).fetchone()
+        if row is None:
+            raise KeyError("unknown external dispatch")
+        if row["status"] not in {JobStatus.EXTERNAL_WAITING.value, JobStatus.QUEUED.value}:
+            return
+        owner = db.execute("SELECT status,callback_digest FROM codex_handoffs WHERE envelope_digest=? AND operation_id IS NOT NULL", (digest,)).fetchone()
+        if owner and (owner["status"] not in {"RETURNING", "COMPLETED"} or owner["callback_digest"] != result_digest):
+            raise ExternalDispatchOwnedError("外部回传必须匹配已授权执行器的收据")
+        db.execute("UPDATE external_dispatches SET status=?, result_digest=?, failure_kind=?, output_digest=? WHERE envelope_digest=?", (status, result_digest, failure_kind, output_digest, digest))
+        db.execute("UPDATE jobs SET status=?, result_ref=?, updated_at=? WHERE task_digest=? AND task_type='external'", (JobStatus.COMPLETED.value, result_digest, float(self._clock()), digest))
+
+    @staticmethod
+    def codex_budget(db, job_id, now, *, exclude=None):
+        """Spent or reserved allowance shared by the research worker and typed handoffs."""
+        rows = db.execute("SELECT * FROM codex_handoffs WHERE job_id=? AND operation_id IS NOT NULL", (job_id,))
+        calls = byte_count = 0
+        seconds = 0.0
+        for row in rows:
+            if row["operation_id"] == exclude:
+                continue
+            reserved = row["status"] in {"AUTHORIZED", "DISPATCHED"} and now < row["lease_until"]
+            if reserved:
+                calls += 1
+                byte_count += row["max_bytes"]
+                seconds += row["max_wall_seconds"]
+            elif row["claimed_at"] is not None:
+                calls += 1
+                byte_count += row["packet_bytes"] + row["response_bytes"]
+                end = row["finished_at"] if row["finished_at"] is not None else row["lease_until"]
+                seconds += min(row["max_wall_seconds"], max(0.0, end - row["claimed_at"]))
+        return {"provider_calls": calls, "bytes_used": byte_count, "wall_seconds": seconds}
 
     def resolve_task(self, task_ref: str) -> AgentTask:
         """Resolve an ephemeral task; reopened queues need an explicit resolver."""

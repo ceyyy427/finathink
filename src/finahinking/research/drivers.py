@@ -157,12 +157,13 @@ class CompatibleApiDriver(UserApiDriver):
 class GroundedApiDriver:
     """One explicitly configured call per material-backed role; no tool access."""
 
-    def __init__(self, snapshot, config, *, materials=(), transport=None, credential_store=None, call_journal=None, discovery=None):
+    def __init__(self, snapshot, config, *, materials=(), transport=None, credential_store=None, call_journal=None, discovery=None, can_dispatch=None):
         import threading
 
         self.snapshot, self.config, self.materials = snapshot, config, materials
         self.transport, self.credential_store = transport, credential_store
         self.call_journal = call_journal
+        self.can_dispatch = can_dispatch
         self.discovery = discovery
         self._calls = []
         self.synthesis_summary = {}
@@ -201,6 +202,8 @@ class GroundedApiDriver:
         call_id = None
 
         def dispatched(request_bytes):
+            if self.can_dispatch is not None and not self.can_dispatch():
+                raise ValueError("research attempt is no longer current")
             if self.call_journal is not None:
                 self.call_journal.dispatched(call_id, request_bytes)
             record.update(dispatched=True, request_bytes=request_bytes)
@@ -226,10 +229,9 @@ class GroundedApiDriver:
             response = adapter.invoke(ModelEnvelope(request.run_id, role, stable_digest(request), bundle.fingerprint, research_context=bundle))
             report = AgentReport(role=role, status="READY", claims=tuple(response.content.get("claims", ())),
                                  evidence_refs=tuple(response.content["evidence_refs"]), limitations=tuple(response.content.get("limitations", ())),
-                                 model_ref=f"model:{self.config.provider_id}:{stable_digest({'provider': self.config.provider_id, 'model': model})[:24]}")
+                                 model_ref=self.config.model_ref_for_role(role))
             # Numeric counters use neutral public names so existing secret/
             # prompt/token-key redaction remains intact at the report boundary.
-            record["status"] = "READY"
             plan = None
             if role == "research":
                 if self.discovery is not None and len(response.content.get("hypotheses", ())) >= self.discovery.blueprint["budget"]["max_hypotheses"]:
@@ -242,6 +244,7 @@ class GroundedApiDriver:
                                                      "disagreements": list(response.content.get("disagreements", ())),
                                                      "manager_observations": list(report.claims), "context_fingerprint": bundle.fingerprint})
                 self.synthesis_summary = {**plan.validation_spec, "hypotheses": list(plan.hypotheses)}
+            record["status"] = "READY"
             return DriverResult(reports=(report,), research_plan=plan)
         except ProviderAdapterError as error:
             record["status"] = error.kind.value

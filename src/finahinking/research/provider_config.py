@@ -127,6 +127,12 @@ class ProviderConfig:
             raise ValueError("research role is not allowed")
         return self.role_models.get(role, self.model)
 
+    def model_ref_for_role(self, role: str) -> str:
+        from .contracts import stable_digest
+
+        mapping = {"provider": self.provider_id, "model": self.model_for_role(role)}
+        return f"model:{self.provider_id}:{stable_digest(mapping)[:24]}"
+
     def redacted(self) -> dict[str, Any]:
         return {"provider_id": self.provider_id, "adapter_kind": self.adapter_kind, "model": self.model, "endpoint_configured": self.endpoint is not None, "credential_ref": self.credential_ref.to_dict() if self.credential_ref else None, "enabled": self.enabled, "role_models": dict(self.role_models)}
 
@@ -181,6 +187,12 @@ class ProviderConfigStore:
             configs = {**self._configs, config.provider_id: config}
             self._persist(configs)
             self._configs = configs
+
+    def current_configs(self) -> tuple[ProviderConfig, ...]:
+        """Read one immutable generation, including saves by another local app."""
+        with self._lock:
+            configs = self._configs if self._path is None else ProviderConfigStore(self._path)._configs
+            return tuple(configs[key] for key in sorted(configs))
 
     def get(self, provider_id: str) -> ProviderConfig | None:
         with self._lock:

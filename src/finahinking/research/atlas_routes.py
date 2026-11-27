@@ -6,7 +6,7 @@ from .atlas_graphics import process_landscape
 from .atlas_workspace import RUNS, VIEWS, render_runs
 
 ASSETS = {"research-atlas.css": "text/css; charset=utf-8", "atlas-labs.css": "text/css; charset=utf-8",
-          "strategy-validation.css": "text/css; charset=utf-8", "research-serif.woff2": "font/woff2"}
+          "model-workbench.css": "text/css; charset=utf-8", "strategy-validation.css": "text/css; charset=utf-8", "research-serif.woff2": "font/woff2"}
 
 
 def route(app, method, path, query, body):
